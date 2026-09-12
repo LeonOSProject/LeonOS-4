@@ -27,11 +27,11 @@ class Probe(WindowProbe):
 
 
 @contextmanager
-def boot(output, disk, iso=None):
+def boot(output, disk, iso=None, *, smp=2):
     output.mkdir(parents=True, exist_ok=True)
     serial, qmp = output / "serial.log", output / "qmp.sock"
     command = ["qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-machine", "q35",
-               "-m", "4096", "-smp", "2", "-bios", "/usr/share/edk2/x64/OVMF.4m.fd",
+               "-m", "4096", "-smp", str(smp), "-bios", "/usr/share/edk2/x64/OVMF.4m.fd",
                "-display", "none", "-serial", f"file:{serial}",
                "-device", "VGA,xres=1280,yres=720", "-device", "qemu-xhci", "-device", "usb-tablet",
                "-netdev", "user,id=net0", "-device", "e1000,netdev=net0",

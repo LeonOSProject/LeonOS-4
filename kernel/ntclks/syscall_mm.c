@@ -625,6 +625,10 @@ static int load_file_cache_page(uint64_t phys, void *opaque)
     want = context->limit - offset < PAGE_SIZE
                ? (uint32_t)(context->limit - offset)
                : (uint32_t)PAGE_SIZE;
+    /* usercopy can fault here inside an async filesystem syscall. A page
+     * fault cannot replay that syscall, and its cache page must stay alive
+     * until DMA completes. Match the uncached fault path's synchronous I/O. */
+    storage_set_io_async_context(false);
     if (storage_read_node(context->node, offset, (void *)(uintptr_t)phys,
                           want, &got) < 0 || got != want) {
         return -LEONOS_EIO;

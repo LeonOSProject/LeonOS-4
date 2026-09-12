@@ -5,6 +5,48 @@ Status: INCOMPLETE. This is the current main agent's running record for
 broker results below are not evidence for the replacement. No commit, push, host account mutation,
 subagent or separate task is authorized or used.
 
+## First-submit account-switch login failure: 2026-09-13
+
+The VMware report in `/home/xiaobai/installer-serial.log` shows successful
+password authentication, followed by `stage=groups status=17` (PAM_CRED_ERR).
+The immediately preceding lazy file fault failed with EIO at `0x5a48000`,
+inside the musl readonly LOAD at `0x5a00000`, file limit `0x4a90c`.
+The matching musl build places `/var/run/nscd/socket` at file offset `0x48fce`.
+`getgrouplist()` calls `__nscd_query()`, whose connect argument touches this
+cold page from kernel usercopy. A failed page read prevents musl's normal
+missing-nscd fallback to `/etc/group`.
+
+Unlike the uncached fault path, `load_file_cache_page()` inherited asynchronous
+storage mode from the syscall. An unfinished AHCI read could return EAGAIN,
+become EIO in the cache loader, and release the backing page prematurely.
+The cached fault loader now forces synchronous storage completion too. Cache
+hits still need no read; genuine read errors and short reads still fail.
+Authentication, account selection, musl and PAM policy are unchanged.
+Reference: Linux v6.12 `mm/filemap.c:filemap_read_folio()` waits for completion
+and checks the uptodate state before a fault can use the page.
+
+Validation: the real kernel ELF mapper/cache regression failed before the fix
+and passed after it under ASan/UBSan, including async entry, cache hits, read
+errors, short reads and page cleanup. `test_ahci_completion.py` and
+`test_pam_login_case.py` passed. `python3 build.py run kernel` completed with
+0 errors; kernel SHA256 is
+`e0b8537b355ef9047a48d0f94b95eda4b5124518a27a0232f3b78e98e7d1e222`.
+
+QEMU/KVM, one vCPU, freshly installed AHCI/ext2 disk: entering root's password
+without submitting, clicking alice, then submitting alice's correct password
+succeeded on the first attempt. Terminal reported UID/GID quartets all 1000
+and `/home/alice`. Evidence: `build/pam-login-switch/cold-switch-1/`.
+The runner then stopped because `/proc/self/status` lacks a Groups field;
+it now obtains that evidence via upstream `id -G`. This runner adjustment,
+remaining cold boots and the wrong-password guest case were not rerun because
+the user chose to take over testing. The full QEMU suite remains unverified,
+as does VMware. Existing official ISOs have not been rebuilt with this fix.
+
+Reproduce the complete guest check after building the kernel:
+`python3 tools/test_pam_login_switch_qemu.py --output build/pam-login-switch-recheck`.
+The runner installs the production ISO on its own scratch disk, verifies the
+replacement kernel bytes in that disk's ESP, and leaves host accounts alone.
+
 ## Integration steering: 2026-09-12
 
 ### sudo su RLIMIT_CORE warning

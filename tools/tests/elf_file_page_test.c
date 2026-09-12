@@ -9,6 +9,10 @@
 static unsigned char file_bytes[8192];
 static uint64_t mapped;
 static unsigned allocations;
+static bool io_async;
+static int read_error;
+static bool short_read;
+static unsigned reads;
 
 uint64_t mm_alloc_page(void)
 {
@@ -23,11 +27,16 @@ int storage_read_node(const struct storage_node *node, uint64_t offset,
                       void *buffer, uint32_t size, uint32_t *got)
 {
     assert(node->size == sizeof(file_bytes) && offset + size <= node->size);
+    ++reads;
+    *got = 0;
+    if (io_async) return -LEONOS_EAGAIN;
+    if (read_error) return read_error;
+    if (short_read) --size;
     memcpy(buffer, file_bytes + offset, size);
     *got = size;
     return 0;
 }
-void storage_set_io_async_context(bool enabled) { (void)enabled; }
+void storage_set_io_async_context(bool enabled) { io_async = enabled; }
 int storage_errno(int status) { return status; }
 bool address_space_map_user_page(struct address_space *as, uint64_t va,
                                  uint64_t phys, uint64_t flags)
@@ -54,16 +63,38 @@ int main(void)
     text.file_limit = sizeof(file_bytes);
     memset(file_bytes, 0x53, sizeof(file_bytes));
     page_cache_init();
+    storage_set_io_async_context(true);
     assert(task_map_file_vma_page(&task, &prefix, prefix.start) == 0);
     uint64_t prefix_page = mapped;
     assert(((unsigned char *)(uintptr_t)prefix_page)[0] == 0x53);
     assert(((unsigned char *)(uintptr_t)prefix_page)[0x900] == 0);
+    /* usercopy can fault on a cold ELF page while syscall I/O is async. */
+    storage_set_io_async_context(true);
     assert(task_map_file_vma_page(&task, &text, text.start) == 0);
     uint64_t text_page = mapped;
     assert(((unsigned char *)(uintptr_t)text_page)[0x900] == 0x53);
     assert(text_page != prefix_page);
+    unsigned reads_before = reads;
+    storage_set_io_async_context(true);
     assert(task_map_file_vma_page(&task, &text, text.start) == 0);
     assert(mapped == text_page);
+    assert(reads == reads_before);
+
+    struct task_vma cold = text;
+    cold.file_offset = 4096;
+    unsigned allocated_before = allocations;
+    read_error = -LEONOS_EIO;
+    assert(task_map_file_vma_page(&task, &cold, cold.start) == -LEONOS_EIO);
+    assert(allocations == allocated_before && mapped == text_page);
+    read_error = 0;
+    short_read = true;
+    assert(task_map_file_vma_page(&task, &cold, cold.start) == -LEONOS_EIO);
+    assert(allocations == allocated_before && mapped == text_page);
+    short_read = false;
+    storage_set_io_async_context(true);
+    assert(task_map_file_vma_page(&task, &cold, cold.start) == 0);
+    assert(memcmp((void *)(uintptr_t)mapped, file_bytes + 4096, 4096) == 0);
+    page_cache_release(mapped);
     page_cache_release(text_page);
     page_cache_release(text_page);
     if (page_cache_owns(prefix_page)) page_cache_release(prefix_page);
@@ -73,4 +104,5 @@ int main(void)
     page_cache_invalidate_node(&resized);
     assert(!allocations);
     puts("PASS ELF segments sharing a file page: independent zero-fill and intact code cache");
+    puts("PASS cold ELF usercopy faults: synchronous I/O, cache hits, errors and short-read cleanup");
 }
