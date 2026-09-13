@@ -19,7 +19,9 @@
 #include <string.h>
 
 #define PAGE_SIZE 4096ULL
-#define LINUX_MAP_SUPPORTED (LINUX_MAP_SHARED | LINUX_MAP_PRIVATE | LINUX_MAP_FIXED | LINUX_MAP_ANONYMOUS | LINUX_MAP_FIXED_NOREPLACE | LINUX_MAP_NORESERVE)
+/* Linux MAP_STACK inhibits THP, not automatic growth. User mappings here use
+ * only 4 KiB pages, so the ordinary mapping/protection path already enforces it. */
+#define LINUX_MAP_SUPPORTED (LINUX_MAP_SHARED | LINUX_MAP_PRIVATE | LINUX_MAP_FIXED | LINUX_MAP_ANONYMOUS | LINUX_MAP_FIXED_NOREPLACE | LINUX_MAP_NORESERVE | LINUX_MAP_STACK)
 _Static_assert(LINUX_PROT_READ == TASK_VMA_PROT_READ &&
                LINUX_PROT_WRITE == TASK_VMA_PROT_WRITE &&
                LINUX_PROT_EXEC == TASK_VMA_PROT_EXEC, "VMA protection encoding");

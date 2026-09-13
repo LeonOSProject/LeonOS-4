@@ -197,6 +197,11 @@ def build_distribution(source, output, work, apk, key):
             link = tree / "usr/bin" / applet
             if link.is_symlink() and os.readlink(link).endswith("/busybox"):
                 link.unlink()
+        # Retire the old ash-as-bash alias when repackaging an existing root.
+        # GNU Bash from Alpine must own /bin/bash, including its script semantics.
+        bash = tree / "bin/bash"
+        if bash.is_symlink() and bash.resolve() == (tree / "bin/busybox").resolve():
+            bash.unlink()
         notices = tree / "usr/share/licenses/apk-tools"
         notices.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(apk.parent / "LICENSE", notices / "LICENSE")
@@ -259,6 +264,8 @@ def build_distribution(source, output, work, apk, key):
             payload_root = development if name == "leonos-musl-dev" else tree
             for entry in files:
                 path = payload_root / entry["path"].lstrip("/")
+                if entry["path"] == "/bin/sh" and path.is_file() and path.stat().st_mode & 0o111:
+                    provides[name].add("/bin/sh")
                 if entry["type"] != "file":
                     continue
                 with path.open("rb") as stream:

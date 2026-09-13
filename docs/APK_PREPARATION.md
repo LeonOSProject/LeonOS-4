@@ -20,6 +20,11 @@ files from the distribution staging root are deliberately owned by
 BusyBox's `ar` and `strings` fallback links are explicitly script-managed,
 following Alpine's trigger model: binutils may own these paths, and removing it
 restores only missing links. The BusyBox executable remains package-owned.
+The package advertises its actual `/bin/sh` provider so shell script
+dependencies do not pull in a conflicting second BusyBox. `/bin/bash` is
+reserved for upstream GNU Bash; the former ash alias is no longer shipped.
+Upstream BusyBox `add-shell` and `remove-shell` register shell packages in
+`/etc/shells` during their original installation/removal scripts.
 This coarse package split can be refined in a future signed package migration.
 
 The actual nano payload and CA bundle now have their own `nano` and
@@ -67,10 +72,19 @@ native x86_64:
 ```text
 https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main
 https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/community
+@testing https://mirrors.tuna.tsinghua.edu.cn/alpine/edge/testing
 ```
 
 The release branch remains v3.24. The same repositories retain `@alpine` aliases for existing world entries.
 Ordinary `apk add NAME` can select upstream packages without a tag.
+Testing exists only on the rolling edge branch and is opt-in: use
+`apk add hyfetch@testing` for the native x86_64 HyFetch package. Its current
+dependencies resolve against v3.24 and the local musl runtime. The `@testing`
+tag keeps unrelated stable installs and upgrades from selecting testing
+packages by default; edge main/community are not enabled. Future testing
+packages may require newer dependencies than v3.24 provides.
+Existing installations can add the tagged line above to `/etc/apk/repositories`
+and run `apk update`; installer upgrades preserve locally edited configuration.
 `/etc/os-release` remains LeonOS, with the Alpine non-usr-merge layout.
 
 Alpine signing keys and the Web PKI bundle have separate roles. Both signature
@@ -147,6 +161,7 @@ apk info --who-owns /usr/bin/fastfetch
 apk add zlib
 apk del zlib
 apk add gcc make
+apk add hyfetch@testing
 gcc hello.c -o hello
 ./hello
 ```
@@ -157,6 +172,25 @@ Never remove the working libc/authentication/base merely to make the solver
 accept a package.
 
 ## Verification
+
+The 2026-09-13 testing-repository regression uses unmodified x86_64
+`hyfetch-2.0.5-r0` and `bash-5.3.9-r1`. A clean host root transaction and QEMU/KVM
+(one socket, two cores, e1000) both install without BusyBox or Bash ownership
+conflicts. `tools/test_apk_qemu.py --testing-only` passes 28 checks: HTTPS and
+index signatures, installation/removal, `/etc/shells` scripts, Bash arrays,
+HyFetch version/help, retained custom Fastfetch ownership and real `MAP_STACK`
+guard-page/signal-stack behavior. Evidence: `build/apk-testing/qemu-test.log`.
+The same raw mapping test passes on host Linux. Linux v6.12 accepts `MAP_STACK`
+and maps it to `VM_NOHUGEPAGE`; NTCLKS user mappings already use only 4 KiB pages.
+This fixes Rust's startup failure without modifying the Alpine binary.
+
+This does not certify HyFetch's full interactive display: its first configuration
+attempt reports a missing neofetch backend even in the host chroot, including
+after installing the separate `neofetch@testing` package. Version/help work;
+the backend lookup remains an upstream-package/runtime integration limitation.
+VMware was not tested. The pre-existing whole-UAPI header check still fails
+because `include/uapi/leonos/net_control.h` includes `leonos/net.h` outside the
+UAPI include root; the changed `linux/mman.h` passes standalone C/C++ checks.
 
 The TCP/e1000 receive-path correction is covered by `tools/test_network.py`,
 `tools/test_e1000.py` and `tools/test_tcp_download_qemu.py`. In an isolated local
@@ -169,6 +203,7 @@ VMware speeds. See `docs/NETWORK_STATUS_2026-09-13.md` for evidence and scope.
 ```sh
 python3 build.py run test-apk-distribution
 python3 tools/test_apk_qemu.py
+python3 tools/test_apk_qemu.py --testing-only
 python3 tools/test_alpine_runtime_qemu.py
 python3 tools/test_apk_qemu.py --package-cache build/alpine-runtime/cache
 python3 build.py run images-iso

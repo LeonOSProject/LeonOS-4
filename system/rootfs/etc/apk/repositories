@@ -5,3 +5,5 @@ https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main
 https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/community
 @alpine https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main
 @alpine https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/community
+# Testing exists only on edge; select it explicitly with apk add NAME@testing.
+@testing https://mirrors.tuna.tsinghua.edu.cn/alpine/edge/testing

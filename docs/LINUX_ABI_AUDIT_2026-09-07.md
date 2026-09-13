@@ -566,6 +566,13 @@ pipe2 先创建管道再验证 flags，非法 flags 返回 EINVAL 时已产生 f
 
 #### B20 mmap 仅实现受限子集
 
+2026-09-13 更新：已接受 native x86-64 `MAP_STACK=0x20000`。Linux v6.12
+`include/linux/mman.h:calc_vm_flag_bits()` 将其映射为 `VM_NOHUGEPAGE`，
+LeonOS 用户映射目前均为 4 KiB 页；仍执行真实分配、保护及解除映射。
+`tools/tests/linux_map_stack_test.c` 在宿主 Linux 和 QEMU 中验证零填充、
+保护页 SIGSEGV、备用信号栈实际执行及清理。原版 Alpine HyFetch 的 Rust
+启动不再因该标志返回 EINVAL。此项不代表 mmap 整体已兼容；下文保留原审计基线。
+
 拒绝 PROT_NONE；MAP_FIXED 遇到已有映射直接失败，未实现 Linux 的覆盖语义。匿名 MAP_SHARED 和普通文件 MAP_SHARED 没有完整实现；未知 flags 一律拒绝，MAP_FIXED_NOREPLACE、MAP_STACK 等未补齐。匿名映射还要求 fd 必须为 -1。W^X 属于当前明确的权限策略，应单独评估，不能把它与布局错误混为一谈。动态加载器预留地址区、共享内存和保护页用法会受影响。
 
 代码：[kernel/ntclks/syscall_mm.c](/home/xiaobai/Projects/Projects/LeonOS-4/kernel/ntclks/syscall_mm.c:715)，[kernel/ntclks/syscall_mm.c](/home/xiaobai/Projects/Projects/LeonOS-4/kernel/ntclks/syscall_mm.c:839)。

@@ -72,6 +72,17 @@ static void command(const char *label, int success, ...)
 }
 #define APK "/sbin/apk", "--repositories-file", "/dev/null"
 #define FIXTURE "/usr/lib/leonos/tests/apk"
+static int configure_proxy(void)
+{
+    int fd = open(FIXTURE "/proxy", O_RDONLY);
+    if (fd < 0) return errno == ENOENT ? 0 : -1;
+    char proxy[1024];
+    ssize_t size = read(fd, proxy, sizeof(proxy));
+    close(fd);
+    if (size <= 0 || size >= (ssize_t)sizeof(proxy)) return -1;
+    proxy[size] = 0;
+    return setenv("https_proxy", proxy, 1) || setenv("http_proxy", proxy, 1) ? -1 : 0;
+}
 static void null_fault_handler(int sig, siginfo_t *info, void *context)
 {
     ucontext_t *uc = context;
@@ -106,6 +117,38 @@ int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
     puts("[apk-probe] START");
+#ifdef APK_TESTING_ONLY
+    extern unsigned test_linux_map_stack(void);
+    failures += test_linux_map_stack();
+    if (configure_proxy() < 0) return 1;
+    setenv("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", 1);
+    /* This QEMU user-network fixture gets its resolver from serviced's DHCP. */
+    for (unsigned i = 0; i < 100 && !contains("/etc/resolv.conf", "nameserver 10.0.2.3"); ++i)
+        usleep(100000);
+    check(contains("/etc/resolv.conf", "nameserver 10.0.2.3"), "DHCP resolver ready before APK");
+    command("HTTPS signed testing indexes", 1, "/sbin/apk", "--timeout", "30", "update", NULL);
+    check(!contains("/tmp/apk-command.log", "WARNING") && !contains("/tmp/apk-command.log", "ERROR"),
+          "testing repository has no trust or fetch errors");
+    command("tagged HyFetch installation", 1, "/sbin/apk", "--timeout", "60", "add", "hyfetch@testing", NULL);
+    check(!contains("/tmp/apk-command.log", "ERROR") && !contains("/tmp/apk-command.log", "not found"),
+          "HyFetch transaction and Bash scripts have no errors");
+    check(contains("/etc/apk/world", "hyfetch@testing\n"), "testing tag recorded in world");
+    check(contains("/etc/shells", "/bin/bash\n"), "Bash post-install registered shell");
+    command("Bash package ownership", 1, APK, "info", "--who-owns", "/bin/bash", NULL);
+    check(contains("/tmp/apk-command.log", "owned by bash-"), "Bash owns its executable");
+    command("Bash execution", 1, "/bin/bash", "-c",
+            "a=(17 25); test $((a[0]+a[1])) -eq 42", NULL);
+    command("HyFetch version", 1, "/usr/bin/hyfetch", "--version", NULL);
+    check(contains("/tmp/apk-command.log", "Version: "), "HyFetch version output");
+    command("HyFetch help", 1, "/usr/bin/hyfetch", "--help", NULL);
+    check(contains("/tmp/apk-command.log", "Usage:"), "HyFetch help output");
+    command("custom Fastfetch retained", 1, APK, "info", "--who-owns", "/usr/bin/fastfetch", NULL);
+    check(contains("/tmp/apk-command.log", "leonos-fastfetch-"), "custom Fastfetch still owns executable");
+    command("remove HyFetch", 1, "/sbin/apk", "--no-network", "del", "hyfetch", NULL);
+    check(!contains("/etc/shells", "/bin/bash\n"), "Bash pre-deinstall removed shell");
+    printf("[apk-probe] DONE failures=%u\n", failures);
+    return failures ? 1 : 0;
+#endif
     fault_delivery_test();
 #ifdef ALPINE_RUNTIME_ONLY
     goto runtime;
@@ -141,17 +184,7 @@ int main(void)
     command("Alpine zlib install", 1, APK, "--cache-dir", "/var/cache/apk", "add", FIXTURE "/zlib.apk", NULL);
     command("Alpine library execution", 1, "/usr/lib/leonos/tests/apk-zlib.elf", NULL);
     command("Alpine zlib removal", 1, APK, "del", "zlib", NULL);
-    fd = open(FIXTURE "/proxy", O_RDONLY);
-    if (fd >= 0) {
-        char proxy[1024];
-        ssize_t size = read(fd, proxy, sizeof(proxy));
-        close(fd);
-        if (size <= 0 || size >= (ssize_t)sizeof(proxy)) return 1;
-        proxy[size] = 0;
-        if (setenv("https_proxy", proxy, 1) || setenv("http_proxy", proxy, 1)) return 1;
-    } else if (errno != ENOENT) {
-        return 1;
-    }
+    if (configure_proxy() < 0) return 1;
     command("HTTPS signed Alpine indexes", 1, "/sbin/apk", "--timeout", "20", "update", NULL);
     check(!contains("/tmp/apk-command.log", "WARNING") && !contains("/tmp/apk-command.log", "ERROR"),
           "default repositories have no fetch or signature warnings");
