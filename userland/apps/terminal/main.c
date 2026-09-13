@@ -26,6 +26,9 @@
 #define TERMINAL_BODY_X 0U
 #define TERMINAL_MAX_COLUMNS (TERMINAL_MAX_W / LEONOS_FONT_W)
 #define TERMINAL_CSI_PARAM_CAP 12U
+#define TERMINAL_OSC_CAP 64U
+#define TERMINAL_DEFAULT_FOREGROUND 0x00d7e3f4U
+#define TERMINAL_DEFAULT_BACKGROUND 0x00000000U
 /* Keep a complete typical curses redraw in one terminal frame.  Smaller
  * batches make full-screen programs redraw and present the window repeatedly. */
 #define TERMINAL_OUTPUT_BUDGET 8192U
@@ -38,6 +41,8 @@ enum terminal_escape_state {
     TERMINAL_TEXT,
     TERMINAL_ESCAPE,
     TERMINAL_CSI,
+    TERMINAL_OSC,
+    TERMINAL_OSC_ESCAPE,
 };
 
 struct terminal_cell {
@@ -98,6 +103,9 @@ struct terminal_session {
     uint16_t csi_params[TERMINAL_CSI_PARAM_CAP];
     uint8_t csi_param_count;
     uint8_t csi_private;
+    char osc[TERMINAL_OSC_CAP];
+    uint8_t osc_length;
+    uint8_t osc_overflow;
     uint8_t utf8_bytes[4];
     uint8_t utf8_length;
     uint8_t utf8_expected;
@@ -207,8 +215,8 @@ static uint32_t terminal_style_background(void)
 
 static void terminal_reset_style(void)
 {
-    text_foreground = 0x00d7e3f4U;
-    text_background = 0x00000000U;
+    text_foreground = TERMINAL_DEFAULT_FOREGROUND;
+    text_background = TERMINAL_DEFAULT_BACKGROUND;
     foreground_index = -1;
     background_index = -1;
     text_bright = 0;
@@ -751,8 +759,10 @@ static void terminal_apply_sgr(uint16_t code)
         text_inverse = 0;
     } else if (code == 39) {
         foreground_index = -1;
+        text_foreground = TERMINAL_DEFAULT_FOREGROUND;
     } else if (code == 49) {
         background_index = -1;
+        text_background = TERMINAL_DEFAULT_BACKGROUND;
     } else if (code >= 30 && code <= 37) {
         foreground_index = (int8_t)(code - 30U);
     } else if (code >= 40 && code <= 47) {
@@ -765,6 +775,17 @@ static void terminal_apply_sgr(uint16_t code)
         background_index = (int8_t)(code - 100U);
         background_bright = 1;
     }
+}
+
+static uint32_t terminal_palette_color(uint16_t index)
+{
+    if (index < 8) return ansi_normal[index];
+    if (index < 16) return ansi_bright[index - 8];
+    if (index >= 232) return (8U + (index - 232U) * 10U) * 0x010101U;
+    static const uint8_t levels[6] = {0, 95, 135, 175, 215, 255};
+    index -= 16;
+    return ((uint32_t)levels[index / 36] << 16) |
+           ((uint32_t)levels[(index / 6) % 6] << 8) | levels[index % 6];
 }
 
 static void terminal_csi_begin(void)
@@ -796,6 +817,31 @@ static void terminal_finish_csi(char final)
     if (final == 'm') {
         uint32_t index;
         for (index = 0; index < csi_param_count; ++index) {
+            if (csi_params[index] == 38 || csi_params[index] == 48) {
+                int background = csi_params[index] == 48;
+                uint32_t color;
+                if (++index >= csi_param_count) break;
+                if (csi_params[index] == 2) {
+                    if (index + 3 >= csi_param_count) break;
+                    index += 3;
+                    if (csi_params[index - 2] > 255 || csi_params[index - 1] > 255 ||
+                        csi_params[index] > 255) continue;
+                    color = ((uint32_t)csi_params[index - 2] << 16) |
+                            ((uint32_t)csi_params[index - 1] << 8) | csi_params[index];
+                } else if (csi_params[index] == 5) {
+                    if (++index >= csi_param_count) break;
+                    if (csi_params[index] > 255) continue;
+                    color = terminal_palette_color(csi_params[index]);
+                } else continue;
+                if (background) {
+                    background_index = -1;
+                    text_background = color;
+                } else {
+                    foreground_index = -1;
+                    text_foreground = color;
+                }
+                continue;
+            }
             terminal_apply_sgr(csi_params[index]);
         }
     } else if (final == 'A') {
@@ -869,6 +915,9 @@ static void terminal_finish_csi(char final)
         }
     } else if (final == 'd') {
         terminal_move_home(amount, 1);
+    } else if (final == 'c' && !csi_private && csi_params[0] == 0) {
+        /* Primary device attributes: VT100 with no optional hardware. */
+        (void)terminal_write_input("\033[?1;0c", 7);
     } else if (final == 'n' && csi_params[0] == 6) {
         char response[32];
         uint32_t row = terminal_logical_active();
@@ -897,13 +946,56 @@ static void terminal_finish_csi(char final)
     escape_state = TERMINAL_TEXT;
 }
 
+static void terminal_finish_osc(int bell)
+{
+    struct terminal_session *session = active_session;
+    session->osc[session->osc_length] = 0;
+    if (!session->osc_overflow &&
+        (terminal_arg_eq(session->osc, "10;?") ||
+         terminal_arg_eq(session->osc, "11;?"))) {
+        uint32_t color = session->osc[1] == '0' ? TERMINAL_DEFAULT_FOREGROUND :
+                                                TERMINAL_DEFAULT_BACKGROUND;
+        char response[40];
+        int length = snprintf(response, sizeof(response),
+                              "\033]%c%c;rgb:%04x/%04x/%04x%s",
+                              session->osc[0], session->osc[1],
+                              ((color >> 16) & 255U) * 257U,
+                              ((color >> 8) & 255U) * 257U,
+                              (color & 255U) * 257U, bell ? "\007" : "\033\\");
+        if (length > 0 && (size_t)length < sizeof(response))
+            (void)terminal_write_input(response, (uint32_t)length);
+    }
+    escape_state = TERMINAL_TEXT;
+}
+
 static void terminal_put_char(char value)
 {
     uint8_t byte = (uint8_t)value;
+    if (escape_state == TERMINAL_OSC || escape_state == TERMINAL_OSC_ESCAPE) {
+        if (byte == 24 || byte == 26) {
+            escape_state = TERMINAL_TEXT;
+        } else if (byte == 7 || (escape_state == TERMINAL_OSC_ESCAPE && value == '\\')) {
+            terminal_finish_osc(byte == 7);
+        } else if (byte == 27) {
+            escape_state = TERMINAL_OSC_ESCAPE;
+        } else if (escape_state == TERMINAL_OSC_ESCAPE) {
+            /* An unexpected escape cancels the string and starts a new one. */
+            escape_state = TERMINAL_ESCAPE;
+            terminal_put_char(value);
+        } else if (active_session->osc_length + 1U < TERMINAL_OSC_CAP) {
+            active_session->osc[active_session->osc_length++] = value;
+        } else {
+            active_session->osc_overflow = 1;
+        }
+        return;
+    }
     if (escape_state == TERMINAL_ESCAPE) {
         if (value == '[') {
             escape_state = TERMINAL_CSI;
             terminal_csi_begin();
+        } else if (value == ']') {
+            escape_state = TERMINAL_OSC;
+            active_session->osc_length = active_session->osc_overflow = 0;
         } else {
             if (value == '7') {
                 terminal_save_cursor();

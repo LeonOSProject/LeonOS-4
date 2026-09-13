@@ -3033,6 +3033,15 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
             fastfetch_config_destination)
         esp_names.append(target.name)
         esp_outputs.append(fastfetch_config_destination)
+        for name, source, guest_path in (
+            ("ascii", "leonos-ascii.txt", "usr/share/fastfetch/leonos-ascii.txt"),
+            ("hyfetch-config", "hyfetch.json", "etc/skel/.config/hyfetch.json"),
+        ):
+            destination = paths.staging / guest_path
+            target = add_copy(graph, f"esp:fastfetch:{name}",
+                ROOT / "userland/fastfetch" / source, destination)
+            esp_names.append(target.name)
+            esp_outputs.append(destination)
         fastfetch_manifest_destination = paths.staging / layout.LICENSES / "fastfetch" / "package.json"
         target = add_copy(graph, "esp:fastfetch:package", fastfetch_stamp, fastfetch_manifest_destination)
         esp_names.append(target.name)

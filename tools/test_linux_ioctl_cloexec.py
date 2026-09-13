@@ -83,10 +83,12 @@ def test_kernel_dispatch_contract() -> None:
     assert "return -LEONOS_ENOTTY;\n    }\n\n    return -LEONOS_ENOSYS;" in syscall_c
     # The signalfd branch must no longer carry a private implementation: the
     # generic handler answers FIOCLEX/FIONCLEX for it like for every other fd.
-    marker = "only signalfd-specific requests remain here. */"
-    assert marker in syscall_c, "missing the signalfd hand-off comment"
-    signalfd_block = syscall_c[syscall_c.index(marker):][:300]
-    assert "FIONBIO" in signalfd_block and "FIONCLEX" not in signalfd_block
+    signalfd = syscall_c.rindex("if (file && file->kind == TASK_FILE_KIND_SIGNALFD)")
+    socket_dispatch = syscall_c.index("if (file && (file->flags & TASK_FILE_FLAG_SOCKET_UNIX))", signalfd)
+    signalfd_block = syscall_c[signalfd:socket_dispatch]
+    assert "FIOCLEX" not in signalfd_block and "FIONCLEX" not in signalfd_block
+    nonblock = syscall_c.index("return syscall_ioctl_nonblock(sched_current_task()", dispatch)
+    assert path_rule < nonblock < owned, "FIONBIO must use the shared generic VFS path"
     # fcntl(F_GETFD/F_SETFD) shares one storage with ioctl(FIOCLEX/FIONCLEX).
     assert "return task_fd_descriptor_flags(task, (int)a0);" in syscall_c
     assert "task_fd_set_descriptor_flags(task, (int)a0, (uint32_t)a2)" in syscall_c

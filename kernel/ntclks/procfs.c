@@ -156,8 +156,8 @@ static int proc_fill_content(const char *path, char *buffer, uint32_t capacity)
         proc_text_eq(path, "/proc/sys/kernel/osrelease") ||
         proc_text_eq(path, "/proc/sys/kernel/version")) {
         const struct leonos_system_info *info = ntclks_system_info();
-        const char *value = !info ? "" :
-            proc_text_eq(path, "/proc/sys/kernel/ostype") ? info->kernel_name :
+        const char *value = proc_text_eq(path, "/proc/sys/kernel/ostype") ? LINUX_UTS_SYSNAME :
+            !info ? "" :
             proc_text_eq(path, "/proc/sys/kernel/version") ? info->build_time :
             info->kernel_version;
         proc_append_text(buffer, &pos, capacity, value);

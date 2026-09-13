@@ -100,7 +100,7 @@ int main(void)
     assert(!strcmp(value, "MAJOR=259\nMINOR=0\nDEVNAME=disk0\nDEVTYPE=disk\n"));
     assert(proc_readlink("/sys/dev/block/259:1", value, sizeof(value)) > 0);
     read_value("/proc/sys/kernel/ostype", value, sizeof(value));
-    assert(!strcmp(value, "ntclks\n"));
+    assert(!strcmp(value, "Linux\n"));
     read_value("/proc/sys/kernel/osrelease", value, sizeof(value));
     assert(!strcmp(value, "9.8.7-0123\n"));
     read_value("/proc/sys/kernel/version", value, sizeof(value));
