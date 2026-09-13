@@ -8,10 +8,14 @@ int storage_inode_permissions(const struct storage_node *node,
     uint64_t flags;
     int ret;
     if (!node || !value) return -22;
-    if (!(node->flags & STORAGE_NODE_FLAG_EXT2)) return -95;
+    if (!(node->flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS))) return -95;
     kernel_execution_lock_irqsave(&flags);
     ret = storage_select_node_volume(node, &previous);
     if (ret < 0) goto out;
+    if (node->flags & STORAGE_NODE_FLAG_TMPFS) {
+        ret = tmpfs_permissions(g_storage.tmpfs, node->first_cluster, value, write);
+        goto restore;
+    }
     ret = ext2_read_inode(node->first_cluster, &inode);
     if (ret < 0) goto restore;
     if (write) {
@@ -43,9 +47,15 @@ int storage_inode_stat(const struct storage_node *node, struct linux_stat_abi *v
     struct ext2_inode inode;
     uint64_t flags;
     if (!node || !value) return -22;
-    if (!(node->flags & STORAGE_NODE_FLAG_EXT2)) return -95;
+    if (!(node->flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS))) return -95;
     kernel_execution_lock_irqsave(&flags);
     int ret = storage_select_node_volume(node, &previous);
+    if (!ret && (node->flags & STORAGE_NODE_FLAG_TMPFS)) {
+        ret = tmpfs_stat(g_storage.tmpfs, node->first_cluster, value);
+        storage_restore_volume(previous);
+        kernel_execution_unlock_irqrestore(flags);
+        return ret;
+    }
     if (!ret) {
         ret = ext2_read_inode(node->first_cluster, &inode);
         if (!ret) {
@@ -82,9 +92,15 @@ int storage_inode_utimensat(const struct storage_node *node, int64_t atime, int6
     struct ext2_inode inode;
     uint64_t flags;
     int ret;
-    if (!node || !(node->flags & STORAGE_NODE_FLAG_EXT2)) return -95;
+    if (!node || !(node->flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS))) return -95;
     kernel_execution_lock_irqsave(&flags);
     ret = storage_select_node_volume(node, &previous);
+    if (!ret && (node->flags & STORAGE_NODE_FLAG_TMPFS)) {
+        ret = tmpfs_utimens(g_storage.tmpfs, node->first_cluster, atime, mtime, set_atime, set_mtime);
+        storage_restore_volume(previous);
+        kernel_execution_unlock_irqrestore(flags);
+        return ret;
+    }
     if (!ret) ret = ext2_read_inode(node->first_cluster, &inode);
     if (!ret) {
         if (set_atime) inode.atime = (uint32_t)atime;

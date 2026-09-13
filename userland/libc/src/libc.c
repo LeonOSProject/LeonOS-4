@@ -451,6 +451,13 @@ static int http_parse_url(const char *url, struct libc_http_url *out)
     return 1;
 }
 
+/* Never silently downgrade a protected request to cleartext after a redirect. */
+static int http_url_is_secure(const char *url)
+{
+    struct libc_http_url parsed;
+    return http_parse_url(url, &parsed) && parsed.secure;
+}
+
 static void http_build_url(char *dst, uint32_t cap, const char *host,
                            uint32_t port, uint8_t secure, const char *path)
 {
@@ -878,6 +885,9 @@ static int http_fetch_once(const char *url_text,
     uint32_t header_len;
     uint32_t timeout_ms = request->timeout_ms ? request->timeout_ms
                                               : LEONOS_HTTP_DEFAULT_TIMEOUT_MS;
+    char *raw_response = request->response_body;
+    uint32_t raw_capacity = request->response_body_capacity;
+    int raw_response_owned = 0;
     int socket;
     int ret;
 
@@ -922,16 +932,29 @@ static int http_fetch_once(const char *url_text,
     printf("[http] connected host=%s socket=%d remote_ip=%u\n", url.host,
            socket, conn.remote_ip);
     if (url.secure) {
+        if (raw_capacity > UINT32_MAX - LEONOS_HTTP_HEADER_MAX - 1U) {
+            leonos_socket_close(socket);
+            response->net_status = LEONOS_NET_STATUS_HTTP_TOO_LARGE;
+            return 0;
+        }
+        raw_capacity += LEONOS_HTTP_HEADER_MAX + 1U;
+        raw_response = malloc(raw_capacity);
+        if (!raw_response) {
+            leonos_socket_close(socket);
+            response->net_status = LEONOS_NET_STATUS_SOCKET_LIMIT;
+            return 0;
+        }
+        raw_response_owned = 1;
         if (leonos_tls_http_exchange(socket, url.host, timeout_ms,
                                      request_text, request_len,
                                      request->request_body,
                                      request->request_body_len,
-                                     request->response_body,
-                                     request->response_body_capacity,
+                                     raw_response, raw_capacity,
                                      &raw_len) < 0) {
             printf("[http] TLS exchange failed host=%s raw=%u\n", url.host,
                    raw_len);
             leonos_socket_close(socket);
+            free(raw_response);
             response->net_status = LEONOS_NET_STATUS_TLS_FAILED;
             return 0;
         }
@@ -958,16 +981,17 @@ static int http_fetch_once(const char *url_text,
                 return 0;
             }
         }
-        while (raw_len + 1U < request->response_body_capacity) {
+        while (raw_len + 1U < raw_capacity) {
             long got = leonos_socket_recv(socket,
-                                          request->response_body + raw_len,
-                                          request->response_body_capacity - raw_len - 1U,
+                                          raw_response + raw_len,
+                                          raw_capacity - raw_len - 1U,
                                           raw_len ? 1200U : timeout_ms,
                                           &net_status);
             if (got < 0) {
                 printf("[http] response read failed host=%s ret=%ld status=%u raw=%u\n",
                        url.host, got, net_status, raw_len);
                 leonos_socket_close(socket);
+                if (raw_response_owned) free(raw_response);
                 response->net_status = LEONOS_NET_STATUS_TCP_FAILED;
                 return 0;
             }
@@ -982,30 +1006,33 @@ static int http_fetch_once(const char *url_text,
         }
     }
     leonos_socket_close(socket);
-    request->response_body[raw_len] = 0;
+    raw_response[raw_len] = 0;
     response->net_status = net_status;
-    if (raw_len + 1U >= request->response_body_capacity) {
+    if (raw_len + 1U >= raw_capacity) {
         response->flags |= LEONOS_HTTP_FLAG_TRUNCATED;
     }
     if (net_status != LEONOS_NET_STATUS_OK) {
         printf("[http] response transport failed host=%s status=%u raw=%u\n",
                url.host, net_status, raw_len);
+        if (raw_response_owned) free(raw_response);
         return 0;
     }
-    body_offset = http_find_body_offset(request->response_body, raw_len);
+    body_offset = http_find_body_offset(raw_response, raw_len);
     if (!body_offset) {
         printf("[http] response missing header terminator host=%s raw=%u\n",
                url.host, raw_len);
         response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+        if (raw_response_owned) free(raw_response);
         return 0;
     }
     header_len = body_offset;
-    response->http_status = http_parse_status_code(request->response_body,
+    response->http_status = http_parse_status_code(raw_response,
                                                    header_len);
     if (!response->http_status) {
         printf("[http] response status parse failed host=%s headers=%u raw=%u\n",
                url.host, header_len, raw_len);
         response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+        if (raw_response_owned) free(raw_response);
         return 0;
     }
     response->headers_len = header_len;
@@ -1016,18 +1043,18 @@ static int http_fetch_once(const char *url_text,
         }
         http_copy_bytes(request->response_headers,
                         request->response_headers_capacity,
-                        request->response_body,
+                        raw_response,
                         response->headers_len);
     }
-    http_header_value(request->response_body, header_len, "Content-Type",
+    http_header_value(raw_response, header_len, "Content-Type",
                       response->content_type, sizeof(response->content_type));
-    http_header_value(request->response_body, header_len, "Location",
+    http_header_value(raw_response, header_len, "Location",
                       location, location_cap);
     transfer_encoding[0] = 0;
-    http_header_value(request->response_body, header_len, "Transfer-Encoding",
+    http_header_value(raw_response, header_len, "Transfer-Encoding",
                       transfer_encoding, sizeof(transfer_encoding));
     content_length_text[0] = 0;
-    if (http_header_value(request->response_body, header_len, "Content-Length",
+    if (http_header_value(raw_response, header_len, "Content-Length",
                           content_length_text, sizeof(content_length_text))) {
         int ok = 0;
         response->content_length = http_parse_decimal(content_length_text, &ok);
@@ -1037,16 +1064,28 @@ static int http_fetch_once(const char *url_text,
     }
     if (http_contains_ignore_case(transfer_encoding, "chunked")) {
         response->flags |= LEONOS_HTTP_FLAG_CHUNKED;
-        response->body_len = http_decode_chunked(request->response_body,
+        response->body_len = http_decode_chunked(raw_response,
                                                 body_offset, raw_len,
-                                                request->response_body_capacity,
+                                                raw_capacity,
                                                 &response->flags);
     } else {
-        response->body_len = http_copy_body(request->response_body,
+        response->body_len = http_copy_body(raw_response,
                                            body_offset, raw_len,
-                                           request->response_body_capacity,
+                                           raw_capacity,
                                            response->content_length,
                                            &response->flags);
+    }
+    if (raw_response_owned) {
+        uint32_t body_len = response->body_len;
+        if (body_len + 1U > request->response_body_capacity) {
+            body_len = request->response_body_capacity
+                           ? request->response_body_capacity - 1U : 0;
+            response->flags |= LEONOS_HTTP_FLAG_TRUNCATED;
+        }
+        if (body_len) memcpy(request->response_body, raw_response, body_len);
+        if (request->response_body_capacity) request->response_body[body_len] = 0;
+        response->body_len = body_len;
+        free(raw_response);
     }
     printf("[http] response host=%s status=%u headers=%u raw=%u body=%u length=%u flags=0x%x type=%s\n",
            url.host, response->http_status, response->headers_len, raw_len,
@@ -1118,6 +1157,12 @@ int leonos_http_request(const struct leonos_http_request *request,
         if (leonos_http_resolve_url(current_url, location,
                                     next_url, sizeof(next_url)) < 0) {
             response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+            return 0;
+        }
+        if (http_url_is_secure(current_url) &&
+            !http_url_is_secure(next_url)) {
+            printf("[http] rejected HTTPS downgrade redirect\n");
+            response->net_status = LEONOS_NET_STATUS_TLS_FAILED;
             return 0;
         }
         http_copy_text(current_url, sizeof(current_url), next_url);
@@ -1578,6 +1623,12 @@ int leonos_http_download(const char *url, const char *output_path,
                 leonos_http_resolve_url(current_url, stream.location,
                                         next_url, sizeof(next_url)) < 0) {
                 response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+                return -1;
+            }
+            if (http_url_is_secure(current_url) &&
+                !http_url_is_secure(next_url)) {
+                printf("[http] rejected HTTPS download downgrade redirect\n");
+                response->net_status = LEONOS_NET_STATUS_TLS_FAILED;
                 return -1;
             }
             http_copy_text(current_url, sizeof(current_url), next_url);

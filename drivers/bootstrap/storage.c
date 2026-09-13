@@ -7,6 +7,7 @@
  * to the storage subsystem while each feature has a focused source file.
  */
 #include "storage/storage_internal.h"
+#include <ntclks/tmpfs.h>
 #include "storage/storage_state.c"
 #include "storage/storage_ext2_cache.c"
 #include "storage/storage_ide.c"
@@ -22,6 +23,7 @@
 #include "storage/storage_mount.c"
 #include "storage/storage_vfs.c"
 #include "storage/storage_mounts.c"
+#include "storage/storage_tmpfs.c"
 #include "storage/storage_permissions.c"
 #include "storage/storage_statfs.c"
 #include "storage/storage_installer.c"

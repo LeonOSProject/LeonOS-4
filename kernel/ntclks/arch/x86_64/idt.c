@@ -420,13 +420,15 @@ static void signal_user_page_fault(struct trap_frame *frame, uint64_t cr2)
         bugcheck_trap("Unhandled Page Fault", frame, cr2);
     }
     format_user_page_fault_report(report, sizeof(report), task, frame, cr2);
-    console_printf("[ntclks] user page fault SIGSEGV pid=%u name=%s cr2=0x%llx rip=0x%llx error=0x%llx\n",
+    uint32_t signal = task->page_fault_signal == 7 ? 7 : 11;
+    console_printf("[ntclks] user page fault signal=%u pid=%u name=%s cr2=0x%llx rip=0x%llx error=0x%llx\n",
+                   signal,
                    task->pid,
                    task->name,
                    (unsigned long long)cr2,
                    (unsigned long long)frame->rip,
                    (unsigned long long)frame->error);
-    kernel_signal_force_fault(task, 11, syscall_page_fault_signal_code(task, cr2), cr2);
+    kernel_signal_force_fault(task, signal, syscall_page_fault_signal_code(task, cr2), cr2);
 }
 
 /**

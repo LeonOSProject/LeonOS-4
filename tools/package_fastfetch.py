@@ -58,7 +58,7 @@ def obtain_binary(cache: Path, source: Path | None) -> None:
         with tempfile.TemporaryDirectory(prefix=".fastfetch-download-", dir=cache.parent) as directory:
             candidate = Path(directory) / "fastfetch"
             subprocess.run([
-                "curl", "--proxy", "http://127.0.0.1:12334", "--fail", "--location",
+                "curl", "--fail", "--location",
                 "--proto", "=https", "--proto-redir", "=https",
                 "--retry", "3", "--connect-timeout", "30", "--max-time", "180",
                 "--output", str(candidate), BINARY_URL,

@@ -23,13 +23,17 @@ sudo apt-get install -y \
   build-essential ninja-build meson clang llvm lld \
   grub-efi-amd64-bin grub-pc-bin grub-common xorriso \
   mtools dosfstools e2fsprogs fakeroot gdisk qemu-utils python3 python3-pil \
-  git make bison flex bc pkg-config
+  git make bison flex bc pkg-config curl ca-certificates openssl
 
 # Requires rustup; install it from https://rustup.rs when it is unavailable.
 rustup toolchain install stable --profile minimal
 rustup default stable
 rustup target add x86_64-unknown-none
 ```
+
+构建下载默认直连，不要求运行本机代理服务，也不绑定任何代理端口。
+需要代理时可自行设置标准的 `http_proxy`、`https_proxy`、`all_proxy` 和
+`no_proxy` 环境变量；构建脚本不会覆盖它们。下载仍保留 TLS、校验和及签名验证。
 
 编译命令：
 

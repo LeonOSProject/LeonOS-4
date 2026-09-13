@@ -194,14 +194,7 @@ ESP_MIDDLELAYER = "/leonos/middlelayer.sys"
 ESP_KERNELDEBUG_MARKER = "/leonos/state/kerneldebug.next"
 ESP_DISPLAY_CONF = "/leonos/config/display.conf"
 
-# Python and GCC keep a relocatable launcher in /usr/bin; the real trees live
-# under /opt.  Python exposes python/python3/python3.14 as symlinks to the one
-# launcher so there is still a single executable image.
-PYTHON_LAUNCHER = "python3.14"
-PYTHON_ALIASES = ("python", "python3")
-GCC_LAUNCHER = "leonos-musl-cc"
-# Symbolic command aliases for the GCC suite; the launcher derives the real
-# compiler name from argv[0].
+# Former build-owned command paths, retained for incremental staging cleanup.
 GCC_ALIASES = (
     "addr2line", "ar", "as", "c++", "c++filt", "cc", "cpp", "elfedit", "g++",
     "gcc", "gcc-15.1.0", "gcc-ar", "gcc-nm", "gcc-ranlib", "gcov", "gcov-dump",
@@ -279,17 +272,21 @@ _PAYLOAD_PATHS: dict[str, tuple[str, ...]] = {
     "less": (f"{USR_BIN}/less", f"{LICENSES}/less"),
     "lua": (OPT_LUA, f"{USR_BIN}/lua", f"{USR_LIB}/liblua.so.5",
             f"{LICENSES}/lua"),
-    "musl-gcc": (OPT_DYNE, *tuple(f"{USR_BIN}/{name}" for name in GCC_ALIASES),
-                 f"{LICENSES}/musl-gcc", f"{EXAMPLES}/musl-gcc"),
     "ncurses": (f"{TERMINFO}", *tuple(f"{USR_BIN}/{name}" for name in NCURSES_COMMANDS),
                 f"{LICENSES}/ncurses"),
-    "python": (OPT_PYTHON,
-               *tuple(f"{USR_BIN}/{name}" for name in ("python", "python3", "python3.14")),
-               f"{LICENSES}/python", f"{EXAMPLES}/python"),
     "sl": (f"{USR_BIN}/sl", f"{LICENSES}/sl"),
-    "tcc": (OPT_TCC, f"{USR_BIN}/tcc", f"{LICENSES}/tcc"),
     "vim": (f"{USR_BIN}/vim", f"{USR_SHARE}/vim", f"{LICENSES}/vim"),
 }
+
+# Only used on host build staging, never on a user's installed filesystem.
+RETIRED_TOOL_PATHS = (
+    OPT_DYNE, OPT_PYTHON, OPT_TCC, f"{LEONOS_APPS}/tcc",
+    *(f"{USR_BIN}/{name}" for name in (*GCC_ALIASES, "python", "python3", "python3.14", "tcc")),
+    *(f"{USR_BIN}/x86_64-linux-musl-{name}" for name in GCC_ALIASES
+      if not name.startswith("musl-")),
+    *(f"{LICENSES}/{name}" for name in ("musl-gcc", "python", "tcc")),
+    *(f"{EXAMPLES}/{name}" for name in ("musl-gcc", "python")),
+)
 
 
 def tool_payload_paths(package: str) -> tuple[str, ...]:
@@ -336,17 +333,8 @@ def builtin_command_links(enabled=None) -> list[tuple[str, str]]:
         entries.append((link, relative_symlink_target(link, f"{BIN}/busybox")))
     if enabled("cmd"):
         add("cmd", OPT_CMD + "/cmd.elf")
-    if enabled("tcc"):
-        add("tcc", OPT_TCC + "/tcc.elf")
     if enabled("lua"):
         add("lua", OPT_LUA + "/lua.elf")
-    if enabled("python"):
-        for alias in PYTHON_ALIASES:
-            # python/python3 live in the same directory as the launcher.
-            entries.append((f"{USR_BIN}/{alias}", PYTHON_LAUNCHER))
-    if enabled("musl-gcc"):
-        for alias in GCC_ALIASES:
-            add(alias, OPT_DYNE + "/bin/" + GCC_LAUNCHER)
     return entries
 
 

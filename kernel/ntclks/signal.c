@@ -247,6 +247,7 @@ static int signal_setup_frame(struct task *task, int sig,
         uint64_t nr = task->restart_syscall - 1;
         bool sleeping = nr == __NR_nanosleep || nr == __NR_clock_nanosleep;
         bool interruptible = nr == __NR_read || nr == __NR_write || nr == __NR_readv ||
+            nr == __NR_pread64 || nr == __NR_pwrite64 ||
             nr == __NR_preadv || nr == __NR_preadv2 || nr == __NR_pwritev || nr == __NR_pwritev2 ||
             nr == __NR_writev || nr == __NR_recvfrom || nr == __NR_sendto ||
             nr == __NR_recvmsg || nr == __NR_sendmsg || nr == __NR_accept ||
@@ -266,6 +267,10 @@ static int signal_setup_frame(struct task *task, int sig,
         bool batch = task->mmsg.active;
         int64_t batch_result = batch ? task_socket_mmsg_interrupt(task, received) : 0;
         received = task_socket_cancel_receive(task);
+        if (task->regular_io.active) {
+            received = task->regular_io.done;
+            storage_drain_task_io(task->pid);
+        }
         task_release_syscall_file(task);
         if (received || (batch && batch_result != -LINUX_EINTR) || (interruptible && !restart)) {
             frame->rip += 2;

@@ -140,7 +140,7 @@ static int proc_fill_content(const char *path, char *buffer, uint32_t capacity)
     }
     if (proc_text_eq(path, "/proc/filesystems")) {
         proc_append_text(buffer, &pos, capacity,
-                         "\text2\n\tvfat\n\texfat\n\tiso9660\nnodev\tproc\nnodev\tdevfs\nnodev\tsysfs\n");
+                         "\text2\n\tvfat\n\texfat\n\tiso9660\nnodev\tproc\nnodev\tdevfs\nnodev\tsysfs\nnodev\ttmpfs\n");
         return 0;
     }
     if (proc_text_eq(path, "/proc/sys/kernel/hostname") ||

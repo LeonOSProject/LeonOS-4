@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "current_distributor": "leonos-build",
+  "apk_registration": "not-installed",
+  "groups": {
+    "leonos-apps": {
+      "destination": "leonos",
+      "components": ["init", "imd", "windowd", "desktop", "installer", "login", "serviced", "shell", "fileman", "taskmgr", "settings", "terminal", "run", "osver", "netctl", "servicemgr", "diskmgr", "devmgr", "drvmgr", "sysconfdialog", "apiapp", "sudod", "hello", "uidemo", "cjktest", "notepad", "calc", "minesweeper", "memtest", "smptest", "abittest", "ipctest", "bugtest", "ping", "httpget", "downloadmgr", "browser", "imageview", "wavplay", "mp3play", "oshlp", "helloworld", "guitest", "pleditor", "stardusthello", "stardustlayout", "stardustshowcase", "doomlauncher", "doom", "oschinpt", "cmd", "stardustui", "portablegl", "glxgears", "leonmmcoset", "xiaobai"],
+      "paths": ["usr/lib/leonos", "usr/share/leonos", "usr/share/fonts/leonos", "etc/leonos", "usr/lib/libportablegl.so.1"],
+      "reason": "Native desktop, service, graphics and application interfaces. Embedded dependencies remain part of their actual consumers."
+    },
+    "leonos-fastfetch": {
+      "destination": "leonos",
+      "components": ["fastfetch"],
+      "future_apk_conflicts": ["fastfetch"],
+      "reason": "Retain the verified custom release with LeonOS Logo. The future real local APK must depend on !fastfetch. This manifest does not enforce that conflict."
+    },
+    "musl": {
+      "destination": "alpine-after-validation",
+      "components": [],
+      "paths": ["lib/ld-musl-x86_64.so.1", "lib/libc.so", "etc/ld-musl-x86_64.path"],
+      "alpine_candidates": ["musl"],
+      "reason": "Password-file locking patch and loader ABI require validation before replacing the running system libc. No fabricated musl provides."
+    },
+    "leonos-mimalloc": {
+      "destination": "leonos",
+      "components": [],
+      "paths": ["lib/libmimalloc.so.3"],
+      "reason": "LeonOS runtime allocator contract; statically linked copies belong to their consumers."
+    },
+    "leonos-musl-dev": {
+      "destination": "leonos",
+      "components": [],
+      "paths": ["usr/share/licenses/leonos-musl-dev"],
+      "reason": "Default-installed headers, startup objects and static libraries generated from the exact runtime musl sysroot. The APK builder assigns their exact file paths when packaging and repackaging roots."
+    },
+    "busybox": {
+      "destination": "alpine-after-validation",
+      "components": ["busybox"],
+      "alpine_candidates": ["busybox"],
+      "reason": "Transfer /bin/sh and applet symlinks together after shell, init and installer regressions. Separately installed utilities retain their own paths."
+    },
+    "authentication": {
+      "destination": "alpine-after-validation",
+      "components": ["sudo", "su"],
+      "library_stems": ["lib/libpam", "lib/libpam_misc", "lib/libpamc", "lib/libcrypt", "usr/lib/libsubid"],
+      "paths": ["bin/su", "usr/bin/sudo", "usr/bin/sudoedit", "usr/bin/passwd", "sbin/unix_chkpwd", "lib/security", "usr/lib/security", "usr/lib/sudo", "etc/pam.d", "etc/security", "etc/sudoers", "etc/sudoers.d", "etc/sudo.conf", "lib/libpam.so.0", "lib/libpam_misc.so.0", "lib/libpamc.so.0", "lib/libcrypt.so.2"],
+      "alpine_candidates": ["linux-pam", "shadow", "sudo", "libxcrypt"],
+      "reason": "PAM patches and pam_leonos_password need real local packaging; preserve policy, setuid modes and login semantics before any upstream replacement."
+    },
+    "auth-support-libraries": {
+      "destination": "alpine-after-validation",
+      "components": [],
+      "library_stems": ["lib/libbsd", "lib/libmd"],
+      "paths": ["usr/include/bsd", "usr/share/licenses/libbsd", "usr/share/licenses/libmd"],
+      "alpine_candidates": ["libbsd", "libmd"],
+      "reason": "Upstream dependencies of shadow; transfer headers, libraries and metadata with authentication consumers."
+    },
+    "storage-util-linux": {
+      "destination": "alpine-after-validation",
+      "components": [],
+      "library_stems": ["usr/lib/libfdisk", "usr/lib/libsmartcols", "usr/lib/libuuid", "usr/lib/libblkid", "usr/lib/libmount"],
+      "alpine_candidates": ["util-linux"],
+      "reason": "Includes split libraries and command packages; resolve actual repository file ownership before choosing subpackages. Installer relies on these tools."
+    },
+    "storage-filesystems": {
+      "destination": "alpine-after-validation",
+      "components": [],
+      "library_stems": ["usr/lib/libcom_err", "usr/lib/libe2p", "usr/lib/libext2fs", "usr/lib/libss"],
+      "paths": ["usr/include/ext2fs", "usr/include/ss", "usr/include/e2p", "usr/include/et", "usr/include/com_err.h", "usr/share/et", "usr/share/ss"],
+      "alpine_candidates": ["e2fsprogs", "dosfstools", "exfatprogs"],
+      "reason": "Transfer formatter/checker aliases with commands; preserve ext2 installer behavior."
+    },
+    "editors": {
+      "destination": "alpine-after-validation",
+      "components": ["vim", "less"],
+      "alpine_candidates": ["vim", "nano", "less"],
+      "reason": "Generic tools; transfer commands and runtime data together, then remove old built-in producers."
+    },
+    "ncurses": {
+      "destination": "alpine-after-validation",
+      "components": ["ncurses"],
+      "alpine_candidates": ["ncurses", "ncurses-terminfo"],
+      "reason": "Resolve terminal data/tools split and libraries from repository metadata; preserve leonos TERM support."
+    },
+    "nano": {
+      "destination": "alpine-after-validation",
+      "components": ["nano"],
+      "alpine_candidates": ["nano"],
+      "reason": "A real standalone nano package lets apk replace its complete payload with upstream nano."
+    },
+    "ca-certificates-bundle": {
+      "destination": "alpine-after-validation",
+      "components": [],
+      "paths": ["etc/ssl/certs/ca-certificates.crt"],
+      "alpine_candidates": ["ca-certificates-bundle"],
+      "reason": "The actual CA bundle is packaged separately so curl dependencies and authenticated upstream updates can own it."
+    },
+    "file": {
+      "destination": "alpine-after-validation",
+      "components": ["file"],
+      "alpine_candidates": ["file", "libmagic"],
+      "reason": "Binary, libmagic and magic.mgc must be transferred as a matching version set."
+    },
+    "lua": {
+      "destination": "alpine-after-validation",
+      "components": ["lua"],
+      "alpine_candidates": ["lua5.4"],
+      "reason": "Current liblua.so.5 and /opt/lua layout require native consumer migration; no false SONAME compatibility links."
+    },
+    "sqlite": {
+      "destination": "alpine-after-validation",
+      "components": ["sqlite"],
+      "paths": ["usr/lib/sqlite.so.3"],
+      "alpine_candidates": ["sqlite", "sqlite-libs"],
+      "reason": "Current custom SONAME and native consumers need migration before upstream library replacement."
+    },
+    "sl": {
+      "destination": "alpine-after-validation",
+      "components": ["sl"],
+      "alpine_candidates": ["sl"],
+      "reason": "Generic optional terminal application."
+    },
+    "trust": {
+      "destination": "alpine-after-validation",
+      "components": [],
+      "paths": ["etc/ssl/certs", "etc/ssl/cert.pem", "etc/apk/keys", "etc/apk/ca.pem", "usr/share/licenses/alpine-keys"],
+      "alpine_candidates": ["ca-certificates", "alpine-keys"],
+      "reason": "Transfer trust data via authenticated packages; validate certificate update triggers on LeonOS."
+    },
+    "leonos-base": {
+      "destination": "leonos",
+      "components": [],
+      "reason": "Fallback distribution inventory, not proof of an individual package producer. Includes kernel, boot, identity and layout; review every fallback before generating APKs."
+    }
+  },
+  "apk_only_future_packages": ["python3", "gcc", "g++", "binutils", "musl-dev", "tcc"],
+  "forbidden_shortcuts": ["fake-installed-database", "fake-provides", "force-overwrite", "disable-signature-verification", "disable-tls-verification"]
+}

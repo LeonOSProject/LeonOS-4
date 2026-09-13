@@ -9,6 +9,19 @@
 #include <stdarg.h>
 
 static unsigned fixture_cpus=1;
+int storage_install_list_disks(struct leonos_install_disk *disks, uint32_t capacity, uint32_t *count)
+{
+    *count = 1;
+    if (capacity) *disks = (struct leonos_install_disk){.id=0, .sector_size=512, .sector_count=131072};
+    return 0;
+}
+int storage_disk_block_info(uint32_t disk, int32_t part, uint64_t *start, uint64_t *count)
+{
+    if (disk || part > 0) return -2;
+    *start = part < 0 ? 0 : 2048;
+    *count = part < 0 ? 131072 : 32768;
+    return 0;
+}
 uint32_t smp_cpu_count(void) { return fixture_cpus; }
 bool smp_cpu_online(uint32_t cpu)
 {
@@ -76,6 +89,16 @@ int main(void)
     cpu_inventory_capture(0);
     char value[16384];
     struct storage_node node;
+    assert(proc_lookup("/sys/dev/block", &node) == 0 && node.type == LEONOS_FS_TYPE_DIR);
+    read_value("/sys/devices/platform/leonos-block/disk0/dev", value, sizeof(value));
+    assert(!strcmp(value, "259:0\n"));
+    read_value("/sys/devices/platform/leonos-block/disk0/disk0p1/partition", value, sizeof(value));
+    assert(!strcmp(value, "1\n"));
+    read_value("/sys/devices/platform/leonos-block/disk0/disk0p1/size", value, sizeof(value));
+    assert(!strcmp(value, "32768\n"));
+    read_value("/sys/devices/platform/leonos-block/disk0/uevent", value, sizeof(value));
+    assert(!strcmp(value, "MAJOR=259\nMINOR=0\nDEVNAME=disk0\nDEVTYPE=disk\n"));
+    assert(proc_readlink("/sys/dev/block/259:1", value, sizeof(value)) > 0);
     read_value("/proc/sys/kernel/ostype", value, sizeof(value));
     assert(!strcmp(value, "ntclks\n"));
     read_value("/proc/sys/kernel/osrelease", value, sizeof(value));

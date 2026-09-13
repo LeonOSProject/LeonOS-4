@@ -3,9 +3,9 @@
 LeonOS keeps third-party source code in `third_party/` and records Git-backed
 dependencies as submodules.
 
-## Prebuilt Native Toolchain
+## External Native Toolchain Test Fixture
 
-The default `musl-gcc` component packages the unchanged x86-64 archive from
+The optional regression fixture packages the unchanged x86-64 archive from
 [Dyne musl 2.2.0](https://github.com/dyne/musl/releases/tag/2.2.0): GCC 15.1.0,
 binutils 2.44, musl headers/static libraries, libgcc and libstdc++, plus the
 upstream supplementary sysroot. SHA256:
@@ -15,10 +15,12 @@ GCC Runtime Library Exception. Musl uses MIT. Bundled library notices remain
 inside `/opt/dyne`; compiler license texts and file hashes are installed under
 `/usr/share/licenses/musl-gcc`. See `userland/musl-gcc/README.md` for source/build
 recipe references, cache configuration and unchanged-binary verification.
+It is no longer a production component: normal ISO, installer, VMDK and SDK
+builds do not build or include it. GCC will be supplied by apk after integration.
 
-## Prebuilt Python Runtime
+## External Python Test Fixture
 
-The default `python` component includes the user-provided static musl CPython
+The optional regression fixture uses the user-provided static musl CPython
 3.14.7 archive `cpython-3.14.7+20260901-x86_64-unknown-linux-musl-lto+static-full.tar.zst`.
 SHA256: `e5a76e5893c39c89ed268ad71c3d6794c3be6b7236ec613449140c57686fc17f`.
 The unmodified executable and full installation are in `/opt/python`.
@@ -26,8 +28,8 @@ The archive's CPython and bundled dependency license texts, `PYTHON.json`, and
 package hashes are installed at `/usr/share/licenses/python`. CPython's license
 is recorded in `LICENSE.cpython.txt`; other bundled libraries retain their
 own notices. See `userland/python/README.md` for reproducible packaging and
-the static command launcher. This replaces the temporary 3.15 runtime in
-default images; it does not certify every Python module's Linux ABI usage.
+the static command launcher. Python is no longer included in production
+images or installer options; it will be supplied by apk after integration.
 
 ## Git Submodule Inventory
 
@@ -86,6 +88,15 @@ in the runtime's `.leonos-musl.json` metadata.
 `libleonos.so.2` and `libleonos.a` provide LeonOS extensions; they contain no
 replacement standard POSIX implementation. Legacy binaries must be rebuilt.
 See `MUSL_MIGRATION_2026-09-08.md` for exact validation and remaining gaps.
+
+## Alpine package signing keys
+
+The apk preparation seed includes the three x86_64 public keys selected by
+Alpine's `alpine-keys` 2.6-r0 APKBUILD for v3.24. They are copied unchanged to
+`/etc/apk/keys`; the official SHA-512 values, source URLs and MIT license
+declaration are recorded under `/usr/share/licenses/alpine-keys`. This trust
+store is separate from the HTTPS CA bundle and includes no private keys.
+See [APK_PREPARATION.md](APK_PREPARATION.md) for the repository/database scope.
 
 ## Authentication Dependencies
 
@@ -256,6 +267,10 @@ logfile output and shell pipes are disabled for the system build.
 
 ## TinyCC
 
+The former built-in TinyCC component has been removed from the production
+build, images, installer and generated SDK. The source and historical port
+below are retained for reference; future system installation will use apk.
+
 - Path: `third_party/tinycc`
 - Upstream: `https://github.com/TinyCC/tinycc.git`
 - Version: `0.9.28rc`
@@ -263,7 +278,7 @@ logfile output and shell pipes are disabled for the system build.
 - License: LGPL-2.1-or-later; the complete upstream `COPYING` is staged at
   `/opt/tcc/COPYING` beside the executable and runtime files.
 
-LeonOS builds TinyCC as the static, on-device x86_64 C compiler at
+The former build used TinyCC as the static, on-device x86_64 C compiler at
 `/opt/tcc/tcc.elf`. It uses the installed musl headers,
 `libleonos.a`, `libc.a`, musl CRT objects, the target support archive
 `libleonos-tcc-rt.a`, and TinyCC's `libtcc1.a` to produce normal static LeonOS

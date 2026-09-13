@@ -138,6 +138,23 @@ int main(int argc, char **argv)
         assert(ext2_mount() == 0);
         assert(!ext2_read_node(&node, 0, got, 8 * bs, &count) && !memcmp(data, got, count));
     }
+    assert(!ext2_write_file("/timestamps", NULL, 0));
+    assert(!ext2_lookup_path("/timestamps", &node));
+    assert(!ext2_read_inode(node.first_cluster, &inode));
+    assert(inode.atime == 1800000000 && inode.mtime == inode.atime && inode.ctime == inode.atime);
+    inode.mtime = inode.ctime = 1;
+    assert(!ext2_write_inode(node.first_cluster, &inode));
+    assert(!ext2_write_node(&node, 0, data, bs, &count));
+    assert(!ext2_read_inode(node.first_cluster, &inode));
+    assert(inode.mtime == 1800000000 && inode.ctime == inode.mtime);
+    inode.mtime = inode.ctime = 1;
+    assert(!ext2_write_inode(node.first_cluster, &inode));
+    assert(!ext2_write_node(&node, 0, data, 0, &count));
+    assert(!ext2_read_inode(node.first_cluster, &inode));
+    assert(inode.mtime == 1 && inode.ctime == 1);
+    assert(!ext2_truncate_file(&node, 0));
+    assert(!ext2_read_inode(node.first_cluster, &inode));
+    assert(inode.mtime == 1800000000 && inode.ctime == inode.mtime);
     assert(!fclose(disk));
     puts("PASS ext2 bounded writes, publication, rollback and zeroed holes");
 }

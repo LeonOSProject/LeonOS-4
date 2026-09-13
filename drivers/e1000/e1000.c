@@ -5,10 +5,12 @@
 
 static const struct leonos_driver_kernel_api *kernel_api;
 
-static void module_console_notice(void)
+static void e1000_log(const char *message)
 {
     if (kernel_api && kernel_api->console_write) {
-        kernel_api->console_write("[driver] e1000 state changed\n");
+        kernel_api->console_write("[e1000] ");
+        kernel_api->console_write(message);
+        kernel_api->console_write("\n");
     }
 }
 
@@ -20,7 +22,6 @@ static void module_console_notice(void)
     kernel_api->pci_write16((bus), (slot), (function), (offset), (value))
 #define pci_config_read32(bus, slot, function, offset) \
     kernel_api->pci_read32((bus), (slot), (function), (offset))
-#define console_printf(...) module_console_notice()
 
 #define E1000_VENDOR_INTEL 0x8086u
 #define E1000_DEVICE_82540EM 0x100eu
@@ -30,6 +31,7 @@ static void module_console_notice(void)
 
 #define E1000_REG_CTRL 0x0000u
 #define E1000_REG_STATUS 0x0008u
+#define E1000_REG_EERD 0x0014u
 #define E1000_REG_ICR 0x00c0u
 #define E1000_REG_IMC 0x00d8u
 #define E1000_REG_RCTL 0x0100u
@@ -48,6 +50,8 @@ static void module_console_notice(void)
 #define E1000_REG_MTA 0x5200u
 #define E1000_REG_RAL 0x5400u
 #define E1000_REG_RAH 0x5404u
+#define E1000_CTRL_SLU (1u << 6)
+#define E1000_CTRL_RST (1u << 26)
 
 #define E1000_RCTL_EN (1u << 1)
 #define E1000_RCTL_UPE (1u << 3)
@@ -69,7 +73,8 @@ static void module_console_notice(void)
 #define PCI_COMMAND_MEMORY 0x0002u
 #define PCI_COMMAND_BUS_MASTER 0x0004u
 
-#define E1000_RX_COUNT 16u
+/* Linux e1000's default accommodates receive bursts while a task is running. */
+#define E1000_RX_COUNT 256u
 #define E1000_TX_COUNT 16u
 #define E1000_BUFFER_SIZE 2048u
 #define E1000_TX_WAIT_SPINS 250000u
@@ -92,6 +97,9 @@ struct e1000_tx_desc {
     uint8_t css;
     uint16_t special;
 } __attribute__((packed));
+
+_Static_assert(E1000_RX_COUNT * sizeof(struct e1000_rx_desc) <= 4096,
+               "RX descriptors must fit their allocated page");
 
 struct module_e1000_info {
     uint32_t present;
@@ -202,7 +210,7 @@ static uint64_t e1000_bar0_mmio(const struct pci_device *dev)
     return addr;
 }
 
-static void e1000_read_mac(void)
+static int e1000_read_mac(void)
 {
     uint32_t ral = e1000_reg_read(E1000_REG_RAL);
     uint32_t rah = e1000_reg_read(E1000_REG_RAH);
@@ -212,15 +220,22 @@ static void e1000_read_mac(void)
     g_e1000.mac[3] = (uint8_t)(ral >> 24);
     g_e1000.mac[4] = (uint8_t)rah;
     g_e1000.mac[5] = (uint8_t)(rah >> 8);
-    if ((g_e1000.mac[0] | g_e1000.mac[1] | g_e1000.mac[2] |
-         g_e1000.mac[3] | g_e1000.mac[4] | g_e1000.mac[5]) == 0) {
-        g_e1000.mac[0] = 0x52;
-        g_e1000.mac[1] = 0x54;
-        g_e1000.mac[2] = 0x00;
-        g_e1000.mac[3] = 0x12;
-        g_e1000.mac[4] = 0x34;
-        g_e1000.mac[5] = 0x56;
+    if (!(rah & E1000_RAH_AV) || (g_e1000.mac[0] & 1u) || !(ral | (rah & 0xffff))) {
+        for (unsigned word = 0; word < 3; ++word) {
+            e1000_reg_write(E1000_REG_EERD, 1u | (word << 8));
+            uint32_t value = 0;
+            for (unsigned spin = 0; spin < E1000_TX_WAIT_SPINS; ++spin) {
+                value = e1000_reg_read(E1000_REG_EERD);
+                if (value & (1u << 4)) break;
+                e1000_cpu_relax();
+            }
+            if (!(value & (1u << 4))) return -1;
+            g_e1000.mac[word * 2] = (uint8_t)(value >> 16);
+            g_e1000.mac[word * 2 + 1] = (uint8_t)(value >> 24);
+        }
     }
+    if ((g_e1000.mac[0] & 1u) || !(g_e1000.mac[0] | g_e1000.mac[1] |
+        g_e1000.mac[2] | g_e1000.mac[3] | g_e1000.mac[4] | g_e1000.mac[5])) return -1;
     ral = (uint32_t)g_e1000.mac[0] |
           ((uint32_t)g_e1000.mac[1] << 8) |
           ((uint32_t)g_e1000.mac[2] << 16) |
@@ -230,6 +245,7 @@ static void e1000_read_mac(void)
           E1000_RAH_AV;
     e1000_reg_write(E1000_REG_RAL, ral);
     e1000_reg_write(E1000_REG_RAH, rah);
+    return 0;
 }
 
 static int e1000_alloc_rings(void)
@@ -310,14 +326,17 @@ static void e1000_hardware_init(void)
     e1000_memzero(&g_e1000, sizeof(g_e1000));
 
     if (e1000_find(&dev) < 0) {
-        console_printf("[ntclks] e1000 not found\n");
+        struct leonos_driver_pci_device other;
+        if (kernel_api->pci_find(0x1022, 0x2000, &other) == 0)
+            e1000_log("VMware PCnet detected; select ethernet0.virtualDev = e1000 in the powered-off VM configuration");
+        else e1000_log("no supported Intel PCI device found");
         return;
     }
     g_e1000.present = 1;
     g_e1000.pci = dev;
     mmio = e1000_bar0_mmio(&dev);
     if (!mmio) {
-        console_printf("[ntclks] e1000 present but BAR0 MMIO is unusable\n");
+        e1000_log("BAR0 MMIO is unassigned or outside the supported 32-bit mapping");
         return;
     }
     g_e1000.mmio_base = (uintptr_t)mmio;
@@ -327,23 +346,36 @@ static void e1000_hardware_init(void)
     command &= (uint16_t)~PCI_COMMAND_IO;
     pci_config_write16(dev.bus, dev.slot, dev.function, 0x04, command);
 
-    e1000_read_mac();
+    e1000_reg_write(E1000_REG_IMC, 0xffffffffu);
+    e1000_reg_write(E1000_REG_RCTL, 0);
+    e1000_reg_write(E1000_REG_TCTL, 0);
+    (void)e1000_reg_read(E1000_REG_STATUS);
+    kernel_api->sleep_ms(10);
+    e1000_reg_write(E1000_REG_CTRL, e1000_reg_read(E1000_REG_CTRL) | E1000_CTRL_RST);
+    kernel_api->sleep_ms(20);
+    if (e1000_reg_read(E1000_REG_CTRL) & E1000_CTRL_RST) {
+        e1000_log("controller reset timed out");
+        return;
+    }
+    e1000_reg_write(E1000_REG_IMC, 0xffffffffu);
+    (void)e1000_reg_read(E1000_REG_ICR);
+    if (e1000_read_mac() < 0) {
+        e1000_log("no valid hardware MAC in RAR or EEPROM");
+        return;
+    }
+    e1000_reg_write(E1000_REG_CTRL, e1000_reg_read(E1000_REG_CTRL) | E1000_CTRL_SLU);
     if (e1000_alloc_rings() < 0) {
-        console_printf("[ntclks] e1000 ring allocation failed\n");
+        e1000_log("ring allocation failed");
         return;
     }
     e1000_configure_rx_tx();
     g_e1000.active = 1;
-    console_printf("[ntclks] e1000 ready pci=%u:%u.%u device=0x%x mmio=%p status=0x%x mac=%x:%x:%x:%x:%x:%x\n",
-                   dev.bus, dev.slot, dev.function, dev.device_id,
-                   (void *)g_e1000.mmio_base, e1000_reg_read(E1000_REG_STATUS),
-                   g_e1000.mac[0], g_e1000.mac[1], g_e1000.mac[2],
-                   g_e1000.mac[3], g_e1000.mac[4], g_e1000.mac[5]);
+    e1000_log("descriptor rings initialized; hardware MAC loaded");
 }
 
 static int e1000_is_ready(void)
 {
-    return g_e1000.active != 0;
+    return g_e1000.active && (e1000_reg_read(E1000_REG_STATUS) & (1u << 1));
 }
 
 static const uint8_t *e1000_mac(void)
@@ -375,6 +407,7 @@ static int e1000_send(const void *frame, uint32_t len)
     g_e1000.tx[index].status = 0;
     g_e1000.tx[index].css = 0;
     g_e1000.tx[index].special = 0;
+    __atomic_thread_fence(__ATOMIC_RELEASE);
     next = (index + 1u) % E1000_TX_COUNT;
     g_e1000.tx_tail = next;
     e1000_reg_write(E1000_REG_TDT, next);
@@ -403,8 +436,10 @@ static int e1000_poll(void *frame, uint32_t capacity, uint32_t *out_len)
     if ((status & E1000_RX_STATUS_DD) == 0) {
         return 0;
     }
+    __atomic_thread_fence(__ATOMIC_ACQUIRE);
     len = g_e1000.rx[index].length;
-    if ((status & E1000_RX_STATUS_EOP) == 0 || g_e1000.rx[index].errors) {
+    if ((status & E1000_RX_STATUS_EOP) == 0 || g_e1000.rx[index].errors ||
+        len > E1000_BUFFER_SIZE || len > capacity) {
         len = 0;
     }
     if (len > capacity) {
@@ -418,6 +453,7 @@ static int e1000_poll(void *frame, uint32_t capacity, uint32_t *out_len)
     g_e1000.rx[index].status = 0;
     g_e1000.rx[index].errors = 0;
     g_e1000.rx[index].special = 0;
+    __atomic_thread_fence(__ATOMIC_RELEASE);
     e1000_reg_write(E1000_REG_RDT, index);
     g_e1000.rx_index = (index + 1u) % E1000_RX_COUNT;
     if (out_len) {
@@ -433,7 +469,7 @@ static void e1000_get_info(struct module_e1000_info *info)
     }
     *info = (struct module_e1000_info){
         .present = g_e1000.present,
-        .active = g_e1000.active,
+        .active = e1000_is_ready() != 0,
         .vendor_id = g_e1000.pci.vendor_id,
         .device_id = g_e1000.pci.device_id,
         .bus = g_e1000.pci.bus,
@@ -489,6 +525,8 @@ static void e1000_release_rings(void)
     e1000_memzero(&g_e1000, sizeof(g_e1000));
 }
 
+static void e1000_driver_fini(void);
+
 static int e1000_driver_init(const struct leonos_driver_kernel_api *api)
 {
     static const struct leonos_driver_e1000_ops ops = {
@@ -504,10 +542,13 @@ static int e1000_driver_init(const struct leonos_driver_kernel_api *api)
     }
     kernel_api = api;
     e1000_hardware_init();
-    if (!e1000_is_ready()) {
+    if (!g_e1000.active) {
+        e1000_driver_fini();
         return -19;
     }
-    return kernel_api->register_e1000(&ops);
+    int ret = kernel_api->register_e1000(&ops);
+    if (ret < 0) e1000_driver_fini();
+    return ret;
 }
 
 static void e1000_driver_fini(void)
@@ -516,6 +557,8 @@ static void e1000_driver_fini(void)
         e1000_reg_write(E1000_REG_RCTL, 0);
         e1000_reg_write(E1000_REG_TCTL, 0);
         e1000_reg_write(E1000_REG_IMC, 0xffffffffu);
+        (void)e1000_reg_read(E1000_REG_STATUS);
+        kernel_api->sleep_ms(10);
     }
     e1000_release_rings();
 }

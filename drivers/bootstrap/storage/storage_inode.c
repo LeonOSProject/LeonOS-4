@@ -34,7 +34,7 @@ int storage_inode_get(const struct storage_node *node, struct storage_inode_ref 
 {
     if (!node || !out) return -22;
     *out = NULL;
-    if (!(node->flags & STORAGE_NODE_FLAG_EXT2)) return 0;
+    if (!(node->flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS))) return 0;
     uint64_t flags;
     kernel_execution_lock_irqsave(&flags);
     struct storage_inode_ref *ref = storage_inode_find(node->volume_id, node->first_cluster);
@@ -42,14 +42,17 @@ int storage_inode_get(const struct storage_node *node, struct storage_inode_ref 
         struct storage_volume *previous = NULL;
         struct ext2_inode inode;
         int ret = storage_select_node_volume(node, &previous);
-        if (!ret) ret = ext2_read_inode(node->first_cluster, &inode);
+        bool memory = node->flags & STORAGE_NODE_FLAG_TMPFS;
+        if (!ret && memory) ret = tmpfs_hold(g_storage.tmpfs, node->first_cluster);
+        else if (!ret) ret = ext2_read_inode(node->first_cluster, &inode);
         storage_restore_volume(previous);
-        if (ret < 0 || !inode.mode) {
+        if (ret < 0 || (!memory && !inode.mode)) {
             kernel_execution_unlock_irqrestore(flags);
             return ret < 0 ? ret : -2;
         }
         ref = kernel_malloc(sizeof(*ref));
         if (!ref) {
+            if (memory) tmpfs_drop(g_volumes[node->volume_id].tmpfs, node->first_cluster);
             kernel_execution_unlock_irqrestore(flags);
             return -12;
         }
@@ -81,7 +84,10 @@ int storage_inode_put(struct storage_inode_ref *reference)
     struct ext2_inode inode;
     int ret = 0;
     bool saved_async = storage_io_async_context;
-    if (reference->unlinked) {
+    if (reference->node.flags & STORAGE_NODE_FLAG_TMPFS) {
+        ret = storage_select_node_volume(&reference->node, &previous);
+        if (!ret) tmpfs_drop(g_storage.tmpfs, reference->node.first_cluster);
+    } else if (reference->unlinked) {
         /* Final close/munmap cannot be replayed after reference release. */
         storage_io_async_context = false;
         ret = storage_select_node_volume(&reference->node, &previous);
@@ -109,7 +115,7 @@ int storage_inode_put(struct storage_inode_ref *reference)
 int storage_inode_refresh(struct storage_node *node)
 {
     if (!node) return -22;
-    if (!(node->flags & STORAGE_NODE_FLAG_EXT2)) return 0;
+    if (!(node->flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS))) return 0;
     struct linux_stat_abi info;
     int ret = storage_inode_stat(node, &info);
     if (!ret) node->size = info.st_size;
@@ -120,14 +126,16 @@ int storage_write_held_node(struct storage_node *node, uint64_t offset,
                             const void *buffer, uint32_t length, uint32_t *written)
 {
     if (written) *written = 0;
-    if (!node || !(node->flags & STORAGE_NODE_FLAG_EXT2)) return -95;
+    if (!node || !(node->flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS))) return -95;
     uint64_t flags;
     struct storage_volume *previous = NULL;
     kernel_execution_lock_irqsave(&flags);
     int ret = storage_select_node_volume(node, &previous);
     if (!ret) {
         storage_begin_mutation();
-        ret = ext2_write_node(node, offset, buffer, length, written);
+        ret = node->flags & STORAGE_NODE_FLAG_TMPFS ?
+            tmpfs_write(g_storage.tmpfs, node->first_cluster, offset, buffer, length, written) :
+            ext2_write_node(node, offset, buffer, length, written);
     }
     storage_restore_volume(previous);
     kernel_execution_unlock_irqrestore(flags);
@@ -136,14 +144,15 @@ int storage_write_held_node(struct storage_node *node, uint64_t offset,
 
 int storage_truncate_held_node(struct storage_node *node, uint64_t length)
 {
-    if (!node || !(node->flags & STORAGE_NODE_FLAG_EXT2)) return -95;
+    if (!node || !(node->flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS))) return -95;
     uint64_t flags;
     struct storage_volume *previous = NULL;
     kernel_execution_lock_irqsave(&flags);
     int ret = storage_select_node_volume(node, &previous);
     if (!ret) {
         storage_begin_mutation();
-        ret = ext2_truncate_file(node, length);
+        ret = node->flags & STORAGE_NODE_FLAG_TMPFS ? tmpfs_truncate(g_storage.tmpfs, node->first_cluster, length) :
+            ext2_truncate_file(node, length);
     }
     if (!ret) node->size = length;
     storage_restore_volume(previous);

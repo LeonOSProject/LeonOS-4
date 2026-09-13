@@ -82,7 +82,7 @@ static int spawn(char *const args[], int output, uint32_t *pid_out)
 }
 
 static int run_as(const char *user, const char *password, char *const argv[],
-                  unsigned mode, uint32_t *pid)
+                  unsigned mode, int output, uint32_t *pid)
 {
     if (!argv || !argv[0] || !pid) { errno = EINVAL; return -1; }
     if (password && *password) { errno = ENOTSUP; return -1; }
@@ -96,8 +96,9 @@ static int run_as(const char *user, const char *password, char *const argv[],
     size_t n = 0;
     args[n++] = mode ? "/bin/su" : "/usr/bin/sudo";
     if (!mode) {
-        args[n++] = isatty(STDIN_FILENO) ? "-u" : "-A";
-        if (!isatty(STDIN_FILENO)) args[n++] = "-u";
+        int askpass = output >= 0 || !isatty(STDIN_FILENO);
+        args[n++] = askpass ? "-A" : "-u";
+        if (askpass) args[n++] = "-u";
         args[n++] = (char *)(user && *user ? user : "root");
         args[n++] = "--";
         for (size_t i = 0; i < count; ++i) args[n++] = argv[i];
@@ -109,17 +110,22 @@ static int run_as(const char *user, const char *password, char *const argv[],
         args[n++] = (char *)(user && *user ? user : "root");
         for (size_t i = 1; i < count; ++i) args[n++] = argv[i];
     }
-    int result = spawn(args, -1, pid), error = errno;
+    int result = spawn(args, output, pid), error = errno;
     free(args); errno = error;
     return result;
 }
 
 int leonos_sudo_run(const char *u, const char *p, char *const a[], uint32_t *pid)
-{ return run_as(u, p, a, 0, pid); }
+{ return run_as(u, p, a, 0, -1, pid); }
+int leonos_sudo_run_stdout(const char *u, char *const a[], int output, uint32_t *pid)
+{
+    if (output < 0) { errno = EBADF; return -1; }
+    return run_as(u, NULL, a, 0, output, pid);
+}
 int leonos_sudo_run_switch(const char *u, const char *p, char *const a[], uint32_t *pid)
-{ return run_as(u, p, a, 1, pid); }
+{ return run_as(u, p, a, 1, -1, pid); }
 int leonos_sudo_run_login(const char *u, const char *p, char *const a[], uint32_t *pid)
-{ return run_as(u, p, a, 2, pid); }
+{ return run_as(u, p, a, 2, -1, pid); }
 
 int leonos_sudo_wait(uint32_t pid, int *status)
 {

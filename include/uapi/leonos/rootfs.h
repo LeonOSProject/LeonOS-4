@@ -13,6 +13,11 @@
     X("/dev/pts", 0755) \
     X("/dev/shm", 01777) \
     X("/etc", 0755) \
+    X("/etc/apk", 0755) \
+    X("/etc/apk/commit_hooks.d", 0755) \
+    X("/etc/apk/keys", 0755) \
+    X("/etc/apk/protected_paths.d", 0755) \
+    X("/etc/apk/repositories.d", 0755) \
     X("/etc/crontabs", 0755) \
     X("/etc/leonos", 0755) \
     X("/etc/modprobe.d", 0755) \
@@ -34,6 +39,12 @@
     X("/etc/sysctl.d", 0755) \
     X("/home", 0755) \
     X("/lib", 0755) \
+    X("/lib/apk", 0755) \
+    X("/lib/apk/commit_hooks.d", 0755) \
+    X("/lib/apk/db", 0755) \
+    X("/lib/apk/exec", 0755) \
+    X("/lib/apk/keys", 0755) \
+    X("/lib/apk/repositories.d", 0755) \
     X("/lib/firmware", 0755) \
     X("/lib/modules-load.d", 0755) \
     X("/lib/sysctl.d", 0755) \
@@ -80,6 +91,7 @@
     X("/usr/src", 0755) \
     X("/var", 0755) \
     X("/var/cache", 0755) \
+    X("/var/cache/apk", 0755) \
     X("/var/cache/leonos", 0755) \
     X("/var/cache/misc", 0755) \
     X("/var/empty", 0555) \
@@ -99,7 +111,9 @@
     X("/var/lock", "../run/lock") \
     X("/var/spool/mail", "../mail") \
     X("/var/spool/cron/crontabs", "../../../etc/crontabs") \
-    X("/etc/mtab", "../proc/mounts")
+    X("/etc/mtab", "../proc/mounts") \
+    X("/etc/ssl/cert.pem", "certs/ca-certificates.crt") \
+    X("/etc/apk/ca.pem", "../ssl/certs/ca-certificates.crt")
 
 #define LEONOS_DEFAULT_PATH "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 

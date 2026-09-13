@@ -1,6 +1,8 @@
 # TinyCC for LeonOS 4
 
-`tcc` is the on-device C compiler for x86_64 LeonOS userland.
+This is the historical port of the on-device C compiler. TinyCC has been
+removed from production builds, images, installer and generated SDKs in
+preparation for apk. The following documents the former port only.
 
 ## Supported first-stage workflow
 

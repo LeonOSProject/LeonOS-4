@@ -7,7 +7,7 @@ adapter. The former submodule and adapter build have been removed.
 
 The packager downloads the binary from
 `https://github.com/VasilyZa/fastfetch/releases/download/2.68.1/fastfetch`
-through `http://127.0.0.1:12334`. It pins SHA-256
+using the host's normal network and optional proxy environment. It pins SHA-256
 `25107efd56d0286059487bab17d964a6ec72275263de2ab09095a46637b06be1`
 and caches it in
 `buildsystem/deps/fastfetch/fastfetch-2.68.1-leonos-x86_64-linux-musl`.

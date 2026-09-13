@@ -584,7 +584,7 @@ int leonos_gui_create_app_window_ex(const char *title, const char *text,
         height > LEONOS_GUI_MAX_WINDOW_HEIGHT) return -1;
     fd = wind_app_ensure();
     if (fd < 0) {
-        printf("[wind] create: app connection failed errno=%d\n", errno);
+        fprintf(stderr, "[wind] create: app connection failed errno=%d\n", errno);
         return -1;
     }
     memset(&request, 0, sizeof(request));
@@ -594,16 +594,16 @@ int leonos_gui_create_app_window_ex(const char *title, const char *text,
     strncpy(request.title, title, sizeof(request.title) - 1u);
     strncpy(request.text, text, sizeof(request.text) - 1u);
     if (leonos_ipc_send(fd, LEONOS_WIN_MSG_CREATE, &request, sizeof(request)) < 0) {
-        printf("[wind] create: send failed errno=%d\n", errno);
+        fprintf(stderr, "[wind] create: send failed errno=%d\n", errno);
         return -1;
     }
     if (wind_wait_type(fd, LEONOS_WIN_MSG_CREATE_ACK, &ack, sizeof(ack),
                        &length, &shm_fd) < 0) {
-        printf("[wind] create: no ack errno=%d\n", errno);
+        fprintf(stderr, "[wind] create: no ack errno=%d\n", errno);
         return -1;
     }
     if (!ack.window_id || shm_fd < 0) {
-        printf("[wind] create: bad ack id=%u shm_fd=%d\n", ack.window_id, shm_fd);
+        fprintf(stderr, "[wind] create: bad ack id=%u shm_fd=%d\n", ack.window_id, shm_fd);
         if (shm_fd >= 0) close(shm_fd);
         return -1;
     }
@@ -611,7 +611,7 @@ int leonos_gui_create_app_window_ex(const char *title, const char *text,
         if (wind_windows[i].fd < 0) { window = &wind_windows[i]; break; }
     }
     if (!window) {
-        printf("[wind] create: window table full\n");
+        fprintf(stderr, "[wind] create: window table full\n");
         close(shm_fd);
         return -1;
     }
@@ -623,7 +623,7 @@ int leonos_gui_create_app_window_ex(const char *title, const char *text,
     window->mapping = mmap(0, (size_t)bytes, PROT_READ | PROT_WRITE,
                            MAP_SHARED, shm_fd, 0);
     if (window->mapping == MAP_FAILED || !window->mapping) {
-        printf("[wind] create: shm mmap failed errno=%d bytes=%lld\n",
+        fprintf(stderr, "[wind] create: shm mmap failed errno=%d bytes=%lld\n",
                errno, (long long)bytes);
         window->mapping = 0;
         wind_release_window(window);

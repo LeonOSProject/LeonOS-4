@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "../../userland/apps/authd/accounts.h"
+#include "legacy_authd/accounts.h"
 
 int main(void)
 {

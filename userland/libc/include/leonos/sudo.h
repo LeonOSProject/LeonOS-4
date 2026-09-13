@@ -16,6 +16,10 @@
  * Use the actual CLI for its complete options and shell/login semantics. */
 int leonos_sudo_run(const char *username, const char *password,
                     char *const argv[], uint32_t *out_pid);
+/* Redirect the command's stdout to an already-open fd; caller retains the fd.
+ * This always uses GUI askpass so a parent window owns the interaction. */
+int leonos_sudo_run_stdout(const char *username, char *const argv[],
+                           int output_fd, uint32_t *out_pid);
 int leonos_sudo_run_switch(const char *username, const char *password,
                            char *const argv[], uint32_t *out_pid);
 int leonos_sudo_run_login(const char *username, const char *password,

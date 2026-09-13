@@ -222,21 +222,21 @@ static int ui_ttf_read_file(struct ui_ttf_font *font, const char *path)
     int fd;
     long mapped_raw;
     if (!font || !path) {
-        printf("[ui] TTF invalid load request\n");
+        fprintf(stderr, "[ui] TTF invalid load request\n");
         return 0;
     }
     if (leonos_stat_legacy(path, &st) != 0) {
-        printf("[ui] TTF stat failed path=%s\n", path);
+        fprintf(stderr, "[ui] TTF stat failed path=%s\n", path);
         return 0;
     }
     if (st.type != LEONOS_FS_TYPE_FILE || st.size < 12 || st.size > UI_TTF_MAX) {
-        printf("[ui] TTF invalid file path=%s type=%u size=%u\n",
+        fprintf(stderr, "[ui] TTF invalid file path=%s type=%u size=%u\n",
                path, st.type, (unsigned)st.size);
         return 0;
     }
     fd = open(path, LEONOS_O_RDONLY, 0);
     if (fd < 0) {
-        printf("[ui] TTF open failed path=%s ret=%d\n", path, fd);
+        fprintf(stderr, "[ui] TTF open failed path=%s ret=%d\n", path, fd);
         return 0;
     }
     /* UI fonts are large (the bundled CJK font is roughly 16 MiB).  Copying
@@ -247,7 +247,7 @@ static int ui_ttf_read_file(struct ui_ttf_font *font, const char *path)
                           LEONOS_MAP_PRIVATE, fd, 0);
     close(fd);
     if (mapped_raw < 0) {
-        printf("[ui] TTF mmap failed path=%s bytes=%u ret=%ld\n",
+        fprintf(stderr, "[ui] TTF mmap failed path=%s bytes=%u ret=%ld\n",
                path, (unsigned)st.size, mapped_raw);
         return 0;
     }
@@ -308,7 +308,7 @@ static int ui_ttf_load_font(struct ui_ttf_font *font, const char *path)
     }
     *font = ui_ttf;
     font->pixel_ascii = path && strcmp(path, UI_TTF_WIN95_PATH) == 0;
-    printf("[ui] TTF loaded path=%s bytes=%u glyphs=%u\n",
+    fprintf(stderr, "[ui] TTF loaded path=%s bytes=%u glyphs=%u\n",
            path ? path : "", ui_ttf.len, ui_ttf.glyph_count);
     return 1;
 }
@@ -333,7 +333,7 @@ static void ui_ttf_load(void)
     if (!ui_ttf_load_font(&ui_ttf_primary, ui_ttf_primary_path()) &&
         (!ui_ttf_override_path[0] ||
          !ui_ttf_load_font(&ui_ttf_primary, ui_ttf_default_path()))) {
-        printf("[ui] TTF load failed path=%s\n", ui_ttf_primary_path());
+        fprintf(stderr, "[ui] TTF load failed path=%s\n", ui_ttf_primary_path());
         return;
     }
     if (ui_ttf_fallback_path[0]) {

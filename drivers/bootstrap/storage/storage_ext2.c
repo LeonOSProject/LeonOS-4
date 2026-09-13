@@ -3,6 +3,15 @@
  * 1/2/4 KiB blocks, 128+ byte inodes, direct and indirect block pointers,
  * and no journal, extents, encryption, or metadata checksums. */
 
+static int ext2_update_write_time(struct ext2_inode *inode, bool created)
+{
+    struct leonos_time_info now;
+    if (time_wall_clock(&now) < 0) return -5;
+    inode->mtime = inode->ctime = (uint32_t)now.unix_seconds;
+    if (created) inode->atime = inode->mtime;
+    return 0;
+}
+
 /** @brief Returns the on-disk byte length of an ext2 inode. */
 static uint64_t ext2_inode_size(const struct ext2_inode *inode)
 {
@@ -1126,6 +1135,8 @@ static int ext2_write_inode_range(uint32_t inode_no, struct ext2_inode *inode,
     int ret;
     if (!inode || (!buffer && len) || end < offset || end > 0xffffffffULL) return -28;
     if (!len) return 0;
+    ret = ext2_update_write_time(inode, false);
+    if (ret < 0) return ret;
     while (done < len) {
         if (!inode_dirty) {
             uint32_t written;
@@ -1150,7 +1161,7 @@ static int ext2_write_inode_range(uint32_t inode_no, struct ext2_inode *inode,
         done += take;
     }
     if (end > ext2_inode_size(inode)) ext2_set_inode_size(inode, end);
-    return inode_dirty ? ext2_write_inode(inode_no, inode) : 0;
+    return ext2_write_inode(inode_no, inode);
 }
 
 /**
@@ -1297,6 +1308,11 @@ static int ext2_write_file(const char *path, const void *buffer, uint32_t len)
         storage_memzero(&inode, sizeof(inode));
         inode.mode = EXT2_S_IFREG | 0644u;
         inode.links_count = 1;
+        ret = ext2_update_write_time(&inode, true);
+        if (ret < 0) {
+            (void)ext2_release_inode(inode_no, 0);
+            return ret;
+        }
         ret = ext2_write_inode(inode_no, &inode);
         if (ret < 0) {
             (void)ext2_release_inode(inode_no, 0);
@@ -1312,6 +1328,8 @@ static int ext2_write_file(const char *path, const void *buffer, uint32_t len)
         ret = ext2_write_inode_range(inode_no, &inode, 0, buffer, len);
         if (ret < 0) return ret;
     } else {
+        ret = ext2_update_write_time(&inode, false);
+        if (ret < 0) return ret;
         ret = ext2_write_inode(inode_no, &inode);
         if (ret < 0) return ret;
     }
@@ -1388,6 +1406,8 @@ static int ext2_truncate_file(const struct storage_node *node, uint64_t length)
         }
     }
     ext2_set_inode_size(&inode, length);
+    ret = ext2_update_write_time(&inode, false);
+    if (ret < 0) return ret;
     ret = ext2_write_inode(node->first_cluster, &inode);
     if (ret == 0) storage_cache_invalidate();
     return ret;

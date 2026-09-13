@@ -18,10 +18,7 @@
 #include <unistd.h>
 
 #define NET_FRAME_CAP 4096u
-#define ntohs(value) ((uint16_t)((((uint16_t)(value) & 0xffu) << 8) | ((uint16_t)(value) >> 8)))
-#define htons(value) ntohs(value)
-#define ntohl(value) ((((uint32_t)(value) & 0xffu) << 24) | ((uint32_t)((value) & 0xff00u) << 8) | ((uint32_t)((value) & 0xff0000u) >> 8) | ((uint32_t)(value) >> 24))
-#define htonl(value) ntohl(value)
+#define NET_REMOTE_ERROR (-2)
 /* A caller must never stall for seconds on a daemon that may not exist at
  * all (installer/recovery images). Each call retries briefly to absorb a
  * daemon still starting, then backs off before probing again. */
@@ -52,20 +49,33 @@ static void net_copy_text(char *dst, uint32_t capacity, const char *src)
 static int net_wait_response(uint32_t expected, void *payload, uint32_t capacity,
                              uint32_t *length)
 {
-    uint32_t deadline = net_now_ms() + 3000u;
+    uint32_t deadline = net_now_ms() + ((expected == LEONOS_NET_MSG_DHCP ||
+        expected == LEONOS_NET_MSG_PING || expected == LEONOS_NET_MSG_DNS) ? 15000u : 3000u);
     for (;;) {
         uint8_t buffer[NET_FRAME_CAP];
         uint32_t type = 0;
         uint32_t got = 0;
         if (leonos_ipc_recv(netmand_fd, &type, buffer, sizeof(buffer), &got) == 0) {
+            if (type == LEONOS_NET_MSG_ERROR) {
+                struct leonos_netmand_error error;
+                if (got != sizeof(error)) { errno = EPROTO; return -1; }
+                memcpy(&error, buffer, sizeof(error));
+                if (error.request_type != expected || error.error <= 0 || error.error > 4095) {
+                    errno = EPROTO; return -1;
+                }
+                errno = error.error;
+                return NET_REMOTE_ERROR;
+            }
             if (type == expected) {
-                if (got > capacity) got = capacity;
+                if (got > capacity || (!length && got != capacity)) { errno = EPROTO; return -1; }
                 if (got) memcpy(payload, buffer, got);
                 if (length) *length = got;
                 return 0;
             }
-        }
-        if (net_now_ms() >= deadline) return -1;
+            errno = EPROTO;
+            return -1;
+        } else if (errno != EAGAIN && errno != EINTR) return -1;
+        if ((int32_t)(net_now_ms() - deadline) >= 0) { errno = ETIMEDOUT; return -1; }
         (void)poll(0, 0, 2);
     }
 }
@@ -76,7 +86,9 @@ static int net_open(void)
     struct leonos_netmand_ack ack;
     uint32_t deadline;
     if (netmand_fd >= 0) return netmand_fd;
-    if (net_now_ms() < netmand_retry_after_ms) return -1;
+    if (netmand_retry_after_ms && (int32_t)(net_now_ms() - netmand_retry_after_ms) < 0) {
+        errno = EAGAIN; return -1;
+    }
     deadline = net_now_ms() + NET_CONNECT_ATTEMPT_MS;
     while (netmand_fd < 0 && net_now_ms() < deadline) {
         netmand_fd = leonos_ipc_connect(LEONOS_IPC_SOCK_NET);
@@ -91,9 +103,17 @@ static int net_open(void)
     if (leonos_ipc_send(netmand_fd, LEONOS_NET_MSG_HELLO, &hello,
                         sizeof(hello)) < 0 ||
         net_wait_response(LEONOS_NET_MSG_ACK, &ack, sizeof(ack), 0) < 0) {
+        int saved = errno;
         leonos_ipc_close(netmand_fd);
         netmand_fd = -1;
         netmand_retry_after_ms = net_now_ms() + NET_CONNECT_BACKOFF_MS;
+        errno = saved;
+        return -1;
+    }
+    if (ack.code != 1 || ack.reserved) {
+        leonos_ipc_close(netmand_fd);
+        netmand_fd = -1;
+        errno = EPROTO;
         return -1;
     }
     return netmand_fd;
@@ -103,8 +123,17 @@ static int net_request(uint32_t type, const void *request, uint32_t request_len,
                        void *response, uint32_t response_capacity)
 {
     if (net_open() < 0) return -1;
-    if (leonos_ipc_send(netmand_fd, type, request, request_len) < 0) return -1;
-    return net_wait_response(type, response, response_capacity, 0);
+    if (leonos_ipc_send(netmand_fd, type, request, request_len) == 0) {
+        int ret = net_wait_response(type, response, response_capacity, 0);
+        if (!ret) return 0;
+        if (ret == NET_REMOTE_ERROR) return -1;
+    }
+    int saved = errno;
+    leonos_ipc_close(netmand_fd);
+    netmand_fd = -1;
+    netmand_retry_after_ms = net_now_ms() + NET_CONNECT_BACKOFF_MS;
+    errno = saved;
+    return -1;
 }
 
 int leonos_net_config(struct leonos_net_config *config)
@@ -259,7 +288,7 @@ int leonos_socket_connect(int socket_fd, const char *host, uint32_t port,
             result->status = dns.status ? dns.status : LEONOS_NET_STATUS_DNS_FAILED;
             return -1;
         }
-        network_ip = dns.addresses[0];
+        network_ip = htonl(dns.addresses[0]);
         (void)i;
     }
     memset(&address, 0, sizeof(address));

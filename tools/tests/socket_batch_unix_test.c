@@ -11,6 +11,16 @@ static struct task_file endpoints[2], passed;
 static uint64_t readonly;
 static unsigned allocations;
 static unsigned pty_holds;
+/* AF_UNIX cases must not cross into the IPv4 backend. */
+int task_udp_recv(struct task_file *f, void *b, uint32_t n, uint32_t flags, uint64_t a, uint64_t l)
+{ (void)f; (void)b; (void)n; (void)flags; (void)a; (void)l; abort(); }
+int task_udp_send(struct task_file *f, const void *b, uint32_t n, uint32_t flags, uint64_t a, uint32_t l)
+{ (void)f; (void)b; (void)n; (void)flags; (void)a; (void)l; abort(); }
+short net_socket_poll_fd(int32_t h, uint32_t p, short e)
+{ (void)h; (void)p; (void)e; abort(); }
+int net_socket_error(int32_t h, bool c) { (void)h; (void)c; abort(); }
+int net_socket_recv(struct leonos_net_socket_io *r, uint32_t p) { (void)r; (void)p; abort(); }
+int net_socket_send(struct leonos_net_socket_io *r, uint32_t p) { (void)r; (void)p; abort(); }
 int task_pty_export_fd(struct task *task, int fd, struct task_pty_fd *out)
 {
     (void)task;

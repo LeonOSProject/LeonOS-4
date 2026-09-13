@@ -1,5 +1,8 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #include <leonos/api.h>
-#include <leonos/admin.h>
+#include <leonos/sudo.h>
 #include <leonos/auth.h>
 #include <leonos/fs.h>
 #include <leonos/gui.h>
@@ -11,6 +14,11 @@
 #include <leonos/ui.h>
 #include <string.h>
 #include <leonos/layout.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #define T(en, zh) leonos_i18n((en), (zh))
 
@@ -54,10 +62,15 @@ struct download_worker_state {
 };
 
 struct install_worker_state {
-    char status_path[DOWNLOAD_STATUS_PATH_MAX];
+    int progress_fd;
     uint32_t last_processed;
     uint32_t total;
     unsigned long last_update_ms;
+};
+
+struct install_progress {
+    uint32_t processed;
+    uint32_t total;
 };
 
 static void copy_text(char *dst, uint32_t capacity, const char *src)
@@ -135,16 +148,6 @@ static void build_download_status_path(char *dst, uint32_t capacity)
     (void)mkdir("/tmp", 01777);
     dst[0] = 0;
     append_text(dst, &pos, capacity, "/tmp/api_download_");
-    append_u32(dst, &pos, capacity, (uint32_t)getpid());
-    append_text(dst, &pos, capacity, ".status");
-}
-
-static void build_install_status_path(char *dst, uint32_t capacity)
-{
-    uint32_t pos = 0;
-    (void)mkdir("/tmp", 01777);
-    dst[0] = 0;
-    append_text(dst, &pos, capacity, "/tmp/api_install_");
     append_u32(dst, &pos, capacity, (uint32_t)getpid());
     append_text(dst, &pos, capacity, ".status");
 }
@@ -424,7 +427,15 @@ static int install_worker_progress(uint32_t processed, uint32_t total,
     state->last_processed = processed;
     state->total = total;
     state->last_update_ms = now;
-    return write_download_status(state->status_path, 'R', processed, total);
+    struct install_progress progress = {processed, total};
+    size_t sent = 0;
+    while (sent < sizeof(progress)) {
+        ssize_t n = write(state->progress_fd, (const char *)&progress + sent, sizeof(progress) - sent);
+        if (n < 0 && errno == EINTR) continue;
+        if (n <= 0) return -1;
+        sent += (size_t)n;
+    }
+    return 0;
 }
 
 static int starts_with_ignore_case(const char *text, const char *prefix)
@@ -474,30 +485,22 @@ static int run_download_worker(const char *url, const char *output_path,
 }
 
 static int run_install_worker(const char *api_path, const char *install_path,
-                              uint32_t create_shortcut,
-                              const char *status_path)
+                              uint32_t create_shortcut)
 {
     struct install_worker_state state;
+    struct stat output;
     int ret;
+    if (geteuid() != 0 || fstat(STDOUT_FILENO, &output) < 0 || !S_ISFIFO(output.st_mode)) return 126;
     memset(&state, 0, sizeof(state));
+    state.progress_fd = fcntl(STDOUT_FILENO, F_DUPFD_CLOEXEC, 3);
+    if (state.progress_fd < 0) return 1;
+    /* Keep library diagnostics out of the private progress pipe. */
+    if (dup2(STDERR_FILENO, STDOUT_FILENO) < 0) { close(state.progress_fd); return 1; }
     install_log("install worker started");
     install_log_path("api path: ", api_path);
     install_log_path("install path: ", install_path);
-    install_log_path("status path: ", status_path);
-    copy_text(state.status_path, sizeof(state.status_path), status_path);
-    for (;;) {
-        char status_state;
-        uint32_t processed;
-        uint32_t total;
-        if (read_download_status(state.status_path, &status_state, &processed,
-                                 &total) == 0 && status_state == 'A') {
-            break;
-        }
-        sleep_ms(10);
-    }
-    /* The parent delegated elevation before publishing the authorization state. */
-    if (write_download_status(state.status_path, 'R', 0, 0) < 0) {
-        install_log("failed to publish running status");
+    if (install_worker_progress(0, 0, &state) < 0) {
+        close(state.progress_fd);
         return 1;
     }
     install_log("calling leonos_api_install_with_progress");
@@ -506,8 +509,7 @@ static int run_install_worker(const char *api_path, const char *install_path,
                                             install_worker_progress, &state);
     install_log_progress(state.last_processed, state.total);
     install_log_result("leonos_api_install_with_progress result: ", ret);
-    (void)write_download_status(state.status_path, ret ? 'D' : 'F',
-                                 state.last_processed, state.total);
+    close(state.progress_fd);
     install_log(ret ? "install worker completed" : "install worker failed");
     return ret ? 0 : 1;
 }
@@ -519,70 +521,59 @@ static int install_api_with_progress(int window_id, const char *api_path,
     struct download_state state;
     struct leonos_gui_app_event event;
     struct leonos_ui_surface ui;
-    char status_state = 0;
-    char *argv[7];
+    struct install_progress progress;
+    size_t received = 0;
+    char *argv[6];
+    int pair[2];
+    uint32_t child;
     int worker_status;
-    uint8_t install_complete = 0;
-    if (!leonos_admin_elevate()) {
-        install_log("parent failed to elevate for installation");
-        return 0;
-    }
     memset(&state, 0, sizeof(state));
     state.window_id = window_id;
-    build_install_status_path(state.status_path, sizeof(state.status_path));
     install_log("installation requested");
     install_log_path("api path: ", api_path);
     install_log_path("install path: ", install_path);
-    install_log_path("status path: ", state.status_path);
-    unlink(state.status_path);
     copy_text(state.status, sizeof(state.status),
-              T("Preparing installation...", "正在准备安装..."));
+              T("Authorizing installation...", "正在授权安装..."));
     leonos_ui_bind(&ui, wizard_pixels, WIZARD_W, WIZARD_H, WIZARD_W);
     argv[0] = APIAPP_PATH;
     argv[1] = "--install-worker";
     argv[2] = (char *)api_path;
     argv[3] = (char *)install_path;
     argv[4] = create_shortcut ? "1" : "0";
-    argv[5] = state.status_path;
-    argv[6] = 0;
-    state.worker_pid = leonos_spawn_argv(APIAPP_PATH, argv);
-    if (state.worker_pid < 0) {
-        install_log_result("failed to spawn install worker: ", state.worker_pid);
+    argv[5] = 0;
+    if (pipe2(pair, O_CLOEXEC) < 0) return 0;
+    if (fcntl(pair[0], F_SETFL, O_NONBLOCK) < 0 ||
+        leonos_sudo_run_stdout(NULL, argv, pair[1], &child) < 0) {
+        int error = errno;
+        close(pair[0]); close(pair[1]);
+        errno = error;
+        install_log("failed to start authorized install worker");
         return 0;
     }
-    if (write_download_status(state.status_path, 'A', 0, 0) < 0) {
-        install_log("failed to authorize install worker");
-        (void)leonos_task_kill((uint32_t)state.worker_pid);
-        unlink(state.status_path);
-        return 0;
-    }
+    close(pair[1]);
     for (;;) {
-        uint32_t processed;
-        uint32_t total;
-        if (read_download_status(state.status_path, &status_state, &processed,
-                                 &total) == 0) {
-            state.received = processed;
-            state.total = total;
-            if (status_state == 'R') {
-                copy_text(state.status, sizeof(state.status),
-                          T("Installing...", "正在安装..."));
-            } else if (status_state == 'D') {
-                install_complete = 1;
-                copy_text(state.status, sizeof(state.status),
-                          T("Finalizing installation...", "正在完成安装..."));
-            } else if (status_state == 'F') {
-                copy_text(state.status, sizeof(state.status),
-                          T("Installation failed", "安装失败"));
-            }
+        for (unsigned budget = 0; budget < 32; ++budget) {
+            ssize_t n = read(pair[0], (char *)&progress + received, sizeof(progress) - received);
+            if (n < 0 && errno == EINTR) continue;
+            if (n <= 0) break;
+            received += (size_t)n;
+            if (received != sizeof(progress)) continue;
+            state.received = progress.processed;
+            state.total = progress.total;
+            received = 0;
+            copy_text(state.status, sizeof(state.status), T("Installing...", "正在安装..."));
         }
-        if (download_worker_exited(state.worker_pid)) {
-            worker_status = 0;
-            (void)wait4(state.worker_pid, &worker_status, 0, 0);
+        if (leonos_sudo_wait(child, &worker_status) == 0) {
+            int complete = WIFEXITED(worker_status) && WEXITSTATUS(worker_status) == 0;
+            close(pair[0]);
             install_log_result("install worker exit status: ", worker_status);
-            install_log(install_complete ? "installation completed" :
-                                          "installation failed before completion");
-            unlink(state.status_path);
-            return install_complete;
+            install_log(complete ? "installation completed" : "installation failed or authorization cancelled");
+            return complete;
+        }
+        if (errno != EINTR && errno != EAGAIN) {
+            close(pair[0]);
+            install_log("failed to wait for authorized install worker");
+            return 0;
         }
         draw_install_progress_page(&ui, &state);
         leonos_gui_present_window((uint32_t)window_id, WIZARD_W, WIZARD_H,
@@ -920,10 +911,11 @@ int main(int argc, char *argv[])
         strcmp(argv[1], "--download-worker") == 0) {
         return run_download_worker(argv[2], argv[3], argv[4]);
     }
-    if (argc == 6 && argv && argv[1] && argv[2] && argv[3] && argv[4] &&
-        argv[5] && strcmp(argv[1], "--install-worker") == 0) {
+    if (argc == 5 && argv && argv[1] && argv[2] && argv[3] && argv[4] &&
+        strcmp(argv[1], "--install-worker") == 0 &&
+        (!strcmp(argv[4], "0") || !strcmp(argv[4], "1"))) {
         return run_install_worker(argv[2], argv[3],
-                                  strcmp(argv[4], "1") == 0, argv[5]);
+                                  strcmp(argv[4], "1") == 0);
     }
     if (argc < 2 || !argv[1] || !argv[1][0]) {
         return 1;

@@ -6,6 +6,12 @@
 
 static FILE *disk;
 static struct task *writer;
+int time_wall_clock(struct leonos_time_info *value)
+{ value->unix_seconds = 1800000000; return 0; }
+uint64_t mm_alloc_page(void) { return (uintptr_t)aligned_alloc(4096, 4096); }
+void mm_free_page(uint64_t p) { free((void *)(uintptr_t)p); }
+void sched_truncate_file_mappings(const struct storage_node *node, uint64_t size)
+{ (void)node; (void)size; abort(); }
 struct task *sched_current_task(void) { return writer; }
 bool task_in_group(const struct task *task, uint32_t gid, bool real)
 { assert(task && !real); return task->fsgid == gid; }

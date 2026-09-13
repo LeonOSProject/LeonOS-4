@@ -366,6 +366,7 @@ int leonos_tls_http_exchange(int socket, const char *hostname,
     uint32_t header_end = 0;
     uint32_t content_length = 0;
     uint32_t verify_flags;
+    unsigned char read_buffer[4096];
     int roots_ret;
     int time_ret;
     int peer_tcp_eof = 0;
@@ -445,8 +446,11 @@ int leonos_tls_http_exchange(int socket, const char *hostname,
         goto cleanup;
     }
     while (received + 1U < response_capacity) {
-        int got = mbedtls_ssl_read(&ssl, (unsigned char *)response + received,
-                                   response_capacity - received - 1U);
+        uint32_t read_capacity = response_capacity - received - 1U;
+        if (read_capacity > sizeof(read_buffer)) {
+            read_capacity = sizeof(read_buffer);
+        }
+        int got = mbedtls_ssl_read(&ssl, read_buffer, read_capacity);
         if (got == 0) {
             peer_tcp_eof = 1;
             response_complete = 1;
@@ -464,6 +468,7 @@ int leonos_tls_http_exchange(int socket, const char *hostname,
         if (got < 0) {
             goto cleanup;
         }
+        memcpy(response + received, read_buffer, (size_t)got);
         received += (uint32_t)got;
         response[received] = 0;
         if (!header_end) {

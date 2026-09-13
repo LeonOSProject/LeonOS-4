@@ -7,6 +7,7 @@
 enum leonos_netmand_msg {
     LEONOS_NET_MSG_HELLO = 10,
     LEONOS_NET_MSG_ACK = 11,
+    LEONOS_NET_MSG_ERROR = 12,
     LEONOS_NET_MSG_CONFIG = 20,
     LEONOS_NET_MSG_DNS_POLICY = 21,
     LEONOS_NET_MSG_DHCP = 22,
@@ -23,6 +24,11 @@ struct leonos_netmand_hello {
 struct leonos_netmand_ack {
     int32_t code;
     uint32_t reserved;
+};
+
+struct leonos_netmand_error {
+    uint32_t request_type;
+    int32_t error;
 };
 
 struct leonos_netmand_connections_ack {

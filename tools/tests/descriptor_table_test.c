@@ -9,6 +9,9 @@ void *kernel_malloc(size_t size) { return fail_allocation ? NULL : malloc(size);
 void kernel_free(void *memory) { free(memory); }
 /* This descriptor test uses anonymous objects, never storage-backed files. */
 int storage_inode_put(struct storage_inode_ref *inode) { assert(!inode); return 0; }
+int fs_permissions_resolve_flags(const struct task *task, const char *base, const char *input,
+                                char *out, uint32_t cap, bool real_ids, uint32_t flags)
+{ (void)task; (void)base; (void)input; (void)out; (void)cap; (void)real_ids; (void)flags; abort(); }
 void task_pipe_release(struct task_file *file) { (void)file; }
 void task_socket_release(struct task_file *file) { (void)file; }
 void task_inet_release(struct task_file *file) { (void)file; }
@@ -155,6 +158,20 @@ static void test_console_descriptions(void)
 
 int main(void)
 {
+    struct task_file pipe = {.flags = TASK_FILE_FLAG_PIPE};
+    struct linux_stat_abi pipe_stat = {.st_mode = 0020660, .st_rdev = 1};
+    linux_stat_fd_type(&pipe_stat, &pipe);
+    assert(pipe_stat.st_mode == (LINUX_S_IFIFO | 0600) && pipe_stat.st_rdev == 0);
+    pipe.flags |= TASK_FILE_FLAG_PIPE_WRITE;
+    pipe_stat.st_mode = 0100644;
+    linux_stat_fd_type(&pipe_stat, &pipe);
+    assert(pipe_stat.st_mode == (LINUX_S_IFIFO | 0600));
+    struct task_file device = {.flags = TASK_FILE_FLAG_DEV_NULL};
+    struct linux_stat_abi device_stat = {.st_mode = 0020660, .st_rdev = 1};
+    linux_stat_fd_type(&device_stat, &device);
+    linux_stat_fd_type(&device_stat, NULL);
+    assert(device_stat.st_mode == 0020660 && device_stat.st_rdev == 1);
+    puts("PASS stat pipe endpoints report FIFO; character devices remain unchanged");
     test_flock_promotion();
     test_pty_descriptions();
     test_console_descriptions();
@@ -163,6 +180,16 @@ int main(void)
     sched_task_limits(task)->nofile.rlim_cur = 1024;
     struct task_file *slot;
     assert(task_allocate_fd(task, 0, &slot) == 3);
+    slot->flags = TASK_FILE_FLAG_PIPE;
+    struct task_file *resolved;
+    char path[LEONOS_FS_PATH_LEN];
+    assert(resolve_kernel_path_at_flags(task, 3, "", true, path, &resolved, false, FS_LOOKUP_FOLLOW) == 0);
+    assert(resolved == slot && !path[0]);
+    assert(resolve_kernel_path_at_flags(task, 3, "entry", true, path, &resolved, false, FS_LOOKUP_FOLLOW) == -LEONOS_ENOTDIR);
+    assert(resolve_kernel_path_at_flags(task, 3, "", false, path, &resolved, false, FS_LOOKUP_FOLLOW) == -LEONOS_ENOENT);
+    assert(resolve_kernel_path_at_flags(task, -1, "", true, path, &resolved, false, FS_LOOKUP_FOLLOW) == -LEONOS_EBADF);
+    slot->flags = 0;
+    puts("PASS AT_EMPTY_PATH anonymous descriptor resolution and invalid-path errors");
     slot->offset = 123;
     slot->kind = TASK_FILE_KIND_SIGNALFD;
     slot->aux = 1ULL << 35;

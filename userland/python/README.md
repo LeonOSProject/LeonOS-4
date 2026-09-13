@@ -1,6 +1,6 @@
 # Python Runtime
 
-The default `python` component ships the user-supplied CPython 3.14.7 build:
+This external ABI test fixture uses the user-supplied CPython 3.14.7 build:
 `cpython-3.14.7+20260901-x86_64-unknown-linux-musl-lto+static-full.tar.zst`.
 SHA256: `e5a76e5893c39c89ed268ad71c3d6794c3be6b7236ec613449140c57686fc17f`.
 
@@ -17,24 +17,22 @@ the caller supplied it, and exec the original interpreter. No shell script
 wrapper or `/install` alias is required. Bundled pip is available through
 `python3 -m pip`; upstream script shebangs are preserved.
 
-## Build
+## Independent Fixture
 
-Supply the archive once (it is cached outside Git), then normal builds are offline:
+Python has been removed from production builds and installer options. Future
+system installation will use apk. The retained fixture can be prepared
+explicitly for ABI regressions:
 
 ```sh
-LEONOS_PYTHON_ARCHIVE=/path/to/cpython-3.14.7+20260901-x86_64-unknown-linux-musl-lto+static-full.tar.zst python3 build.py run python
-python3 build.py test python-package
-python3 build.py run image-iso
-python3 build.py run installer-image
+python3 build.py run musl
+python3 tools/package_python.py --source /path/to/cpython-3.14.7+20260901-x86_64-unknown-linux-musl-lto+static-full.tar.zst --archive buildsystem/deps/python/cpython-3.14.7+20260901-x86_64-unknown-linux-musl-lto+static-full.tar.zst --musl build/musl/sysroot --out build/python/root
+python3 tools/test_python_package.py --root build/python/root
 ```
 
 Cache: `buildsystem/deps/python/` with the exact archive filename above.
-Disable using `CONFIG_LEON_COMPONENT_TOOL_PYTHON_BUILD=n` or omit only the
-image payload with `CONFIG_LEON_COMPONENT_TOOL_PYTHON_IMAGE=n`.
-All standard images consume the same package staging tree, including the
-installer's live environment and installed root payload.
+This tree is not consumed by normal ISO, VMDK, installer or SDK builds.
 
-Inside LeonOS:
+Inside an explicitly prepared Python regression image:
 
 ```sh
 python3 --version

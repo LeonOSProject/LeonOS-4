@@ -4,7 +4,10 @@
  */
 #include <ntclks/console.h>
 #include <ntclks/e1000.h>
+#include <ntclks/heap.h>
 #include <ntclks/net.h>
+#include <ntclks/net_udp.h>
+#include <linux/errno.h>
 #include <ntclks/sched.h>
 #include <linux/poll.h>
 #include <ntclks/storage.h>
@@ -54,7 +57,11 @@
 #define NET_ARP_CACHE_SIZE 8u
 #define NET_HTTP_DEFAULT_TIMEOUT_MS 8000u
 #define NET_HTTP_MAX_TIMEOUT_MS 10000u
-#define NET_SOCKET_RX_CAP 8192u
+/* The full unscaled TCP window; scaling is not negotiated yet. */
+#define NET_SOCKET_RX_CAP 65535u
+#ifndef NET_TCP_TRACE
+#define NET_TCP_TRACE 0
+#endif
 #define NET_SOCKET_CLOSE_HOLD_MS 10000u
 #define NET_SOCKET_DEFAULT_TIMEOUT_MS 5000u
 #define NET_SERVICES_CONFIG_PATH LEONOS_PATH_SERVICES_CFG
@@ -120,6 +127,12 @@ struct net_arp_cache_entry {
 
 struct net_socket {
     uint32_t used;
+    bool fd_owned;
+    bool shutdown_read;
+    bool shutdown_write;
+    int error;
+    uint64_t syn_deadline;
+    uint64_t syn_retransmit;
     int32_t handle;
     uint32_t owner_pid;
     uint32_t owner_uid;
@@ -133,22 +146,27 @@ struct net_socket {
     uint32_t remote_seq;
     uint32_t acked_seq;
     uint32_t rx_len;
+    uint32_t rx_head;
+    uint32_t rx_window_ack;
+    uint32_t rx_window;
+    bool rx_window_valid;
     uint32_t tx_bytes;
     uint32_t rx_bytes;
     uint32_t created_ms;
     uint32_t changed_ms;
     uint32_t fin_received;
     uint8_t dst_mac[6];
-    uint8_t rx[NET_SOCKET_RX_CAP];
+    uint8_t *rx;
 };
 
 static const uint8_t net_broadcast_mac[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static uint32_t net_sequence = 1;
 static uint16_t net_ipv4_id = 1;
 static struct leonos_net_config net_config;
-static uint32_t net_dns_mode = LEONOS_NET_DNS_MODE_CLOUDFLARE;
+static uint32_t net_dns_mode = LEONOS_NET_DNS_MODE_DHCP;
 static uint32_t net_dns_custom_ip;
 static uint32_t net_dhcp_dns_ip;
+static uint64_t net_dhcp_acquired_ms;
 static struct net_arp_cache_entry net_arp_cache[NET_ARP_CACHE_SIZE];
 static uint32_t net_arp_cache_next;
 static struct net_socket net_sockets[LEONOS_NET_SOCKET_MAX];
@@ -426,7 +444,7 @@ static int net_load_dns_policy_file(const char *path)
  */
 static void net_load_dns_policy(void)
 {
-    net_dns_mode = LEONOS_NET_DNS_MODE_CLOUDFLARE;
+    net_dns_mode = LEONOS_NET_DNS_MODE_DHCP;
     net_dns_custom_ip = 0;
     if (net_load_dns_policy_file(NET_NETWORK_CONFIG_PATH) < 0) {
         (void)net_load_dns_policy_file(NET_NETWORK_CONFIG_BACKUP_PATH);
@@ -446,7 +464,7 @@ static uint32_t net_effective_dns_ip(uint32_t dhcp_dns_ip)
     if (net_dns_mode == LEONOS_NET_DNS_MODE_CUSTOM && net_dns_custom_ip) {
         return net_dns_custom_ip;
     }
-    if (net_dns_mode == LEONOS_NET_DNS_MODE_DHCP && dhcp_dns_ip) {
+    if (net_dns_mode == LEONOS_NET_DNS_MODE_DHCP) {
         return dhcp_dns_ip;
     }
     return LEONOS_NET_CLOUDFLARE_DNS_IP;
@@ -764,17 +782,16 @@ static void net_arp_cache_store(uint32_t ip, const uint8_t mac[6])
 static void net_update_config_flags(void)
 {
     uint32_t flags = 0;
-    if (e1000_is_ready()) {
-        flags |= LEONOS_NET_CONFIG_FLAG_PRESENT | LEONOS_NET_CONFIG_FLAG_ACTIVE;
-    }
+    struct e1000_info info;
+    e1000_get_info(&info);
+    if (info.present) flags |= LEONOS_NET_CONFIG_FLAG_PRESENT;
+    if (info.active) flags |= LEONOS_NET_CONFIG_FLAG_ACTIVE;
     if (net_config.source == LEONOS_NET_CONFIG_SOURCE_DHCP) {
         flags |= LEONOS_NET_CONFIG_FLAG_DHCP;
     }
     net_config.flags = flags;
     net_memzero(net_config.mac, sizeof(net_config.mac));
-    if (e1000_is_ready()) {
-        net_memcpy(net_config.mac, e1000_mac(), 6);
-    }
+    if (info.present) net_memcpy(net_config.mac, info.mac, 6);
 }
 
 /**
@@ -783,17 +800,26 @@ static void net_update_config_flags(void)
 static void net_set_static_fallback(void)
 {
     net_arp_cache_clear();
+    net_dhcp_dns_ip = 0;
+    net_dhcp_acquired_ms = 0;
     net_config = (struct leonos_net_config){
         .flags = 0,
-        .source = LEONOS_NET_CONFIG_SOURCE_STATIC,
-        .local_ip = LEONOS_NET_DEFAULT_LOCAL_IP,
-        .subnet_mask = LEONOS_NET_DEFAULT_SUBNET_MASK,
-        .gateway_ip = LEONOS_NET_DEFAULT_GATEWAY_IP,
+        .source = LEONOS_NET_CONFIG_SOURCE_NONE,
+        .local_ip = 0,
+        .subnet_mask = 0,
+        .gateway_ip = 0,
         .dns_ip = net_effective_dns_ip(0),
         .dhcp_server_ip = 0,
         .lease_seconds = 0,
     };
     net_update_config_flags();
+}
+
+static void net_expire_lease(void)
+{
+    if (net_config.source == LEONOS_NET_CONFIG_SOURCE_DHCP && net_config.lease_seconds != UINT32_MAX &&
+        time_uptime_ms() - net_dhcp_acquired_ms >= (uint64_t)net_config.lease_seconds * 1000)
+        net_set_static_fallback();
 }
 
 /**
@@ -805,11 +831,12 @@ static void net_apply_dhcp_offer(const struct net_dhcp_offer *offer)
     net_arp_cache_clear();
     net_config.local_ip = offer->yiaddr;
     net_config.subnet_mask = offer->subnet_mask ? offer->subnet_mask : LEONOS_NET_DEFAULT_SUBNET_MASK;
-    net_config.gateway_ip = offer->router_ip ? offer->router_ip : LEONOS_NET_DEFAULT_GATEWAY_IP;
+    net_config.gateway_ip = offer->router_ip;
     net_dhcp_dns_ip = offer->dns_ip;
     net_config.dns_ip = net_effective_dns_ip(net_dhcp_dns_ip);
     net_config.dhcp_server_ip = offer->server_ip;
     net_config.lease_seconds = offer->lease_seconds;
+    net_dhcp_acquired_ms = time_uptime_ms();
     net_config.source = LEONOS_NET_CONFIG_SOURCE_DHCP;
     net_update_config_flags();
 }
@@ -942,7 +969,7 @@ static int net_send_udp_to_mac(const uint8_t *dst_mac, uint32_t src_ip,
     uint8_t *udp = frame + 34;
     uint16_t udp_len;
     uint16_t total_len;
-    if (!payload || payload_len > NET_FRAME_MAX - 42u) {
+    if ((payload_len && !payload) || payload_len > NET_FRAME_MAX - 42u) {
         return -1;
     }
     udp_len = (uint16_t)(8u + payload_len);
@@ -967,20 +994,24 @@ static int net_send_udp_to_mac(const uint8_t *dst_mac, uint32_t src_ip,
     return e1000_send(frame, 42u + payload_len);
 }
 
-/**
- * Net send tcp to mac.
- * @param dst_mac Value supplied by the caller.
- * @param src_ip Value supplied by the caller.
- * @param dst_ip Value supplied by the caller.
- * @param src_port Value supplied by the caller.
- * @param dst_port Value supplied by the caller.
- * @param seq Value supplied by the caller.
- * @param ack Value supplied by the caller.
- * @param flags Identifier or flags controlling the operation.
- * @param payload Value supplied by the caller.
- * @param payload_len Value supplied by the caller.
- * @return The value or status produced by the operation.
- */
+/* Remaining space already advertised to the peer, across sequence wrap. */
+static uint32_t net_socket_receive_window(const struct net_socket *socket)
+{
+    if (!socket->rx_window_valid) return 0;
+    uint32_t consumed = socket->remote_seq - socket->rx_window_ack;
+    return consumed < socket->rx_window ? socket->rx_window - consumed : 0;
+}
+
+static uint32_t net_socket_select_window(const struct net_socket *socket)
+{
+    uint32_t free_bytes = NET_SOCKET_RX_CAP - socket->rx_len;
+    uint32_t window = free_bytes - free_bytes % NET_TCP_MSS;
+    uint32_t remaining = net_socket_receive_window(socket);
+    /* As in Linux tcp_select_window(), do not retract an offered right edge.
+     * Only extend it in full segments to avoid receiver silly-window syndrome. */
+    return window > remaining ? window : remaining;
+}
+
 static int net_send_tcp_to_mac(const uint8_t *dst_mac, uint32_t src_ip,
                                uint32_t dst_ip, uint16_t src_port,
                                uint16_t dst_port, uint32_t seq,
@@ -1019,7 +1050,18 @@ static int net_send_tcp_to_mac(const uint8_t *dst_mac, uint32_t src_ip,
     net_put_u32(tcp + 8, ack);
     tcp[12] = (uint8_t)((tcp_header_len / 4u) << 4);
     tcp[13] = flags;
-    net_put_u16(tcp + 14, NET_SOCKET_RX_CAP);
+    uint32_t window = 8192u;
+    struct net_socket *receiver = 0;
+    for (unsigned i = 0; i < LEONOS_NET_SOCKET_MAX; ++i) {
+        struct net_socket *s = &net_sockets[i];
+        if (s->used && s->local_port == src_port && s->remote_port == dst_port &&
+            s->remote_ip == dst_ip) {
+            receiver = s;
+            window = net_socket_select_window(s);
+            break;
+        }
+    }
+    net_put_u16(tcp + 14, (uint16_t)window);
     net_put_u16(tcp + 16, 0);
     net_put_u16(tcp + 18, 0);
     if (flags & TCP_FLAG_SYN) {
@@ -1031,7 +1073,13 @@ static int net_send_tcp_to_mac(const uint8_t *dst_mac, uint32_t src_ip,
         net_memcpy(tcp + tcp_header_len, payload, payload_len);
     }
     net_put_u16(tcp + 16, net_tcp_checksum(src_ip, dst_ip, tcp, tcp_len));
-    return e1000_send(frame, 14u + total_len);
+    int result = e1000_send(frame, 14u + total_len);
+    if (result >= 0 && receiver && (flags & TCP_FLAG_ACK)) {
+        receiver->rx_window_ack = ack;
+        receiver->rx_window = window;
+        receiver->rx_window_valid = true;
+    }
+    return result;
 }
 
 /**
@@ -1126,7 +1174,7 @@ static void net_handle_udp(const uint8_t *ip, uint32_t total_len,
     uint16_t dst_port;
     uint16_t udp_len;
     uint32_t payload_len;
-    if (!udp_wait || udp_wait->done || total_len < ihl + 8u) {
+    if (total_len < ihl + 8u) {
         return;
     }
     udp = ip + ihl;
@@ -1136,6 +1184,13 @@ static void net_handle_udp(const uint8_t *ip, uint32_t total_len,
     if (udp_len < 8u || ihl + udp_len > total_len) {
         return;
     }
+    if (net_get_u16(udp + 6)) {
+        uint32_t sum = net_checksum_partial(0, ip + 12, 8);
+        sum += IPV4_PROTO_UDP + udp_len;
+        if (net_checksum_finish(net_checksum_partial(sum, udp, udp_len))) return;
+    }
+    net_udp_input(src_ip, net_get_u32(ip + 16), src_port, dst_port, udp + 8, udp_len - 8);
+    if (!udp_wait || udp_wait->done) return;
     if (udp_wait->src_port && src_port != udp_wait->src_port) {
         return;
     }
@@ -1180,6 +1235,7 @@ static void net_handle_tcp(const uint8_t *ip, uint32_t total_len,
     }
     tcp = ip + ihl;
     tcp_len = total_len - ihl;
+    if (net_tcp_checksum(src_ip, net_get_u32(ip + 16), tcp, tcp_len)) return;
     src_port = net_get_u16(tcp);
     dst_port = net_get_u16(tcp + 2);
     hdr_len = (uint32_t)(tcp[12] >> 4) * 4u;
@@ -1283,6 +1339,9 @@ static void net_handle_ipv4(const uint8_t *frame, uint32_t len,
     if (total_len < ihl || 14u + total_len > len) {
         return;
     }
+    /* Fragment reassembly is not implemented; fragments must never be
+     * interpreted as independent transport packets. */
+    if (net_checksum(ip, ihl) || (net_get_u16(ip + 6) & 0x3fffu)) return;
     dst_ip = net_get_u32(ip + 16);
     if (!net_ip_for_us(dst_ip)) {
         return;
@@ -1412,6 +1471,7 @@ static uint32_t net_now32(void)
 static void net_socket_clear(struct net_socket *socket)
 {
     if (socket) {
+        kernel_free(socket->rx);
         net_memzero(socket, sizeof(*socket));
     }
 }
@@ -1435,7 +1495,7 @@ static void net_socket_gc(void)
     uint32_t now = net_now32();
     for (uint32_t i = 0; i < LEONOS_NET_SOCKET_MAX; ++i) {
         struct net_socket *socket = &net_sockets[i];
-        if (!socket->used) {
+        if (!socket->used || socket->fd_owned) {
             continue;
         }
         if ((socket->state == LEONOS_NET_TCP_CLOSED ||
@@ -1521,7 +1581,7 @@ static void net_socket_mark_closed(struct net_socket *socket, uint32_t status)
  */
 static int net_socket_trace_tls(const struct net_socket *socket)
 {
-    return socket && socket->remote_port == 443u;
+    return NET_TCP_TRACE && socket && socket->remote_port == 443u;
 }
 
 /**
@@ -1546,7 +1606,7 @@ static void net_socket_handle_tcp(uint32_t src_ip, uint16_t src_port,
         return;
     }
     if (net_socket_trace_tls(socket)) {
-        console_printf("[net] tls rx socket=%d state=%u flags=0x%x seq=%u ack=%u payload=%u expected=%u\\n",
+        console_printf("[net] tls rx socket=%d state=%u flags=0x%x seq=%u ack=%u payload=%u expected=%u\n",
                        socket->handle, socket->state, flags, seq, ack,
                        payload_len, socket->remote_seq);
     }
@@ -1557,6 +1617,7 @@ static void net_socket_handle_tcp(uint32_t src_ip, uint16_t src_port,
         }
     }
     if (flags & TCP_FLAG_RST) {
+        socket->error = socket->state == LEONOS_NET_TCP_SYN_SENT ? LINUX_ECONNREFUSED : LINUX_ECONNRESET;
         net_socket_mark_closed(socket, LEONOS_NET_STATUS_TCP_RESET);
         return;
     }
@@ -1567,9 +1628,10 @@ static void net_socket_handle_tcp(uint32_t src_ip, uint16_t src_port,
             socket->remote_seq = seq + 1u;
             socket->state = LEONOS_NET_TCP_ESTABLISHED;
             socket->status = LEONOS_NET_STATUS_OK;
+            socket->syn_deadline = 0;
             net_socket_touch(socket);
             if (net_socket_trace_tls(socket)) {
-                console_printf("[net] tls connected socket=%d local=%u remote=%u\\n",
+                console_printf("[net] tls connected socket=%d local=%u remote=%u\n",
                                socket->handle, socket->local_port,
                                socket->remote_port);
             }
@@ -1585,30 +1647,42 @@ static void net_socket_handle_tcp(uint32_t src_ip, uint16_t src_port,
         return;
     }
     if (payload_len) {
+        if (net_tcp_seq_after_or_equal(socket->remote_seq, seq) && seq != socket->remote_seq) {
+            uint32_t duplicate = socket->remote_seq - seq;
+            if (duplicate > payload_len) duplicate = payload_len;
+            payload += duplicate;
+            payload_len -= duplicate;
+            seq += duplicate;
+        }
         if (seq == socket->remote_seq) {
-            uint32_t free_bytes = NET_SOCKET_RX_CAP - socket->rx_len;
+            uint32_t free_bytes = socket->shutdown_read ? payload_len : NET_SOCKET_RX_CAP - socket->rx_len;
             uint32_t copy_len = payload_len;
             uint32_t overflow = 0;
             if (copy_len > free_bytes) {
                 copy_len = free_bytes;
                 overflow = 1;
             }
-            if (copy_len) {
-                net_memcpy(socket->rx + socket->rx_len, payload, copy_len);
+            if (copy_len && !socket->shutdown_read) {
+                uint32_t tail = (socket->rx_head + socket->rx_len) % NET_SOCKET_RX_CAP;
+                uint32_t first = NET_SOCKET_RX_CAP - tail;
+                if (first > copy_len) first = copy_len;
+                net_memcpy(socket->rx + tail, payload, first);
+                net_memcpy(socket->rx, payload + first, copy_len - first);
                 socket->rx_len += copy_len;
                 socket->rx_bytes += copy_len;
             }
-            socket->remote_seq += payload_len;
-            socket->status = overflow ? LEONOS_NET_STATUS_HTTP_TOO_LARGE
-                                      : LEONOS_NET_STATUS_OK;
+            /* Acknowledge only bytes retained. The sender retransmits the
+             * suffix once the application opens the receive window again. */
+            socket->remote_seq += copy_len;
+            socket->status = LEONOS_NET_STATUS_OK;
             net_socket_touch(socket);
             if (net_socket_trace_tls(socket)) {
-                console_printf("[net] tls rx accepted socket=%d bytes=%u queued=%u next=%u overflow=%u\\n",
+                console_printf("[net] tls rx accepted socket=%d bytes=%u queued=%u next=%u overflow=%u\n",
                                socket->handle, copy_len, socket->rx_len,
                                socket->remote_seq, overflow);
             }
         } else if (net_socket_trace_tls(socket)) {
-            console_printf("[net] tls rx ignored socket=%d seq=%u expected=%u bytes=%u\\n",
+            console_printf("[net] tls rx ignored socket=%d seq=%u expected=%u bytes=%u\n",
                            socket->handle, seq, socket->remote_seq, payload_len);
         }
         (void)net_send_tcp_to_mac(socket->dst_mac, net_config.local_ip,
@@ -1780,13 +1854,9 @@ static int net_dhcp_parse_packet(const uint8_t *payload, uint32_t len,
         if (code == 255) {
             break;
         }
-        if (pos >= len) {
-            break;
-        }
+        if (pos >= len) return -1;
         opt_len = payload[pos++];
-        if (pos + opt_len > len) {
-            break;
-        }
+        if (pos + opt_len > len) return -1;
         opt = payload + pos;
         if (code == 53 && opt_len >= 1) {
             offer->msg_type = opt[0];
@@ -1908,8 +1978,10 @@ static uint32_t net_dhcp_request(uint32_t timeout_ms,
         }
         return LEONOS_NET_STATUS_TX_FAILED;
     }
+    uint32_t offered_ip = offer.yiaddr, offered_server = offer.server_ip;
     ret = net_dhcp_wait(xid, timeout_ms, NET_DHCP_ACK, &offer);
-    if (ret < 0 || !offer.yiaddr) {
+    if (ret < 0 || offer.yiaddr != offered_ip || offer.server_ip != offered_server ||
+        !offer.subnet_mask || !offer.lease_seconds) {
         if (out_config) {
             *out_config = net_config;
         }
@@ -1931,10 +2003,11 @@ static uint32_t net_dhcp_request(uint32_t timeout_ms,
  */
 static uint32_t net_ensure_ipv4_config(uint32_t timeout_ms, int require_dns)
 {
+    net_expire_lease();
     if (!e1000_is_ready()) {
         return LEONOS_NET_STATUS_NO_DEVICE;
     }
-    if (net_config.local_ip && net_config.gateway_ip &&
+    if (net_config.local_ip &&
         (!require_dns || net_config.dns_ip)) {
         return LEONOS_NET_STATUS_OK;
     }
@@ -1980,7 +2053,7 @@ void net_init(void)
         console_printf("[ntclks] net unavailable: no active e1000\n");
         return;
     }
-    net_log_config("[ntclks] net ready static fallback");
+    net_log_config("[ntclks] network interface ready, awaiting configuration");
     if (!net_service_enabled("dhcp", 1)) {
         console_printf("[ntclks] DHCP boot auto-connect disabled by services.cfg\n");
         return;
@@ -1996,7 +2069,7 @@ void net_init(void)
         console_printf("[ntclks] DHCP boot attempt %u failed status=%u\n",
                        attempt, status);
     }
-    net_log_config("[ntclks] DHCP unavailable, keeping static fallback");
+    net_log_config("[ntclks] DHCP unavailable, interface remains unconfigured");
 }
 
 /**
@@ -2006,6 +2079,24 @@ void net_init(void)
 int net_is_ready(void)
 {
     return e1000_is_ready();
+}
+
+void net_poll_packets(void)
+{
+    for (unsigned i = 0; i < 32; ++i) net_poll_once(0, 0, 0, 0);
+}
+
+int net_ipv4_send_udp(uint32_t source, uint32_t destination, uint16_t source_port,
+                       uint16_t destination_port, const void *data, uint32_t length)
+{
+    if (!e1000_is_ready()) return -LINUX_ENETDOWN;
+    if (net_ensure_ipv4_config(3000, 0) != LEONOS_NET_STATUS_OK) return -LINUX_ENETUNREACH;
+    uint8_t mac[6];
+    if (destination == 0xffffffffu) net_memcpy(mac, net_broadcast_mac, 6);
+    else if (net_resolve_mac(net_route_arp_ip(destination), 1000, mac) < 0) return -LINUX_EHOSTUNREACH;
+    if (!source) source = net_config.local_ip;
+    return net_send_udp_to_mac(mac, source, destination, source_port, destination_port,
+                               data, length) < 0 ? -LINUX_EIO : 0;
 }
 
 /**
@@ -2018,8 +2109,11 @@ int net_get_config(struct leonos_net_config *config)
     if (!config) {
         return -1;
     }
+    net_expire_lease();
     net_update_config_flags();
     *config = net_config;
+    if (config->source == LEONOS_NET_CONFIG_SOURCE_DHCP && config->lease_seconds != UINT32_MAX)
+        config->lease_seconds -= (uint32_t)((time_uptime_ms() - net_dhcp_acquired_ms) / 1000);
     return 0;
 }
 
@@ -2630,7 +2724,7 @@ static struct net_socket *net_socket_alloc(uint32_t owner_pid, uint32_t owner_ui
     }
     if (!slot) {
         for (uint32_t i = 0; i < LEONOS_NET_SOCKET_MAX; ++i) {
-            if (net_sockets[i].state == LEONOS_NET_TCP_CLOSED) {
+            if (!net_sockets[i].fd_owned && net_sockets[i].state == LEONOS_NET_TCP_CLOSED) {
                 slot = &net_sockets[i];
                 break;
             }
@@ -2638,7 +2732,7 @@ static struct net_socket *net_socket_alloc(uint32_t owner_pid, uint32_t owner_ui
     }
     if (!slot) {
         for (uint32_t i = 0; i < LEONOS_NET_SOCKET_MAX; ++i) {
-            if (net_sockets[i].state == LEONOS_NET_TCP_TIME_WAIT) {
+            if (!net_sockets[i].fd_owned && net_sockets[i].state == LEONOS_NET_TCP_TIME_WAIT) {
                 slot = &net_sockets[i];
                 break;
             }
@@ -2648,6 +2742,8 @@ static struct net_socket *net_socket_alloc(uint32_t owner_pid, uint32_t owner_ui
         return 0;
     }
     net_socket_clear(slot);
+    slot->rx = kernel_malloc(NET_SOCKET_RX_CAP);
+    if (!slot->rx) return 0;
     slot->used = 1;
     slot->handle = net_next_socket_handle++;
     if (net_next_socket_handle <= 0) {
@@ -2720,7 +2816,7 @@ int net_socket_open(struct leonos_net_socket_open *request, uint32_t owner_pid,
  */
 static uint32_t net_socket_connect_ip(struct net_socket *socket,
                                       uint32_t remote_ip, uint16_t remote_port,
-                                      uint32_t timeout_ms)
+                                      uint32_t timeout_ms, bool asynchronous)
 {
     uint8_t dst_mac[6];
     uint32_t arp_ip;
@@ -2741,6 +2837,8 @@ static uint32_t net_socket_connect_ip(struct net_socket *socket,
     }
 
     socket->state = LEONOS_NET_TCP_SYN_SENT;
+    socket->rx_head = 0;
+    socket->rx_window_valid = false;
     socket->status = LEONOS_NET_STATUS_TCP_TIMEOUT;
     socket->local_ip = net_config.local_ip;
     socket->remote_ip = remote_ip;
@@ -2766,6 +2864,11 @@ static uint32_t net_socket_connect_ip(struct net_socket *socket,
     ++socket->local_seq;
     start = time_uptime_ms();
     next_retransmit = start + NET_TCP_SYN_RETRANSMIT_MS;
+    if (asynchronous) {
+        socket->syn_deadline = start + timeout_ms;
+        socket->syn_retransmit = next_retransmit;
+        return LEONOS_NET_STATUS_TCP_TIMEOUT;
+    }
     while (!net_timeout_expired(start, timeout_ms, spins++)) {
         uint64_t now;
         net_poll_once(0, 0, 0, 0);
@@ -2858,7 +2961,7 @@ int net_socket_connect(struct leonos_net_socket_connect *request,
     }
     for (uint32_t i = 0; i < remote_count; ++i) {
         status = net_socket_connect_ip(socket, remote_ips[i],
-                                       (uint16_t)request->port, timeout_ms);
+                                       (uint16_t)request->port, timeout_ms, false);
         if (status == LEONOS_NET_STATUS_OK) {
             request->status = status;
             request->remote_ip = socket->remote_ip;
@@ -2896,6 +2999,7 @@ int net_socket_send(struct leonos_net_socket_io *request, uint32_t owner_pid)
         request->status = LEONOS_NET_STATUS_SOCKET_BAD_HANDLE;
         return 0;
     }
+    if (socket->shutdown_write) { request->status = LEONOS_NET_STATUS_SOCKET_CLOSED; return 0; }
     if (socket->state == LEONOS_NET_TCP_TIME_WAIT ||
         socket->state == LEONOS_NET_TCP_CLOSED) {
         request->status = LEONOS_NET_STATUS_SOCKET_CLOSED;
@@ -2919,7 +3023,7 @@ int net_socket_send(struct leonos_net_socket_io *request, uint32_t owner_pid)
         }
         target_seq = seq + chunk;
         if (net_socket_trace_tls(socket)) {
-            console_printf("[net] tls tx socket=%d seq=%u ack=%u bytes=%u target=%u\\n",
+            console_printf("[net] tls tx socket=%d seq=%u ack=%u bytes=%u target=%u\n",
                            socket->handle, seq, socket->remote_seq, chunk,
                            target_seq);
         }
@@ -2967,7 +3071,7 @@ int net_socket_send(struct leonos_net_socket_io *request, uint32_t owner_pid)
         if (!net_tcp_seq_after_or_equal(socket->acked_seq, target_seq)) {
             request->status = LEONOS_NET_STATUS_TCP_TIMEOUT;
             if (net_socket_trace_tls(socket)) {
-                console_printf("[net] tls tx timeout socket=%d target=%u acked=%u state=%u\\n",
+                console_printf("[net] tls tx timeout socket=%d target=%u acked=%u state=%u\n",
                                socket->handle, target_seq, socket->acked_seq,
                                socket->state);
             }
@@ -3005,6 +3109,7 @@ int net_socket_recv(struct leonos_net_socket_io *request, uint32_t owner_pid)
         request->status = LEONOS_NET_STATUS_SOCKET_BAD_HANDLE;
         return 0;
     }
+    if (!request->length || socket->shutdown_read) { request->status = LEONOS_NET_STATUS_OK; return 0; }
     if (socket->state != LEONOS_NET_TCP_ESTABLISHED &&
         socket->state != LEONOS_NET_TCP_TIME_WAIT) {
         request->status = socket->state == LEONOS_NET_TCP_CLOSED
@@ -3027,15 +3132,22 @@ int net_socket_recv(struct leonos_net_socket_io *request, uint32_t owner_pid)
             copy_len = socket->rx_len;
         }
         if (copy_len) {
-            net_memcpy(dst, socket->rx, copy_len);
-            for (uint32_t i = copy_len; i < socket->rx_len; ++i) {
-                socket->rx[i - copy_len] = socket->rx[i];
-            }
+            uint32_t first = NET_SOCKET_RX_CAP - socket->rx_head;
+            if (first > copy_len) first = copy_len;
+            net_memcpy(dst, socket->rx + socket->rx_head, first);
+            net_memcpy(dst + first, socket->rx, copy_len - first);
+            socket->rx_head = (socket->rx_head + copy_len) % NET_SOCKET_RX_CAP;
             socket->rx_len -= copy_len;
-            (void)net_send_tcp_to_mac(socket->dst_mac, net_config.local_ip,
-                                      socket->remote_ip, socket->local_port,
-                                      socket->remote_port, socket->local_seq,
-                                      socket->remote_seq, TCP_FLAG_ACK, 0, 0);
+            uint32_t remaining = net_socket_receive_window(socket);
+            uint32_t window = net_socket_select_window(socket);
+            /* Linux tcp_cleanup_rbuf() sends a window update after a
+             * significant increase, including reopening a zero window. */
+            if (!socket->fin_received && window > remaining && window >= 2u * remaining) {
+                (void)net_send_tcp_to_mac(socket->dst_mac, net_config.local_ip,
+                                          socket->remote_ip, socket->local_port,
+                                          socket->remote_port, socket->local_seq,
+                                          socket->remote_seq, TCP_FLAG_ACK, 0, 0);
+            }
         }
         request->transferred = copy_len;
         request->status = LEONOS_NET_STATUS_OK;
@@ -3051,7 +3163,7 @@ int net_socket_recv(struct leonos_net_socket_io *request, uint32_t owner_pid)
     }
     request->status = LEONOS_NET_STATUS_TCP_TIMEOUT;
     if (net_socket_trace_tls(socket)) {
-        console_printf("[net] tls rx timeout socket=%d state=%u expected=%u queued=%u fin=%u\\n",
+        console_printf("[net] tls rx timeout socket=%d state=%u expected=%u queued=%u fin=%u\n",
                        socket->handle, socket->state, socket->remote_seq,
                        socket->rx_len, socket->fin_received);
     }
@@ -3177,18 +3289,98 @@ int net_connections(struct leonos_net_connection_list *request,
  */
 short net_socket_poll_fd(int32_t handle, uint32_t owner_pid, short events)
 {
+    net_poll_packets();
     struct net_socket *socket = net_socket_find(handle, owner_pid, 1);
     short result = 0;
     if (!socket) return POLLNVAL;
+    if (socket->state == LEONOS_NET_TCP_SYN_SENT && socket->syn_deadline) {
+        uint64_t now = time_uptime_ms();
+        if (now >= socket->syn_deadline) {
+            socket->error = LINUX_ETIMEDOUT;
+            net_socket_mark_closed(socket, LEONOS_NET_STATUS_TCP_TIMEOUT);
+        } else if (now >= socket->syn_retransmit) {
+            (void)net_send_tcp_to_mac(socket->dst_mac, socket->local_ip, socket->remote_ip,
+                socket->local_port, socket->remote_port, socket->local_seq - 1, 0, TCP_FLAG_SYN, 0, 0);
+            socket->syn_retransmit = now + NET_TCP_SYN_RETRANSMIT_MS;
+        }
+    }
     if (socket->state == LEONOS_NET_TCP_ESTABLISHED) {
-        if ((events & POLLIN) && (socket->rx_len || socket->fin_received)) result |= POLLIN;
+        if ((events & POLLIN) && (socket->rx_len || socket->fin_received || socket->shutdown_read)) result |= POLLIN;
         if (events & POLLOUT) result |= POLLOUT;
     } else if (socket->state == LEONOS_NET_TCP_TIME_WAIT) {
         result |= POLLIN | POLLHUP;
     } else if (socket->state == LEONOS_NET_TCP_CLOSED) {
-        result |= POLLHUP;
+        result |= POLLHUP | (events & POLLOUT);
     }
+    if (socket->error) result |= POLLERR;
     return result;
+}
+
+/* The descriptor table owns one reference per open file description. PID
+ * filtering belongs to the management API, not inherited Linux descriptors. */
+void net_socket_pin_fd(int32_t handle)
+{
+    struct net_socket *s = net_socket_find(handle, 0, 1);
+    if (s) s->fd_owned = true;
+}
+
+void net_socket_release_fd(int32_t handle)
+{
+    struct net_socket *s = net_socket_find(handle, 0, 1);
+    if (!s) return;
+    struct leonos_net_socket_close request = {.socket = handle};
+    (void)net_socket_close(&request, 0);
+    s->fd_owned = false;
+}
+
+int net_socket_error(int32_t handle, bool clear)
+{
+    struct net_socket *s = net_socket_find(handle, 0, 1);
+    if (!s) return LINUX_EBADF;
+    int error = s->error;
+    if (clear) s->error = 0;
+    return error;
+}
+
+int net_socket_available(int32_t handle)
+{
+    struct net_socket *s = net_socket_find(handle, 0, 1);
+    return s ? (int)s->rx_len : -LINUX_EBADF;
+}
+
+int net_socket_connect_fd(int32_t handle, uint32_t ip, uint16_t port, bool nonblock)
+{
+    struct net_socket *s = net_socket_find(handle, 0, 1);
+    if (!s) return -LINUX_EBADF;
+    if (s->state == LEONOS_NET_TCP_SYN_SENT) return -LINUX_EALREADY;
+    if (s->state != LEONOS_NET_TCP_CLOSED) return -LINUX_EISCONN;
+    if (!e1000_is_ready()) return -LINUX_ENETDOWN;
+    if (!ip || !port) return -LINUX_EINVAL;
+    if (net_ensure_ipv4_config(3000, 0) != LEONOS_NET_STATUS_OK) return -LINUX_ENETUNREACH;
+    s->error = 0;
+    uint32_t status = net_socket_connect_ip(s, ip, port, 10000, nonblock);
+    if (s->state == LEONOS_NET_TCP_SYN_SENT) return -LINUX_EINPROGRESS;
+    if (status == LEONOS_NET_STATUS_OK) return 0;
+    if (s->error) return -s->error;
+    return status == LEONOS_NET_STATUS_ARP_TIMEOUT ? -LINUX_EHOSTUNREACH : -LINUX_ETIMEDOUT;
+}
+
+int net_socket_shutdown_fd(int32_t handle, int how)
+{
+    struct net_socket *s = net_socket_find(handle, 0, 1);
+    if (!s) return -LINUX_EBADF;
+    if (how < 0 || how > 2) return -LINUX_EINVAL;
+    if (s->state != LEONOS_NET_TCP_ESTABLISHED && s->state != LEONOS_NET_TCP_TIME_WAIT)
+        return -LINUX_ENOTCONN;
+    if (how != 1) { s->shutdown_read = true; s->rx_len = 0; }
+    if (how != 0 && !s->shutdown_write) {
+        if (net_send_tcp_to_mac(s->dst_mac, s->local_ip, s->remote_ip, s->local_port,
+            s->remote_port, s->local_seq, s->remote_seq, TCP_FLAG_FIN | TCP_FLAG_ACK, 0, 0) < 0)
+            return -LINUX_EIO;
+        ++s->local_seq;
+        s->shutdown_write = true;
+    }
+    return 0;
 }
 
 int net_socket_address(int32_t handle, uint32_t owner_pid,
@@ -3211,7 +3403,7 @@ void net_close_owner_sockets(uint32_t owner_pid)
     }
     for (uint32_t i = 0; i < LEONOS_NET_SOCKET_MAX; ++i) {
         struct net_socket *socket = &net_sockets[i];
-        if (socket->used && socket->owner_pid == owner_pid &&
+        if (socket->used && !socket->fd_owned && socket->owner_pid == owner_pid &&
             socket->state != LEONOS_NET_TCP_CLOSED) {
             net_socket_mark_closed(socket, LEONOS_NET_STATUS_SOCKET_CLOSED);
         }
@@ -3223,7 +3415,10 @@ void net_close_owner_sockets(uint32_t owner_pid)
  */
 void net_driver_detached(void)
 {
-    net_memzero(net_sockets, sizeof(net_sockets));
+    for (unsigned i = 0; i < LEONOS_NET_SOCKET_MAX; ++i) {
+        struct net_socket *s = &net_sockets[i];
+        if (s->used) { s->error = LINUX_ENETDOWN; net_socket_mark_closed(s, LEONOS_NET_STATUS_NO_DEVICE); }
+    }
     net_arp_cache_clear();
     net_set_static_fallback();
     net_update_config_flags();

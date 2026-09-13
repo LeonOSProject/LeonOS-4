@@ -496,7 +496,7 @@ int leonos_ui_show_password_dialog(const char *title, const char *label,
                          i + 1 < capacity && value[i]; ++i) {
         original[i] = value[i];
     }
-    window_id = leonos_gui_create_app_window_ex(title ? title : "Password",
+    window_id = leonos_gui_create_app_window_ex(title ? title : UI_T("Password", "密码"),
                                                  label ? label : "",
                                                  W, H,
                                                  LEONOS_GUI_WINDOW_NO_RESIZE);
@@ -523,9 +523,9 @@ int leonos_ui_show_password_dialog(const char *title, const char *label,
         leonos_ui_edit_state_draw(&surface, 16, 46, W - 32, &shown,
                                   LEONOS_UI_EDIT_SECURE);
         leonos_ui_button(&surface, W - 168, H - 38, 72, LEONOS_UI_BUTTON_H,
-                         "OK", 0);
+                         UI_T("OK", "确定"), 0);
         leonos_ui_button(&surface, W - 88, H - 38, 72, LEONOS_UI_BUTTON_H,
-                         "Cancel", 0);
+                         UI_T("Cancel", "取消"), 0);
         leonos_gui_present_window((uint32_t)window_id, W, H, W, pixels);
         event.window_id = (uint32_t)window_id;
         if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {

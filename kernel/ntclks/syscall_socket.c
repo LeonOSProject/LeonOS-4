@@ -1,6 +1,7 @@
 /* Unix-domain sockets backed by the kernel object table. */
 #include <ntclks/heap.h>
 #include <ntclks/net.h>
+#include <ntclks/net_udp.h>
 #include <ntclks/object.h>
 #include <ntclks/sched.h>
 #include <ntclks/syscall.h>
@@ -872,14 +873,9 @@ int task_socket_ioctl(struct task_file *file, uint64_t request, uint64_t address
     return 0;
 }
 
-static struct unix_socket *unix_from_inet_file(const struct task_file *file)
-{
-    (void)file;
-    return NULL;
-}
-
 int task_inet_read(struct task_file *file, void *buffer, uint32_t length)
 {
+    if (file && file->kind == TASK_FILE_KIND_UDP) return task_udp_recv(file, buffer, length, 0, 0, 0);
     struct leonos_net_socket_io request = {0};
     struct task *task = sched_current_task();
     short ready;
@@ -887,12 +883,17 @@ int task_inet_read(struct task_file *file, void *buffer, uint32_t length)
     request.socket = (int32_t)file->aux;
     request.buffer = buffer;
     request.length = length;
-    request.timeout_ms = (file->flags & LEONOS_O_NONBLOCK) ? 1u : 3000u;
-    ready = net_socket_poll_fd(request.socket, task ? task->pid : 0, POLLIN | POLLHUP);
-    if (!(ready & (POLLIN | POLLHUP)) && (file->flags & LEONOS_O_NONBLOCK)) {
-        return -LEONOS_EAGAIN;
+    if (!length) return 0;
+    request.timeout_ms = 1;
+    ready = net_socket_poll_fd(request.socket, 0, POLLIN | POLLHUP);
+    if (!(ready & (POLLIN | POLLHUP | POLLERR))) {
+        if (file->flags & LEONOS_O_NONBLOCK) return -LEONOS_EAGAIN;
+        if (!task) return -LINUX_ESRCH;
+        sched_sleep_current_until(time_ticks() + 1);
+        return KERNEL_SYSCALL_BLOCKED;
     }
-    if (net_socket_recv(&request, task ? task->pid : 0) < 0) return -LEONOS_EIO;
+    if (ready & POLLERR) { int error = net_socket_error(request.socket, true); if (error) return -error; }
+    if (net_socket_recv(&request, 0) < 0) return -LEONOS_EIO;
     if (request.status == LEONOS_NET_STATUS_OK) return (int)request.transferred;
     if (request.status == LEONOS_NET_STATUS_SOCKET_CLOSED ||
         request.status == LEONOS_NET_STATUS_TCP_RESET) return 0;
@@ -902,14 +903,15 @@ int task_inet_read(struct task_file *file, void *buffer, uint32_t length)
 
 int task_inet_write(struct task_file *file, const void *buffer, uint32_t length)
 {
+    if (file && file->kind == TASK_FILE_KIND_UDP) return task_udp_send(file, buffer, length, 0, 0, 0);
     struct leonos_net_socket_io request = {0};
-    struct task *task = sched_current_task();
     if (!file || !(file->flags & TASK_FILE_FLAG_SOCKET_INET)) return -LEONOS_EBADF;
     request.socket = (int32_t)file->aux;
     request.buffer = (void *)buffer;
     request.length = length;
-    request.timeout_ms = (file->flags & LEONOS_O_NONBLOCK) ? 1u : 3000u;
-    if (net_socket_send(&request, task ? task->pid : 0) < 0) return -LEONOS_EIO;
+    request.timeout_ms = 10000u;
+    if (net_socket_send(&request, 0) < 0) return -LEONOS_EIO;
+    if (request.transferred) return (int)request.transferred;
     if (request.status == LEONOS_NET_STATUS_OK) return (int)request.transferred;
     if (request.status == LEONOS_NET_STATUS_SOCKET_CLOSED ||
         request.status == LEONOS_NET_STATUS_TCP_RESET) return -LEONOS_EPIPE;
@@ -919,9 +921,9 @@ int task_inet_write(struct task_file *file, const void *buffer, uint32_t length)
 
 short task_inet_poll(const struct task_file *file, short events)
 {
-    struct task *task = sched_current_task();
+    if (file && file->kind == TASK_FILE_KIND_UDP) return task_udp_poll((struct task_file *)file, events);
     if (!file || !(file->flags & TASK_FILE_FLAG_SOCKET_INET)) return POLLNVAL;
-    return net_socket_poll_fd((int32_t)file->aux, task ? task->pid : 0, events);
+    return net_socket_poll_fd((int32_t)file->aux, 0, events);
 }
 
 void task_inet_retain(struct task_file *file)
@@ -931,35 +933,8 @@ void task_inet_retain(struct task_file *file)
 
 void task_inet_release(struct task_file *file)
 {
-    /* net.c sockets remain owner-pid scoped and are reaped on process exit.
-     * Forked descriptors therefore keep sharing the parent connection until
-     * the last process closes; the ABI migration does not change that. */
-    (void)file;
-}
-
-static void inet_ip_to_text(uint32_t ip, char *text, uint32_t capacity)
-{
-    if (capacity < 16u) return;
-    for (uint32_t i = 0; i < 4u; ++i) {
-        uint32_t value = (ip >> (i * 8u)) & 0xffu;
-        uint32_t digits = value ? 0u : 1u;
-        uint32_t temp = value;
-        while (temp) { temp /= 10u; ++digits; }
-        if (digits > 2u) {
-            text[0] = (char)('0' + (value / 100u)); ++text;
-            value %= 100u;
-            text[0] = (char)('0' + (value / 10u)); ++text;
-            value %= 10u;
-            text[0] = (char)('0' + value); ++text;
-        } else if (digits == 2u) {
-            text[0] = (char)('0' + (value / 10u)); ++text;
-            text[0] = (char)('0' + (value % 10u)); ++text;
-        } else {
-            text[0] = (char)('0' + value); ++text;
-        }
-        if (i != 3u) { *text = '.'; ++text; }
-    }
-    *text = 0;
+    if (file && file->kind == TASK_FILE_KIND_UDP) { task_udp_release(file); return; }
+    if (file && (file->flags & TASK_FILE_FLAG_SOCKET_INET)) net_socket_release_fd((int32_t)file->aux);
 }
 
 static int64_t inet_socket_dispatch(uint64_t number, uint64_t a0, uint64_t a1,
@@ -969,11 +944,19 @@ static int64_t inet_socket_dispatch(uint64_t number, uint64_t a0, uint64_t a1,
     struct task_file *file;
     (void)a3;
     if (!task) return -LEONOS_EPERM;
+    if (number == __NR_socket && (a1 & 0xfu) == SOCK_DGRAM)
+        return syscall_udp(number, a0, a1, a2, a3, a4, 0);
+    if (number != __NR_socket) {
+        file = task_file_for_fd(task, (int32_t)a0);
+        if (file && file->kind == TASK_FILE_KIND_UDP)
+            return syscall_udp(number, a0, a1, a2, a3, a4, 0);
+    }
     if (number == __NR_socket) {
+        if ((int32_t)a2 && (int32_t)a2 != 6) return -LINUX_EPROTONOSUPPORT;
         if (a1 & ~(uint32_t)(SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC)) return -LEONOS_EINVAL;
         struct leonos_net_socket_open request = {
             .domain = (uint32_t)a0,
-            .type = (uint32_t)a1,
+            .type = (uint32_t)a1 & 0xfu,
             .protocol = (uint32_t)a2,
         };
         if ((int)a0 != AF_INET || ((int)a1 & 0x0f) != SOCK_STREAM) {
@@ -990,6 +973,7 @@ static int64_t inet_socket_dispatch(uint64_t number, uint64_t a0, uint64_t a1,
             file->offset = 0;
             file->aux = (uint64_t)(uint32_t)request.socket;
             file->path[0] = 0;
+            net_socket_pin_fd(request.socket);
             return fd;
         }
         {
@@ -1001,46 +985,54 @@ static int64_t inet_socket_dispatch(uint64_t number, uint64_t a0, uint64_t a1,
     file = task_file_for_fd(task, (int)a0);
     if (!file || !(file->flags & TASK_FILE_FLAG_SOCKET_INET)) return -LEONOS_EBADF;
     if (number == __NR_connect) {
-        const struct sockaddr_in *address = (const struct sockaddr_in *)(uintptr_t)a1;
-        struct leonos_net_socket_connect request = {0};
-        if (!user_range_ok(a1, sizeof(*address)) || address->sin_family != AF_INET) {
-            return -LEONOS_EINVAL;
-        }
-        request.socket = (int32_t)file->aux;
-        request.port = ntohs(address->sin_port);
-        request.timeout_ms = (file->flags & LEONOS_O_NONBLOCK) ? 1u : 5000u;
-        inet_ip_to_text(ntohl(address->sin_addr.s_addr), request.host,
-                        sizeof(request.host));
-        if (net_socket_connect(&request, task->pid) < 0) return -LEONOS_EIO;
-        if (request.status != LEONOS_NET_STATUS_OK) {
-            if ((file->flags & LEONOS_O_NONBLOCK) &&
-                request.status == LEONOS_NET_STATUS_TCP_TIMEOUT) return -LEONOS_EAGAIN;
-            if (request.status == LEONOS_NET_STATUS_NO_DEVICE) return -LEONOS_ENODEV;
-            return -LEONOS_EIO;
-        }
-        return 0;
+        struct sockaddr_in address;
+        if ((int32_t)a2 < (int32_t)sizeof(address)) return -LINUX_EINVAL;
+        if (!user_range_ok(a1, sizeof(address))) return -LINUX_EFAULT;
+        __builtin_memcpy(&address, (void *)(uintptr_t)a1, sizeof(address));
+        if (address.sin_family != AF_INET) return -LINUX_EAFNOSUPPORT;
+        return net_socket_connect_fd((int32_t)file->aux, ntohl(address.sin_addr.s_addr),
+            ntohs(address.sin_port), (file->flags & LEONOS_O_NONBLOCK) != 0);
     }
     if (number == __NR_getsockname || number == __NR_getpeername) {
         uint32_t local_ip, remote_ip;
         uint16_t local_port, remote_port;
-        struct sockaddr_in *address = (struct sockaddr_in *)(uintptr_t)a1;
-        socklen_t *length = (socklen_t *)(uintptr_t)a2;
-        if (!user_range_ok(a1, sizeof(*address)) || !user_range_ok(a2, sizeof(*length))) return -LEONOS_EFAULT;
-        if (net_socket_address((int32_t)file->aux, task->pid,
+        if (!user_range_writable(a2, 4)) return -LEONOS_EFAULT;
+        uint32_t length = *(uint32_t *)(uintptr_t)a2;
+        if ((int32_t)length < 0) return -LINUX_EINVAL;
+        if (length > sizeof(struct sockaddr_in)) length = sizeof(struct sockaddr_in);
+        if (length && !user_range_writable(a1, length)) return -LINUX_EFAULT;
+        if (net_socket_address((int32_t)file->aux, 0,
                                &local_ip, &local_port, &remote_ip, &remote_port) < 0) return -LEONOS_EBADF;
-        *address = (struct sockaddr_in){
+        if (number == __NR_getpeername && !remote_ip) return -LINUX_ENOTCONN;
+        struct sockaddr_in address = {
             .sin_family = AF_INET,
             .sin_port = number == __NR_getsockname ? htons(local_port) : htons(remote_port),
             .sin_addr = {.s_addr = number == __NR_getsockname ? htonl(local_ip) : htonl(remote_ip)},
         };
-        *length = sizeof(*address);
+        __builtin_memcpy((void *)(uintptr_t)a1, &address, length);
+        *(uint32_t *)(uintptr_t)a2 = sizeof(address);
         return 0;
     }
-    if (number == __NR_shutdown || number == __NR_setsockopt ||
-        number == __NR_getsockopt) {
+    if (number == __NR_shutdown) return net_socket_shutdown_fd((int32_t)file->aux, (int32_t)a1);
+    if (number == __NR_setsockopt) return -LINUX_ENOPROTOOPT;
+    if (number == __NR_getsockopt) {
+        if ((int32_t)a1 != SOL_SOCKET) return -LINUX_ENOPROTOOPT;
+        if (!user_range_writable(a4, 4)) return -LINUX_EFAULT;
+        uint32_t length = *(uint32_t *)(uintptr_t)a4;
+        if ((int32_t)length < 0) return -LINUX_EINVAL;
+        if (length > 4) length = 4;
+        if (length && !user_range_writable(a3, length)) return -LINUX_EFAULT;
+        int value;
+        if ((int32_t)a2 == SO_ERROR) value = net_socket_error((int32_t)file->aux, true);
+        else if ((int32_t)a2 == SO_TYPE) value = SOCK_STREAM;
+        else if ((int32_t)a2 == SO_DOMAIN) value = AF_INET;
+        else if ((int32_t)a2 == SO_PROTOCOL) value = 6;
+        else return -LINUX_ENOPROTOOPT;
+        __builtin_memcpy((void *)(uintptr_t)a3, &value, length);
+        *(uint32_t *)(uintptr_t)a4 = length;
         return 0;
     }
-    return -LEONOS_ENOSYS;
+    return -LINUX_EOPNOTSUPP;
 }
 
 /** @brief Import native iovec lengths without faulting data pages prematurely. */
@@ -1354,6 +1346,59 @@ complete_message: ;
  * @param result Captured input length and output flags used by batch iteration.
  * @return Bytes processed, negative errno, or the internal blocking sentinel.
  */
+static int64_t inet_message(struct task_file *file, uint64_t user_header,
+                            struct msghdr message, uint32_t flags, bool receiving,
+                            uint64_t total, struct socket_message_result *output)
+{
+    bool datagram = file->kind == TASK_FILE_KIND_UDP;
+    if (flags & ~(MSG_DONTWAIT | MSG_NOSIGNAL | MSG_PEEK | MSG_TRUNC | MSG_WAITALL | MSG_CMSG_CLOEXEC))
+        return -LINUX_EOPNOTSUPP;
+    if (!receiving && message.msg_controllen) return -LINUX_EINVAL;
+    if (!receiving && datagram && total > 1472) return -LINUX_EMSGSIZE;
+    if (receiving && !user_range_writable(user_header, sizeof(message))) return -LINUX_EFAULT;
+    uint32_t size = total > 16384 ? 16384 : (uint32_t)total;
+    uint8_t *data = size ? kernel_malloc(size) : NULL;
+    if (size && !data) return -LINUX_ENOMEM;
+    int64_t ret = -LINUX_EFAULT;
+    uint32_t offset = 0;
+    for (uint64_t i = 0; i < message.msg_iovlen && offset < size; ++i) {
+        uint32_t n = message.msg_iov[i].iov_len > size - offset ? size - offset : message.msg_iov[i].iov_len;
+        uint64_t pointer = (uintptr_t)message.msg_iov[i].iov_base;
+        if (n && !(receiving ? user_range_writable(pointer, n) : user_range_ok(pointer, n))) goto done;
+        if (!receiving && n) __builtin_memcpy(data + offset, (void *)(uintptr_t)pointer, n);
+        offset += n;
+    }
+    output->requested = total;
+    struct task_file local = *file;
+    if (flags & MSG_DONTWAIT) local.flags |= LEONOS_O_NONBLOCK;
+    struct msghdr *destination = (void *)(uintptr_t)user_header;
+    if (receiving) {
+        if (datagram) ret = task_udp_recv(file, data, size, (flags & ~MSG_CMSG_CLOEXEC) | MSG_TRUNC,
+            (uintptr_t)message.msg_name, (uintptr_t)&destination->msg_namelen);
+        else if (flags & (MSG_PEEK | MSG_TRUNC)) ret = -LINUX_EOPNOTSUPP;
+        else ret = task_inet_read(&local, data, size);
+        if (ret < 0) goto done;
+        uint32_t copied = (uint64_t)ret < size ? (uint32_t)ret : size;
+        offset = 0;
+        for (uint64_t i = 0; i < message.msg_iovlen && offset < copied; ++i) {
+            uint32_t n = message.msg_iov[i].iov_len > copied - offset ? copied - offset : message.msg_iov[i].iov_len;
+            if (n) __builtin_memcpy(message.msg_iov[i].iov_base, data + offset, n);
+            offset += n;
+        }
+        output->flags = datagram && (uint64_t)ret > size ? MSG_TRUNC : 0;
+        destination->msg_flags = output->flags;
+        destination->msg_controllen = 0;
+        if (!message.msg_name || !datagram) destination->msg_namelen = 0;
+        if (!(flags & MSG_TRUNC)) ret = copied;
+    } else {
+        if (datagram) ret = task_udp_send(file, data, size, flags, (uintptr_t)message.msg_name, message.msg_namelen);
+        else ret = task_inet_write(&local, data, size);
+    }
+done:
+    if (data) kernel_free(data);
+    return ret;
+}
+
 int64_t task_socket_message(struct task *task, struct task_file *file, uint64_t message,
                             uint32_t flags, bool receiving, bool batch,
                             struct socket_message_result *result)
@@ -1361,7 +1406,7 @@ int64_t task_socket_message(struct task *task, struct task_file *file, uint64_t 
     if (flags & MSG_CMSG_COMPAT) return -LINUX_EINVAL;
     if (!file) return -LINUX_EBADF;
     if (!(file->flags & TASK_FILE_FLAG_SOCKET)) return -LINUX_ENOTSOCK;
-    if (!(file->flags & TASK_FILE_FLAG_SOCKET_UNIX)) return -LINUX_EOPNOTSUPP;
+    if (!(file->flags & (TASK_FILE_FLAG_SOCKET_UNIX | TASK_FILE_FLAG_SOCKET_INET))) return -LINUX_EOPNOTSUPP;
     if (!user_range_ok(message, sizeof(struct msghdr))) return -LINUX_EFAULT;
     struct msghdr imported;
     __builtin_memcpy(&imported, (const void *)(uintptr_t)message, sizeof(imported));
@@ -1381,7 +1426,9 @@ int64_t task_socket_message(struct task *task, struct task_file *file, uint64_t 
         imported.msg_iov = vectors;
         uint64_t total;
         status = unix_message_vectors(&imported, &total);
-        if (!status) status = receiving ?
+        if (!status && (file->flags & TASK_FILE_FLAG_SOCKET_INET))
+            status = inet_message(file, message, imported, flags, receiving, total, result);
+        else if (!status) status = receiving ?
             unix_recvmsg(task, file, (const void *)(uintptr_t)message, imported, flags, total, result) :
             unix_sendmsg(task, file, imported, flags, batch, total, result);
     }
@@ -1762,7 +1809,11 @@ int64_t syscall_socket_dispatch(uint64_t number, uint64_t a0, uint64_t a1,
         struct task_file *file = task_file_for_io(task, (int)a0);
         if (!file) return -LEONOS_EBADF;
         if (a2 && !user_range_ok(a1, a2)) return -LEONOS_EFAULT;
-        if (file->flags & TASK_FILE_FLAG_SOCKET_INET) return task_inet_write(file, (const void *)(uintptr_t)a1, (uint32_t)a2);
+        if (file->flags & TASK_FILE_FLAG_SOCKET_INET) {
+            if (file->kind == TASK_FILE_KIND_UDP)
+                return task_udp_send(file, (void *)(uintptr_t)a1, (uint32_t)a2, (uint32_t)a3, a4, (uint32_t)a5);
+            return task_inet_write(file, (const void *)(uintptr_t)a1, (uint32_t)a2);
+        }
         if (!(file->flags & TASK_FILE_FLAG_SOCKET_UNIX)) return -LEONOS_EBADF;
         if (a3 & ~(MSG_DONTWAIT | MSG_NOSIGNAL | MSG_MORE | MSG_EOR)) return -LINUX_EOPNOTSUPP;
         struct unix_socket *socket = unix_from_file(file);
@@ -1787,7 +1838,11 @@ int64_t syscall_socket_dispatch(uint64_t number, uint64_t a0, uint64_t a1,
         struct task_file *file = task->socket_receive_file ? task->socket_receive_file : task_file_for_io(task, (int)a0);
         if (!file) return -LEONOS_EBADF;
         if (a2 && !user_range_writable(a1, a2)) return -LEONOS_EFAULT;
-        if (file->flags & TASK_FILE_FLAG_SOCKET_INET) return task_inet_read(file, (void *)(uintptr_t)a1, (uint32_t)a2);
+        if (file->flags & TASK_FILE_FLAG_SOCKET_INET) {
+            if (file->kind == TASK_FILE_KIND_UDP)
+                return task_udp_recv(file, (void *)(uintptr_t)a1, (uint32_t)a2, (uint32_t)a3, a4, a5);
+            return task_inet_read(file, (void *)(uintptr_t)a1, (uint32_t)a2);
+        }
         if (!(file->flags & TASK_FILE_FLAG_SOCKET_UNIX)) return -LEONOS_EBADF;
         if (a3 & ~(MSG_DONTWAIT | MSG_PEEK | MSG_TRUNC | MSG_WAITALL | MSG_CMSG_CLOEXEC)) return -LINUX_EOPNOTSUPP;
         if (a4) {

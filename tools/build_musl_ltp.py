@@ -34,7 +34,7 @@ def main():
     parser.add_argument("--sdk", type=Path, default=ROOT / "build/musl/sdk")
     parser.add_argument("--cache", type=Path, default=ROOT / "build")
     parser.add_argument("--out", type=Path, default=ROOT / "build/musl/ltp")
-    parser.add_argument("--proxy", default="http://127.0.0.1:12334")
+    parser.add_argument("--proxy", help="override the proxy from the environment (optional)")
     args = parser.parse_args()
     cache, output, sdk = args.cache.resolve(), args.out.resolve(), args.sdk.resolve()
     cache.mkdir(parents=True, exist_ok=True)
@@ -42,7 +42,8 @@ def main():
     for filename, url, digest, directory in SOURCES:
         archive = cache / filename
         if not archive.is_file():
-            run(["curl", "--fail", "--location", "--proxy", args.proxy, url, "-o", archive])
+            run(["curl", "--fail", "--location",
+                 *(["--proxy", args.proxy] if args.proxy is not None else []), url, "-o", archive])
         with archive.open("rb") as stream:
             actual = hashlib.file_digest(stream, "sha256").hexdigest()
         if actual != digest:

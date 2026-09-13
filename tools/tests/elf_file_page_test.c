@@ -37,6 +37,8 @@ int storage_read_node(const struct storage_node *node, uint64_t offset,
     return 0;
 }
 void storage_set_io_async_context(bool enabled) { io_async = enabled; }
+int storage_tmpfs_get_page(const struct storage_node *node, uint64_t offset, uint64_t *phys)
+{ (void)node; (void)offset; (void)phys; abort(); }
 int storage_errno(int status) { return status; }
 bool address_space_map_user_page(struct address_space *as, uint64_t va,
                                  uint64_t phys, uint64_t flags)

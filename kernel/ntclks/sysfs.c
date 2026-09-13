@@ -43,13 +43,16 @@ enum attribute {
     A_FB_MODES,
     A_CONNECTED,
     A_ENABLED,
-    A_PCI_UEVENT
+    A_PCI_UEVENT,
+    A_BLOCK_NUMBER,
+    A_BLOCK_TEXT
 };
 struct sys_node {
     const char *path;
     enum attribute attr;
     uint32_t index;
     const char *target;
+    uint64_t value;
 };
 typedef int (*sys_visit)(const struct sys_node *, void *);
 /** @brief Cache PCI identities once, under the caller's kernel execution lock. */
@@ -104,14 +107,94 @@ static void sys_pci_path(char out[LEONOS_FS_PATH_LEN], const char *prefix, uint3
 static int sys_emit(sys_visit visit, void *ctx, const char *path, enum attribute attr, uint32_t index,
                     const char *target)
 {
-    struct sys_node n = {path, attr, index, target};
+    struct sys_node n = {.path=path, .attr=attr, .index=index, .target=target};
     return visit(&n, ctx);
+}
+static void sys_block_name(char *out, uint32_t disk, int32_t part)
+{
+    sys_path(out, "disk", (int)disk, "");
+    if (part >= 0) {
+        char suffix[LEONOS_FS_PATH_LEN];
+        sys_path(suffix, "p", part + 1, "");
+        sys_path(out, "disk", (int)disk, suffix);
+    }
+}
+
+/* Use the same registered disks/GPT extents and dev_t encoding as devfs. */
+static int sys_blocks(sys_visit visit, void *ctx)
+{
+    struct leonos_install_disk disks[LEONOS_INSTALL_MAX_DISKS];
+    uint32_t count = 0;
+    int ret = storage_install_list_disks(disks, LEONOS_INSTALL_MAX_DISKS, &count);
+    if (ret < 0) return ret;
+    if (count > LEONOS_INSTALL_MAX_DISKS) return -5;
+    for (uint32_t i = 0; i < count; ++i) {
+        char diskpath[LEONOS_FS_PATH_LEN];
+        sys_path(diskpath, "/sys/devices/platform/leonos-block/disk", disks[i].id, "");
+        for (int32_t part = -1; part < (int32_t)LEONOS_DISK_MAX_PARTITIONS; ++part) {
+            uint64_t start = 0, sectors = disks[i].sector_count;
+            if (part >= 0) {
+                ret = storage_disk_block_info(disks[i].id, part, &start, &sectors);
+                if (ret == -2 || ret == -22) continue; /* No GPT entry/table. */
+                if (ret < 0) return ret;
+            }
+            char name[LEONOS_FS_PATH_LEN], base[LEONOS_FS_PATH_LEN];
+            char path[LEONOS_FS_PATH_LEN], target[LEONOS_FS_PATH_LEN], number[64], event[256];
+            sys_block_name(name, disks[i].id, part);
+            sys_path(base, diskpath, -1, part < 0 ? "" : "/");
+            if (part >= 0) {
+                sys_path(path, base, -1, name);
+                sys_path(base, path, -1, "");
+            }
+            uint32_t minor = STORAGE_BLOCK_MINOR(STORAGE_BLOCK_VOLUME_ID(disks[i].id, part));
+            struct text_stream s = {.buffer=number, .capacity=sizeof(number)-1};
+            text_unsigned(&s, STORAGE_BLOCK_MAJOR); text_string(&s, ":"); text_unsigned(&s, minor);
+            number[s.written] = 0;
+            s = (struct text_stream){.buffer=event, .capacity=sizeof(event)-1};
+            text_string(&s, "MAJOR="); text_unsigned(&s, STORAGE_BLOCK_MAJOR);
+            text_string(&s, "\nMINOR="); text_unsigned(&s, minor);
+            text_string(&s, "\nDEVNAME="); text_string(&s, name);
+            text_string(&s, "\nDEVTYPE="); text_string(&s, part < 0 ? "disk" : "partition");
+            if (part >= 0) { text_string(&s, "\nPARTN="); text_unsigned(&s, part + 1); }
+            event[s.written] = 0;
+            const char *suffix[] = {"", "/holders", "/slaves", "/dev", "/size", "/uevent",
+                                   "/start", "/partition", "/queue", "/queue/logical_block_size"};
+            const enum attribute kind[] = {A_DIR,A_DIR,A_DIR,A_BLOCK_TEXT,A_BLOCK_NUMBER,A_BLOCK_TEXT,
+                                           A_BLOCK_NUMBER,A_BLOCK_NUMBER,A_DIR,A_BLOCK_NUMBER};
+            for (uint32_t j=0; j<sizeof(kind)/sizeof(kind[0]); ++j) {
+                if ((part < 0 && (j == 6 || j == 7)) || (part >= 0 && j >= 8)) continue;
+                sys_path(path, base, -1, suffix[j]);
+                struct sys_node n = {.path=path,.attr=kind[j],.target=j == 3 ? number : event,
+                    .value=j == 4 ? sectors * (disks[i].sector_size / 512u) :
+                           j == 6 ? start * (disks[i].sector_size / 512u) :
+                           j == 7 ? (uint32_t)part + 1 : disks[i].sector_size};
+                if ((ret = visit(&n, ctx))) return ret;
+            }
+            sys_path(target, "../../", -1, base + 5);
+            sys_path(path, "/sys/dev/block/", -1, number);
+            if ((ret=sys_emit(visit,ctx,path,A_LINK,0,target))) return ret;
+            sys_path(path, "/sys/class/block/", -1, name);
+            if ((ret=sys_emit(visit,ctx,path,A_LINK,0,target))) return ret;
+            if (part < 0) {
+                sys_path(target, "../", -1, base + 5);
+                sys_path(path, "/sys/block/", -1, name);
+                if ((ret=sys_emit(visit,ctx,path,A_LINK,0,target))) return ret;
+            }
+        }
+    }
+    return 0;
 }
 /** @brief Enumerate the same namespace used by lookup/readlink/readdir. */
 static int sys_walk(sys_visit visit, void *ctx)
 {
     static const char *dirs[] = {"/sys",
+                                 "/sys/dev",
+                                 "/sys/dev/block",
+                                 "/sys/block",
+                                 "/sys/class/block",
                                  "/sys/devices",
+                                 "/sys/devices/platform",
+                                 "/sys/devices/platform/leonos-block",
                                  "/sys/devices/system",
                                  "/sys/devices/system/cpu",
                                  "/sys/devices/virtual",
@@ -223,7 +306,7 @@ static int sys_walk(sys_visit visit, void *ctx)
                             "../../devices/virtual/drm/card0/card0-Unknown-1")))
             return ret;
     }
-    return 0;
+    return sys_blocks(visit, ctx);
 }
 /** @brief Read a PCI config register for a known node. */
 static uint32_t sys_pci_config(const struct sys_node *n, uint8_t offset)
@@ -377,6 +460,12 @@ static void sys_value(const struct sys_node *n, struct text_stream *s)
         break;
     case A_ENABLED:
         text_string(s, "enabled");
+        break;
+    case A_BLOCK_NUMBER:
+        text_unsigned(s, n->value);
+        break;
+    case A_BLOCK_TEXT:
+        text_string(s, n->target);
         break;
     default:
         return;

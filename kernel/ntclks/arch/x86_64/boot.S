@@ -159,6 +159,13 @@ x86_64_ltr:
 
 /** @brief Switches to the page-table root address in `rdi`. */
 .global x86_64_load_cr3
+.global x86_64_flush_user_tlb
+.type x86_64_flush_user_tlb, @function
+x86_64_flush_user_tlb:
+    mov %cr3, %rax
+    mov %rax, %cr3
+    ret
+
 .type x86_64_load_cr3, @function
 x86_64_load_cr3:
     mov %rdi, %cr3

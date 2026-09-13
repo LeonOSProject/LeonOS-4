@@ -632,32 +632,6 @@ api = false
 depends = ["ncurses"]
 
 [[components]]
-id = "musl-gcc"
-symbol = "TOOL_MUSL_GCC"
-label = "Static musl GCC and binutils"
-category = "Developer applications"
-kind = "tool"
-default = true
-required = false
-stage = true
-entry = false
-sdk = false
-api = false
-
-[[components]]
-id = "python"
-symbol = "TOOL_PYTHON"
-label = "Python 3 with complete standard library"
-category = "Developer applications"
-kind = "tool"
-default = true
-required = false
-stage = true
-entry = false
-sdk = false
-api = false
-
-[[components]]
 id = "ncurses"
 symbol = "LIB_NCURSES"
 label = "ncurses wide-character terminal library"
@@ -824,19 +798,6 @@ api = false
 id = "file"
 symbol = "TOOL_FILE"
 label = "file and libmagic"
-category = "Developer applications"
-kind = "tool"
-default = true
-required = false
-stage = true
-entry = false
-sdk = true
-api = false
-
-[[components]]
-id = "tcc"
-symbol = "TOOL_TCC"
-label = "Tiny C Compiler"
 category = "Developer applications"
 kind = "tool"
 default = true

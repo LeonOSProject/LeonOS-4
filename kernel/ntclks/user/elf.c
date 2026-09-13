@@ -193,7 +193,7 @@ static bool elf64_interp(const struct elf64_ehdr *eh, const void *image, size_t 
 }
 
 /**
- * @brief Verify a dynamic image's PHDR/ABI-note layout; the main image must also carry a matching PT_INTERP, while the interpreter must not. Records phdr_vaddr, interp, and abi_major in out.
+ * @brief Read interpreter and ABI metadata independently of ET_EXEC/ET_DYN.
  */
 static bool elf64_validate_dynamic_header(const struct elf64_ehdr *eh, const void *image,
                                           size_t len, bool is_interpreter,
@@ -249,6 +249,7 @@ static bool elf64_probe_image(const void *image, size_t header_len, uint64_t fil
 {
     const struct elf64_ehdr *eh;
     uint32_t loads = 0;
+    bool has_interpreter = false;
     if (!image || header_len < sizeof(struct elf64_ehdr) || !out) {
         return false;
     }
@@ -283,6 +284,7 @@ static bool elf64_probe_image(const void *image, size_t header_len, uint64_t fil
     for (uint16_t i = 0; i < eh->e_phnum; ++i) {
         const struct elf64_phdr *ph = elf64_phdr_at(eh, image, i);
         uint64_t end;
+        if (ph->p_type == PT_INTERP) has_interpreter = true;
         if (ph->p_type != PT_LOAD || !ph->p_memsz) {
             continue;
         }
@@ -303,7 +305,7 @@ static bool elf64_probe_image(const void *image, size_t header_len, uint64_t fil
     if (!loads || out->low_vaddr == UINT64_MAX) {
         return false;
     }
-    if (out->dynamic &&
+    if ((out->dynamic || has_interpreter) &&
         !elf64_validate_dynamic_header(eh, image, header_len, is_interpreter, out)) {
         return false;
     }
@@ -725,7 +727,7 @@ static int elf64_map_one(struct task *task, const struct storage_node *node,
 }
 
 /**
- * @brief Map the task's main ELF (and its dynamic interpreter when PIE) into the task, recording entry/PHDR/interpreter addresses and ASLR biases in out.
+ * @brief Map the main ELF and any PT_INTERP; only ET_DYN receives a load bias.
  */
 int elf64_map_task_image(struct task *task, const struct storage_node *node,
                           struct elf_image_info *out)
@@ -783,13 +785,8 @@ int elf64_map_task_image(struct task *task, const struct storage_node *node,
     main_info.load_bias = main_bias;
     main_info.entry += main_bias;
     main_info.phdr_vaddr += main_bias;
-    if (!main_info.dynamic) {
-        *out = main_info;
-        return 0;
-    }
-
     if (!main_info.interp[0]) {
-        /* Static PIE: run the image entry directly.  AT_BASE remains zero via
+        /* Static ET_EXEC or PIE: enter the main image. AT_BASE stays zero via
          * the cleared dynamic-launch state; AT_PHDR/AT_ENTRY are filled by
          * userland_load_task_image_locked(). */
         main_info.interpreter_entry = main_info.entry;

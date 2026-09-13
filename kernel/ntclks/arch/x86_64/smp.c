@@ -58,9 +58,12 @@ static uint64_t membarrier_sequence;
 static uint64_t membarrier_request[SMP_MAX_CPUS];
 static uint64_t membarrier_ack[SMP_MAX_CPUS];
 static bool membarrier_sync_core;
+static bool membarrier_flush_tlb;
+extern void x86_64_flush_user_tlb(void);
 
 static void cpu_memory_barrier(bool sync_core)
 {
+    if (membarrier_flush_tlb) x86_64_flush_user_tlb();
     if (sync_core) {
         uint32_t eax = 0, ebx, ecx, edx;
         __asm__ volatile("cpuid" : "+a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : : "memory");
@@ -78,11 +81,12 @@ void smp_membarrier_poll(void)
     __atomic_store_n(&membarrier_ack[cpu], request, __ATOMIC_RELEASE);
 }
 
-void smp_membarrier(bool sync_core)
+static void smp_cpu_barrier(bool sync_core, bool flush_tlb)
 {
     uint32_t current = smp_current_cpu();
     uint64_t targets = 0, sequence = ++membarrier_sequence;
     membarrier_sync_core = sync_core;
+    membarrier_flush_tlb = flush_tlb;
     cpu_memory_barrier(sync_core);
     for (uint32_t cpu = 0; cpu < smp_cpu_count(); ++cpu) {
         if (cpu == current || !smp_cpu_online(cpu)) continue;
@@ -97,6 +101,9 @@ void smp_membarrier(bool sync_core)
     }
     cpu_memory_barrier(sync_core);
 }
+
+void smp_membarrier(bool sync_core) { smp_cpu_barrier(sync_core, false); }
+void smp_flush_user_tlb(void) { smp_cpu_barrier(false, true); }
 
 static uint32_t trampoline_offset(const uint8_t *symbol)
 {
@@ -290,6 +297,7 @@ void smp_ap_entry(uint32_t cpu_index)
      * smp_start_aps(). Do not let an AP race that first transition or invoke
      * lazy ELF loading while the bootstrap CPU still owns the task table. */
     while (!smp_scheduler_started) {
+        smp_membarrier_poll();
         __asm__ volatile("pause" : : : "memory");
     }
     /* No device IRQ is routed to an AP. Its local timer is sufficient for

@@ -173,4 +173,5 @@ both libc builds; broadening Unix DAC itself would have hidden that regression.
 
 Upstream references: [musl 1.2.6](https://git.musl-libc.org/cgit/musl/tag/?h=v1.2.6),
 [mimalloc 3.5.1](https://github.com/microsoft/mimalloc/tree/v3.5.1).
-All network source retrieval uses http://127.0.0.1:12334.
+The historical migration run used http://127.0.0.1:12334 for source retrieval.
+Current builds use the host's normal network and optional proxy environment.

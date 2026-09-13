@@ -36,5 +36,7 @@ void smp_membarrier_poll(void);
  * hold the kernel execution lock; sync_core also serializes instruction fetch.
  */
 void smp_membarrier(bool sync_core);
+/* Execution-lock serialized invalidation before reusing unmapped user pages. */
+void smp_flush_user_tlb(void);
 
 #endif

@@ -14,7 +14,7 @@ struct task;
 
 struct elf_image_info {
     bool valid;
-    bool dynamic;
+    bool dynamic; /* ET_DYN: needs a load bias; PT_INTERP is independent. */
     uint64_t entry;
     uint64_t load_bias;
     uint16_t machine;

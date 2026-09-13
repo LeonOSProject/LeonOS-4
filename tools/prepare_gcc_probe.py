@@ -14,18 +14,25 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runner", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--toolchain", required=True, type=Path,
+                        help="Explicit external GCC fixture root from package_musl_gcc.py")
     args = parser.parse_args()
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
     stage = out / "stage"
     if stage.exists():
         shutil.rmtree(stage)
-    shutil.copytree(ROOT / "build/esp", stage)
+    shutil.copytree(ROOT / "build/esp", stage, symlinks=True)
     shutil.copy2(ROOT / "build/system/kernel.sys", stage / "leonos/kernel.sys")
     shutil.copy2(ROOT / "build/system/middlelayer.sys", stage / "leonos/middlelayer.sys")
     shutil.copy2(ROOT / "build/boot/loader.elf", stage / "loader.elf")
-    if not (stage / "usr/bin/musl-gcc").is_symlink() and not (stage / "usr/bin/musl-gcc").is_file():
-        raise SystemExit("gcc-probe requires the normal musl-gcc image component")
+    from package_musl_gcc import COMMANDS
+    for name in ("opt/dyne", "usr/share/licenses/musl-gcc", "usr/share/examples/musl-gcc"):
+        shutil.copytree(args.toolchain / name, stage / name, symlinks=True)
+    for name in COMMANDS:
+        link = stage / "usr/bin" / name
+        link.unlink(missing_ok=True)
+        link.symlink_to("../../opt/dyne/bin/leonos-musl-cc")
     tests = stage / "usr/lib/leonos/tests"
     tests.mkdir(parents=True, exist_ok=True)
     shutil.copy2(args.runner, tests / "gcc-probe.elf")

@@ -465,6 +465,8 @@ static int storage_lookup_path_unlocked(const char *path, struct storage_node *o
         return ret;
     }
 
+    if (g_storage.filesystem == STORAGE_FILESYSTEM_TMPFS)
+        return tmpfs_lookup(g_storage.tmpfs, backend_path, out);
     if (storage_path_cache_lookup(resolved, out)) {
         return 0;
     }
@@ -564,7 +566,7 @@ static int storage_read_node_cursor_unlocked(const struct storage_node *node, ui
         return -22;
     }
     struct storage_node refreshed = *node;
-    if (node->flags & STORAGE_NODE_FLAG_EXT2) {
+    if (node->flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS)) {
         ret = storage_inode_refresh(&refreshed);
         if (ret < 0) return ret;
         node = &refreshed;
@@ -587,6 +589,11 @@ static int storage_read_node_cursor_unlocked(const struct storage_node *node, ui
     }
     if (len > node->size - offset) {
         len = (uint32_t)(node->size - offset);
+    }
+    if (g_storage.filesystem == STORAGE_FILESYSTEM_TMPFS) {
+        ret = tmpfs_read(g_storage.tmpfs, node->first_cluster, offset, buf, len, out_read);
+        storage_restore_volume(old_volume);
+        return ret;
     }
 
     if (g_storage.filesystem == STORAGE_FILESYSTEM_ISO9660) {
@@ -890,6 +897,11 @@ static int storage_readdir_node_unlocked(const struct storage_node *node, uint64
         }
         return ret;
     }
+    if (g_storage.filesystem == STORAGE_FILESYSTEM_TMPFS) {
+        ret = tmpfs_readdir(g_storage.tmpfs, node->first_cluster, cursor, entry);
+        storage_restore_volume(old_volume);
+        return ret;
+    }
     if (g_storage.filesystem == STORAGE_FILESYSTEM_EXT2) {
         ret = ext2_iter_dir_entry(node->first_cluster, *cursor, entry);
         storage_restore_volume(old_volume);
@@ -1013,6 +1025,10 @@ int storage_write_node(const char *path, uint64_t offset,
     storage_cache_invalidate();
     if (node.type != LEONOS_FS_TYPE_FILE) {
         return -21;
+    }
+    if (g_storage.filesystem == STORAGE_FILESYSTEM_TMPFS) {
+        storage_begin_mutation();
+        return tmpfs_write(g_storage.tmpfs, node.first_cluster, offset, buf, len, out_written);
     }
     if (g_storage.filesystem == STORAGE_FILESYSTEM_EXT2) {
         storage_begin_mutation();
@@ -1276,6 +1292,16 @@ int storage_write_file(const char *path, const void *buf, uint32_t len)
         storage_begin_mutation();
         return ext2_write_file(backend_path, buf, len);
     }
+    if (g_storage.filesystem == STORAGE_FILESYSTEM_TMPFS) {
+        ret = storage_backend_path(resolved, backend_path, sizeof(backend_path));
+        if (ret < 0) return ret;
+        storage_begin_mutation();
+        ret = tmpfs_lookup(g_storage.tmpfs, backend_path, &existing);
+        if (ret == -2) ret = tmpfs_create(g_storage.tmpfs, backend_path, LINUX_S_IFREG | 0666, NULL, &existing);
+        if (!ret) ret = tmpfs_truncate(g_storage.tmpfs, existing.first_cluster, 0);
+        if (!ret) ret = tmpfs_write(g_storage.tmpfs, existing.first_cluster, 0, buf, len, &data_written);
+        return ret;
+    }
     if (g_storage.filesystem == STORAGE_FILESYSTEM_EXFAT) {
         ret = storage_backend_path(resolved, backend_path, sizeof(backend_path));
         if (ret < 0) return ret;
@@ -1464,7 +1490,7 @@ int storage_truncate_file(const char *path, uint64_t length)
     uint32_t target;
     int ret;
 
-    if (!path || length > 0xffffffffULL) {
+    if (!path) {
         return -22;
     }
     ret = storage_lookup_path(path, &node);
@@ -1478,6 +1504,11 @@ int storage_truncate_file(const char *path, uint64_t length)
         storage_begin_mutation();
         return ext2_truncate_file(&node, length);
     }
+    if (g_storage.filesystem == STORAGE_FILESYSTEM_TMPFS) {
+        storage_begin_mutation();
+        return tmpfs_truncate(g_storage.tmpfs, node.first_cluster, length);
+    }
+    if (length > 0xffffffffULL) return -22;
     if (g_storage.filesystem == STORAGE_FILESYSTEM_EXFAT) {
         char backend_path[LEONOS_FS_PATH_LEN];
         ret = storage_backend_path(path, backend_path, sizeof(backend_path));
@@ -1555,6 +1586,12 @@ int storage_mkdir(const char *path)
         }
         storage_begin_mutation();
         return ext2_mkdir(backend_path);
+    }
+    if (g_storage.filesystem == STORAGE_FILESYSTEM_TMPFS) {
+        ret = storage_backend_path(resolved, backend_path, sizeof(backend_path));
+        if (ret < 0) return ret;
+        storage_begin_mutation();
+        return tmpfs_create(g_storage.tmpfs, backend_path, LINUX_S_IFDIR | 0777, NULL, NULL);
     }
     if (g_storage.filesystem == STORAGE_FILESYSTEM_EXFAT) {
         ret = storage_backend_path(resolved, backend_path, sizeof(backend_path));
@@ -1664,6 +1701,12 @@ int storage_unlink(const char *path)
         storage_begin_mutation();
         return ext2_unlink(backend_path);
     }
+    if (g_storage.filesystem == STORAGE_FILESYSTEM_TMPFS) {
+        ret = storage_backend_path(resolved, backend_path, sizeof(backend_path));
+        if (ret < 0) return ret;
+        storage_begin_mutation();
+        return tmpfs_unlink(g_storage.tmpfs, backend_path, false);
+    }
     if (g_storage.filesystem == STORAGE_FILESYSTEM_EXFAT) {
         if (node.type == LEONOS_FS_TYPE_DIR) return -21;
         ret = storage_backend_path(resolved, backend_path, sizeof(backend_path));
@@ -1757,6 +1800,12 @@ int storage_rmdir(const char *path)
         storage_begin_mutation();
         return ext2_rmdir(backend_path);
     }
+    if (g_storage.filesystem == STORAGE_FILESYSTEM_TMPFS) {
+        ret = storage_backend_path(resolved, backend_path, sizeof(backend_path));
+        if (ret < 0) return ret;
+        storage_begin_mutation();
+        return tmpfs_unlink(g_storage.tmpfs, backend_path, true);
+    }
     if (g_storage.filesystem == STORAGE_FILESYSTEM_EXFAT) {
         if (node.type != LEONOS_FS_TYPE_DIR) return -20;
         ret = storage_backend_path(resolved, backend_path, sizeof(backend_path));
@@ -1822,6 +1871,16 @@ int storage_rename(const char *old_path, const char *new_path)
         storage_parent_path(old_resolved, old_parent, sizeof(old_parent), old_name, sizeof(old_name)) < 0 ||
         storage_parent_path(new_resolved, new_parent, sizeof(new_parent), new_name, sizeof(new_name)) < 0) {
         return -22;
+    }
+    struct storage_volume *old_tmp_volume, *new_tmp_volume;
+    ret = storage_route_path(old_resolved, &old_tmp_volume, old_backend_path, sizeof(old_backend_path));
+    if (ret < 0) return ret;
+    ret = storage_route_path(new_resolved, &new_tmp_volume, new_backend_path, sizeof(new_backend_path));
+    if (ret < 0) return ret;
+    if (old_tmp_volume != new_tmp_volume) return -18;
+    if (old_tmp_volume->filesystem == STORAGE_FILESYSTEM_TMPFS) {
+        storage_begin_mutation();
+        return tmpfs_rename(old_tmp_volume->tmpfs, old_backend_path, new_backend_path);
     }
     if (!storage_text_eq_ci(old_parent, new_parent)) {
         return -22;
@@ -1945,6 +2004,10 @@ int storage_link(const char *old_path, const char *new_path)
     if (old_volume->volume_id != new_volume->volume_id) return -18;
     ret = storage_select_volume(old_volume->volume_id);
     if (ret < 0) return ret;
+    if (g_storage.filesystem == STORAGE_FILESYSTEM_TMPFS) {
+        storage_begin_mutation();
+        return tmpfs_link(g_storage.tmpfs, old_backend_path, new_backend_path);
+    }
     if (g_storage.filesystem != STORAGE_FILESYSTEM_EXT2) return -95;
     storage_begin_mutation();
     return ext2_link(old_backend_path, new_backend_path);
@@ -1967,6 +2030,11 @@ int storage_symlink(const char *target, const char *path)
     if (ret < 0) goto out;
     ret = storage_select_volume(volume->volume_id);
     if (ret < 0) goto out;
+    if (g_storage.filesystem == STORAGE_FILESYSTEM_TMPFS) {
+        storage_begin_mutation();
+        ret = tmpfs_create(g_storage.tmpfs, backend_path, LINUX_S_IFLNK | 0777, target, NULL);
+        goto out;
+    }
     if (g_storage.filesystem != STORAGE_FILESYSTEM_EXT2) { ret = -1; goto out; }
     storage_begin_mutation();
     ret = ext2_symlink(target, backend_path);
@@ -2004,7 +2072,9 @@ int storage_readlink(const char *path, char *buffer, uint32_t capacity, uint32_t
             __builtin_memcpy(buffer, target, length);
             if (out_len) *out_len = length;
         }
-    } else if (!ret) ret = ext2_symlink_read(&node, buffer, capacity, out_len);
+    } else if (!ret && (node.flags & STORAGE_NODE_FLAG_TMPFS))
+        ret = tmpfs_readlink(g_storage.tmpfs, node.first_cluster, buffer, capacity, out_len);
+    else if (!ret) ret = ext2_symlink_read(&node, buffer, capacity, out_len);
     storage_restore_volume(previous);
     kernel_execution_unlock_irqrestore(irq_flags);
     return ret;
@@ -2077,6 +2147,14 @@ int storage_create_socket(const char *path, struct storage_node *out)
     int ret = storage_lookup_path(path, &existing);
     if (!ret) return -17;
     if (ret != -2) return ret;
+    struct storage_volume *volume;
+    char backend[LEONOS_FS_PATH_LEN];
+    ret = storage_route_path(path, &volume, backend, sizeof(backend));
+    if (ret < 0) return ret;
+    if (volume->filesystem == STORAGE_FILESYSTEM_TMPFS) {
+        storage_begin_mutation();
+        return tmpfs_create(volume->tmpfs, backend, LINUX_S_IFSOCK | 0777, NULL, out);
+    }
     ret = storage_write_file(path, "", 0);
     if (ret < 0) return ret;
     ret = storage_lookup_path(path, out);

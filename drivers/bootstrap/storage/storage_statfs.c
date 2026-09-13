@@ -28,6 +28,9 @@ int storage_statfs(const struct storage_node *node, struct linux_statfs_abi *val
     if (ret < 0) goto out;
     value->f_fsid[0] = node->volume_id + 1;
     switch (g_storage.filesystem) {
+    case STORAGE_FILESYSTEM_TMPFS:
+        tmpfs_statfs(g_storage.tmpfs,value);
+        break;
     case STORAGE_FILESYSTEM_FAT32:
         value->f_type = 0x4d44;
         value->f_bsize = g_storage.cluster_bytes;

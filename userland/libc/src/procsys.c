@@ -154,22 +154,21 @@ int leonos_perf_info(struct leonos_perf_info *info)
 int leonos_time_info(struct leonos_time_info *info)
 {
     struct timeval tv;
-    if (!info) return -1;
+    struct tm calendar;
+    if (!info) { errno = EINVAL; return -1; }
     memset(info, 0, sizeof(*info));
-    if (gettimeofday(&tv, 0) == 0) {
-        info->unix_seconds = (uint64_t)tv.tv_sec;
-        info->valid = 1;
-    }
     info->uptime_ms = leonos_uptime_ms();
-    return 0;
-}
-
-int leonos_time_ntp_sync(uint32_t timeout_ms, struct leonos_time_sync *result)
-{
-    if (!result) return -1;
-    memset(result, 0, sizeof(*result));
-    result->timeout_ms = timeout_ms;
-    result->status = LEONOS_NET_STATUS_DNS_NO_ANSWER;
+    if (gettimeofday(&tv, 0) < 0) return -1;
+    if (tv.tv_sec < 0) { errno = EOVERFLOW; return -1; }
+    if (!gmtime_r(&tv.tv_sec, &calendar)) return -1;
+    info->unix_seconds = (uint64_t)tv.tv_sec;
+    info->year = (uint32_t)calendar.tm_year + 1900u;
+    info->month = (uint32_t)calendar.tm_mon + 1u;
+    info->day = (uint32_t)calendar.tm_mday;
+    info->hour = (uint32_t)calendar.tm_hour;
+    info->minute = (uint32_t)calendar.tm_min;
+    info->second = (uint32_t)calendar.tm_sec;
+    info->valid = 1;
     return 0;
 }
 
