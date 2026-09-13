@@ -35,7 +35,7 @@ def obtain_archive(archive: Path, source: Path | None) -> None:
     elif not archive.exists():
         with tempfile.TemporaryDirectory(prefix=".gcc-download-", dir=archive.parent) as directory:
             candidate = Path(directory) / ARCHIVE_NAME
-            subprocess.run(["curl", "--proxy", "http://127.0.0.1:12334", "--fail", "--location",
+            subprocess.run(["curl", "--fail", "--location",
                             "--retry", "3", "--connect-timeout", "30", "--max-time", "600",
                             "--output", str(candidate), ARCHIVE_URL], check=True)
             if digest(candidate) != ARCHIVE_SHA256:

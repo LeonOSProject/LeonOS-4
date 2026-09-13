@@ -72,9 +72,13 @@ void storage_inode_retain(struct storage_inode_ref *reference);
 int storage_inode_put(struct storage_inode_ref *reference);
 int storage_inode_refresh(struct storage_node *node);
 int storage_node_mount_flags(const struct storage_node *node, uint64_t *flags);
+int storage_tmpfs_get_page(const struct storage_node *node, uint64_t offset, uint64_t *phys);
 int storage_remount_path(const char *path, uint64_t flags);
+int storage_mount_tmpfs(const char *source, const char *target, uint64_t flags,
+                         const char *options, uint32_t uid, uint32_t gid);
 int storage_sync_volume(uint32_t volume_id);
 int storage_sync_all(void);
+int storage_sync_disk(uint32_t disk_id);
 int storage_write_held_node(struct storage_node *node, uint64_t offset,
                             const void *buffer, uint32_t length, uint32_t *written);
 int storage_truncate_held_node(struct storage_node *node, uint64_t length);
@@ -127,6 +131,7 @@ struct storage_read_cursor {
 #define STORAGE_NODE_FLAG_PROC    0x00000100u
 #define STORAGE_NODE_FLAG_SYSFS 0x00000400u
 #define STORAGE_NODE_FLAG_PTY   0x00000800u
+#define STORAGE_NODE_FLAG_TMPFS 0x00001000u
 #define STORAGE_SYSFS_DEVICE 202u
 #define STORAGE_NODE_FLAG_DEV_LINK 0x00000200u
 /* Anonymous filesystem device numbers, also exported in proc mountinfo. */
@@ -138,6 +143,13 @@ struct storage_read_cursor {
  * whole disk.  Device nodes never use volume_id for mounted-volume lookup. */
 #define STORAGE_BLOCK_DISK_ID(value) ((uint32_t)(value) & 0xffffu)
 #define STORAGE_BLOCK_PARTITION(value) ((int32_t)(((uint32_t)(value) >> 16) & 0xffffu) - 1)
+#define STORAGE_BLOCK_MAJOR 259u
+#define STORAGE_BLOCK_MINOR(value) (STORAGE_BLOCK_DISK_ID(value) * 256u + STORAGE_BLOCK_PARTITION(value) + 1u)
+static inline uint64_t storage_block_rdev(uint32_t value)
+{
+    uint32_t minor = STORAGE_BLOCK_MINOR(value);
+    return ((uint64_t)STORAGE_BLOCK_MAJOR << 8) | (minor & 255u) | ((uint64_t)(minor & ~255u) << 12);
+}
 #define STORAGE_BLOCK_VOLUME_ID(disk, partition) \
     ((uint32_t)(disk) & 0xffffu) | ((uint32_t)((partition) + 1) << 16)
 

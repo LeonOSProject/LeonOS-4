@@ -42,6 +42,7 @@ void kernel_spin_lock(struct kernel_spinlock *lock)
             return;
         }
         busy = 1;
+        smp_membarrier_poll();
         __asm__ volatile("pause" : : : "memory");
     }
 }

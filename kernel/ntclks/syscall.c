@@ -157,7 +157,7 @@ static int linux_stat_from_legacy(struct linux_stat_abi *out,
 {
     struct storage_node found;
     if (!node && path && storage_lookup_path(path, &found) == 0) node = &found;
-    if (node && (node->flags & STORAGE_NODE_FLAG_EXT2)) return storage_inode_stat(node, out);
+    if (node && (node->flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS))) return storage_inode_stat(node, out);
     uint32_t type = st ? st->type : LEONOS_FS_TYPE_FILE;
     uint32_t mode = type == LEONOS_FS_TYPE_DIR ? 0040755u :
                     type == LEONOS_FS_TYPE_SOCKET ? LINUX_S_IFSOCK | 0777u :
@@ -183,6 +183,8 @@ static int linux_stat_from_legacy(struct linux_stat_abi *out,
             (value.mode & 07777u);
     }
     out->st_rdev = type == LEONOS_FS_TYPE_DEVICE ? 1 : 0;
+    if (node && (node->flags & STORAGE_NODE_FLAG_DEV_BLOCK))
+        out->st_rdev = storage_block_rdev(node->volume_id);
     if (node && (node->flags & STORAGE_NODE_FLAG_PTY)) {
         out->st_ino = (uint64_t)node->volume_id * 16 + node->first_cluster;
         out->st_rdev = (136u << 8) | node->first_cluster;
@@ -191,6 +193,16 @@ static int linux_stat_from_legacy(struct linux_stat_abi *out,
     out->st_blksize = 4096;
     out->st_blocks = (out->st_size + 511) / 512;
     return 0;
+}
+
+static void linux_stat_fd_type(struct linux_stat_abi *out, const struct task_file *file)
+{
+    /* The legacy SDK labels anonymous pipes as devices. Linux get_pipe_inode()
+     * creates S_IFIFO | 0600; it must not look like a terminal to libc/sudo. */
+    if (file && (file->flags & TASK_FILE_FLAG_PIPE)) {
+        out->st_mode = LINUX_S_IFIFO | 0600u;
+        out->st_rdev = 0;
+    }
 }
 
 static void linux_statx_from_legacy(struct linux_statx *out,
@@ -1111,6 +1123,8 @@ void task_release_syscall_file(struct task *task)
     task_sysv_sem_cancel(task);
     struct task_file *file = task->syscall_file;
     task->syscall_file = NULL;
+    if (file && file->io_owner == task->pid) file->io_owner = 0;
+    __builtin_memset(&task->regular_io, 0, sizeof(task->regular_io));
     task_pty_release_entry(&task->syscall_pty);
     task->signalfd_waiting = false;
     task->signalfd_wait_mask = 0;
@@ -2444,9 +2458,15 @@ static int resolve_kernel_path_at_flags(struct task *task, int32_t dirfd, const 
     if (!raw[0] && !allow_empty) return -LEONOS_ENOENT;
     if (raw[0] != '/' && dirfd != LINUX_AT_FDCWD) {
         struct task_file *file = task_file_for_fd(task, dirfd);
-        if (!file || !file->path[0]) return -LEONOS_EBADF;
+        if (!file) return -LEONOS_EBADF;
+        /* AT_EMPTY_PATH addresses the open object, including anonymous pipes. */
+        if (!raw[0] && empty_file) {
+            *empty_file = file;
+            copy_text(path, LEONOS_FS_PATH_LEN, file->path);
+            return 0;
+        }
         if (raw[0] && file->node.type != LEONOS_FS_TYPE_DIR) return -LEONOS_ENOTDIR;
-        if (!raw[0] && empty_file) *empty_file = file;
+        if (!file->path[0]) return -LEONOS_EBADF;
         base = file->path;
     }
     if (!raw[0]) { copy_text(path, LEONOS_FS_PATH_LEN, base); return 0; }
@@ -5000,8 +5020,6 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
             return (int64_t)request_len;
         }
         struct task_file *file = task_file_for_io(task, (int)a0);
-        uint32_t wrote = 0;
-        int ret;
         if (!file) {
             return -LEONOS_EBADF;
         }
@@ -5020,6 +5038,11 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         }
         if (file->flags & TASK_FILE_FLAG_DEV_NODE) {
             if (!file_can_write(file)) return -LEONOS_EBADF;
+            if (file->flags & TASK_FILE_FLAG_DEV_BLOCK) {
+                if (task_effective_role(task) != LEONOS_AUTH_ROLE_ADMIN &&
+                    !(task->uid == 0 && storage_installer_root_active())) return -LEONOS_EACCES;
+                return syscall_regular_io(task,file,a1,a2,0,true,false);
+            }
             request_len = a2 > LEONOS_FS_IO_SLICE_BYTES
                               ? LEONOS_FS_IO_SLICE_BYTES : (uint32_t)a2;
             {
@@ -5046,37 +5069,12 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         if (file->node.type != LEONOS_FS_TYPE_FILE || !file->path[0]) {
             return -LEONOS_EBADF;
         }
-        request_len = a2 > LEONOS_FS_FILE_WRITE_SLICE_BYTES
-                          ? LEONOS_FS_FILE_WRITE_SLICE_BYTES
-                          : (uint32_t)a2;
-        if (file->flags & LEONOS_O_APPEND) {
-            ret = storage_inode_refresh(&file->node);
-            if (ret < 0) return ret;
-            file->offset = file->node.size;
-        }
-        file->read_cursor.valid = 0;
-        ret = file->inode ? storage_write_held_node(&file->node, file->offset,
-                                 (const void *)(uintptr_t)a1, request_len, &wrote) :
-            storage_write_node(file->path, file->offset,
-                                 (const void *)(uintptr_t)a1, request_len, &wrote);
-        if (ret < 0) {
-            return ret;
-        }
-        file->offset += wrote;
-        if (wrote && file->node.first_cluster < 2) {
-            struct storage_node updated;
-            if (storage_lookup_path(file->path, &updated) == 0) {
-                file->node = updated;
-            }
-        }
-        file->node.size = file->offset > file->node.size ? file->offset : file->node.size;
-        return (int64_t)wrote;
+        return syscall_regular_io(task, file, a1, a2, 0, true, false);
     }
 
     if (number == LINUX_SYS_READ) {
         struct task *task = sched_current_task();
         struct task_file *file;
-        uint32_t got = 0;
         uint32_t request_len;
         int pty_stream;
         file = task_file_for_io(task, (int32_t)a0);
@@ -5164,6 +5162,11 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         }
         if (file->flags & TASK_FILE_FLAG_DEV_NODE) {
             if (!file_can_read(file)) return -LEONOS_EBADF;
+            if (file->flags & TASK_FILE_FLAG_DEV_BLOCK) {
+                if (task_effective_role(task) != LEONOS_AUTH_ROLE_ADMIN &&
+                    !(task->uid == 0 && storage_installer_root_active())) return -LEONOS_EACCES;
+                return syscall_regular_io(task,file,a1,a2,0,false,false);
+            }
             request_len = a2 > LEONOS_FS_IO_SLICE_BYTES
                               ? LEONOS_FS_IO_SLICE_BYTES : (uint32_t)a2;
             {
@@ -5232,19 +5235,7 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         if (!file_can_read(file)) {
             return -LEONOS_EBADF;
         }
-        request_len = a2 > LEONOS_FS_READ_SLICE_BYTES
-                          ? LEONOS_FS_READ_SLICE_BYTES
-                          : (uint32_t)a2;
-        {
-            int ret = storage_read_node_cursor(&file->node, file->offset,
-                                               (void *)(uintptr_t)a1, request_len, &got,
-                                               &file->read_cursor);
-            if (ret < 0) {
-                return storage_errno(ret);
-            }
-        }
-        file->offset += got;
-        return (int64_t)got;
+        return syscall_regular_io(task, file, a1, a2, 0, false, false);
     }
 
     if (number == LINUX_SYS_EXIT || number == LINUX_SYS_EXIT_GROUP) {
@@ -5833,6 +5824,7 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
             ret = linux_stat_from_legacy(&linux_st, &st,
                                          empty_file->path[0] ? empty_file->path : NULL,
                                          &empty_file->node);
+            if (ret >= 0) linux_stat_fd_type(&linux_st, empty_file);
         } else {
             ret = fs_permissions_search(task, path, false);
             if (ret < 0) return ret;
@@ -5882,6 +5874,7 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         if (!file && task_pty_node_for_fd(task, (int)a0, &pty_node, &path) == 0) node = &pty_node;
         ret = linux_stat_from_legacy(&linux_st, &st, path, node);
         if (ret < 0) return ret;
+        linux_stat_fd_type(&linux_st, file);
         *(struct linux_stat_abi *)(uintptr_t)a1 = linux_st;
         return 0;
     }
@@ -6023,6 +6016,8 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         if (!file) return -LEONOS_EBADF;
         if (file->flags & TASK_FILE_FLAG_PATH) return -LEONOS_EBADF;
         if (file->flags & TASK_FILE_FLAG_DEV_SHM) return 0;
+        if (file->flags & TASK_FILE_FLAG_DEV_BLOCK)
+            return storage_sync_disk(STORAGE_BLOCK_DISK_ID(file->node.volume_id));
         if (file->kind || (file->flags & (TASK_FILE_FLAG_PIPE | TASK_FILE_FLAG_SOCKET_UNIX |
             TASK_FILE_FLAG_SOCKET_INET | TASK_FILE_FLAG_EVENTFD | TASK_FILE_FLAG_EPOLL | TASK_FILE_FLAG_TIMERFD)))
             return -LEONOS_EINVAL;
@@ -6044,12 +6039,29 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
 
     if (number == LINUX_SYS_PREAD64 || number == LINUX_SYS_PWRITE64) {
         struct task *task = sched_current_task();
-        struct task_file *file = task_file_for_fd(task, (int)a0);
+        struct task_file *file = task_file_for_io(task, (int)a0);
         uint64_t saved;
         int64_t result;
         if (file && file->kind == TASK_FILE_KIND_SIGNALFD)
             return (int64_t)a3 < 0 ? -LINUX_EINVAL : -LINUX_ESPIPE;
-        if (!file || (int64_t)a3 < 0) return -LEONOS_EBADF;
+        if ((int64_t)a3 < 0) return -LEONOS_EINVAL;
+        if (!file || (file->flags & TASK_FILE_FLAG_PATH)) return -LEONOS_EBADF;
+        if (file->flags & TASK_FILE_FLAG_DEV_BLOCK) {
+            bool writing = number == LINUX_SYS_PWRITE64;
+            if (writing ? !file_can_write(file) : !file_can_read(file)) return -LEONOS_EBADF;
+            if (writing ? !user_range_ok(a1,a2) : !user_range_writable(a1,a2)) return -LEONOS_EFAULT;
+            if (task_effective_role(task) != LEONOS_AUTH_ROLE_ADMIN &&
+                !(task->uid == 0 && storage_installer_root_active())) return -LEONOS_EACCES;
+            return syscall_regular_io(task,file,a1,a2,a3,writing,true);
+        }
+        if (file->node.type == LEONOS_FS_TYPE_FILE &&
+            !(file->flags & (TASK_FILE_FLAG_DEV_NODE | TASK_FILE_FLAG_DEV_SHM)) &&
+            !(file->node.flags & (STORAGE_NODE_FLAG_PROC | STORAGE_NODE_FLAG_SYSFS))) {
+            bool writing = number == LINUX_SYS_PWRITE64;
+            if (writing ? !file_can_write(file) : !file_can_read(file)) return -LEONOS_EBADF;
+            if (writing ? !user_range_ok(a1, a2) : !user_range_writable(a1, a2)) return -LEONOS_EFAULT;
+            return syscall_regular_io(task, file, a1, a2, a3, writing, true);
+        }
         saved = file->offset;
         file->offset = a3;
         result = syscall_dispatch_regs_legacy(number == LINUX_SYS_PREAD64 ? LINUX_SYS_READ : LINUX_SYS_WRITE,
@@ -6259,6 +6271,7 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         if (!file) {
             return -LEONOS_EBADF;
         }
+        if (file->io_owner && file->io_owner != task->pid) return -LEONOS_EAGAIN;
         int refresh = storage_inode_refresh(&file->node);
         if (refresh < 0) return refresh;
         if (file->kind == TASK_FILE_KIND_SIGNALFD) return (uint32_t)a2 > 4 ? -LINUX_EINVAL : (int64_t)file->offset;
@@ -6482,10 +6495,35 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
 
         if (!task || !(task->cap_effective & (1ULL << CAP_SYS_ADMIN))) return -LEONOS_EPERM;
         if (a3 & MS_REMOUNT) {
-            if (a4 || (a3 & ~(uint64_t)(MS_REMOUNT | MS_NOSUID | MS_NOEXEC))) return -LEONOS_EOPNOTSUPP;
+            if (a4) return -LEONOS_EOPNOTSUPP;
             ret = resolve_user_path(task, a1, target, sizeof(target));
             if (ret < 0) return ret;
             return storage_remount_path(target, a3 & ~MS_REMOUNT);
+        }
+        ret = resolve_user_path(task, a1, target, sizeof(target));
+        if (ret < 0) return ret;
+        filesystem[0]=0;
+        if (a2) {
+            ret=copy_user_string_fixed(filesystem,sizeof(filesystem),a2,NULL);
+            if (ret < 0) return ret;
+        }
+        if (!__builtin_strcmp(filesystem,"tmpfs")) {
+            uint64_t allowed=MS_RDONLY|MS_NOSUID|MS_NODEV|MS_NOEXEC|MS_NOATIME|MS_NODIRATIME|MS_RELATIME|MS_STRICTATIME;
+            if (a3 & ~allowed) return -LEONOS_EOPNOTSUPP;
+            source[0]=0;
+            if (a0) {
+                ret=copy_user_string_fixed(source,sizeof(source),a0,NULL);
+                if (ret < 0) return ret;
+            }
+            char *options=kernel_malloc(4096);
+            if (!options) return -LEONOS_ENOMEM;
+            options[0]=0;
+            ret=a4 ? copy_user_string_fixed(options,4096,a4,NULL) : 0;
+            uint64_t flags=a3;
+            if (!(flags & (MS_NOATIME|MS_STRICTATIME))) flags |= MS_RELATIME;
+            if (!ret) ret=storage_mount_tmpfs(source,target,flags,options,task->fsuid,task->fsgid);
+            kernel_free(options);
+            return ret;
         }
         if (a4 != 0 ||
             (a3 & ~(MS_RDONLY | MS_NOSUID | MS_NODEV | MS_NOEXEC |
@@ -6731,6 +6769,8 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         }
         if (file && (file->flags & TASK_FILE_FLAG_SOCKET_UNIX))
             return task_socket_ioctl(file, a1, a2);
+        if (file && (file->flags & TASK_FILE_FLAG_SOCKET_INET))
+            return task_net_control(file, (uint32_t)a1, a2);
         int evdev_ret = task_evdev_ioctl(file, a1, a2);
         if (evdev_ret != -LEONOS_ENOTTY) {
             return evdev_ret;
@@ -7161,6 +7201,7 @@ void syscall_dispatch_frame(struct trap_frame *frame)
         calling_task->frame.rsp = frame->rsp;
     }
     bool file_io = number == LINUX_SYS_READ || number == LINUX_SYS_WRITE ||
+        number == LINUX_SYS_PREAD64 || number == LINUX_SYS_PWRITE64 ||
         number == LINUX_SYS_READV || number == LINUX_SYS_WRITEV ||
         number == LINUX_SYS_PREADV || number == LINUX_SYS_PWRITEV ||
         number == LINUX_SYS_PREADV2 || number == LINUX_SYS_PWRITEV2 ||

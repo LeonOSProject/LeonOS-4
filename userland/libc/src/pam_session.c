@@ -4,6 +4,7 @@
 #include <grp.h>
 #include <leonos/pam_session.h>
 #include <leonos/ui.h>
+#include <uapi/leonos/rootfs.h>
 #include <pwd.h>
 #include <security/pam_appl.h>
 #include <signal.h>
@@ -260,7 +261,7 @@ int leonos_session_apply(void)
     if (!account) goto out;
     if (setenv("HOME", account->pw_dir, 1) < 0 || setenv("USER", account->pw_name, 1) < 0 ||
         setenv("LOGNAME", account->pw_name, 1) < 0 || setenv("SHELL", account->pw_shell, 1) < 0 ||
-        (!getenv("PATH") && setenv("PATH", "/usr/local/bin:/usr/bin:/bin", 1) < 0) ||
+        (!getenv("PATH") && setenv("PATH", LEONOS_DEFAULT_PATH, 1) < 0) ||
         account->pw_gid != state.gid || setgroups(state.group_count, groups) < 0 || setgid(state.gid) < 0 ||
         setuid(account->pw_uid) < 0 || chdir(account->pw_dir) < 0) goto out;
     result = 0;

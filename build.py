@@ -141,9 +141,8 @@ BUILD_NUMBER_EXEMPT_TARGETS = frozenset({
     "test-los2w",
     "test-qmp-terminal",
     "test-terminal-packages",
-    "test-python-package",
     "test-qmp-pleditor",
-    "test-qmp-tcc",
+    "test-builtin-tool-removal",
     "gcc-probe-image",
     "gcc-probe-runner",
     "test-qmp-fastfetch",
@@ -174,12 +173,17 @@ BUILD_NUMBER_EXEMPT_TARGETS = frozenset({
     "test-musl-abi",
     "test-musl-distribution",
     "test-linux-rootfs",
+    "test-apk-layout",
+    "test-apk-ownership",
+    "test-apk-distribution",
     "test-linux-inventory",
     "test-fastfetch-package",
     "test-linux-resources",
     "test-linux-threads",
     "test-linux-socket-batches",
     "test-linux-descriptors",
+    "test-regular-file-io",
+    "test-tmpfs",
     "test-linux-ioctl-cloexec",
     "test-svga",
     "test-installer-input",
@@ -204,6 +208,8 @@ SYSTEM_FILES = [
     ("system/resources/mouse.bmp", "usr/share/leonos/resources/mouse.bmp"),
     ("system/resources/wallpaper-metro.bmp", "usr/share/leonos/resources/wallpaper-metro.bmp"),
     ("system/certs/cacert.pem", "etc/ssl/certs/ca-certificates.crt"),
+    ("docs/APK_PREPARATION.md", "usr/share/doc/leonos/APK_PREPARATION.md"),
+    ("configs/apk-ownership.json", "usr/share/leonos/apk-ownership.json"),
     ("third_party/doomgeneric/FREEDOOM-COPYING.txt", "usr/share/doc/leonos/FREEDOOM-COPYING.txt"),
     ("third_party/portablegl/LICENSE", "usr/share/doc/leonos/PORTABLEGL-LICENSE"),
 ]
@@ -764,8 +770,10 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         outputs=tuple(musl_prefix / name for name in (
             ".leonos-musl.json", "lib/libc.so", "lib/libc.a", "lib/libmimalloc.so.3",
             "share/licenses/musl/COPYRIGHT", "share/licenses/mimalloc/LICENSE",
-            "lib/mimalloc.o", "lib/crt1.o", "lib/Scrt1.o", "lib/crti.o", "lib/crtn.o")),
+            "lib/mimalloc.o", "lib/crt1.o", "lib/Scrt1.o", "lib/crti.o", "lib/crtn.o",
+            "lib/libssp_nonshared.a")),
         inputs=tuple([ROOT / "tools/build_musl.py", ROOT / "tools/fetch_auth_upstream.py",
+            ROOT / "userland/musl-dev/stack_chk_fail_local.c",
             ROOT / "patches/musl/0001-enforce-password-file-lock.patch", *collect(
             "third_party/musl/**/*.c", "third_party/musl/**/*.h", "third_party/musl/**/*.s",
             "third_party/musl/**/*.in", "third_party/musl/configure", "third_party/musl/Makefile",
@@ -815,40 +823,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     ))
     musl_archive = musl_prefix / "lib/libc.a"
     musl_stamp = musl_prefix / ".leonos-musl.json"
-    from tools.package_musl_gcc import ARCHIVE_NAME
-    gcc_archive = ROOT / "buildsystem/deps/musl-gcc" / ARCHIVE_NAME
-    gcc_source = Path(os.environ["LEONOS_GCC_ARCHIVE"]).resolve() if os.environ.get("LEONOS_GCC_ARCHIVE") else None
-    gcc_package = paths.out / "musl-gcc/root"
-    gcc_stamp = gcc_package / ".leonos-package.json"
-    graph.add(Target(name="musl-gcc", outputs=(gcc_stamp, gcc_archive,
-                         gcc_package / "opt/dyne",
-                         gcc_package / "usr/share/licenses/musl-gcc",
-                         gcc_package / "usr/share/examples/musl-gcc"),
-                     inputs=(ROOT / "tools/package_musl_gcc.py", ROOT / "userland/musl-gcc/launcher.c",
-                             ROOT / "userland/musl-gcc/README.md", ROOT / "userland/musl-gcc/hello.c",
-                             ROOT / "userland/musl-gcc/COPYING3", ROOT / "userland/musl-gcc/COPYING.RUNTIME",
-                             ROOT / "third_party/musl/COPYRIGHT", *((gcc_source,) if gcc_source else ())),
-                     kind="generate", command=(PYTHON, "tools/package_musl_gcc.py",
-                         "--archive", str(gcc_archive), "--out", relative(gcc_package),
-                         *(("--source", str(gcc_source)) if gcc_source else ()))))
-    graph.add(Target(name="test-musl-gcc-package", depends_on=("musl-gcc",), kind="test",
-                     command=(PYTHON, "tools/test_musl_gcc_package.py", "--root", relative(gcc_package))))
-    from tools.package_python import ARCHIVE_NAME as python_archive_name, PAYLOAD_PATHS as python_payload_paths
-    python_archive = ROOT / "buildsystem/deps/python" / python_archive_name
-    python_source = Path(os.environ["LEONOS_PYTHON_ARCHIVE"]).resolve() if os.environ.get("LEONOS_PYTHON_ARCHIVE") else None
-    python_package = paths.out / "python/root"
-    python_stamp = python_package / ".leonos-package.json"
-    graph.add(Target(name="python", outputs=(python_stamp, python_archive,
-                         *(python_package / name for name in python_payload_paths)),
-                     inputs=(ROOT / "tools/package_python.py", ROOT / "tools/musl_link.py", musl_stamp,
-                             ROOT / "userland/python/launcher.c", ROOT / "userland/python/README.md",
-                             ROOT / "userland/python/hello.py", *((python_source,) if python_source else ())),
-                     depends_on=("musl",), kind="generate",
-                     command=(PYTHON, "tools/package_python.py", "--archive", str(python_archive),
-                              "--out", relative(python_package), "--musl", relative(musl_prefix),
-                              *(("--source", str(python_source)) if python_source else ()))))
-    graph.add(Target(name="test-python-package", depends_on=("python",), kind="test",
-                     command=(PYTHON, "tools/test_python_package.py", "--root", relative(python_package))))
     ncurses_prefix = paths.out / "ncurses/install/usr"
     vim_prefix = paths.out / "vim/install/usr"
     ncurses_stamp = ncurses_prefix / ".leonos-package.json"
@@ -939,12 +913,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     less_elf = paths.out / "userland/less.elf"
     less_stamp = paths.out / "userland/less.stamp"
     less_work_dir = paths.out / "less-work"
-    tcc_source = ROOT / "third_party/tinycc"
-    tcc_port = ROOT / "userland/tcc"
-    tcc_app_manifest = ROOT / "userland/apps/tcc/tcc.app.ini"
-    tcc_elf = paths.out / "userland/tcc.elf"
-    tcc_runtime_dir = paths.out / "tcc-runtime"
-    tcc_stamp = paths.out / "userland/tcc.stamp"
     lua_source = ROOT / "third_party/lua"
     lua_port = ROOT / "userland/lua"
     lua_app_manifest = ROOT / "userland/apps/lua/lua.app.ini"
@@ -1048,8 +1016,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     if (not (less_port / "leonos_termcap.c").is_file() or
             not (less_port / "include/defines.h").is_file()):
         raise GraphError("the LeonOS less port metadata is missing")
-    if not (tcc_source / "tcc.c").is_file():
-        raise GraphError("third_party/tinycc is missing; initialize the TinyCC source tree")
     if not (lua_source / "lua.c").is_file() or not (lua_source / "lua.h").is_file():
         raise GraphError("third_party/lua is missing; initialize the Lua source tree")
     if not (cmd_source / "cmain.c").is_file() or not (cmd_source / "LICENSE").is_file():
@@ -1199,7 +1165,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         "-Ithird_party/mbedtls/include", "-Ithird_party/zlib", "-Ithird_party/libpng",
         f"-I{relative(libpng_generated_dir)}", '-DMBEDTLS_CONFIG_FILE="leonos_mbedtls_config.h"',
     ]
-    # TCC's target linker consumes a static, non-PIC SDK.  The normal libc
+    # The static SDK consumes non-PIC objects.  The normal libc
     # objects are PIC inputs for the shared runtime and contain GOT relaxation
     # relocations that TinyCC intentionally does not accept in static links.
     cflags_user_libc_static_base = [
@@ -1580,21 +1546,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         ))
     graph.add(Target(name="musl-probes", depends_on=("musl-probe:dynamic", "musl-probe:static"),
                      group=True, kind="aggregate"))
-    gcc_probe = paths.out / "gcc-probe/gcc-probe.elf"
-    graph.add(Target(name="gcc-probe-runner", outputs=(gcc_probe,), depends_on=("musl-sdk",),
-                     inputs=(ROOT / "tools/tests/gcc_guest_probe.c", ROOT / "tools/tests/vfork_linux_edges.c",
-                             ROOT / "userland/apps/installer/installer_directory.h",
-                             paths.out / "musl/leonos-musl-sdk.tar.gz"),
-                     kind="link", command=(PYTHON, relative(paths.out / "musl/sdk/bin/leonos-musl-cc"),
-                         "-O2", "-static", "tools/tests/gcc_guest_probe.c", "-o", relative(gcc_probe))))
-    if component_enabled("musl-gcc", "image"):
-        graph.add(Target(name="gcc-probe-image", outputs=(paths.out / "gcc-probe/gcc-probe.vmdk",),
-                         depends_on=("gcc-probe-runner", "esp"),
-                         inputs=(gcc_stamp, gcc_probe, kernel_sys, loader_elf, middle_sys,
-                                 ROOT / "tools/prepare_gcc_probe.py"),
-                         kind="generate", command=(PYTHON, "tools/prepare_gcc_probe.py",
-                             "--runner", str(gcc_probe),
-                             "--out", relative(paths.out / "gcc-probe"))))
     ltp_programs = ("getcwd01", "fcntl01", "fstat02", "mprotect01", "chmod01", "fchmod01", "chown01", "ltp-runner",
                     "pthread_create_1-1", "pthread_join_1-1", "pthread_mutex_lock_1-1", "pthread_cond_wait_1-1",
                     "pthread_cancel_1-1", "pthread_key_create_1-1", "pthread_barrier_wait_1-1",
@@ -1981,60 +1932,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         ),
     ))
 
-    tcc_inputs = collect(
-        "third_party/tinycc/**/*.c", "third_party/tinycc/**/*.h",
-        "third_party/tinycc/**/*.S", "third_party/tinycc/**/*.def",
-        "third_party/tinycc/VERSION", "third_party/tinycc/COPYING",
-        "userland/tcc/**/*.c", "userland/tcc/**/*.h", "userland/tcc/**/*.md",
-        "include/uapi/**/*.h",
-        "tools/build_tcc.py", "tools/musl_link.py",
-    )
-    graph.add(Target(
-        name="tcc",
-        outputs=(tcc_elf, tcc_stamp),
-        inputs=tuple([*tcc_inputs, ROOT / "tools/musl_link.py", static_libc_a, musl_archive, zlib_archive, libpng_archive]),
-        depends_on=("musl", "archive:libc-static", "archive:zlib", "archive:libpng"),
-        kind="compile",
-        command=(
-            PYTHON,
-            "tools/build_tcc.py",
-            "--source",
-            "third_party/tinycc",
-            "--port",
-            "userland/tcc",
-            "--sdk-include",
-            "devtools/include",
-            "--uapi-include",
-            "include/uapi",
-            "--musl-prefix",
-            relative(musl_prefix),
-            "--leonos-lib",
-            relative(static_libc_a),
-            "--musl-lib",
-            relative(musl_archive),
-            "--zlib-lib",
-            relative(zlib_archive),
-            "--libpng-lib",
-            relative(libpng_archive),
-            "--zlib-source",
-            "third_party/zlib",
-            "--libpng-source",
-            "third_party/libpng",
-            "--libpng-config",
-            relative(libpng_config),
-            "--work-dir",
-            relative(paths.out / "tcc-work"),
-            "--runtime-dir",
-            relative(tcc_runtime_dir),
-            "--output",
-            relative(tcc_elf),
-            "--stamp",
-            relative(tcc_stamp),
-            *compile_option_args,
-            *linker_option_args,
-        ),
-    ))
-
     lua_inputs = collect(
         "third_party/lua/*.c", "third_party/lua/*.h", "third_party/lua/README.md",
         "userland/lua/**/*.c", "userland/lua/**/*.h", "userland/lua/**/*.md",
@@ -2255,7 +2152,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         user_targets.append("busybox")
     if component_enabled("nano"):
         user_targets.append("nano")
-    for package in ("ncurses", "vim", "musl-gcc", "python"):
+    for package in ("ncurses", "vim"):
         if component_enabled(package):
             user_targets.append(package)
     if component_enabled("fastfetch"):
@@ -2264,8 +2161,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         user_targets.append("sl")
     if component_enabled("less"):
         user_targets.append("less")
-    if component_enabled("tcc"):
-        user_targets.append("tcc")
     if component_enabled("lua"):
         user_targets.append("lua")
     if component_enabled("cmd"):
@@ -2374,7 +2269,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         "vim": vim_elf,
         "busybox": busybox_elf,
         "file": file_elf,
-        "tcc": tcc_elf,
         "lua": lua_elf,
         "cmd": cmd_elf,
         "less": less_elf,
@@ -2578,14 +2472,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
             "--stardustui-lib", relative(stardustui_archive),
             "--stardustui-source", "third_party/stardustui",
         ))
-    if component_enabled("tcc", "sdk"):
-        sdk_inputs_list.extend((tcc_elf, tcc_stamp, *collect("userland/tcc/**/*")))
-        sdk_depends.append("tcc")
-        sdk_command.extend((
-            "--component-file", "tcc", "bin/tcc.elf", relative(tcc_elf),
-            "--component-tree", "tcc", "runtime", relative(tcc_runtime_dir),
-            "--component-tree", "tcc", "port", "userland/tcc",
-        ))
     if component_enabled("lua", "sdk"):
         sdk_inputs_list.extend((
             lua_elf, liblua_so, liblua_archive, lua_stamp, *collect("third_party/lua/*"),
@@ -2663,6 +2549,8 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     component_prune_stamp = paths.out / "generated/component-staging-prune.json"
 
     def prune_component_staging(context: ActionContext) -> None:
+        for name in layout.RETIRED_TOOL_PATHS:
+            remove_staging_path(paths.staging / name)
         # Remove build-owned outputs from obsolete image layouts.
         for obsolete in ("system/lib/ld-leonos.elf", "system/lib/libleonos.so.1",
                          "system/kernel.sys", "system/middlelayer.sys",
@@ -2763,7 +2651,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         depends_on=("config-sync",),
         kind="generate",
         action=prune_component_staging,
-        action_key="staging-prune-musl-v9",
+        action_key="staging-prune-musl-v10-retired-tools",
     ))
     esp_names = ["staging-prune", "grub-efi"]
     esp_outputs: list[Path] = [grub_efi]
@@ -2908,51 +2796,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         ensure_parent(context, terminal_payload_stamp,
                       json.dumps({name: component_enabled(name, "image")
                                   for name in ("vim", "ncurses", "busybox")}) + "\n")
-    gcc_payload_stamp = paths.out / "generated/musl-gcc-payload.json"
-
-    def stage_gcc_package(context: ActionContext) -> None:
-        enabled = component_enabled("musl-gcc", "image")
-        for name in (layout.OPT_DYNE, f"{layout.LICENSES}/musl-gcc",
-                     f"{layout.EXAMPLES}/musl-gcc"):
-            destination = paths.staging / name
-            remove_staging_path(destination)
-            if enabled:
-                copy_tree_preserving_links(gcc_package / name, destination)
-        ensure_parent(context, gcc_payload_stamp, json.dumps({"musl-gcc": enabled}) + "\n")
-
-    gcc_payload_outputs = (gcc_payload_stamp,)
-    if component_enabled("musl-gcc", "image"):
-        gcc_payload_outputs += (paths.staging / layout.OPT_DYNE,
-                                paths.staging / layout.LICENSES / "musl-gcc",
-                                paths.staging / layout.EXAMPLES / "musl-gcc")
-    graph.add(Target(name="esp:musl-gcc", outputs=gcc_payload_outputs,
-                     inputs=(config_path, ROOT / "configs/components.toml",
-                             *((gcc_stamp,) if component_enabled("musl-gcc", "image") else ())),
-                     depends_on=("esp:terminal-packages",), kind="generate",
-                     action=stage_gcc_package, action_key="musl-gcc-payload-v2"))
-    esp_names.append("esp:musl-gcc")
-    esp_outputs.extend(gcc_payload_outputs)
-    python_payload_stamp = paths.out / "generated/python-payload.json"
-
-    def stage_python_package(context: ActionContext) -> None:
-        enabled = component_enabled("python", "image")
-        for name in python_payload_paths:
-            destination = paths.staging / name
-            remove_staging_path(destination)
-            if enabled:
-                copy_tree_preserving_links(python_package / name, destination)
-        ensure_parent(context, python_payload_stamp, json.dumps({"python": enabled}) + "\n")
-
-    python_payload_outputs = (python_payload_stamp,)
-    if component_enabled("python", "image"):
-        python_payload_outputs += tuple(paths.staging / name for name in python_payload_paths)
-    graph.add(Target(name="esp:python", outputs=python_payload_outputs,
-                     inputs=(config_path, ROOT / "configs/components.toml",
-                             *((python_stamp,) if component_enabled("python", "image") else ())),
-                     depends_on=("esp:musl-gcc",), kind="generate",
-                     action=stage_python_package, action_key="python-payload-v2"))
-    esp_names.append("esp:python")
-    esp_outputs.extend(python_payload_outputs)
     grub_font_destination = paths.staging / "grub/fonts/leonos-unicode.pf2"
     target = add_copy(graph, "esp:grub-font", grub_font, grub_font_destination)
     esp_names.append(target.name)
@@ -3151,43 +2994,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         target = add_copy(graph, "esp:file:magic.mgc", magic_database, magic_destination)
         esp_names.append(target.name)
         esp_outputs.append(magic_destination)
-    if component_enabled("tcc", "image"):
-        tcc_destination = paths.staging / layout.OPT_TCC
-
-        def sync_tcc_runtime(context: ActionContext) -> None:
-            remove_staging_path(tcc_destination)
-            context.detail(
-                f"copy runtime tree: {relative(tcc_runtime_dir)} -> {relative(tcc_destination)}"
-            )
-            copy_tree_preserving_links(tcc_runtime_dir, tcc_destination)
-            context.copy(tcc_elf, tcc_destination / "tcc.elf")
-            context.copy(tcc_app_manifest, tcc_destination / "tcc.app.ini")
-
-        target = graph.add(Target(
-            name="esp:tcc",
-            outputs=(tcc_destination / "tcc.elf", tcc_destination / "lib/libtcc1.a",
-                tcc_destination / "lib/libleonos-tcc-rt.a",
-                tcc_destination / "tcc.app.ini"),
-            inputs=(tcc_elf, tcc_stamp, tcc_app_manifest),
-            depends_on=("tcc",),
-            kind="generate",
-            action=sync_tcc_runtime,
-            action_key="sync-tcc-runtime-v3",
-        ))
-        # Replacing the runtime directory must precede its separately owned entries.
-        for staged_target in graph.targets.values():
-            if staged_target is not target and any(
-                output.is_relative_to(tcc_destination) for output in staged_target.outputs):
-                staged_target.depends_on += (target.name,)
-        esp_names.append(target.name)
-        esp_outputs.extend((tcc_destination / "tcc.elf", tcc_destination / "lib/libtcc1.a",
-            tcc_destination / "lib/libleonos-tcc-rt.a",
-            tcc_destination / "tcc.app.ini"))
-        tcc_license = paths.staging / layout.LICENSES / "tcc" / "COPYING"
-        target = add_copy(graph, "esp:tcc:COPYING", ROOT / "third_party/tinycc/COPYING",
-            tcc_license)
-        esp_names.append(target.name)
-        esp_outputs.append(tcc_license)
     if component_enabled("lua", "image"):
         lua_destination = paths.staging / layout.OPT_LUA / "lua.elf"
         target = add_copy(graph, "esp:lua:lua.elf", lua_elf, lua_destination)
@@ -3472,6 +3278,15 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                      action=stage_layout_links, action_key="layout-links-v5-storage", always=True))
     esp_names.append("esp:layout-links")
     esp_outputs.extend(layout_outputs)
+    ownership_report = paths.out / "generated/apk-ownership-inventory.json"
+    graph.add(Target(name="esp:apk-ownership", outputs=(ownership_report,),
+                     inputs=(ROOT / "configs/apk-ownership.json", ROOT / "configs/components.toml",
+                             ROOT / "tools/apk_ownership.py", ROOT / "tools/leonos_layout.py",
+                             ROOT / "tools/storage_tools.py"),
+                     depends_on=("esp:layout-links",), kind="generate", always=True,
+                     command=(PYTHON, "tools/apk_ownership.py", "--root", relative(paths.staging),
+                              "--output", relative(ownership_report))))
+    esp_names.append("esp:apk-ownership")
     # staging-prune removes obsolete pre-FHS trees before any staging producer
     # runs.  Producers created by add_copy() do not declare that dependency
     # individually, so add it centrally here rather than duplicating it at
@@ -3484,6 +3299,17 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                 staged_target.depends_on += ("esp:rootfs",)
     graph.add(Target(name="esp", depends_on=tuple(esp_names), group=True, kind="aggregate"))
 
+    apk_root = paths.out / "apk/root"
+    apk_manifest = paths.out / "apk/normal/manifest.json"
+    graph.add(Target(name="apk-root", outputs=(apk_manifest, apk_root / "lib/apk/db/installed"),
+                     inputs=(*esp_outputs, ROOT / "tools/apk_distribution.py",
+                             ROOT / "tools/apk_ownership.py", ROOT / "configs/apk-ownership.json",
+                             ROOT / "userland/storage/leonos-apk-update",
+                             ROOT / "userland/storage/busybox-binutils-links"),
+                     depends_on=("esp",), kind="generate", always=True,
+                     command=(PYTHON, "tools/apk_distribution.py", "--source", relative(paths.staging),
+                              "--output", relative(apk_root), "--work", relative(paths.out / "apk/normal"))))
+
     # ---- 磁盘镜像、ISO、安装器和运行目标 ----
     # image-* 只消费 staging；分区大小、文件系统或 GRUB 参数的变更应同步更新
     # 对应 tools 脚本的 inputs，确保增量缓存能感知脚本变化。
@@ -3495,25 +3321,23 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                            *sorted((ROOT / "system/test-accounts").glob("*")))
     vmdk_language = "zh" if config_bool(values, "CONFIG_VMDK_DEFAULT_LANGUAGE_ZH") else "en"
     graph.add(Target(name="image-vmdk", outputs=(vmdk, raw, esp_fat, root_ext2),
-                     inputs=tuple([*esp_outputs, config_path, ROOT / "tools/make_image.py", ROOT / "tools/make_ext2_root.py",
+                     inputs=tuple([*esp_outputs, apk_manifest, config_path, ROOT / "tools/make_image.py", ROOT / "tools/make_ext2_root.py",
                                     layout.ROOTFS_CONTRACT, ROOT / "tools/leonos_layout.py", *test_account_inputs]),
-                     depends_on=("esp",), kind="generate", command=(PYTHON, "tools/make_image.py", "--out",
+                     depends_on=("apk-root",), kind="generate", command=(PYTHON, "tools/make_image.py", "--out",
                      relative(vmdk), "--raw", relative(raw), "--esp-tree",
-                     relative(paths.staging), "--esp-image", relative(esp_fat),
+                     relative(apk_root), "--esp-image", relative(esp_fat),
                      "--root-image", relative(root_ext2), "--root-fs", "ext2", "--default-language", vmdk_language,
-                     "--size-mib", str(max(config_int(values, "CONFIG_IMAGE_SIZE_MIB"),
-                                           2048 if component_enabled("python", "image") else 0,
-                                           1024 if component_enabled("musl-gcc", "image") else 0)))))
+                     "--size-mib", str(config_int(values, "CONFIG_IMAGE_SIZE_MIB")))))
 
     iso = paths.images / "leonos4.iso"
     iso_stage = paths.out / "iso"
     desktop_root = paths.out / "live/root.ext2"
     graph.add(Target(name="desktop-live-root", outputs=(desktop_root,),
-                     inputs=(*esp_outputs, ROOT / "tools/make_live_root.py",
+                     inputs=(*esp_outputs, apk_manifest, ROOT / "tools/make_live_root.py",
                              ROOT / "tools/make_installer_root.py",
                              ROOT / "tools/make_ext2_root.py", layout.ROOTFS_CONTRACT, ROOT / "tools/leonos_layout.py", ROOT / "tools/make_image.py", *test_account_inputs),
-                     depends_on=("esp",), kind="generate", command=(
-                         PYTHON, "tools/make_live_root.py", "--tree", relative(paths.staging),
+                     depends_on=("apk-root",), kind="generate", command=(
+                         PYTHON, "tools/make_live_root.py", "--tree", relative(apk_root),
                          "--out", relative(desktop_root))))
     graph.add(Target(name="image-iso", outputs=(iso,), inputs=(desktop_root, loader_elf,
                      kernel_sys, middle_sys, grub_font, ROOT / "boot/grub/live.cfg",
@@ -3530,6 +3354,8 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     installer_stage = paths.out / "install/root"
     graph.add(Target(name="installer-root", outputs=(installer_root,), inputs=tuple([
         *esp_outputs,
+        apk_manifest,
+        ROOT / "tools/apk_distribution.py",
         app_elfs["desktop"],
         app_elfs["installer"],
         busybox_elf,
@@ -3540,7 +3366,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         ROOT / "tools/image_test_accounts.py",
         ROOT / "tools/make_ext2_root.py", layout.ROOTFS_CONTRACT, ROOT / "tools/leonos_layout.py",
     ]), depends_on=(
-        "esp",
+        "apk-root",
         "installer-runtime",
         "busybox",
         "installer-tool:gptinit",
@@ -3552,7 +3378,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         "--stage",
         relative(installer_stage),
         "--esp-tree",
-        relative(paths.staging),
+        relative(apk_root),
         "--installed-policy-dir",
         relative(paths.out / "userland-installer-policy"),
         "--policy-runtime",
@@ -3803,6 +3629,8 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                              ROOT / "tools/tests/legacy_authd/authd_sudo.h"),
                      kind="command", always=True,
                      command=(PYTHON, "tools/test_sudo_policy.py")))
+    graph.add(Target(name="test-builtin-tool-removal", kind="command", always=True,
+                     command=(PYTHON, "tools/test_builtin_tool_removal.py")))
     graph.add(Target(name="test-installer-setup", kind="command", always=True,
                      command=(PYTHON, "tools/test_installer_setup.py")))
     graph.add(Target(name="test-installer-input",
@@ -3887,7 +3715,12 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     graph.add(Target(name="test-installer-copy", kind="command", always=True,
                      command=(PYTHON, "tools/test_installer_copy.py")))
     for suffix, script in (("linux-rootfs", "test_linux_rootfs.py"),
+                           ("apk-layout", "test_apk_layout.py"),
+                           ("apk-ownership", "test_apk_ownership.py"),
+                           ("apk-distribution", "test_apk_distribution.py"),
                            ("linux-inventory", "test_linux_inventory.py"),
+                           ("regular-file-io", "test_regular_file_io.py"),
+                           ("tmpfs", "test_tmpfs.py"),
                            ("linux-resources", "test_linux_resources.py"),
                            ("linux-socket-batches", "test_linux_socket_batches.py"),
                            ("linux-threads", "test_linux_threads.py"),
@@ -3895,6 +3728,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                            ("linux-ioctl-cloexec", "test_linux_ioctl_cloexec.py"),
                            ("linux-vfork-stack", "test_linux_vfork_stack.py")):
         graph.add(Target(name="test-" + suffix, kind="command", always=True,
+                         depends_on=("busybox",) if suffix == "apk-distribution" else (),
                          command=(PYTHON, "tools/" + script)))
     graph.add(Target(name="test-musl-distribution", kind="command", always=True,
                      depends_on=("installer-root",),
@@ -3920,7 +3754,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         command=(PYTHON, "tools/test_component_config.py"),
     ))
 
-    def qmp_test(context: ActionContext, editor: str = "nano", tcc_smoke: bool = False,
+    def qmp_test(context: ActionContext, editor: str = "nano",
                  fastfetch_smoke: bool = False,
                  sl_smoke: bool = False,
                  less_smoke: bool = False,
@@ -3941,7 +3775,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
             "less" if less_smoke else
             "sl" if sl_smoke else
             "fastfetch" if fastfetch_smoke else
-            "tcc" if tcc_smoke else editor
+            editor
         )
         # Keep the control endpoint and writes isolated from the produced VMDK.
         # The test name also makes per-test serial logs and QMP diagnostics
@@ -3974,9 +3808,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                                        stderr=subprocess.STDOUT)
             try:
                 smoke_command = [PYTHON, "tools/qmp_terminal_smoke.py"]
-                if tcc_smoke:
-                    smoke_command.append("--tcc")
-                elif fastfetch_smoke:
+                if fastfetch_smoke:
                     smoke_command.append("--fastfetch")
                 elif sl_smoke:
                     smoke_command.append("--sl")
@@ -4026,12 +3858,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                 "spawn path=/usr/lib/leonos/apps/abittest/abittest.elf",
             )
             expected_exits = ("name=busybox.elf", "name=abittest.elf")
-        elif tcc_smoke:
-            expected_spawns = (
-                "spawn path=/opt/tcc/tcc.elf",
-                "spawn path=/tmp/leonos-tcc-smoke",
-            )
-            expected_exits = ("name=tcc.elf", "name=leonos-tcc-smoke")
         elif fastfetch_smoke:
             expected_spawns = ("spawn path=/usr/lib/leonos/apps/fastfetch/fastfetch.elf",)
             expected_exits = ("name=fastfetch.elf",)
@@ -4087,9 +3913,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
             for expected_exit in expected_exits:
                 if expected_exit not in serial_text:
                     raise BuildFailure(f"QMP test did not observe {test_name} exit: missing {expected_exit}")
-        if tcc_smoke and not re.search(
-                r"scheduler task exited pid=\d+ name=leonos-tcc-smoke code=0(?:\s|$)", serial_text):
-            raise BuildFailure("QMP TCC-generated musl executable did not exit successfully")
         if abittest_smoke:
             if "[abittest] signal PASS" not in serial_text or \
                "[abittest] pty PASS" not in serial_text or \
@@ -4151,10 +3974,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         vmdk,
         ROOT / "tools/qmp_terminal_smoke.py",
     ), depends_on=("image-vmdk",), kind="command", action=lambda context: qmp_test(context, "vim"), action_key="qmp-vim-v1"))
-    graph.add(Target(name="test-qmp-tcc", inputs=(
-        vmdk,
-        ROOT / "tools/qmp_terminal_smoke.py",
-    ), depends_on=("image-vmdk",), kind="command", action=lambda context: qmp_test(context, tcc_smoke=True), action_key="qmp-tcc-v1"))
     graph.add(Target(name="test-qmp-fastfetch", inputs=(
         vmdk,
         ROOT / "tools/qmp_terminal_smoke.py",
@@ -4190,8 +4009,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     qmp_suite_specs: list[dict[str, object]] = []
     if config_bool(values, "CONFIG_TEST_QMP_TERMINAL"):
         qmp_suite_specs.append({})
-    if config_bool(values, "CONFIG_TEST_QMP_TCC") and component_enabled("tcc", "image"):
-        qmp_suite_specs.append({"tcc_smoke": True})
     if component_enabled("cmd", "image"):
         qmp_suite_specs.append({"cmd_pipeline_smoke": True})
     if component_enabled("less", "image"):
@@ -4200,9 +4017,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         qmp_suite_specs.append({"desktop_app": "stardusthello"})
 
     def qmp_test_suite(context: ActionContext) -> None:
-        # A full TinyCC run exceeds a minute on a cold guest.  Running QMP
-        # guests serially keeps timing deterministic and avoids CPU contention
-        # that can make shell input arrive while the compiler owns the PTY.
+        # Run guests serially to avoid competing for input timing and host CPU.
         for spec in qmp_suite_specs:
             qmp_test(context, **spec)
 
@@ -4288,7 +4103,7 @@ def task_tools(task: str) -> tuple[str, ...]:
         return (*vmdk, "grub-mkrescue", "xorriso", "qemu-system-x86_64")
     if task == "menuconfig":
         return ("kconfig-mconf",)
-    if task in {"test-qmp-terminal", "test-qmp-pleditor", "test-qmp-tcc", "test-qmp-fastfetch", "test-qmp-sl", "test-qmp-less",
+    if task in {"test-qmp-terminal", "test-qmp-pleditor", "test-qmp-fastfetch", "test-qmp-sl", "test-qmp-less",
                 "test-qmp-dynlinkerror", "test-qmp-cmd", "test-qmp-abittest", "test-qmp-stardust", "test-qmp-glxgears",
                 "test-linux-abi-contract", "test-all"}:
         return (*vmdk, "qemu-system-x86_64")
@@ -4329,7 +4144,7 @@ Commands:
   build.py settings
   build.py map
   build.py gen <file>
-  build.py test <license-server|los2w|component-config|svga|installer-input|oobe|qmp-terminal|qmp-pleditor|qmp-tcc|qmp-fastfetch|qmp-sl|qmp-less|qmp-dynlinkerror|qmp-cmd|qmp-stardust|qmp-glxgears|all>
+  build.py test <license-server|los2w|component-config|svga|installer-input|oobe|qmp-terminal|qmp-pleditor|qmp-fastfetch|qmp-sl|qmp-less|qmp-dynlinkerror|qmp-cmd|qmp-stardust|qmp-glxgears|all>
   build.py client <run|gen|test|profile> ...
   build.py status <task-id>
   build.py log <task-id>
@@ -4816,10 +4631,10 @@ def parser() -> argparse.ArgumentParser:
     add_config_options(generate)
     test = commands.add_parser("test")
     test.add_argument("item", choices=("license-server", "los2w", "component-config", "svga", "installer-input", "installer-setup", "oobe", "sudo-policy",
-                                       "qmp-terminal", "qmp-pleditor", "qmp-tcc", "qmp-fastfetch", "qmp-sl", "qmp-less",
+                                       "qmp-terminal", "qmp-pleditor", "qmp-fastfetch", "qmp-sl", "qmp-less",
                                        "qmp-dynlinkerror", "qmp-cmd", "qmp-abittest", "qmp-stardust", "qmp-glxgears",
                                        "linux-abi-contract", "linux-memory", "linux-pty", "linux-permissions",
-                                       "linux-ioctl-cloexec", "python-package",
+                                       "linux-ioctl-cloexec", "builtin-tool-removal",
                                        "storage-metadata", "storage-rename", "storage-mkdir-mount", "musl-abi", "uapi", "all"))
     add_config_options(test)
     config = commands.add_parser("config")

@@ -18,6 +18,8 @@
 #include <linux/openat2.h>
 #include <leonos/syscall_abi.h>
 
+struct storage_node;
+
 #define LINUX_SYS_READ __NR_read
 #define LINUX_SYS_WRITE __NR_write
 #define LINUX_SYS_OPEN __NR_open
@@ -349,6 +351,7 @@ int64_t syscall_clone3(const struct trap_frame *frame, uint64_t arguments, uint6
 int syscall_handle_user_page_fault(uint64_t fault_addr, uint64_t error);
 int syscall_handle_task_page_fault(struct task *task, uint64_t fault_addr, uint64_t error);
 int syscall_page_fault_signal_code(struct task *task, uint64_t address);
+void syscall_mm_truncate_file(struct task *task, const struct storage_node *node, uint64_t size);
 int64_t syscall_poll(uint64_t fds_ptr, uint64_t count, int64_t timeout_ms);
 int64_t syscall_linux_signal(uint64_t number, uint64_t signal_number,
                              uint64_t action_ptr, uint64_t old_action_ptr,

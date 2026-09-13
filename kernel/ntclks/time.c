@@ -31,6 +31,7 @@
 static volatile uint64_t ticks;
 static uint64_t wall_unix_seconds;
 static uint64_t wall_subticks;
+static uint64_t wall_fraction_ns;
 static uint8_t wall_clock_valid;
 static volatile uint16_t pit_divisor;
 
@@ -221,6 +222,7 @@ void time_init(void)
     ticks = 0;
     wall_unix_seconds = 0;
     wall_subticks = 0;
+    wall_fraction_ns = 0;
     wall_clock_valid = 0;
     pit_divisor = 0;
     if (rtc_read_unix_seconds(&wall_unix_seconds) == 0) {
@@ -268,7 +270,7 @@ int time_clock_get(int32_t clock, struct linux_timespec *value)
     case LINUX_CLOCK_REALTIME_COARSE:
         value->tv_sec = wall_clock_valid ? (int64_t)wall_unix_seconds : (int64_t)(now / NTCLKS_TICK_HZ);
         value->tv_nsec = (int64_t)((wall_clock_valid ? wall_subticks : now % NTCLKS_TICK_HZ) *
-                                  (1000000000ULL / NTCLKS_TICK_HZ));
+                                  (1000000000ULL / NTCLKS_TICK_HZ) + (wall_clock_valid ? wall_fraction_ns : 0));
         return 0;
     case LINUX_CLOCK_MONOTONIC:
     case LINUX_CLOCK_MONOTONIC_RAW:
@@ -354,8 +356,13 @@ int time_wall_clock(struct leonos_time_info *info)
  */
 int time_set_wall_clock(uint64_t unix_seconds)
 {
+    return time_set_wall_clock_ns(unix_seconds, 0);
+}
+
+int time_set_wall_clock_ns(uint64_t unix_seconds, uint32_t nanoseconds)
+{
     struct leonos_time_info info;
-    if (unix_seconds < 1ULL) {
+    if (nanoseconds >= 1000000000u || unix_seconds > 253402300799ULL) {
         return -1;
     }
     unix_to_datetime(unix_seconds, &info);
@@ -364,7 +371,8 @@ int time_set_wall_clock(uint64_t unix_seconds)
         return -1;
     }
     wall_unix_seconds = unix_seconds;
-    wall_subticks = 0;
+    wall_subticks = nanoseconds / (1000000000ULL / NTCLKS_TICK_HZ);
+    wall_fraction_ns = nanoseconds % (1000000000ULL / NTCLKS_TICK_HZ);
     wall_clock_valid = 1;
     console_printf("[ntclks] wall clock set %u-%u-%u %u:%u:%u\n",
                    info.year, info.month, info.day, info.hour,

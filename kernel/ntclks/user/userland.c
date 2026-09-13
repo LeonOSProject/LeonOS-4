@@ -577,7 +577,7 @@ static int userland_load_task_image_locked(struct task *task, const struct task 
         return -8;
     }
 
-    task->entry = loaded.dynamic ? loaded.interpreter_entry : loaded.entry;
+    task->entry = loaded.interpreter_entry;
     task->exec_phnum = loaded.phnum;
     task->dynamic_launch.main_entry = loaded.entry;
     task->dynamic_launch.main_phdr = loaded.phdr_vaddr;
@@ -747,10 +747,9 @@ struct task *userland_schedule_from_frame(struct trap_frame *frame)
     struct task *current = sched_current_task();
     if (current && current->kind == TASK_KIND_USER && frame &&
         current->state != TASK_EXITED) {
-        /* A malformed interrupt frame must not erase a live task context.
-         * RIP=0 is never a valid LeonOS user entry and would make the next
-         * iretq fault while fetching its first instruction. */
-        if (frame->rip != 0 && (frame->cs & 3ULL) == 3ULL) {
+        /* A faulting user RIP may be zero. Deliver its synchronous signal
+         * before validating the frame that will actually return to userspace. */
+        if ((frame->cs & 3ULL) == 3ULL) {
             /* Install a pending user signal handler on this live return
              * frame before it is published to the scheduler. */
             arch_fpu_save(current->fpu_state);

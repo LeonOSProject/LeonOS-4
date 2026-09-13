@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch fixed official authentication sources through the required proxy."""
+"""Fetch and verify fixed official authentication sources."""
 from __future__ import annotations
 
 import argparse
@@ -14,7 +14,6 @@ from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "configs/auth-upstream.json"
-PROXY = "http://127.0.0.1:12334"
 
 
 def verify(path: Path, expected: str) -> None:
@@ -73,8 +72,7 @@ def fetch(name: str, entry: dict, cache: Path, sources: Path, *, allow_generated
     if not archive.exists():
         with tempfile.TemporaryDirectory(prefix=f".{name}-", dir=cache) as tmp:
             downloaded = Path(tmp) / archive.name
-            subprocess.run(["curl", "--proxy", PROXY, "--noproxy", "",
-                            "--fail", "--location", "--retry", "2",
+            subprocess.run(["curl", "--fail", "--location", "--retry", "2",
                             "--connect-timeout", "20", "--max-time", "300",
                             "--output", str(downloaded), entry["url"]], check=True)
             verify(downloaded, entry["sha256"])

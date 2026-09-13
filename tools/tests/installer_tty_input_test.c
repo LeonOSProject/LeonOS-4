@@ -1,9 +1,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
-#define main login_application_main
-#include "../../userland/apps/login/main.c"
-#undef main
+#include "../../userland/apps/installer/installer_tty.c"
 
 static const char *input_text;
 static size_t input_position;
@@ -57,17 +55,17 @@ int main(void)
     char output[LEONOS_AUTH_PASSWORD_LEN], overlong[140];
     feed("U!lower\n");
     interrupt_read = 1;
-    assert(tty_read_secret(NULL, output, sizeof(output)) == 1);
+    assert(tty_secret(NULL, output, sizeof(output)) == 1);
     assert(!strcmp(output, "U!lower") && termios_calls == 2);
     for (unsigned i = 0; i < 32; ++i) memcpy(overlong + i * 4, "\xf0\x9f\x94\x91", 4);
     strcpy(overlong + 128, "x\nnext\n");
     feed(overlong);
-    assert(tty_read_secret(NULL, output, sizeof(output)) == 0 && errno == EOVERFLOW);
-    assert(tty_read_line(NULL, output, sizeof(output), 0) == 1);
+    assert(tty_secret(NULL, output, sizeof(output)) == 0 && errno == EOVERFLOW);
+    assert(tty_read_line(NULL, output, sizeof(output)) == 1);
     assert(!strcmp(output, "next"));
     feed("r\n");
     restore_error = 1;
-    assert(tty_read_secret(NULL, output, sizeof(output)) == 0 && errno == EIO);
-    puts("login input: EINTR, complete-line rejection, and terminal restoration PASS");
+    assert(tty_secret(NULL, output, sizeof(output)) == 0 && errno == EIO);
+    puts("installer input: EINTR, complete-line rejection, and terminal restoration PASS");
     return 0;
 }

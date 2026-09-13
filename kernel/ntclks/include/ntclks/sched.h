@@ -42,6 +42,7 @@
 #define TASK_VMA_FLAG_DEVICE  0x00000040u
 #define TASK_VMA_FLAG_SHARED  0x00000080u
 #define TASK_VMA_FLAG_LOCKED  0x00000100u
+#define TASK_VMA_FLAG_MMAP    0x00000200u
 
 #define TASK_VMA_PROT_READ  0x1u
 #define TASK_VMA_PROT_WRITE 0x2u
@@ -71,6 +72,7 @@ struct task_file {
     uint32_t fd_flags;
     uint32_t flock_type;
     uint32_t kind;
+    uint32_t io_owner;
     struct storage_node node;
     struct storage_inode_ref *inode;
     uint64_t offset;
@@ -439,6 +441,10 @@ struct task {
     struct task_pty_fd syscall_pty;
     int32_t syscall_fd;
     uint32_t syscall_file_number;
+    struct {
+        uint64_t buffer, count, position, done;
+        bool active;
+    } regular_io;
     uint64_t socket_io_deadline;
     bool socket_io_timed;
     struct task_mmsg_state mmsg;
@@ -581,6 +587,7 @@ struct task {
     };
     struct trap_frame frame;
     uint64_t signal_fault_address;
+    uint32_t page_fault_signal;
     uint8_t fpu_state[512] __attribute__((aligned(16)));
     struct kernel_signal_action signal_actions[KERNEL_SIGNAL_ACTION_MAX];
     uint32_t running_cpu;
@@ -766,6 +773,8 @@ void sched_set_task_exec_params(uint32_t pid,
 struct task_vma *sched_task_vma_at(struct task *task, uint32_t index);
 uint32_t sched_task_vma_capacity(const struct task *task);
 void sched_task_vma_release(struct task *task);
+/* Called with the kernel execution lock held, before file pages are released. */
+void sched_truncate_file_mappings(const struct storage_node *node, uint64_t size);
 struct task_file *sched_task_file_at(struct task *task, uint32_t index);
 uint32_t sched_task_file_capacity(const struct task *task);
 void sched_task_file_release(struct task *task);
@@ -834,6 +843,7 @@ struct task *sched_find_by_path(const char *path);
 struct task *sched_find_by_path_basename(const char *basename);
 /** Returns true when a CWD, file, image, or mapping references a volume. */
 bool sched_volume_in_use(uint32_t volume_id);
+bool sched_volume_has_writers(uint32_t volume_id);
 /** Save this CPU's user trap frame and release its current task when runnable. */
 bool sched_capture_current_user_frame(const struct trap_frame *frame);
 /** Release this CPU's ownership after its current task was marked EXITED. */

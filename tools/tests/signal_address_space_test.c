@@ -20,6 +20,8 @@ static unsigned exits;
 static int deferred_error;
 static uint64_t lazy_page;
 static unsigned demand_faults;
+static unsigned drained_io;
+void storage_drain_task_io(uint32_t pid) { assert(pid==target.pid); ++drained_io; }
 void kernel_execution_lock_irqsave(uint64_t *flags) { *flags = 0; }
 void kernel_execution_unlock_irqrestore(uint64_t flags) { (void)flags; }
 void *kernel_malloc(size_t size) { return malloc(size); }
@@ -38,7 +40,7 @@ int task_socket_message_error(struct task_file *file, int error, bool setting)
 { (void)file; assert(setting); deferred_error = error; return 0; }
 int time_clock_get(int32_t id, struct linux_timespec *out)
 { assert(id == LINUX_CLOCK_MONOTONIC); *out = (struct linux_timespec){1, 0}; return 0; }
-void task_release_syscall_file(struct task *task) { (void)task; }
+void task_release_syscall_file(struct task *task) { memset(&task->regular_io,0,sizeof(task->regular_io)); }
 struct task *sched_find(uint32_t pid) { (void)pid; return &target; }
 void sched_exit_group(uint32_t pid, uint64_t code)
 { assert(pid == 1 && code == 139); target.state = TASK_EXITED; ++exits; }
@@ -130,6 +132,19 @@ int main(void)
     memcpy(&remaining, target_pages + 64, sizeof(remaining));
     assert(remaining.tv_sec == 0 && remaining.tv_nsec == 200000000);
     assert(!target.nanosleep_deadline && !target.nanosleep_remaining);
+    for (unsigned restart=0;restart<2;++restart) {
+        target.blocked_signals=0;
+        target.restart_syscall=__NR_pread64+1;
+        target.regular_io.active=true;
+        target.regular_io.done=65536;
+        target.signal_actions[2].flags=restart ? LINUX_SA_RESTART : 0;
+        assert(kernel_signal_queue_task(&target,2)==0);
+        frame=(struct trap_frame){.rsp=saved_rsp,.rip=0x430000,.cs=0x23};
+        assert(kernel_signal_deliver_pending(&target,&frame)==1);
+        memcpy(&saved,target_pages+frame.rsp-STACK_ADDRESS,sizeof(saved));
+        assert(saved.uc.context.rax==65536 && saved.uc.context.rip==0x430002);
+        assert(drained_io==restart+1 && !target.regular_io.active);
+    }
     uint64_t process_pending = 1ULL << 1;
     target.shared_process_pending = &process_pending;
     target.blocked_signals = 0;

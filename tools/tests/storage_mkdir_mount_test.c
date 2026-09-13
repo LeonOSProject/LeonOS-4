@@ -6,6 +6,12 @@
 #include "../../drivers/bootstrap/storage.c"
 
 static int test_fail_cache_alloc;
+void *kernel_malloc(size_t size) { return malloc(size); }
+void kernel_free(void *p) { free(p); }
+uint64_t mm_alloc_page(void) { return (uintptr_t)aligned_alloc(4096, 4096); }
+void mm_free_page(uint64_t p) { free((void *)(uintptr_t)p); }
+void sched_truncate_file_mappings(const struct storage_node *node, uint64_t size)
+{ (void)node; (void)size; abort(); }
 uint64_t mm_alloc_pages(uint32_t pages)
 { return test_fail_cache_alloc ? 0 : (uint64_t)(uintptr_t)calloc(pages, 4096); }
 void console_printf(const char *format, ...) { (void)format; }

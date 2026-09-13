@@ -26,7 +26,6 @@ from leonos_layout import (  # noqa: E402
     LICENSES,
     ROOT_SYMLINKS,
     layout_directories,
-    tool_payload_paths,
     apply_root_symlinks,
     command_symlink,
     RUN_LEONOS,
@@ -146,8 +145,6 @@ def stage_runtime_payload(esp_tree: Path, stage: Path, policy_runtime: Path,
         elif path.exists():
             raise ValueError(f"installer command conflicts with a regular file: {path}")
         path.symlink_to(target)
-    (stage / ETC / "resolv.conf").write_text("nameserver 1.1.1.1\n",
-                                              encoding="ascii")
     layout_directories(stage)
     apply_root_symlinks(stage)
 
@@ -162,9 +159,6 @@ def stage_installed_payloads(esp_tree: Path, destination: Path) -> None:
     root = destination / "install/root"
     esp = destination / "install/esp"
     copy_tree(esp_tree, root)
-    (destination / "install/components.list").write_text(
-        "".join(f"{component}\t/{path}\n" for component in ("python", "musl-gcc")
-                for path in tool_payload_paths(component)), encoding="ascii")
     shutil.rmtree(root / "EFI", ignore_errors=True)
     shutil.rmtree(root / "grub", ignore_errors=True)
     remove_file(root / "loader.elf")
@@ -235,6 +229,10 @@ def main() -> int:
     layout_directories(stage / "install/root")
     apply_root_symlinks(stage)
     apply_root_symlinks(stage / "install/root")
+    if (esp_tree / "lib/apk/db/installed").is_file():
+        from apk_distribution import repackage_tree
+        repackage_tree(stage / "install/root", stage.parent / "apk-installed")
+        repackage_tree(stage, stage.parent / "apk-runtime")
     share_identical_payload_files(stage)
     write_ext2_root(stage, out, args.size_mib)
     return 0

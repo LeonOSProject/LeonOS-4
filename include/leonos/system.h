@@ -71,6 +71,7 @@ struct leonos_task_affinity {
     uint64_t allowed_mask;
 };
 
+/* The broken-down calendar is UTC, matching unix_seconds. */
 struct leonos_time_info {
     uint64_t unix_seconds;
     uint64_t uptime_ms;

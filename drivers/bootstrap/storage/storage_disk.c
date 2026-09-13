@@ -334,6 +334,28 @@ int storage_disk_block_info(uint32_t disk_id, int32_t partition_index,
                             out_first_lba, out_sector_count);
 }
 
+int storage_sync_disk(uint32_t disk_id)
+{
+    uint64_t irq_flags, sectors;
+    struct install_disk_state *disk;
+    struct storage_volume volume = {0};
+    kernel_execution_lock_irqsave(&irq_flags);
+    int ret = storage_acquire_task_io();
+    if (!ret) ret = disk_manage_prepare(disk_id, &disk, &sectors);
+    if (!ret) {
+        storage_volume_from_install_disk(&volume, disk);
+        volume.ready = true;
+        kernel_spin_lock(&storage_transport_lock);
+        bool saved_async = storage_io_async_context;
+        storage_io_async_context = false;
+        ret = storage_flush_volume(&volume);
+        storage_io_async_context = saved_async;
+        kernel_spin_unlock(&storage_transport_lock);
+    }
+    kernel_execution_unlock_irqrestore(irq_flags);
+    return ret;
+}
+
 /** @brief Return a validated GPT partition UUID; caller holds the storage lock.
  * @param disk_id Published disk index.
  * @param partition_index Zero-based GPT slot.
@@ -356,13 +378,12 @@ int storage_disk_block_read(uint32_t disk_id, int32_t partition_index,
                             uint32_t *out_read)
 {
     uint64_t first_lba, sectors;
-    uint32_t count;
     uint32_t done = 0;
     uint8_t *destination = (uint8_t *)buffer;
     struct install_disk_state *disk;
     int ret;
     if (out_read) *out_read = 0;
-    if (!buffer || (offset & 511u) || (length & 511u)) return -22;
+    if (!buffer && length) return -22;
     if (!length) return 0;
     ret = storage_acquire_task_io();
     if (ret < 0) return ret;
@@ -370,20 +391,23 @@ int storage_disk_block_read(uint32_t disk_id, int32_t partition_index,
     if (ret < 0) return ret;
     ret = disk_block_range(disk_id, disk, sectors, partition_index, &first_lba, &sectors);
     if (ret < 0) return ret;
-    if (offset / 512u >= sectors || (uint64_t)(length / 512u) > sectors - offset / 512u) return -22;
-    count = length / 512u;
+    if (sectors > UINT64_MAX / 512u) return -75;
+    uint64_t bytes = sectors * 512u;
+    if (offset >= bytes) return 0;
+    if (length > bytes - offset) length = bytes - offset;
     /* Block drivers program DMA with physical kernel addresses.  A raw
      * device syscall receives a user virtual address, so it must never be
      * used directly as a DMA target.  Transfer through the kernel-owned,
      * page-aligned scratch buffer in bounded chunks instead. */
-    while (done < count) {
-        uint32_t chunk = min_u32(STORAGE_SCRATCH_SECTORS, count - done);
-        ret = install_read_sectors(disk, first_lba + offset / 512u + done,
-                                   chunk, storage_scratch);
-        if (ret < 0) return ret;
-        storage_memcpy(destination + (uint64_t)done * SECTOR_SIZE,
-                       storage_scratch, chunk * SECTOR_SIZE);
-        done += chunk;
+    while (done < length) {
+        uint64_t position = offset + done;
+        uint32_t skip = position % 512u;
+        uint32_t take = min_u32(STORAGE_SCRATCH_SECTORS * 512u - skip, length - done);
+        ret = install_read_sectors(disk, first_lba + position / 512u,
+                                   (skip + take + 511u) / 512u, storage_scratch);
+        if (ret < 0) { if (out_read) *out_read = done; return ret; }
+        storage_memcpy(destination + done, storage_scratch + skip, take);
+        done += take;
     }
     if (out_read) *out_read = length;
     return 0;
@@ -394,13 +418,12 @@ int storage_disk_block_write(uint32_t disk_id, int32_t partition_index,
                              uint32_t *out_written)
 {
     uint64_t first_lba, sectors;
-    uint32_t count;
     uint32_t done = 0;
     const uint8_t *source = (const uint8_t *)buffer;
     struct install_disk_state *disk;
     int ret;
     if (out_written) *out_written = 0;
-    if (!buffer || (offset & 511u) || (length & 511u)) return -22;
+    if (!buffer && length) return -22;
     if (!length) return 0;
     ret = storage_acquire_task_io();
     if (ret < 0) return ret;
@@ -408,7 +431,10 @@ int storage_disk_block_write(uint32_t disk_id, int32_t partition_index,
     if (ret < 0) return ret;
     ret = disk_block_range(disk_id, disk, sectors, partition_index, &first_lba, &sectors);
     if (ret < 0) return ret;
-    if (offset / 512u >= sectors || (uint64_t)(length / 512u) > sectors - offset / 512u) return -22;
+    if (sectors > UINT64_MAX / 512u) return -75;
+    uint64_t bytes = sectors * 512u;
+    if (offset >= bytes) return -28;
+    if (length > bytes - offset) length = bytes - offset;
     /* The raw node is intentionally not a back door around mounted-volume
      * protection. Installer advanced mode may write an unmounted target; a
      * running system or mounted target must use filesystem operations. */
@@ -423,18 +449,23 @@ int storage_disk_block_write(uint32_t disk_id, int32_t partition_index,
          * use metadata from before a partially completed update. */
         disk_block_cache_invalidate(disk_id);
     }
-    count = length / 512u;
+    storage_begin_mutation();
     /* See storage_disk_block_read(): source user mappings are not DMA-safe.
      * Copy each sector-aligned request into kernel memory before submitting it
      * to the controller. */
-    while (done < count) {
-        uint32_t chunk = min_u32(STORAGE_SCRATCH_SECTORS, count - done);
-        storage_memcpy(storage_scratch, source + (uint64_t)done * SECTOR_SIZE,
-                       chunk * SECTOR_SIZE);
-        ret = install_write_sectors(disk, first_lba + offset / 512u + done,
-                                    chunk, storage_scratch);
-        if (ret < 0) return ret;
-        done += chunk;
+    while (done < length) {
+        uint64_t position = offset + done;
+        uint32_t skip = position % 512u;
+        uint32_t take = min_u32(STORAGE_SCRATCH_SECTORS * 512u - skip, length - done);
+        uint32_t chunk = (skip + take + 511u) / 512u;
+        if (skip || (take & 511u)) {
+            ret = install_read_sectors(disk, first_lba + position / 512u, chunk, storage_scratch);
+            if (ret < 0) { if (out_written) *out_written = done; return ret; }
+        }
+        storage_memcpy(storage_scratch + skip, source + done, take);
+        ret = install_write_sectors(disk, first_lba + position / 512u, chunk, storage_scratch);
+        if (ret < 0) { if (out_written) *out_written = done; return ret; }
+        done += take;
     }
     /* A write through a partition node cannot change its GPT extent. Keeping
      * that range cached avoids re-reading the table before every 4 KiB mkfs
@@ -1575,8 +1606,8 @@ int storage_mount_path_volume_id(const char *target, uint32_t *out_volume_id)
     for (uint32_t volume_id = STORAGE_VOLUME_TARGET_ROOT;
          volume_id < STORAGE_MAX_VOLUMES; ++volume_id) {
         const struct storage_volume *volume = &g_volumes[volume_id];
-        if (volume->ready && volume->data_partition_mount &&
-            storage_text_eq_ci(volume->mount_path, target)) {
+        if (volume->ready && (volume->data_partition_mount || volume->tmpfs) &&
+            storage_text_eq(volume->mount_path, target)) {
             *out_volume_id = volume_id;
             return 0;
         }
@@ -1618,6 +1649,7 @@ int storage_unmount_path(const char *target, uint32_t *out_volume_id)
     console_printf("[ntclks] storage unmounted data partition disk=%u entry=%u path=%s\\n",
                    g_volumes[volume_id].source_disk_id,
                    g_volumes[volume_id].source_partition_index, target);
+    tmpfs_destroy(g_volumes[volume_id].tmpfs);
     storage_memzero(&g_volumes[volume_id], sizeof(g_volumes[volume_id]));
     storage_cache_invalidate();
     if (out_volume_id) {

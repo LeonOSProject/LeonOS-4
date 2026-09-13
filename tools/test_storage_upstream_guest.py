@@ -25,9 +25,10 @@ def main():
     parser.add_argument("--timeout", type=int, default=360)
     parser.add_argument("--root", type=Path, default=ROOT / "build/live/root.ext2")
     parser.add_argument("--power", choices=("reboot", "poweroff"))
+    parser.add_argument("--smp", type=int, choices=(1,2), default=2)
     args = parser.parse_args()
     args.root = args.root.resolve()
-    work = WORK / (args.root.parent.name + ("-" + args.power if args.power else ""))
+    work = WORK / (args.root.parent.name + ("-" + args.power if args.power else "") + f"-smp{args.smp}")
     work.mkdir(parents=True, exist_ok=True)
     (work / "result.json").unlink(missing_ok=True)
     with args.root.open("rb") as source:
@@ -36,7 +37,8 @@ def main():
     probe = work / "probe.elf"
     subprocess.run([str(compiler), "-static", "-O2", "-Wall", "-Wextra",
                     *([f'-DPROBE_POWER_COMMAND="{args.power}"'] if args.power else []),
-                    "tools/tests/storage_upstream_guest.c", "-o", str(probe)], cwd=ROOT, check=True)
+                    "tools/tests/storage_upstream_guest.c", "tools/tests/tmpfs_mmap_test.c",
+                    "-o", str(probe)], cwd=ROOT, check=True)
     image = work / "root.ext2"
     shutil.copy2(args.root, image)
     target = "/usr/lib/leonos/tests/linux-inventory.elf"
@@ -51,14 +53,23 @@ def main():
         "autospawn=ioctlcloexec autospawn=python315", "autospawn=inventory").replace(
         "syscall-trace=/opt/python/", "").replace("ioctl CLOEXEC regression", "official storage tools probe")
     iso = iso_tools.build_iso(image, work / "storage-test.iso", work / "grub.cfg", work)
+    kernel_hash = hashlib.sha256((ROOT / "build/system/kernel.sys").read_bytes()).hexdigest()
+    probe_hash = hashlib.sha256(probe.read_bytes()).hexdigest()
     serial = work / "serial.log"
     serial.write_text("")
+    disk=work / "disposable.raw"
+    with disk.open("wb") as output:
+        output.truncate(64 << 20)
+    subprocess.run(["sfdisk",str(disk)],input="label: gpt\nstart=2048,size=32768,type=L\n",
+                   text=True,check=True,capture_output=True)
     with tempfile.TemporaryDirectory(prefix="storage-qmp-") as directory, (work / "qemu.log").open("w") as errors:
         qmp = Path(directory) / "qmp.sock"
         command = ["qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-machine", "q35", "-m", "4096",
-                   "-smp", "2", "-bios", "/usr/share/edk2/x64/OVMF.4m.fd", "-display", "none",
+                   "-smp", str(args.smp), "-bios", "/usr/share/edk2/x64/OVMF.4m.fd", "-display", "none",
                    "-serial", f"file:{serial}", "-device", "VGA,xres=1280,yres=720",
                    "-cdrom", str(iso), "-boot", "d", "-qmp", f"unix:{qmp},server=on,wait=off",
+                   "-drive",f"file={disk},format=raw,if=none,id=testdisk",
+                   "-device","ide-hd,drive=testdisk,bus=ide.1",
                    "-no-reboot", "-no-shutdown"]
         process = subprocess.Popen(command, cwd=ROOT, stdout=subprocess.DEVNULL, stderr=errors)
         deadline = time.monotonic() + args.timeout
@@ -103,6 +114,7 @@ def main():
         complete = bool(not validation_error and power_event and power_event["data"].get("reason") == reason and
                         f"reboot(2) requested by pid=1 command=0x{magic}" in text)
     evidence = {"base_root": str(args.root), "base_sha256": base_hash,
+                "kernel_sha256": kernel_hash, "probe_sha256": probe_hash,
                 "qemu_command": command, "passed": passed,
                 "failed": failed, "complete": complete, "serial_log": str(serial),
                 "power_event": power_event, "validation_error": validation_error}

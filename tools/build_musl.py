@@ -74,6 +74,10 @@ def main() -> None:
          "--disable-gcc-wrapper"], cwd=build_dir, env=env)
     run(["make", f"-j{args.jobs}"], cwd=build_dir, env=env)
     run(["make", "install"], cwd=build_dir, env=env)
+    ssp = build_dir / "stack_chk_fail_local.o"
+    run(["clang", "--target=x86_64-linux-musl", "-O2", "-fPIC", "-fno-stack-protector",
+         "-nostdinc", "-c", str(ROOT / "userland/musl-dev/stack_chk_fail_local.c"), "-o", str(ssp)])
+    run(["llvm-ar", "rcs", str(prefix / "lib/libssp_nonshared.a"), str(ssp)])
     resource = subprocess.check_output(["clang", "-print-resource-dir"], text=True).strip()
     mimalloc = ROOT / "third_party/mimalloc"
     obj = build_dir / "mimalloc.o"

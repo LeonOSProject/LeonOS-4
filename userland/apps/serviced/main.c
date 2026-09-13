@@ -5,6 +5,7 @@
 #include <leonos/syscall.h>
 #include <leonos/system.h>
 #include <errno.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "devmand.h"
@@ -216,6 +217,10 @@ static const char *net_status_name(uint32_t status)
         return "DNS timeout";
     case NET_SERVICE_STATUS_DNS_FAILED:
         return "DNS failed";
+    case LEONOS_NET_STATUS_NTP_TIMEOUT:
+        return "timeout";
+    case LEONOS_NET_STATUS_NTP_INVALID:
+        return "invalid server response";
     default:
         return "network error";
     }
@@ -389,6 +394,7 @@ static void process_commands(void)
 
 static void update_dhcp(unsigned long now)
 {
+    static uint64_t renew_after_ms;
     net_service_config_t config;
     uint32_t pid = (uint32_t)getpid();
     char detail[SERVICE_DETAIL_LEN];
@@ -398,14 +404,16 @@ static void update_dhcp(unsigned long now)
         set_service_state(1, "stopped", "disabled by policy", 0);
         return;
     }
-    if (net_service_config(&config) < 0) {
+    if (netmand_config(&config) < 0) {
         set_service_state(1, "failed", "network config query failed", pid);
         return;
     }
     if ((config.flags & NET_SERVICE_CONFIG_FLAG_ACTIVE) &&
         (config.flags & NET_SERVICE_CONFIG_FLAG_DHCP) &&
         config.source == NET_SERVICE_CONFIG_SOURCE_DHCP &&
-        config.local_ip && config.gateway_ip) {
+        config.local_ip && !force_dhcp_renew && (!renew_after_ms || now < renew_after_ms)) {
+        if (!renew_after_ms && config.lease_seconds != UINT32_MAX)
+            renew_after_ms = now + (uint64_t)config.lease_seconds * 500;
         detail[0] = 0;
         append_text(detail, &pos, sizeof(detail), "DHCP lease active ip=");
         append_ipv4(detail, &pos, sizeof(detail), config.local_ip);
@@ -421,8 +429,9 @@ static void update_dhcp(unsigned long now)
         dhcp_attempted = 1;
         force_dhcp_renew = 0;
         log_line("DHCP renew attempt");
-        ret = net_service_dhcp_renew(DHCP_TIMEOUT_MS, &dhcp);
+        ret = netmand_dhcp(DHCP_TIMEOUT_MS, &dhcp);
         if (ret == 0 && dhcp.status == NET_SERVICE_STATUS_OK) {
+            renew_after_ms = dhcp.config.lease_seconds == UINT32_MAX ? 0 : now + (uint64_t)dhcp.config.lease_seconds * 500;
             detail[0] = 0;
             pos = 0;
             append_text(detail, &pos, sizeof(detail), "DHCP lease active ip=");
@@ -434,12 +443,12 @@ static void update_dhcp(unsigned long now)
         detail[0] = 0;
         pos = 0;
         append_text(detail, &pos, sizeof(detail), net_status_name(dhcp.status));
-        append_text(detail, &pos, sizeof(detail), "; static fallback active");
+        append_text(detail, &pos, sizeof(detail), "; no DHCP address");
         set_service_state(1, "failed", detail, pid);
         log_line("DHCP renew failed");
         return;
     }
-    set_service_state(1, "failed", "static fallback active; retry pending", pid);
+    set_service_state(1, "failed", "no DHCP address; retry pending", pid);
 }
 
 static void update_simple_services(void)
@@ -491,8 +500,8 @@ static void update_ntp(unsigned long now)
     }
     ntp_last_result_ok = 0;
     detail[0] = 0;
-    append_text(detail, &pos, sizeof(detail), ret < 0 ? "NTP permission failure: " : "NTP ");
-    append_text(detail, &pos, sizeof(detail), net_status_name(sync.status));
+    append_text(detail, &pos, sizeof(detail), "NTP ");
+    append_text(detail, &pos, sizeof(detail), ret < 0 ? strerror(errno) : net_status_name(sync.status));
     set_service_state(4, "failed", detail, (uint32_t)getpid());
     log_line("NTP clock synchronization failed");
 }

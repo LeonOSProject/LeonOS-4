@@ -1352,7 +1352,7 @@ int e1000_is_ready(void)
  */
 const uint8_t *e1000_mac(void)
 {
-    return e1000_is_ready() ? e1000_ops->mac() : e1000_empty_mac;
+    return e1000_ops && e1000_ops->mac ? e1000_ops->mac() : e1000_empty_mac;
 }
 
 /**
@@ -1372,7 +1372,7 @@ int e1000_poll(void *frame, uint32_t capacity, uint32_t *out_len)
 }
 
 /**
- * @brief Copy the driver's NIC info into info, zeroing it first when no driver is ready.
+ * @brief Copy NIC identity independently of carrier state.
  */
 void e1000_get_info(struct e1000_info *info)
 {
@@ -1381,7 +1381,7 @@ void e1000_get_info(struct e1000_info *info)
         return;
     }
     *info = (struct e1000_info){0};
-    if (!e1000_is_ready()) {
+    if (!e1000_ops || !e1000_ops->get_info) {
         return;
     }
     e1000_ops->get_info(&source);

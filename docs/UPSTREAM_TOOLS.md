@@ -14,12 +14,12 @@ Both production root targets have built successfully:
   installer runtime root and the installed-system payload at `/install/root`.
 
 Actual embedded tool/library bytes and compatibility links are checked with
-`debugfs`, not inferred from staging success. This is **not full guest functional
-acceptance**. QEMU testing exposes outstanding filesystem I/O, sysfs inventory,
-and mounting limitations described below. No successful full installation,
-physical-disk formatting, or VMware run is claimed. Ordinary and installer ISOs
-were rebuilt by `run images-iso` after the upstream-tool and init changes;
-VMDK was not rebuilt.
+`debugfs`, not inferred from staging success. The seven previously failing
+guest checks now pass, with the expanded suite reporting 93 passing checks and
+zero failures for each root. This includes formatting and checking a disposable
+QEMU AHCI partition, not a host disk. Ordinary and installer ISOs are generated
+by `run images-iso`; VMDK and a complete graphical installation were not tested
+in this round. VMware remains unverified.
 
 The earlier kernel compilation failure was resolved by replacing an undeclared
 `memcpy` with `__builtin_memcpy`, matching existing local code.
@@ -52,6 +52,10 @@ its host regression passes. This does not establish VMware transport stability.
 - `build/userland/busybox.stamp` records source, config, build flags, applets and
   ELF SHA256. Its conservative `guest_verified: false` is not promoted by a
   limited shell-pipeline test.
+- Official `ln`, `tar` creation/GNU extensions, `gzip`, `gunzip`, `zcat`, and
+  gzip decompression support are enabled in the production configuration.
+  Their sources remain unmodified; tmpfs copy/link/rename/archive round trips
+  are covered by the guest probe.
 
 ### util-linux
 
@@ -152,11 +156,18 @@ python3 tools/test_auth_source_integrity.py -v
 python3 tools/test_storage_payload.py -v
 python3 tools/test_upstream_tools_runtime.py -v
 python3 tools/test_storage_upstream_runtime.py -v
-python3 tools/test_upstream_tools_images.py -v
 LEONOS_STORAGE_TEST_ROOT=build/esp LEONOS_UPSTREAM_TEST_ROOT=build/esp \
   python3 tools/test_storage_upstream_runtime.py -v
-python3 tools/test_storage_upstream_guest.py --root build/install/root.fat
-python3 tools/test_storage_upstream_guest.py --root build/live/root.ext2
+python3 tools/test_storage_upstream_guest.py --root build/install/root.fat --smp 2
+python3 tools/test_storage_upstream_guest.py --root build/live/root.ext2 --smp 1
+python3 tools/test_upstream_tools_images.py -v
+python3 tools/test_regular_file_io.py
+python3 tools/test_tmpfs.py
+python3 tools/test_linux_memory.py
+python3 tools/test_linux_threads.py
+python3 tools/test_storage_mkdir_mount.py
+python3 tools/test_storage_rename.py
+python3 tools/test_storage_metadata.py
 python3 tools/test_init_power.py
 python3 tools/test_file_runtime.py
 python3 tools/test_storage_upstream_guest.py --root build/live/root.ext2 --power reboot
@@ -169,22 +180,18 @@ files; checkers must reject unformatted files. Host mount tests are version and
 read-only listing tests. None of these tests writes a host block device.
 
 Image tests compare 20 embedded commands/libraries at each of the three root
-locations and verify the declared compatibility links. The final combined build
-log is `build/upstream-tools-final-build.log` (0 errors). Artifacts:
+locations and verify the declared compatibility links. The combined build
+log for this repair is `build/storage-tools-build.log`. Artifacts:
 `build/images/leonos4.iso` and `build/images/leonos4-installer.iso`.
-The root payload extracted from each ISO matches the corresponding tested root
-image byte-for-byte by SHA256. ISO SHA256 values for this build:
-
-| ISO | SHA256 |
-| --- | --- |
-| `leonos4.iso` | `739327e18e646cec56ae325bc871426cab9fe88c7ac3383263ffc16f3a97a8c8` |
-| `leonos4-installer.iso` | `ddf28be0f16d38233817065be038c5de7137c2195dd80e98ddb35c6e70956b9d` |
+ISO and embedded payload verification is recorded in
+`build/storage-tools-iso-evidence.json`; obsolete hashes from the pre-fix
+images must not be used to identify this build.
 
 Guest probes copy a production root, add only a test executable at the existing
 inventory autospawn slot, then build a diagnostic ISO. They do not patch the
 kernel or replace production tools. QEMU has no host block devices attached.
 The runner records base-image SHA256, invocation, complete serial output and
-failures under `build/storage-upstream-guest/{install,live}/` and returns nonzero
+failures under `build/storage-upstream-guest/{install-smp2,live-smp1}/` and returns nonzero
 for failures; passing individual commands does not set package-wide acceptance.
 
 The dedicated power probes pass with the rebuilt Live root:
@@ -200,27 +207,57 @@ executing BusyBox. An earlier immediate request terminated PID 1 with SIGTERM:
 the kernel's missing early PID 1 default-signal protection remains a limitation.
 These passing post-initialization tests do not certify that early-boot case.
 
-### Observed Guest Limitations
+### Repaired Guest Failures (2026-09-13)
 
-The final installer and live root probes each complete with 20 passing checks
-and seven failed checks, not a hang. BusyBox pipelines, `file` ELF/text detection
-without magic warnings and missing-input errors, boot-payload copy/rejection,
-fdisk version and GPT write/read, mount version/listing, fsck dry-run dispatch,
-FAT32 formatting/identification and exFAT formatting/checking/identification pass.
-The pass count includes four disposable-file creation checks. Host `file` tests
-also pass with an injected 32768-byte read limit; that injection is host-only.
+| Previous failure | Implementation and observed result | Status |
+| --- | --- | --- |
+| lsblk inventory | Real disks/partitions, `/sys/dev/block`, `/sys/block`, `/sys/class/block`, sizes and matching `st_rdev`; disk0/disk0p1 listed | Verified subset |
+| mkfs.ext2 | Scalar I/O aggregates transport chunks, retaining progress across asynchronous retries; regular image and QEMU AHCI partition format successfully | Verified subset |
+| fsck.ext2 | Checks both successfully formatted ext2 targets | Verified subset |
+| blkid ext2 | Identifies the ext2 filesystem created by the official formatter | Verified subset |
+| fsck.fat | Full 516096-byte read is no longer capped at 32768 bytes; checker succeeds | Verified subset |
+| mount tmpfs | Source is a label; real sparse RAM filesystem with inode/page quotas and native metadata | Verified subset |
+| umount tmpfs | Releases the filesystem, rejects live references with EBUSY, restores underlying directory | Verified subset |
 
-- `lsblk`: `/sys/dev/block` is missing. Host inventory success does not establish
-  LeonOS sysfs compatibility.
-- `mkfs.ext2`: short writes while clearing blocks/inode tables. Subsequent
-  `fsck.ext2` and `blkid` cannot validate the failed filesystem creation; these
-  are not independent evidence that their ext2 parsers are broken.
-- `fsck.fat`: received 32768 bytes instead of the requested 516096 bytes. The
-  formatter exit code and blkid result do not prove the FAT volume is healthy.
-- `mount -t tmpfs tmpfs ...`: reports that special device `tmpfs` does not exist.
-  The following umount fails because no mount was created. No actual mount/
-  unmount workflow has been accepted.
+The expanded 93-check suite also covers 1 MiB scalar/positional transfers,
+shared descriptor offsets, held-unlinked files, non-sector-aligned block I/O,
+end-of-device partial transfers, fsync/fdatasync, tmpfs permissions/quotas,
+read-only remount and official BusyBox file/archive workflows. The original
+27 checks and their expectations remain present.
 
-These failures remain explicit, without changed expectations or private tool
-fallbacks. See the per-root `result.json` and `serial.log` for the final
-rerun results, including the project boot-copier checks.
+Tmpfs mmap now maps the inode's physical pages. Shared mappings and read/write
+observe the same bytes; private mappings use COW. Fork and partial munmap retain
+and release references. Truncate revokes shared and private PTEs before freeing
+pages, clears the final page tail, and repeated growth uses current inode size.
+Out-of-file and quota-exhausted page faults deliver SIGBUS/BUS_ADRERR. The
+18-case portable mapping test passes on host Linux and in the guest, with nine
+additional guest checks for quota and mount ownership. `msync` implements tmpfs
+and private-map behavior, including zero flags/length and locked INVALIDATE
+rejection, without pretending that a separate cached copy was written back.
+
+Reference: fixed Linux v6.12 `mm/shmem.c` (`shmem_fault`, `shmem_setattr`),
+`mm/msync.c`, `fs/read_write.c`, and `block/fops.c` under `build/linux-6.12`.
+Host tests exercise the real tmpfs/I/O/page/signal implementations with
+ASan/UBSan; interrupted partial I/O drains pending DMA before signal delivery.
+Existing storage mkdir/rename/metadata harnesses now link the new backend.
+
+### Remaining Limits
+
+- The 2-vCPU QEMU configuration is a boot/scheduling smoke test. Production
+  still has `SMP_USER_SCHEDULER_ENABLED=0`, so this is not concurrent multicore
+  user-execution validation. TLB notifications reuse the existing core barrier;
+  no NUMA or multi-socket work was added.
+- Disk-file shared mmap writeback, unfaulted shared-anonymous pages across fork,
+  complete mmap flags, tmpfs swapping/huge pages/xattrs/seals/FIFO/device nodes,
+  quota-changing remount options, bind mounts and lazy unmount remain outside
+  this repair. Native path/name and mount-count limits still apply.
+- Read-only remount tracks live task descriptors and VMAs; Linux's full
+  superblock writer accounting, including descriptors only in SCM queues,
+  remains unverified.
+- No LTP run, VMware verification, full graphical installer workflow or
+  all-applet certification is claimed. Existing early PID 1 signal protection
+  and orderly shutdown limitations above remain.
+- `test_linux_permissions.py` passes the native permission checks but its old
+  ACL stack harness still includes the removed `leonos/auth_db.h`; the aggregate
+  command fails before that obsolete fixture compiles. Its expectations were
+  not removed or weakened. Guest native tmpfs ownership/access checks pass.

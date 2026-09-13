@@ -9,54 +9,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-const char *const installer_component_names[2] = {"Python", "GCC and binutils"};
-static const char *const component_ids[2] = {"python", "musl-gcc"};
-static const char *const component_roots[2] = {"/opt/python", "/opt/dyne"};
-static struct { unsigned component; char path[256]; } paths[96];
-static unsigned path_count;
-static char payload_root[256];
-
-int installer_setup_load(struct installer_setup *setup, const char *manifest,
-                         const char *payload)
-{
-    char line[300];
-    unsigned found[2] = {0};
-    path_count = 0;
-    if (strlen(payload) >= sizeof(payload_root)) { errno = ENAMETOOLONG; return -1; }
-    strcpy(payload_root, payload);
-    FILE *file = fopen(manifest, "r");
-    if (!file) return -1;
-    while (fgets(line, sizeof(line), file)) {
-        char *tab = strchr(line, '\t');
-        char *end = strchr(line, '\n');
-        if (!tab || !end || end <= tab + 1 || path_count == 96) goto invalid;
-        *tab++ = 0;
-        *end = 0;
-        unsigned component = !strcmp(line, component_ids[0]) ? 0 :
-                             !strcmp(line, component_ids[1]) ? 1 : 2;
-        if (component == 2 || tab[0] != '/' || strstr(tab, "..") ||
-            strlen(tab) >= sizeof(paths[0].path)) goto invalid;
-        paths[path_count].component = component;
-        strcpy(paths[path_count++].path, tab);
-        found[component] = 1;
-    }
-    if (ferror(file) || !found[0] || !found[1]) goto invalid;
-    fclose(file);
-    for (unsigned i = 0; i < 2; ++i) {
-        char path[512];
-        struct stat st;
-        snprintf(path, sizeof(path), "%s%s", payload, component_roots[i]);
-        setup->component_available[i] = stat(path, &st) == 0 && S_ISDIR(st.st_mode);
-        setup->component_selected[i] = setup->component_available[i];
-    }
-    return 0;
-invalid:
-    fclose(file);
-    path_count = 0;
-    errno = EINVAL;
-    return -1;
-}
-
 int installer_setup_valid(const struct installer_setup *setup)
 {
     if (!leonos_account_name_valid(setup->username, sizeof(setup->username)) ||
@@ -68,31 +20,6 @@ int installer_setup_valid(const struct installer_setup *setup)
         if (!leonos_auth_password_valid(passwords[i], LEONOS_AUTH_PASSWORD_LEN)) return 0;
     return !strcmp(setup->password, setup->password_confirm) &&
            !strcmp(setup->root_password, setup->root_password_confirm);
-}
-
-int installer_setup_include(const struct installer_setup *setup, const char *source)
-{
-    size_t root_len = strlen(payload_root);
-    if (strncmp(source, payload_root, root_len) || source[root_len] != '/') return 1;
-    source += root_len;
-    for (unsigned i = 0; i < path_count; ++i) {
-        size_t length = strlen(paths[i].path);
-        if (!setup->component_selected[paths[i].component] &&
-            !strncmp(source, paths[i].path, length) &&
-            (!source[length] || source[length] == '/')) return 0;
-    }
-    return 1;
-}
-
-void installer_setup_existing(struct installer_setup *setup, const char *target)
-{
-    for (unsigned i = 0; i < 2; ++i) {
-        char path[512];
-        struct stat st;
-        snprintf(path, sizeof(path), "%s%s", target, component_roots[i]);
-        setup->component_selected[i] = setup->component_available[i] &&
-                                       stat(path, &st) == 0 && S_ISDIR(st.st_mode);
-    }
 }
 
 static int prepare_home(const char *target, const struct leonos_user_info *user)
@@ -140,8 +67,7 @@ int installer_setup_write(const struct installer_setup *setup, const char *targe
     snprintf(path, sizeof(path), "%s/etc/leonos/installed", target);
     FILE *file = fopen(path, "w");
     if (!file) goto out;
-    int failed = fprintf(file, "python=%u\nmusl-gcc=%u\n", setup->component_selected[0],
-                         setup->component_selected[1]) < 0;
+    int failed = fputs("installed=1\n", file) == EOF;
     if (fflush(file) || fchmod(fileno(file), 0644) || fsync(fileno(file))) failed = 1;
     if (fclose(file)) failed = 1;
     if (!failed) result = 0;

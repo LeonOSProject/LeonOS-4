@@ -1,0 +1,20 @@
+# These rules extend apk's built-in +etc/, @etc/init.d and !etc/apk.
+# Keep local identity, authentication and boot configuration as .apk-new.
+# This is configuration-file handling, not a sandbox for package scripts.
+!etc/leonos
+!etc/os-release
+!etc/passwd
+!etc/shadow
+!etc/group
+!etc/gshadow
+!etc/pam.d
+!etc/security
+!etc/sudoers
+!etc/sudoers.d
+!etc/sudo.conf
+!etc/fstab
+!etc/hostname
+!etc/hosts
+!etc/resolv.conf
+!etc/ntp.conf
+!etc/ld-musl-x86_64.path

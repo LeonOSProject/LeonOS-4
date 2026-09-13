@@ -1,0 +1,4 @@
+# apk-tools 3.x global options (apk-tools 2.x uses its built-in defaults).
+timeout 60
+wait 30
+cache-dir /var/cache/apk

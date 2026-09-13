@@ -795,9 +795,10 @@ int64_t syscall_process_control(uint64_t number, uint64_t a0,
     }
     if (number == LINUX_SYS_SETTIMEOFDAY) {
         struct task *task = sched_current_task();
-        if (!task || task->uid != 0) return -LEONOS_EPERM;
+        if (!task || !(task->cap_effective & (1ULL << CAP_SYS_TIME))) return -LEONOS_EPERM;
         if (!a0 || !user_range_ok(a0, 16u)) return -LEONOS_EFAULT;
-        if (time_set_wall_clock((uint64_t)((const int64_t *)(uintptr_t)a0)[0]) < 0) {
+        int64_t sec = ((const int64_t *)(uintptr_t)a0)[0], usec = ((const int64_t *)(uintptr_t)a0)[1];
+        if (sec < 0 || usec < 0 || usec >= 1000000 || time_set_wall_clock_ns((uint64_t)sec, (uint32_t)usec * 1000) < 0) {
             return -LEONOS_EINVAL;
         }
         return 0;
@@ -805,13 +806,13 @@ int64_t syscall_process_control(uint64_t number, uint64_t a0,
     if (number == LINUX_SYS_CLOCK_SETTIME) {
         struct task *task = sched_current_task();
         struct linux_timespec value;
-        if (!task || task->uid != 0) return -LEONOS_EPERM;
+        if (!task || !(task->cap_effective & (1ULL << CAP_SYS_TIME))) return -LEONOS_EPERM;
         if ((int32_t)a0 != LINUX_CLOCK_REALTIME) return -LEONOS_EINVAL;
         if (!a1 || !user_range_ok(a1, sizeof(value))) return -LEONOS_EFAULT;
         value = *(const struct linux_timespec *)(uintptr_t)a1;
         if (value.tv_nsec < 0 || value.tv_nsec >= 1000000000LL || value.tv_sec < 0)
             return -LEONOS_EINVAL;
-        return time_set_wall_clock((uint64_t)value.tv_sec) < 0 ? -LEONOS_EINVAL : 0;
+        return time_set_wall_clock_ns((uint64_t)value.tv_sec, (uint32_t)value.tv_nsec) < 0 ? -LEONOS_EINVAL : 0;
     }
     if (number == LINUX_SYS_SCHED_GETAFFINITY || number == LINUX_SYS_SCHED_SETAFFINITY) {
         struct task *current = sched_current_task();

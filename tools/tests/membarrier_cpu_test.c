@@ -8,6 +8,11 @@
 static _Thread_local uint32_t test_cpu;
 static atomic_int stop_workers;
 static atomic_uint sent[4];
+static atomic_uint tlb_flushes[4];
+void x86_64_flush_user_tlb(void)
+{
+    atomic_fetch_add(&tlb_flushes[test_cpu], 1);
+}
 
 uint32_t apic_id(void) { return test_cpu; }
 
@@ -37,7 +42,8 @@ int main(void)
     pthread_t workers[2];
     for (uintptr_t i = 1; i <= 2; ++i) assert(pthread_create(&workers[i - 1], NULL, remote_cpu, (void *)i) == 0);
     for (uint64_t sequence = 1; sequence <= 2000; ++sequence) {
-        smp_membarrier(sequence % 2);
+        if (sequence % 3 == 0) smp_flush_user_tlb();
+        else smp_membarrier(sequence % 2);
         for (unsigned cpu = 1; cpu <= 2; ++cpu)
             assert(__atomic_load_n(&membarrier_ack[cpu], __ATOMIC_ACQUIRE) == sequence);
         assert(membarrier_request[0] == 0 && membarrier_request[3] == 0);
@@ -46,6 +52,7 @@ int main(void)
     for (unsigned i = 0; i < 2; ++i) {
         assert(pthread_join(workers[i], NULL) == 0);
         assert(atomic_load(&sent[i + 1]) == 2000);
+        assert(atomic_load(&tlb_flushes[i + 1]) == 2000 / 3);
     }
     puts("PASS membarrier CPU rendezvous: remote acknowledgement, offline CPUs, repeated normal/sync-core barriers");
 }

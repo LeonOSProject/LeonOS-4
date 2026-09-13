@@ -11,4 +11,5 @@ struct linux_statfs_abi {
 };
 #define LINUX_ST_RDONLY 1
 #define LINUX_ST_VALID 32
+#define LINUX_ST_RELATIME 4096
 #endif

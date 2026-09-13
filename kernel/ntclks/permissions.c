@@ -145,7 +145,7 @@ int fs_permissions_get(const char *path, const struct storage_node *node,
         node = &found;
     }
     if (node->flags & STORAGE_NODE_FLAG_PTY) return pty_inode_permissions(node, value, false);
-    if (node->flags & STORAGE_NODE_FLAG_EXT2) return storage_inode_permissions(node, value, false);
+    if (node->flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS)) return storage_inode_permissions(node, value, false);
     if (node->flags & STORAGE_NODE_FLAG_DEV_LINK) {
         *value = (struct leonos_permissions){0777, 0, 0};
         return 0;
@@ -176,7 +176,7 @@ static int store(const char *path, const struct storage_node *node,
 {
     struct leonos_permissions_request req = {.action = LEONOS_PERMISSIONS_SET, .value = *value};
     if (node->flags & STORAGE_NODE_FLAG_PTY) return pty_inode_permissions(node, &req.value, true);
-    if (node->flags & STORAGE_NODE_FLAG_EXT2) return storage_inode_permissions(node, &req.value, true);
+    if (node->flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS)) return storage_inode_permissions(node, &req.value, true);
     if (metadata_path(path)) return -LEONOS_EPERM;
     if (node->flags & STORAGE_NODE_FLAG_DEV_LINK) return -LEONOS_EROFS;
     if (node->flags & (STORAGE_NODE_FLAG_DEV_NODE | STORAGE_NODE_FLAG_DEV_DIR | STORAGE_NODE_FLAG_DEV_FB0))
@@ -191,6 +191,12 @@ static int check_node(const struct task *task, const char *path,
                       const struct storage_node *node, uint32_t access, bool real_ids)
 {
     if ((access & FS_ACCESS_WRITE) && metadata_path(path)) return -LEONOS_EPERM;
+    if ((access & FS_ACCESS_WRITE) && (node->flags & STORAGE_NODE_FLAG_TMPFS)) {
+        uint64_t flags;
+        int ret=storage_node_mount_flags(node,&flags);
+        if (ret < 0) return ret;
+        if (flags & MS_RDONLY) return -LEONOS_EROFS;
+    }
     if (node->type == LEONOS_FS_TYPE_FILE && (access & FS_ACCESS_EXEC) &&
         !(node->flags & (STORAGE_NODE_FLAG_PROC | STORAGE_NODE_FLAG_SYSFS))) {
         uint64_t mount_flags;

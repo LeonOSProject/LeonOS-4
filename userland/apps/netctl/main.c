@@ -7,6 +7,12 @@
 #include <leonos/syscall.h>
 #include <leonos/ui.h>
 #include <leonos/layout.h>
+#include <leonos/sudo.h>
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #define NETCTL_W 720
 #define NETCTL_H 584
@@ -37,6 +43,7 @@ static char dns_text[192] = "Enter a host name and resolve an A record.";
 static struct leonos_ui_edit_state domain_edit;
 static struct leonos_ui_edit_state dns_edit;
 static struct leonos_ui_listview_state connections_view;
+static uint32_t dhcp_child;
 
 static void copy_text(char *dst, uint32_t cap, const char *src)
 {
@@ -278,11 +285,16 @@ static const char *source_name(uint32_t source)
 
 static void set_status_ret(const char *prefix, int ret)
 {
+    int error = errno;
     uint32_t pos = 0;
     status_text[0] = 0;
     append_text(status_text, &pos, sizeof(status_text), prefix);
     append_text(status_text, &pos, sizeof(status_text), " ret=");
     append_i32(status_text, &pos, sizeof(status_text), ret);
+    if (ret < 0 && error) {
+        append_text(status_text, &pos, sizeof(status_text), ": ");
+        append_text(status_text, &pos, sizeof(status_text), strerror(error));
+    }
 }
 
 static void refresh_connections(void);
@@ -333,10 +345,20 @@ static void refresh_connections(void)
 
 static void renew_dhcp(void)
 {
+    if (dhcp_child) return;
+    if (geteuid() != 0) {
+        char *args[] = {"/usr/lib/leonos/apps/netctl/netctl.elf", "--renew-dhcp", NULL};
+        if (leonos_sudo_run(NULL, NULL, args, &dhcp_child) < 0) {
+            set_status_ret(T("Authorization failed", "授权失败"), -1);
+            return;
+        }
+        copy_text(status_text, sizeof(status_text), T("Authorizing DHCP update...", "正在授权更新 DHCP..."));
+        return;
+    }
     net_service_dhcp_t dhcp;
     int ret = net_service_dhcp_renew(4000, &dhcp);
     if (ret < 0) {
-        set_status_ret(T("DHCP ioctl failed", "DHCP ioctl 失败"), ret);
+        set_status_ret(T("DHCP request failed", "DHCP 请求失败"), ret);
         return;
     }
     config = dhcp.config;
@@ -345,6 +367,51 @@ static void renew_dhcp(void)
     }
     refresh_connections();
     copy_text(status_text, sizeof(status_text), status_name(dhcp.status));
+}
+
+/* A separate sudo-authorized process performs only this operation. The GUI
+ * stays unprivileged; sudoers and PAM decide whether the helper may run. */
+static int renew_dhcp_command(void)
+{
+    if (geteuid() != 0) return 128 + EACCES;
+    net_service_dhcp_t result;
+    if (net_service_dhcp_renew(4000, &result) < 0) {
+        int error = errno;
+        fprintf(stderr, "[netctl] DHCP request failed: %s (errno=%d)\n", strerror(error), error);
+        return 128 + (error > 0 && error < 128 ? error : EIO);
+    }
+    if (result.status != NET_SERVICE_STATUS_OK)
+        return result.status < 64 ? 64 + (int)result.status : 128 + EIO;
+    return 0;
+}
+
+static int poll_dhcp_command(void)
+{
+    if (!dhcp_child) return 0;
+    int status;
+    if (leonos_sudo_wait(dhcp_child, &status) < 0) {
+        if (errno == EAGAIN || errno == EINTR) return 0;
+        dhcp_child = 0;
+        set_status_ret(T("DHCP worker failed", "DHCP 更新进程失败"), -1);
+        return 1;
+    }
+    dhcp_child = 0;
+    if (!WIFEXITED(status)) {
+        copy_text(status_text, sizeof(status_text), T("DHCP update interrupted", "DHCP 更新被中断"));
+        return 1;
+    }
+    int code = WEXITSTATUS(status);
+    if (code == 0) refresh_config();
+    else if (code >= 128) {
+        errno = code - 128;
+        set_status_ret(T("DHCP request failed", "DHCP 请求失败"), -1);
+    } else if (code >= 64) {
+        copy_text(status_text, sizeof(status_text), status_name((uint32_t)code - 64));
+    } else {
+        copy_text(status_text, sizeof(status_text),
+                  T("Authorization denied or cancelled", "授权被拒绝或已取消"));
+    }
+    return 1;
 }
 
 static int path_exists(const char *path)
@@ -652,11 +719,14 @@ static int hit_rect(int32_t px, int32_t py, int32_t x, int32_t y,
            px < x + (int32_t)w && py < y + (int32_t)h;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
+
+    if (argc == 2 && !strcmp(argv[1], "--renew-dhcp")) return renew_dhcp_command();
+    if (argc != 1) return 2;
 
     puts("[netctl.elf] network controller starting");
     window_id = leonos_gui_create_app_window_ex(T("Network Controller", "网络控制器"),
@@ -753,6 +823,10 @@ int main(void)
                 draw_netctl(&ui);
                 leonos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
             }
+        }
+        if (poll_dhcp_command()) {
+            draw_netctl(&ui);
+            leonos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
         }
         sleep_ms(10);
     }

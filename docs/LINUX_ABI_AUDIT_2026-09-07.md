@@ -37,6 +37,68 @@
 
 ## 本轮实际修复与状态
 
+### 2026-09-13 Alpine GCC 动态启动与开发包
+
+Alpine 原版 GCC 15.2.0-r5 是带 `PT_INTERP` 的 ET_EXEC。旧加载器仅为
+ET_DYN 读取并启动解释器，导致 GCC 的动态重定位未执行并跳转到地址 0；
+调度入口又在处理信号前拒绝 RIP=0，形成反复缺页。现已将加载偏移与解释器
+选择分离：ET_EXEC 保持固定地址，存在 PT_INTERP 时仍映射并进入解释器，
+AT_ENTRY/AT_BASE 分别描述主程序/解释器。信号先于返回帧校验处理。
+依据是固定 Linux v6.12 `fs/binfmt_elf.c:868` 的 PT_INTERP 扫描和
+`:1234` 的解释器入口选择，不是 GCC 应用适配。
+
+宿主真实 `elf.c` 的 ASan/UBSan 回归覆盖 ET_EXEC+PT_INTERP、PIE、静态
+ET_EXEC 和非法解释器字符串；用例在旧实现上失败。QEMU 中默认及捕获
+SIGSEGV 的 RIP=0 用例均正常结束，捕获路径校验 si_addr 与 ucontext。
+
+`leonos-musl-dev` 是离线仓库中的可选真实开发包，包含与运行库同一次
+musl 构建的头文件、启动对象、静态库及 Alpine GCC 所需的
+`libssp_nonshared.a`，精确依赖本地 musl 版本，不伪造 Alpine musl 版本。
+原有 libxcrypt 的 crypt_data ABI 与开发文件保留。安装命令为
+`apk add gcc leonos-musl-dev make`，GCC 仍是未修改的 Alpine 软件包。
+
+`tools/test_alpine_runtime_qemu.py` 宿主安装签名验证后的 Alpine 包，再在
+NTCLKS/QEMU 运行：GCC 版本、目标文件编译、动态/静态链接、生成程序的
+stdio/pthread/TLS，以及 ar、make、nano、jq、OpenSSL、curl 定向运行，
+共 18 项通过、0 失败。日志为 `build/alpine-runtime/guest-serial.log`。
+宿主暂存软件包不算来宾安装验证，真实安装由 `tools/test_apk_qemu.py`
+独立覆盖。带真实包缓存的来宾测试共 44 项通过、0 失败：HTTPS 下载索引和
+zlib、签名验证、缓存复用、脚本/升级/卸载，以及 `--no-network` 安装 GCC
+与依赖（约 10 秒）、随后执行和编译。日志为 `build/apk-qemu/guest-serial.log`。
+无缓存联网安装曾在 300 秒预算处超时，保留
+`build/apk-qemu/guest-serial.online-timeout.log`；首次大包下载速度仍待优化。
+为分离测试因素，缓存夹具镜像使用 768 MiB，容纳夹具、缓存和解包产物；
+这不改变正式 Live 镜像的容量，也不证明其剩余空间足够安装完整工具链。
+大包应在有足够空间的已安装文件系统上使用。
+
+正式配置显式指定 `cache-dir /var/cache/apk`，启用上游 apk 的包缓存策略，
+避免仅存在 fallback 索引目录时忽略已经保存的软件包。普通 ISO、installer
+运行根和待安装根已构建，真实数据库/文件校验和/配置/仓库的镜像检查通过。
+普通 musl-dev 的精确 Alpine 版本依赖仍不能随意替换本地运行库。
+这不证明所有 Alpine 软件包、GUI、服务或完整 ELF/信号 ABI 已兼容；
+VMware 与 LTP 本轮未验证，CSV 整项状态不提升。
+
+### 2026-09-13 官方工具的 7 项失败与 tmpfs 共享映射
+
+原版 BusyBox/util-linux/e2fsprogs/dosfstools 的来宾回归由 20 通过、7 失败
+修复为扩展后的 93 通过、0 失败（普通 rootfs 与 installer rootfs 各一轮）。
+保留原 27 项测试及预期；修复发生在内核和正式 BusyBox 配置，没有移植上游工具。
+
+- `read/write/pread64/pwrite64` 聚合底层 32 KiB 传输块，保留异步重试进度和 OFD
+  偏移，实际完成 1 MiB 请求；信号打断时返回已传输字节并排空 DMA。
+- 块设备支持非扇区对齐 I/O、设备末尾 EOF/ENOSPC 和真实 flush；一次性 QEMU AHCI
+  分区通过官方 ext2 格式化和检查。sysfs 块设备拓扑及 dev_t 与 lsblk 一致。
+- tmpfs 提供实际 RAM 页、稀疏文件、配额、权限、链接和 inode 引用；mount/umount
+  不再依赖虚构块源。文件映射共享物理页、私有 COW、fork/munmap、截断失效、
+  再增长清零、SIGBUS/BUS_ADRERR 以及 msync 语义有宿主 Linux/来宾对照证据。
+
+源码依据：固定 Linux 6.12 的 `mm/shmem.c`、`mm/msync.c`、`fs/read_write.c`
+和 `block/fops.c`。证据与具体边界见 `docs/UPSTREAM_TOOLS.md` 和
+`build/storage-upstream-guest/{live-smp1,install-smp2}/{result.json,serial.log}`。
+状态为已验证的具体子集，CSV 整项兼容性状态不提升。磁盘文件共享映射回写、
+共享匿名映射 fork 后首次缺页、完整挂载选项等仍未完成；当前禁用 AP 用户调度，
+2-vCPU 测试不能证明真实多核并发。VMware/LTP/完整安装流程本轮未验证。
+
 ### 2026-09-10 通用 ioctl close-on-exec 修复（`FIOCLEX`/`FIONCLEX`）
 
 **已证实的缺口**：静态 musl CPython 3.15 执行 `python3 /bin/hello.py` 报

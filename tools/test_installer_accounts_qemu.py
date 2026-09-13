@@ -27,11 +27,11 @@ class Probe(WindowProbe):
 
 
 @contextmanager
-def boot(output, disk, iso=None):
+def boot(output, disk, iso=None, *, smp=2):
     output.mkdir(parents=True, exist_ok=True)
     serial, qmp = output / "serial.log", output / "qmp.sock"
     command = ["qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-machine", "q35",
-               "-m", "4096", "-smp", "2", "-bios", "/usr/share/edk2/x64/OVMF.4m.fd",
+               "-m", "4096", "-smp", str(smp), "-bios", "/usr/share/edk2/x64/OVMF.4m.fd",
                "-display", "none", "-serial", f"file:{serial}",
                "-device", "VGA,xres=1280,yres=720", "-device", "qemu-xhci", "-device", "usb-tablet",
                "-netdev", "user,id=net0", "-device", "e1000,netdev=net0",
@@ -82,17 +82,12 @@ def wait_install(probe, serial, process):
     raise AssertionError("Installation timed out")
 
 
-def install_gui(probe, serial, process, components):
+def install_gui(probe, serial, process):
     wait_log(serial, "[installer.elf] starting installer wizard", process)
     time.sleep(4)
     probe.frame("language")
     for _ in range(6): next_page(probe)
-    probe.frame("components")
     y = 64 if probe.height > 640 else 44
-    for index, selected in enumerate((components in ("all", "python"), components in ("all", "gcc"))):
-        if not selected: probe.click(270, y + 88 + index * 54)
-    probe.frame("components-selected")
-    next_page(probe)
     for index, text in enumerate(("alice", USER_PASSWORD, USER_PASSWORD, ROOT_PASSWORD, ROOT_PASSWORD)):
         probe.click(350, y + 96 + index * 54)
         probe.text(text)
@@ -106,14 +101,12 @@ def install_gui(probe, serial, process, components):
     wait_install(probe, serial, process)
 
 
-def install_tty(probe, serial, process, components):
+def install_tty(probe, serial, process):
     time.sleep(3)
     probe.key("down")
     probe.key("ret")
     answers = (("Mode [install/update]: ", "install"),
                ("Select disk number (r to refresh, q to quit): ", "0"),
-               ("Install Python? [Y/n]: ", "y" if components in ("all", "python") else "n"),
-               ("Install GCC and binutils? [Y/n]: ", "y" if components in ("all", "gcc") else "n"),
                ("Username: ", "alice"), ("Password: ", USER_PASSWORD),
                ("Confirm password: ", USER_PASSWORD), ("root password: ", ROOT_PASSWORD),
                ("Confirm root password: ", ROOT_PASSWORD),
@@ -125,7 +118,7 @@ def install_tty(probe, serial, process, components):
     wait_install(probe, serial, process)
 
 
-def login_tty(probe, serial, process, root, components):
+def login_tty(probe, serial, process, root):
     time.sleep(3)
     probe.key("down")
     probe.key("ret")
@@ -149,7 +142,8 @@ def login_tty(probe, serial, process, root, components):
             "if (echo bad > /etc/passwd) 2>/dev/null; then echo ACCESS_FAILED; else echo PASSWD_DENIED; fi; "
             "if cat /tmp/root-group-only 2>/dev/null; then echo ACCESS_FAILED; else echo ROOT_GROUP_DENIED; fi; "
             "test -e /usr/bin/python3; echo PYTHON_STATUS=$?; "
-            "test -e /usr/bin/gcc; echo GCC_STATUS=$?; echo USER_SESSION_DONE")
+            "test -e /usr/bin/gcc; echo GCC_STATUS=$?; "
+            "test -e /usr/bin/tcc; echo TCC_STATUS=$?; echo USER_SESSION_DONE")
     probe.text(command)
     probe.key("ret")
     marker = "ROOT_SESSION_DONE" if root else "USER_SESSION_DONE"
@@ -168,8 +162,8 @@ def login_tty(probe, serial, process, root, components):
         for line in ("ROOT_DENIED", "PASSWD_DENIED", "ROOT_GROUP_DENIED", "HOME=/home/alice", "user-ok"):
             assert "\n" + line + "\n" in log, line
         assert "\nACCESS_FAILED\n" not in log
-        assert f"\nPYTHON_STATUS={0 if components in ('all', 'python') else 1}\n" in log
-        assert f"\nGCC_STATUS={0 if components in ('all', 'gcc') else 1}\n" in log
+        for tool in ("PYTHON", "GCC", "TCC"):
+            assert f"\n{tool}_STATUS=1\n" in log
     else:
         assert "\nroot-ok\n" in log
     probe.frame("root-session" if root else "user-session")
@@ -204,7 +198,6 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--iso", type=Path, default=ROOT / "build/images/leonos4-installer.iso")
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--components", choices=("none", "all", "python", "gcc"), default="none")
     parser.add_argument("--installer", choices=("gui", "tty"), default="gui")
     parser.add_argument("--login-only", action="store_true", help="Boot this test's existing scratch disk without reinstalling")
     parser.add_argument("--desktop", action="store_true", help="Also log into the installed desktop and capture Terminal identity")
@@ -223,15 +216,15 @@ def main():
     else:
         with disk.open("xb") as file: file.truncate(8 * 1024**3)
         with boot(output / "install", disk, args.iso.resolve()) as session:
-            (install_gui if args.installer == "gui" else install_tty)(*session, args.components)
+            (install_gui if args.installer == "gui" else install_tty)(*session)
     with boot(output / "root", disk) as session:
-        login_tty(*session, True, args.components)
+        login_tty(*session, True)
     with boot(output / "user", disk) as session:
-        login_tty(*session, False, args.components)
+        login_tty(*session, False)
     if args.desktop:
         with boot(output / "desktop", disk) as session:
             login_desktop(*session)
-    print(f"PASS: installer, {args.components}, ordinary/root credentials: {output}")
+    print(f"PASS: installer, ordinary/root credentials: {output}")
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@
 #include <leonos/sudo.h>
 #include <leonos/auth.h>
 #include <leonos/ui.h>
+#include <leonos/i18n.h>
 #include <leonos/fs.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
@@ -279,7 +280,11 @@ static int sudod_finish(int32_t status)
 static int askpass(const char *prompt)
 {
     char password[LEONOS_AUTH_PASSWORD_LEN] = {0};
-    int result = leonos_ui_show_password_dialog("Authentication", prompt, password, sizeof(password));
+    if (!prompt || !strcmp(prompt, "Password:") || !strcmp(prompt, "Password: "))
+        prompt = leonos_i18n("Password:", "\u5bc6\u7801\uff1a");
+    int result = leonos_ui_show_password_dialog(
+        leonos_i18n("Authentication", "\u8eab\u4efd\u9a8c\u8bc1"), prompt, password, sizeof(password));
+    fprintf(stderr, "[askpass] dialog result=%d\n", result);
     if (result == 1) {
         size_t size = strlen(password);
         password[size++] = '\n';
@@ -287,7 +292,10 @@ static int askpass(const char *prompt)
         while (sent < size) {
             ssize_t n = write(STDOUT_FILENO, password + sent, size - sent);
             if (n < 0 && errno == EINTR) continue;
-            if (n <= 0) { result = 0; break; }
+            if (n <= 0) {
+                fprintf(stderr, "[askpass] response write failed errno=%d\n", errno);
+                result = 0; break;
+            }
             sent += (size_t)n;
         }
     }

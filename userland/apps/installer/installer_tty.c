@@ -56,22 +56,6 @@ static int tty_secret(const char *prompt, char *buffer, uint32_t capacity)
 
 static int tty_setup(struct installer_setup *setup)
 {
-    char answer[16], prompt[80];
-    for (unsigned i = 0; i < 2; ++i) {
-        if (!setup->component_available[i]) continue;
-        snprintf(prompt, sizeof(prompt), "Install %s? [Y/n]: ", installer_component_names[i]);
-        for (;;) {
-            if (!tty_read_line(prompt, answer, sizeof(answer))) return 0;
-            if (!answer[0] || !strcmp(answer, "y") || !strcmp(answer, "Y")) {
-                setup->component_selected[i] = 1;
-                break;
-            }
-            if (!strcmp(answer, "n") || !strcmp(answer, "N")) {
-                setup->component_selected[i] = 0;
-                break;
-            }
-        }
-    }
     for (;;) {
         if (!tty_read_line("Username: ", setup->username, sizeof(setup->username)) ||
             !tty_secret("Password: ", setup->password, sizeof(setup->password)) ||
@@ -189,7 +173,6 @@ int installer_tty_main(const struct installer_tty_context *context)
             return 1;
         }
         context->print_update_packages();
-        installer_setup_existing(context->setup, "/target");
         if (!tty_read_line("Type UPDATE to confirm an in-place update: ",
                            input, sizeof(input)) || !tty_line_is(input, "UPDATE")) {
             puts("Update not confirmed. Installation cancelled.");

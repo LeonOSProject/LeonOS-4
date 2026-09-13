@@ -23,6 +23,7 @@
 #include <linux/time.h>
 #include <linux/signal.h>
 #include <linux/errno.h>
+#include <linux/fcntl.h>
 
 /* The table grows by moving only pointers; task objects keep stable addresses
  * because wait queues and interrupt paths may retain struct task pointers. */
@@ -39,6 +40,18 @@ static uint64_t scheduler_cpu_busy_ticks[SMP_MAX_CPUS];
 static uint64_t scheduler_cpu_idle_ticks[SMP_MAX_CPUS];
 static struct kernel_spinlock scheduler_lock = KERNEL_SPINLOCK_INIT;
 static void sched_notify_parent_exit(struct task *task);
+
+void sched_truncate_file_mappings(const struct storage_node *node, uint64_t size)
+{
+    /* The execution lock pins task/VMA lifetimes and excludes concurrent
+     * faults, fork and exec. Duplicate CLONE_VM entries are harmless. */
+    for (uint32_t i = 0; i < task_count; ++i) {
+        struct task *task = tasks[i];
+        if (task && task->kind == TASK_KIND_USER &&
+            !(task->flags & TASK_FLAG_RESOURCES_RELEASED))
+            syscall_mm_truncate_file(task, node, size);
+    }
+}
 
 /* A READY task can still be owned by the CPU that just saved its interrupt
  * frame.  Keep that reservation until the owner either reclaims or replaces
@@ -927,6 +940,7 @@ int64_t sched_clone_current(const struct trap_frame *parent_frame, uint64_t flag
     child->sysv_sem = (struct task_sysv_sem_state){0};
     child->sysv_undo = NULL;
     child->syscall_file = NULL;
+    __builtin_memset(&child->regular_io, 0, sizeof(child->regular_io));
     child->tty_old_pgrp = 0;
     child->syscall_pty = (struct task_pty_fd){0};
     child->socket_io_deadline = 0;
@@ -2123,6 +2137,30 @@ static bool sched_path_uses_volume(const char *path, uint32_t volume_id)
 /**
  * @brief True when any live task's cwd, path, image node, or open files/VMA reference this volume.
  */
+bool sched_volume_has_writers(uint32_t volume_id)
+{
+    for (uint32_t i = 0; i < task_count; ++i) {
+        struct task *task = tasks[i];
+        if (!task || !task->pid || (task->flags & TASK_FLAG_RESOURCES_RELEASED)) continue;
+        for (uint32_t j = 0; j < sched_task_file_capacity(task) + SCHED_TASK_STDIO_MAX; ++j) {
+            struct task_file *slot = j < SCHED_TASK_STDIO_MAX ?
+                &sched_task_fds(task)->stdio_files[j] : sched_task_file_at(task, j - SCHED_TASK_STDIO_MAX);
+            struct task_file *file = task_file_description(slot);
+            if (file && file->used && (file->node.flags & STORAGE_NODE_FLAG_TMPFS) &&
+                file->node.volume_id == volume_id &&
+                ((file->flags & LINUX_O_ACCMODE) == LINUX_O_WRONLY ||
+                 (file->flags & LINUX_O_ACCMODE) == LINUX_O_RDWR)) return true;
+        }
+        for (uint32_t j = 0; j < sched_task_vma_capacity(task); ++j) {
+            struct task_vma *vma = sched_task_vma_at(task, j);
+            if (vma && vma->used && (vma->flags & TASK_VMA_FLAG_SHARED_FILE) &&
+                vma->file_node.volume_id == volume_id &&
+                (vma->max_prot & TASK_VMA_PROT_WRITE)) return true;
+        }
+    }
+    return false;
+}
+
 bool sched_volume_in_use(uint32_t volume_id)
 {
     for (uint32_t i = 0; i < task_count; ++i) {

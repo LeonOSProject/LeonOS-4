@@ -13,14 +13,22 @@ int storage_node_mount_flags(const struct storage_node *node, uint64_t *mount_fl
 int storage_remount_path(const char *path, uint64_t mount_flags)
 {
     if (!path) return -22;
-    if (mount_flags & ~(uint64_t)(MS_NOSUID | MS_NOEXEC)) return -95;
     uint64_t flags;
     kernel_execution_lock_irqsave(&flags);
     int ret = -22;
     for (uint32_t i = 0; i < STORAGE_MAX_VOLUMES; ++i) {
         struct storage_volume *volume = &g_volumes[i];
         if (volume->ready && storage_text_eq(volume->mount_path, path)) {
+            uint64_t allowed=MS_NOSUID | MS_NOEXEC;
+            if (volume->tmpfs) allowed |= MS_RDONLY | MS_NODEV | MS_NOATIME | MS_NODIRATIME | MS_RELATIME | MS_STRICTATIME;
+            if (mount_flags & ~allowed) { ret=-95; break; }
+            if (volume->tmpfs && (mount_flags & MS_RDONLY) &&
+                !(volume->mount_flags & MS_RDONLY) && sched_volume_has_writers(i)) {
+                ret = -16;
+                break;
+            }
             volume->mount_flags = mount_flags;
+            if (volume->tmpfs) tmpfs_set_flags(volume->tmpfs,mount_flags);
             ret = 0;
             break;
         }
@@ -122,18 +130,21 @@ static int storage_read_mount_table(uint64_t offset, void *buffer, uint32_t capa
     for (uint32_t i = 0; i < STORAGE_MAX_VOLUMES; ++i) {
         const struct storage_volume *volume = &g_volumes[i];
         const char *filesystem;
-        char source[80];
+        char source[LEONOS_FS_PATH_LEN];
         if (!volume->ready || !volume->mount_path[0]) continue;
         switch (volume->filesystem) {
         case STORAGE_FILESYSTEM_EXT2: filesystem = "ext2"; break;
         case STORAGE_FILESYSTEM_FAT32: filesystem = "vfat"; break;
         case STORAGE_FILESYSTEM_EXFAT: filesystem = "exfat"; break;
         case STORAGE_FILESYSTEM_ISO9660: filesystem = "iso9660"; break;
+        case STORAGE_FILESYSTEM_TMPFS: filesystem = "tmpfs"; break;
         default:
             kernel_execution_unlock_irqrestore(flags);
             return -5;
         }
-        if (volume->data_partition_mount) {
+        if (volume->tmpfs) {
+            storage_copy_text(source,sizeof(source),volume->tmpfs_source);
+        } else if (volume->data_partition_mount) {
             storage_format_u32(source, sizeof(source), "/dev/disk",
                                volume->source_disk_id, (int32_t)volume->source_partition_index);
         } else if (!volume->ram_base && volume->transport &&
@@ -147,13 +158,19 @@ static int storage_read_mount_table(uint64_t offset, void *buffer, uint32_t capa
         } else {
             storage_copy_text(source, sizeof(source), volume->ram_base ? "ramdisk" : "rootfs");
         }
-        char options[32];
-        storage_copy_text(options, sizeof(options), volume->filesystem == STORAGE_FILESYSTEM_ISO9660 ? "ro" : "rw");
+        char options[128];
+        storage_copy_text(options, sizeof(options), volume->filesystem == STORAGE_FILESYSTEM_ISO9660 || (volume->mount_flags & MS_RDONLY) ? "ro" : "rw");
         if (volume->mount_flags & MS_NOSUID)
             storage_copy_text(options + 2, sizeof(options) - 2, ",nosuid");
         if (volume->mount_flags & MS_NOEXEC) {
             uint32_t length = storage_strlen(options);
             storage_copy_text(options + length, sizeof(options) - length, ",noexec");
+        }
+        const uint64_t extra_flags[]={MS_NODEV,MS_NOATIME,MS_NODIRATIME,MS_RELATIME};
+        const char *extra_names[]={",nodev",",noatime",",nodiratime",",relatime"};
+        for (unsigned j=0;j<4;++j) if (volume->mount_flags & extra_flags[j]) {
+            uint32_t length=storage_strlen(options);
+            storage_copy_text(options+length,sizeof(options)-length,extra_names[j]);
         }
         if (mountinfo) {
             storage_mount_prefix(&text, i + 1, i + 1, volume->mount_path, options);

@@ -8,6 +8,7 @@
 #include <ntclks/sched.h>
 #include <ntclks/smp.h>
 #include <ntclks/storage.h>
+#include <ntclks/tmpfs.h>
 #include <ntclks/syscall.h>
 #include <ntclks/time.h>
 #include <ntclks/lock.h>
@@ -173,6 +174,7 @@ enum storage_filesystem_kind {
     STORAGE_FILESYSTEM_ISO9660 = 2,
     STORAGE_FILESYSTEM_EXT2 = 3,
     STORAGE_FILESYSTEM_EXFAT = 4,
+    STORAGE_FILESYSTEM_TMPFS = 5,
 };
 
 struct __attribute__((packed)) ahci_hba_port {
@@ -438,6 +440,8 @@ static const uint8_t basic_data_guid[16] = {
 
 struct storage_volume {
     bool ready;
+    struct tmpfs_super *tmpfs;
+    char tmpfs_source[LEONOS_FS_PATH_LEN];
     uint64_t mount_flags;
     uint8_t volume_id;
     uint8_t kind;

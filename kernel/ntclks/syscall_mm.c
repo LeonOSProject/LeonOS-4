@@ -5,6 +5,7 @@
 #include <ntclks/console.h>
 #include <ntclks/framebuffer.h>
 #include <ntclks/mm.h>
+#include <ntclks/smp.h>
 #include <ntclks/paging.h>
 #include <ntclks/page_cache.h>
 #include <linux/mount.h>
@@ -507,6 +508,7 @@ static void task_unmap_pages(struct task *task, uint64_t start, uint64_t end)
         int device = address_space_user_page_is_device(sched_task_as(task), page);
         uint64_t phys = address_space_unmap_user_page(sched_task_as(task), page);
         if (phys) {
+            smp_flush_user_tlb();
             if ((vma && (vma->flags & TASK_VMA_FLAG_DEVICE)) ||
                 device) {
                 /* Framebuffer mappings borrow reserved VRAM. */
@@ -516,6 +518,21 @@ static void task_unmap_pages(struct task *task, uint64_t start, uint64_t end)
                 mm_free_page(phys);
             }
         }
+    }
+}
+
+void syscall_mm_truncate_file(struct task *task, const struct storage_node *node, uint64_t size)
+{
+    uint64_t hole = align_up_page(size);
+    for (uint32_t i = 0; i < sched_task_vma_capacity(task); ++i) {
+        struct task_vma *vma = sched_task_vma_at(task, i);
+        if (!vma || !vma->used || !(vma->flags & TASK_VMA_FLAG_FILE) ||
+            vma->file_node.volume_id != node->volume_id ||
+            vma->file_node.first_cluster != node->first_cluster ||
+            vma->file_node.flags != node->flags) continue;
+        uint64_t skip = hole > vma->file_offset ? hole - vma->file_offset : 0;
+        if (skip < vma->end - vma->start)
+            task_unmap_pages(task, vma->start + skip, vma->end);
     }
 }
 
@@ -625,6 +642,10 @@ static int load_file_cache_page(uint64_t phys, void *opaque)
     want = context->limit - offset < PAGE_SIZE
                ? (uint32_t)(context->limit - offset)
                : (uint32_t)PAGE_SIZE;
+    /* usercopy can fault here inside an async filesystem syscall. A page
+     * fault cannot replay that syscall, and its cache page must stay alive
+     * until DMA completes. Match the uncached fault path's synchronous I/O. */
+    storage_set_io_async_context(false);
     if (storage_read_node(context->node, offset, (void *)(uintptr_t)phys,
                           want, &got) < 0 || got != want) {
         return -LEONOS_EIO;
@@ -640,14 +661,19 @@ static int task_map_file_vma_page(struct task *task, const struct task_vma *vma,
     }
     uint64_t phys = 0;
     uint64_t file_offset = vma->file_offset + (page - vma->start);
+    bool tmpfs = (vma->file_node.flags & STORAGE_NODE_FLAG_TMPFS) &&
+                  (vma->flags & TASK_VMA_FLAG_MMAP);
     uint64_t cache_end = file_offset + PAGE_SIZE;
     if (cache_end > vma->file_node.size) cache_end = vma->file_node.size;
     /* Cache keys describe file pages, not ELF segment limits. A segment's
      * private zero-filled tail must never replace bytes of another LOAD. */
-    int cached = (vma->flags & TASK_VMA_FLAG_SHARED_FILE) &&
+    int cached = !tmpfs && (vma->flags & TASK_VMA_FLAG_SHARED_FILE) &&
                  file_offset < vma->file_node.size && vma->file_limit >= cache_end;
     struct file_page_load_context context;
-    if (cached) {
+    if (tmpfs) {
+        int ret = storage_tmpfs_get_page(&vma->file_node, file_offset, &phys);
+        if (ret < 0) return ret;
+    } else if (cached) {
         context.node = &vma->file_node;
         context.offset = vma->file_offset + (page - vma->start);
         context.limit = vma->file_limit;
@@ -661,11 +687,11 @@ static int task_map_file_vma_page(struct task *task, const struct task_vma *vma,
     if (!phys) {
         return -LEONOS_ENOMEM;
     }
-    if (!cached) {
+    if (!cached && !tmpfs) {
         zero_phys_page(phys);
     }
 
-    if (!cached && file_offset < vma->file_limit) {
+    if (!cached && !tmpfs && file_offset < vma->file_limit) {
         uint64_t available = vma->file_limit - file_offset;
         uint32_t want = available < PAGE_SIZE ? (uint32_t)available : (uint32_t)PAGE_SIZE;
         uint32_t got = 0;
@@ -685,6 +711,8 @@ static int task_map_file_vma_page(struct task *task, const struct task_vma *vma,
     }
 
     uint64_t page_flags = (vma->prot & LINUX_PROT_WRITE) ? NTCLKS_PAGE_WRITABLE : 0;
+    if (tmpfs && !(vma->flags & TASK_VMA_FLAG_SHARED) && (vma->prot & LINUX_PROT_WRITE))
+        page_flags = NTCLKS_PAGE_COW;
     if (vma->flags & TASK_VMA_FLAG_SHARED) page_flags |= NTCLKS_PAGE_SHARED;
     if (!(vma->prot & LINUX_PROT_EXEC)) {
         page_flags |= NTCLKS_PAGE_NOEXEC;
@@ -732,6 +760,7 @@ static bool task_stack_growth_allowed(const struct task *task, uint64_t page)
 /** @brief Distinguish a missing mapping from denied access to an existing VMA. */
 int syscall_page_fault_signal_code(struct task *task, uint64_t address)
 {
+    if (task->page_fault_signal == LINUX_SIGBUS) return LINUX_BUS_ADRERR;
     struct task_address_space_state *mm = sched_task_mm(task);
     uint64_t page = align_down_page(address);
     if (task_vma_containing(task, page, page + PAGE_SIZE) ||
@@ -745,6 +774,7 @@ int syscall_handle_task_page_fault(struct task *task, uint64_t fault_addr, uint6
     if (!task || task->kind != TASK_KIND_USER) {
         return 0;
     }
+    task->page_fault_signal = LINUX_SIGSEGV;
     uint64_t page = align_down_page(fault_addr);
     if (page < NTCLKS_USER_BASE || page >= NTCLKS_USER_TOP) {
         return 0;
@@ -827,6 +857,10 @@ int syscall_handle_task_page_fault(struct task *task, uint64_t fault_addr, uint6
         int ret = task_map_file_vma_page(task, vma, page);
         userland_loader_unlock(loader_flags);
         if (ret < 0) {
+            if ((vma->file_node.flags & STORAGE_NODE_FLAG_TMPFS) &&
+                (vma->flags & TASK_VMA_FLAG_MMAP) &&
+                (ret == -LEONOS_EINVAL || ret == -LEONOS_ENOSPC))
+                task->page_fault_signal = LINUX_SIGBUS;
             console_printf("[ntclks] lazy file map failed pid=%u page=0x%llx "
                            "fault=0x%llx error=0x%llx vma=0x%llx-0x%llx "
                            "flags=0x%x file_off=0x%llx file_limit=0x%llx ret=%d\n",
@@ -898,7 +932,7 @@ int64_t syscall_mm_mmap(uint64_t addr, uint64_t len, uint64_t prot,
         return -LEONOS_EINVAL;
     }
     vma_flags = anonymous ? TASK_VMA_FLAG_ANON :
-        (TASK_VMA_FLAG_FILE | TASK_VMA_FLAG_LAZY |
+        (TASK_VMA_FLAG_FILE | TASK_VMA_FLAG_LAZY | TASK_VMA_FLAG_MMAP |
          ((flags & LINUX_MAP_SHARED) ? TASK_VMA_FLAG_SHARED_FILE : TASK_VMA_FLAG_PRIVATE));
     if (flags & LINUX_MAP_SHARED) vma_flags |= TASK_VMA_FLAG_SHARED;
     if (!anonymous) {
@@ -915,18 +949,22 @@ int64_t syscall_mm_mmap(uint64_t addr, uint64_t len, uint64_t prot,
         if (!file_can_read(file)) return -LEONOS_EACCES;
         int refresh = storage_inode_refresh(&file->node);
         if (refresh < 0) return refresh;
-        if (file->node.flags & STORAGE_NODE_FLAG_EXT2) {
+        if ((flags & LINUX_MAP_SHARED) && !file_can_write(file)) {
+            max_prot &= ~LINUX_PROT_WRITE;
+            if (prot & LINUX_PROT_WRITE) return -LEONOS_EACCES;
+        }
+        if (file->node.flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS)) {
             uint64_t mount_flags;
             int ret = storage_node_mount_flags(&file->node, &mount_flags);
             if (ret < 0) return ret;
+            if ((mount_flags & MS_RDONLY) && (flags & LINUX_MAP_SHARED)) {
+                if (prot & LINUX_PROT_WRITE) return -LEONOS_EROFS;
+                max_prot &= ~LINUX_PROT_WRITE;
+            }
             if (mount_flags & MS_NOEXEC) {
                 if (prot & LINUX_PROT_EXEC) return -LEONOS_EPERM;
                 max_prot &= ~LINUX_PROT_EXEC;
             }
-        }
-        if ((flags & LINUX_MAP_SHARED) && !file_can_write(file)) {
-            max_prot &= ~LINUX_PROT_WRITE;
-            if (prot & LINUX_PROT_WRITE) return -LEONOS_EACCES;
         }
         if (file->flags & (TASK_FILE_FLAG_DEV_NODE | TASK_FILE_FLAG_DEV_SHM)) {
             uint64_t bytes;
@@ -1436,19 +1474,30 @@ static int mm_validate_range(struct task *task, uint64_t addr, uint64_t len,
 int64_t syscall_mm_msync(uint64_t addr, uint64_t len, uint64_t flags)
 {
     struct task *task = sched_current_task();
-    if (!flags || (flags & ~(uint64_t)(LINUX_MS_ASYNC | LINUX_MS_INVALIDATE |
+    if ((addr & (PAGE_SIZE - 1)) || (flags & ~(uint64_t)(LINUX_MS_ASYNC | LINUX_MS_INVALIDATE |
                                         LINUX_MS_SYNC)) ||
         ((flags & LINUX_MS_ASYNC) && (flags & LINUX_MS_SYNC))) {
         return -LEONOS_EINVAL;
     }
-    int ret = mm_validate_range(task, addr, len, NULL);
-    if (ret < 0) return ret;
-    uint64_t mapped_len = (len + PAGE_SIZE - 1ULL) & ~(PAGE_SIZE - 1ULL);
-    for (uint64_t page = addr; page < addr + mapped_len; page += PAGE_SIZE) {
+    if (len > UINT64_MAX - (PAGE_SIZE - 1)) return -LEONOS_ENOMEM;
+    uint64_t mapped_len = align_up_page(len);
+    if (mapped_len > UINT64_MAX - addr) return -LEONOS_ENOMEM;
+    if (!mapped_len) return 0;
+    if (!task || addr < NTCLKS_USER_BASE || addr + mapped_len > NTCLKS_USER_TOP)
+        return -LEONOS_ENOMEM;
+    int ret = 0;
+    for (uint64_t page = addr; page < addr + mapped_len;) {
         struct task_vma *vma = task_vma_containing(task, page, page + PAGE_SIZE);
-        if (vma && (vma->flags & TASK_VMA_FLAG_FILE)) return -LEONOS_EOPNOTSUPP;
+        if (!vma) { ret = -LEONOS_ENOMEM; page += PAGE_SIZE; continue; }
+        if ((flags & LINUX_MS_INVALIDATE) && (vma->flags & TASK_VMA_FLAG_LOCKED))
+            return -LEONOS_EBUSY;
+        if ((flags & LINUX_MS_SYNC) && (vma->flags & TASK_VMA_FLAG_SHARED_FILE) &&
+            !(vma->file_node.flags & STORAGE_NODE_FLAG_TMPFS)) return -LEONOS_EOPNOTSUPP;
+        /* tmpfs mappings already address the inode's pages. Its fsync is
+         * noop_fsync in Linux; there is no separate dirty copy to write back. */
+        page = vma->end;
     }
-    return 0;
+    return ret;
 }
 
 int64_t syscall_mm_mincore(uint64_t addr, uint64_t len, uint64_t vec)

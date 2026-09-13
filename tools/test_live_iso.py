@@ -33,6 +33,8 @@ class LiveRootTests(unittest.TestCase):
                 "usr/share/vim/vim91/defaults.vim": b"set nocompatible\n",
                 "usr/share/terminfo/x/xterm": b"terminfo",
                 "lib/ld-musl-x86_64.so.1": b"musl",
+                "etc/sudoers": b"%wheel ALL=(ALL:ALL) ALL\n",
+                "etc/skel/.profile": b"# test account skeleton\n",
                 "opt/python/bin/python3.14": b"static Python executable",
                 "opt/python/lib/python3.14/encodings/__init__.py": b"encodings",
             }.items():

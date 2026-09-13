@@ -239,7 +239,7 @@ def main() -> int:
         return 0
 
     if less_smoke:
-        send_keys(sock, text_keys("less /opt/tcc/examples/hello.c") + ("ret",))
+        send_keys(sock, text_keys("less /etc/os-release") + ("ret",))
         # The pager must still own the PTY before the quit key is sent. A
         # successful launch renders the first page and waits for input.
         time.sleep(1.0)

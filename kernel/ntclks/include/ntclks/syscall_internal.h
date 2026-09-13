@@ -16,6 +16,10 @@ struct task_file *task_file_for_io(struct task *task, int fd);
 
 #include <ntclks/sched.h>
 
+int64_t syscall_regular_io(struct task *task, struct task_file *file,
+                           uint64_t buffer, uint64_t count, uint64_t position,
+                           bool writing, bool positional);
+
 /** @brief Execute native SysV semaphore calls under the kernel execution lock. */
 int64_t syscall_sysv_sem(uint64_t number, uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3);
 /** @brief Cancel an in-flight semaphore operation without applying persistent undo records. */
@@ -76,6 +80,7 @@ int task_pipe_read(struct task_file *file, void *buffer, uint32_t length);
 int task_pipe_write(struct task_file *file, const void *buffer, uint32_t length);
 short task_pipe_poll(const struct task_file *file, short events);
 int task_inet_read(struct task_file *file, void *buffer, uint32_t length);
+int task_net_control(struct task_file *file, uint32_t request, uint64_t address);
 int task_inet_write(struct task_file *file, const void *buffer, uint32_t length);
 short task_inet_poll(const struct task_file *file, short events);
 void task_inet_retain(struct task_file *file);

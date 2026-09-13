@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class LinuxMemoryTests(unittest.TestCase):
     def test_memory_ownership_and_elf_page_boundaries(self):
-        cases = (("paging_protection", []),
+        cases = (("paging_protection", []), ("elf_interpreter", []),
                  ("elf_file_page", ["kernel/ntclks/page_cache.c"]))
         for name, sources in cases:
             with self.subTest(name=name), tempfile.TemporaryDirectory(prefix="leonos-mm-") as tmp:

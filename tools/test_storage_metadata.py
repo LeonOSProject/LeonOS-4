@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory(prefix="leonos-storage-") as directory:
     subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                     "-fno-omit-frame-pointer", "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
                     "-Iinclude", "-Iinclude/uapi", "-Ikernel/ntclks/include",
-                    "tools/tests/storage_metadata_test.c", "-o", executable], cwd=ROOT, check=True)
+                    "tools/tests/storage_metadata_test.c", "kernel/ntclks/tmpfs.c", "-o", executable], cwd=ROOT, check=True)
     subprocess.run([executable, disk, inode], cwd=ROOT, check=True)
     after = subprocess.check_output(["debugfs", "-R", "stat /probe", disk], text=True)
     assert re.search(r"Mode:\s*06750", after), after

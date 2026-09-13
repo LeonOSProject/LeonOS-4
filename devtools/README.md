@@ -34,7 +34,6 @@ ELF 应用程序。
 - `examples/inputm_provider/`: 注册 InputM 提供者并提交/透传键盘事件的示例。
 - `docs/`: 按主题拆分的系统调用、GUI/UI、InputM、公共库、构建和打包文档。
 - `Makefile`: 独立构建入口，不会引用 LeonOS 4 源码目录。
-- `README-tcc.md`: 镜像内置设备端 TinyCC 的静态编译工作流与限制。
 
 ## 前置条件
 

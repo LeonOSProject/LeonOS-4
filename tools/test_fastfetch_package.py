@@ -66,7 +66,9 @@ class FastfetchPackageTests(unittest.TestCase):
                 if command[0] != "curl":
                     return real_run(command, **kwargs)
                 self.assertEqual(command[-1], BINARY_URL)
-                self.assertEqual(command[command.index("--proxy") + 1], "http://127.0.0.1:12334")
+                self.assertNotIn("--proxy", command)
+                self.assertNotIn("--noproxy", command)
+                self.assertNotIn("env", kwargs)
                 target = Path(command[command.index("--output") + 1])
                 target.write_bytes(fixture if failure is None else b"incomplete download")
                 if failure == "network":

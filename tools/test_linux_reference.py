@@ -19,7 +19,7 @@ def run(command, **kwargs):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--proxy", default="http://127.0.0.1:12334")
+    parser.add_argument("--proxy", help="override the proxy from the environment (optional)")
     parser.add_argument("--timeout", type=float, default=120)
     parser.add_argument("--jobs", type=int, default=8)
     parser.add_argument("--probe-source", type=Path, default=ROOT / "tools/tests/musl_guest_test.c")
@@ -36,7 +36,8 @@ def main():
     filename, url, digest, _ = next(item for item in SOURCES if item[0] == "linux-6.12.tar.xz")
     archive = cache / filename
     if not archive.exists():
-        run(["curl", "--fail", "--location", "--proxy", args.proxy, url, "-o", archive])
+        run(["curl", "--fail", "--location",
+             *(["--proxy", args.proxy] if args.proxy is not None else []), url, "-o", archive])
     with archive.open("rb") as stream:
         if hashlib.file_digest(stream, "sha256").hexdigest() != digest:
             raise SystemExit("Linux source archive checksum mismatch")
