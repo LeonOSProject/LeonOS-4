@@ -355,7 +355,7 @@ void open_app_window_from_msg(const struct leonos_gui_window_msg *msg)
         return;
     }
     if (desktop_lifecycle_state != DESKTOP_LIFECYCLE_IDLE ||
-        oobe_lock_blocks_window_msg(msg) || login_lock_blocks_window_msg(msg)) {
+        login_lock_blocks_window_msg(msg)) {
         return;
     }
     uint8_t slot = MAX_WINDOWS;

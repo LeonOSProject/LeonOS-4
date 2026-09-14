@@ -113,9 +113,10 @@ the target trust store.
 
 `python3 build.py run apk-root` builds the normal staging payload, makes signed
 APKv3 packages/index with upstream `apk mkpkg/mkndx`, and installs them into
-`build/apk/root` using upstream `apk add`. Host user namespaces map ownership
-to root without modifying the host root or requiring sudo. The host must support
-`unshare -Ur`. Normal image targets depend on this managed root.
+`build/apk/root` using upstream `apk add`. When available, host user namespaces
+map ownership to root without modifying the host root or requiring sudo. On
+runners that prohibit user namespaces, the build uses the installed `fakeroot`
+compatibility path instead. Normal image targets depend on this managed root.
 
 The build manifest at `build/apk/normal/manifest.json` records package versions,
 files and signing identity. Local versions identify build snapshots, not

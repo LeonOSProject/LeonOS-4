@@ -63,6 +63,7 @@ jobs:
             ninja-build \
             meson \
             clang \
+            libclang-rt-dev \
             llvm \
             lld \
             grub-efi-amd64-bin \

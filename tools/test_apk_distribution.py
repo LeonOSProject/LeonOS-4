@@ -9,11 +9,37 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class DistributionTests(unittest.TestCase):
+    def test_apk_runner_falls_back_to_fakeroot_when_user_namespace_is_unavailable(self):
+        module = ROOT / "tools/apk_distribution.py"
+        spec = importlib.util.spec_from_file_location("apk_distribution_fallback", module)
+        distribution = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(distribution)
+        commands = []
+
+        def fake_run(command, **_kwargs):
+            commands.append([str(argument) for argument in command])
+
+        with mock.patch.object(distribution, "run", side_effect=fake_run), \
+                mock.patch.object(distribution.shutil, "which", return_value="/usr/bin/fakeroot"):
+            distribution._USER_NAMESPACE_AVAILABLE = False
+            distribution.make_package(
+                "/tmp/apk.static", None, Path("/tmp/payload"), Path("/tmp/output.apk"),
+                "fixture", "1.0-r0", [])
+            distribution._run_apk("/tmp/apk.static", ["--root", "/tmp/root", "add", "fixture"],
+                                  usermode=True)
+
+        self.assertEqual(commands[0][0:2], ["fakeroot", "/tmp/apk.static"])
+        self.assertEqual(commands[0][2], "mkpkg")
+        self.assertEqual(commands[1][0:4],
+                         ["fakeroot", "/tmp/apk.static", "--usermode", "--force-no-chroot"])
+        self.assertEqual(commands[1][4:], ["--root", "/tmp/root", "add", "fixture"])
+
     def test_signed_install_and_fastfetch_conflict(self):
         module = ROOT / "tools/apk_distribution.py"
         self.assertTrue(module.is_file(), "real signed APK distribution builder is missing")
