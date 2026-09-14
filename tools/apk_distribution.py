@@ -29,10 +29,36 @@ LICENSE_URLS = (
 )
 REPOSITORY = "usr/share/leonos/apk/repository"
 EXTERNAL = {"EFI", "grub", "leonos", "loader.elf", "install"}
+_USER_NAMESPACE_AVAILABLE = None
 
 
 def run(args, **kwargs):
     return subprocess.run([str(a) for a in args], check=True, **kwargs)
+
+
+def _user_namespace_available():
+    global _USER_NAMESPACE_AVAILABLE
+    if _USER_NAMESPACE_AVAILABLE is None:
+        try:
+            run(["unshare", "-Ur", "true"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except (OSError, subprocess.CalledProcessError):
+            _USER_NAMESPACE_AVAILABLE = False
+        else:
+            _USER_NAMESPACE_AVAILABLE = True
+    return _USER_NAMESPACE_AVAILABLE
+
+
+def _run_apk(apk, arguments, *, usermode=False):
+    """Run apk with root-like metadata support on restricted CI runners."""
+    if _user_namespace_available():
+        run(["unshare", "-Ur", apk, *arguments])
+        return
+    if shutil.which("fakeroot") is None:
+        raise RuntimeError("apk packaging requires unshare user namespaces or fakeroot")
+    command = ["fakeroot", apk]
+    if usermode:
+        command.append("--usermode")
+    run(command + list(arguments))
 
 
 def digest(path):
@@ -128,7 +154,7 @@ def signing_key(path=None):
 
 def make_package(apk, key, payload, output, name, version, depends, provides=(), scripts=(), triggers=()):
     payload.mkdir(parents=True, exist_ok=True)
-    args = ["unshare", "-Ur", apk, "mkpkg", "--files", payload, "--output", output,
+    args = ["mkpkg", "--files", payload, "--output", output,
             "--info", f"name:{name}", "--info", f"version:{version}",
             "--info", "arch:x86_64", "--info", f"origin:{name}",
             "--info", f"description:LeonOS build payload {name}",
@@ -143,7 +169,7 @@ def make_package(apk, key, payload, output, name, version, depends, provides=(),
         args += ["--script", f"{kind}:{script}"]
     for trigger in triggers:
         args += ["--trigger", trigger]
-    run(args)
+    _run_apk(apk, args)
     return output
 
 
@@ -359,9 +385,9 @@ def build_distribution(source, output, work, apk, key):
         managed = scratch / "managed"
         layout_directories(managed)
         shutil.copyfile(public, managed / "etc/apk/keys" / public_name)
-        run(["unshare", "-Ur", apk, "--root", managed, "--arch", "x86_64", "--initdb",
-             "--repositories-file", "/dev/null", "--repository", repository / "packages.adb",
-             "add", *sorted(groups)])
+        _run_apk(apk, ["--root", managed, "--arch", "x86_64", "--initdb",
+                       "--repositories-file", "/dev/null", "--repository", repository / "packages.adb",
+                       "add", *sorted(groups)], usermode=True)
         apply_root_symlinks(managed)
         shutil.copytree(repository, managed / REPOSITORY)
         for name in EXTERNAL - {"install"}:
