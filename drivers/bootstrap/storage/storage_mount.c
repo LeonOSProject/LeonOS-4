@@ -281,6 +281,7 @@ void storage_init(void)
 
     storage_memzero(g_volumes, sizeof(g_volumes));
     storage_memzero(g_install_disks, sizeof(g_install_disks));
+    storage_disk_block_cache_reset();
     g_install_disk_count = 0;
     g_devfs_enabled = 1;
     g_installer_root_active = 0;
@@ -530,13 +531,24 @@ int storage_mount_ramdisk_root(const void *image, uint64_t len)
      * intentionally ephemeral and never modify the ISO source. */
     root->volume_id = 0;
     root->kind = STORAGE_VOLUME_RAM;
-    root->filesystem = STORAGE_FILESYSTEM_FAT32;
     root->ram_base = (uint8_t *)image_mapping;
     root->ram_bytes = len;
     root->esp_start_lba = 0;
     root->esp_sector_count = len / SECTOR_SIZE;
     storage_copy_text(root->mount_path, sizeof(root->mount_path), "/");
-    if (fat32_mount() < 0) {
+    /* New media use ext2 to retain case-sensitive UAPI headers. Keep FAT32
+     * module support for existing media; the handoff kind/path are unchanged. */
+    const uint8_t *bytes = image_mapping;
+    int mount_result;
+    if (len >= 4096 && bytes[1080] == 0x53 && bytes[1081] == 0xef) {
+        root->ext2_start_lba = 0;
+        root->ext2_sector_count = len / SECTOR_SIZE;
+        mount_result = ext2_mount();
+    } else {
+        root->filesystem = STORAGE_FILESYSTEM_FAT32;
+        mount_result = fat32_mount();
+    }
+    if (mount_result < 0) {
         storage_memzero(root, sizeof(*root));
         return -2;
     }
@@ -549,11 +561,11 @@ int storage_mount_ramdisk_root(const void *image, uint64_t len)
     }
     root->ready = true;
     g_installer_root_active = 1;
-    console_printf("[ntclks] storage installer root ready ramdisk=%p kernel_map=%p bytes=%llu mode=direct fat32_root=%u\n",
+    console_printf("[ntclks] storage installer root ready ramdisk=%p kernel_map=%p bytes=%llu mode=direct fs=%s\n",
                    image,
                    image_mapping,
                    (unsigned long long)len,
-                   root->root_cluster);
+                   root->filesystem == STORAGE_FILESYSTEM_EXT2 ? "ext2" : "fat32");
     return 0;
 }
 
@@ -562,6 +574,7 @@ void storage_init_installer_root(const struct boot_info *boot)
     int mount_ret = -2;
     bool found = false;
     storage_memzero(g_volumes, sizeof(g_volumes));
+    storage_disk_block_cache_reset();
     g_active_volume = &g_volumes[0];
     g_installer_root_active = 0;
     storage_cache_invalidate();

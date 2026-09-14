@@ -8,9 +8,12 @@
 #include <ntclks/sched.h>
 #include <ntclks/smp.h>
 #include <ntclks/storage.h>
+#include <ntclks/tmpfs.h>
 #include <ntclks/syscall.h>
 #include <ntclks/time.h>
 #include <ntclks/lock.h>
+#include <ntclks/pty.h>
+#include <linux/mount.h>
 
 #define ATA_CLASS_MASS_STORAGE 0x01u
 #define ATA_SUBCLASS_SATA 0x06u
@@ -67,7 +70,7 @@
 
 #define AHCI_CMDH_PRDTL 1u
 #define AHCI_MAX_SECTORS 64u
-#define STORAGE_WRITE_MAX_SECTORS 8u
+#define STORAGE_WRITE_MAX_SECTORS AHCI_MAX_SECTORS
 /* AHCI completion is polled synchronously. Keep enough headroom for a busy
  * virtual disk: a too-short limit abandons a live command and turns the next
  * application image read into a spurious -EIO. Filesystem syscalls already
@@ -122,9 +125,12 @@
 #define EXT2_S_IFMT 0xf000u
 #define EXT2_S_IFREG 0x8000u
 #define EXT2_S_IFDIR 0x4000u
+#define EXT2_S_IFLNK 0xa000u
 #define EXT2_FT_UNKNOWN 0u
 #define EXT2_FT_REG_FILE 1u
 #define EXT2_FT_DIR 2u
+#define EXT2_FT_SOCK 6u
+#define EXT2_FT_SYMLINK 7u
 #define STORAGE_MAX_VOLUMES 10u
 #define STORAGE_VOLUME_ROOT 0u
 #define STORAGE_VOLUME_TARGET_ROOT 1u
@@ -168,6 +174,7 @@ enum storage_filesystem_kind {
     STORAGE_FILESYSTEM_ISO9660 = 2,
     STORAGE_FILESYSTEM_EXT2 = 3,
     STORAGE_FILESYSTEM_EXFAT = 4,
+    STORAGE_FILESYSTEM_TMPFS = 5,
 };
 
 struct __attribute__((packed)) ahci_hba_port {
@@ -433,6 +440,9 @@ static const uint8_t basic_data_guid[16] = {
 
 struct storage_volume {
     bool ready;
+    struct tmpfs_super *tmpfs;
+    char tmpfs_source[LEONOS_FS_PATH_LEN];
+    uint64_t mount_flags;
     uint8_t volume_id;
     uint8_t kind;
     uint8_t filesystem;
@@ -481,6 +491,9 @@ struct storage_volume {
     uint32_t ext2_inode_size;
     uint32_t ext2_first_data_block;
     uint32_t ext2_group_count;
+    uint32_t ext2_feature_incompat;
+    uint32_t ext2_next_block;
+    uint32_t ext2_next_inode;
     uint32_t exfat_fat_offset;
     uint32_t exfat_fat_length;
     uint32_t exfat_cluster_heap_offset;
@@ -502,6 +515,8 @@ struct storage_volume {
     uint32_t next_free_cluster;
     uint8_t gpt_disk_guid[16];
     uint8_t esp_unique_guid[16];
+    uint8_t ext2_unique_guid[16];
+    uint8_t exfat_unique_guid[16];
     uint8_t has_gpt_identity;
     uint32_t source_disk_id;
     uint32_t source_partition_index;
@@ -566,6 +581,9 @@ static uint8_t ahci_cmd_table_buf[256] __attribute__((aligned(128)));
 static struct ahci_cmd_header ahci_cmd_headers[32] __attribute__((aligned(1024)));
 static uint8_t storage_scratch[STORAGE_SCRATCH_SECTORS * SECTOR_SIZE] __attribute__((aligned(4096)));
 static uint8_t storage_cluster_buf[64 * SECTOR_SIZE] __attribute__((aligned(4096)));
+
+/* The public /dev block namespace is rebuilt whenever storage is probed. */
+void storage_disk_block_cache_reset(void);
 static uint8_t storage_fat_cache_data[STORAGE_FAT_CACHE_SECTORS * SECTOR_SIZE]
     __attribute__((aligned(4096)));
 static uint8_t storage_read_cache_data[STORAGE_READAHEAD_SECTORS * SECTOR_SIZE]
@@ -595,6 +613,10 @@ static struct ahci_pending_command ahci_pending_command;
  * namespace enumerator calls this to give root selection identical behavior
  * to AHCI and IDE disks. */
 static int storage_try_mount_root_disk(struct install_disk_state *disk);
+
+/* Implemented by storage_disk.c, which is included after this module. */
+int storage_disk_block_info(uint32_t disk_id, int32_t partition_index,
+                            uint64_t *out_first_lba, uint64_t *out_sector_count);
 
 struct storage_sector_cache {
     struct storage_volume *volume;

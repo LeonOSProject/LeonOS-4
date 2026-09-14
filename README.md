@@ -5,6 +5,9 @@
 
 此代码库是 **LeonOS 4** 项目的源代码仓库，此仓库的开源协议位于[LICENSE](LICENSE)。
 
+## 感谢
+感谢 [@VasilyZa](https://github.com/VasilyZa/) 对 LeonOS 4 的 Linux ABI 和 musl libc 等等有着至高无上的贡献，他的贡献将会被永远记住。
+
 ## 编译源代码
 > 本项目只能在 Linux 和 WSL 平台编译
 
@@ -22,14 +25,18 @@ sudo apt-get update
 sudo apt-get install -y \
   build-essential ninja-build meson clang llvm lld \
   grub-efi-amd64-bin grub-pc-bin grub-common xorriso \
-  mtools dosfstools e2fsprogs gdisk qemu-utils python3 python3-pil \
-  git make bison flex bc pkg-config
+  mtools dosfstools e2fsprogs fakeroot gdisk qemu-utils python3 python3-pil \
+  git make bison flex bc pkg-config curl ca-certificates openssl
 
 # Requires rustup; install it from https://rustup.rs when it is unavailable.
 rustup toolchain install stable --profile minimal
 rustup default stable
 rustup target add x86_64-unknown-none
 ```
+
+构建下载默认直连，不要求运行本机代理服务，也不绑定任何代理端口。
+需要代理时可自行设置标准的 `http_proxy`、`https_proxy`、`all_proxy` 和
+`no_proxy` 环境变量；构建脚本不会覆盖它们。下载仍保留 TLS、校验和及签名验证。
 
 编译命令：
 
@@ -84,7 +91,7 @@ python3 build.py status <九位任务ID>
 
 ## 界面样式
 
-系统默认使用蓝色、直角、平面化的 Metro 样式。管理员可在“设置 → 显示”中切换为完整保留的 Win95 样式；选择会立即应用到 Desktop 和已打开程序，并保存到 `/system/config/display.conf` 供下次启动的登录、OOBE、安装器与内核早期画面使用。
+系统默认使用蓝色、直角、平面化的 Metro 样式。管理员可在“设置 → 显示”中切换为完整保留的 Win95 样式；选择会立即应用到 Desktop 和已打开程序，并保存到 `/etc/leonos/display.conf` 供下次启动的登录、安装器与内核早期画面使用。账户在安装器中创建，OOBE 已移除；普通用户和固定的 `root` 账户均要求 1 至 32 个字符且不含空白字符的密码。Python 与 GCC/binutils 可在安装时独立选择。
 
 ## 代码与目录结构
 

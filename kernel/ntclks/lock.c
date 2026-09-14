@@ -42,6 +42,7 @@ void kernel_spin_lock(struct kernel_spinlock *lock)
             return;
         }
         busy = 1;
+        smp_membarrier_poll();
         __asm__ volatile("pause" : : : "memory");
     }
 }
@@ -107,6 +108,9 @@ void kernel_execution_lock_irqsave(uint64_t *flags)
                      : "+r"(ticket), "+m"(execution_next_ticket)
                      : : "memory");
     while (execution_serving_ticket != ticket) {
+        /* IRQs are masked here. A membarrier owner must still be able to
+         * rendezvous with CPUs waiting for this lock. */
+        smp_membarrier_poll();
         __asm__ volatile("pause" : : : "memory");
     }
     execution_owner = cpu;

@@ -5,12 +5,6 @@
 #include <leonos/kernel_debug.h>
 #include <stdint.h>
 
-#define LEONOS_IOCTL_SYSTEM_INFO 0x4c535953UL
-#define LEONOS_IOCTL_PERF_INFO 0x4c504552UL
-#define LEONOS_IOCTL_TIME_INFO 0x4c54494dUL
-#define LEONOS_IOCTL_TIME_NTP_SYNC 0x4c544e54UL
-#define LEONOS_IOCTL_MACHINE_IDENTITY 0x4c4d4944UL
-#define LEONOS_IOCTL_TASK_AFFINITY 0x4c414646UL
 #define LEONOS_TASK_AFFINITY_GET 0U
 #define LEONOS_TASK_AFFINITY_SET 1U
 
@@ -77,6 +71,7 @@ struct leonos_task_affinity {
     uint64_t allowed_mask;
 };
 
+/* The broken-down calendar is UTC, matching unix_seconds. */
 struct leonos_time_info {
     uint64_t unix_seconds;
     uint64_t uptime_ms;

@@ -5,6 +5,7 @@
 #include <leonos/system.h>
 #include <leonos/syscall.h>
 #include <leonos/tls.h>
+#include <leonos/layout.h>
 
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
@@ -16,7 +17,7 @@
 
 #include <string.h>
 
-#define LEONOS_TLS_CA_BUNDLE "/system/certs/cacert.pem"
+#define LEONOS_TLS_CA_BUNDLE LEONOS_PATH_CACERT
 #define LEONOS_TLS_CA_BUNDLE_MAX (512U * 1024U)
 
 struct leonos_tls_io {
@@ -228,7 +229,7 @@ static int leonos_tls_load_roots(void)
         return leonos_tls_roots_state > 0 ? 0 : -1;
     }
     leonos_tls_roots_state = -1;
-    ret = stat(LEONOS_TLS_CA_BUNDLE, &stat_info);
+    ret = leonos_stat_legacy(LEONOS_TLS_CA_BUNDLE, &stat_info);
     if (ret < 0 ||
         stat_info.type != LEONOS_FS_TYPE_FILE || stat_info.size == 0 ||
         stat_info.size > LEONOS_TLS_CA_BUNDLE_MAX) {
@@ -365,6 +366,7 @@ int leonos_tls_http_exchange(int socket, const char *hostname,
     uint32_t header_end = 0;
     uint32_t content_length = 0;
     uint32_t verify_flags;
+    unsigned char read_buffer[4096];
     int roots_ret;
     int time_ret;
     int peer_tcp_eof = 0;
@@ -444,8 +446,11 @@ int leonos_tls_http_exchange(int socket, const char *hostname,
         goto cleanup;
     }
     while (received + 1U < response_capacity) {
-        int got = mbedtls_ssl_read(&ssl, (unsigned char *)response + received,
-                                   response_capacity - received - 1U);
+        uint32_t read_capacity = response_capacity - received - 1U;
+        if (read_capacity > sizeof(read_buffer)) {
+            read_capacity = sizeof(read_buffer);
+        }
+        int got = mbedtls_ssl_read(&ssl, read_buffer, read_capacity);
         if (got == 0) {
             peer_tcp_eof = 1;
             response_complete = 1;
@@ -463,6 +468,7 @@ int leonos_tls_http_exchange(int socket, const char *hostname,
         if (got < 0) {
             goto cleanup;
         }
+        memcpy(response + received, read_buffer, (size_t)got);
         received += (uint32_t)got;
         response[received] = 0;
         if (!header_end) {

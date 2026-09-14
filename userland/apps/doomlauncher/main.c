@@ -1,15 +1,17 @@
 #include <leonos/gui.h>
 #include <leonos/i18n.h>
 #include <leonos/launch.h>
+#include <leonos/launch_result.h>
 #include <leonos/psf_font.h>
 #include <leonos/syscall.h>
 #include <leonos/ui.h>
 #include <stdint.h>
+#include <leonos/layout.h>
 
 #define LAUNCHER_W 640U
 #define LAUNCHER_H 320U
-#define DOOM_PATH "/programs/doom/doom.elf"
-#define DEFAULT_IWAD "/programs/doom/freedoom1.wad"
+#define DOOM_PATH LEONOS_LAYOUT_LEONOS_APPS "/doom/doom.elf"
+#define DEFAULT_IWAD LEONOS_LAYOUT_LEONOS_APPS "/doom/freedoom1.wad"
 #define TASK_STATE_EXITED 3U
 #define T(en, zh) leonos_i18n((en), (zh))
 
@@ -68,11 +70,11 @@ static void set_status_code(const char *prefix, int code)
 static const char *launcher_error_text(int code)
 {
     switch (code) {
-    case LEONOS_LAUNCH_ERR_EMPTY:
+    case LAUNCH_RESULT_EMPTY:
         return T("Arguments are empty", "启动参数为空");
-    case LEONOS_LAUNCH_ERR_TOO_MANY_ARGS:
+    case LAUNCH_RESULT_TOO_MANY_ARGS:
         return T("Too many arguments", "启动参数过多");
-    case LEONOS_LAUNCH_ERR_UNCLOSED_QUOTE:
+    case LAUNCH_RESULT_UNCLOSED_QUOTE:
         return T("Missing closing quote", "缺少闭合引号");
     default:
         return leonos_launch_error_text(code);

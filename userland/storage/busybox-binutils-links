@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+# As in Alpine's BusyBox trigger, only fill missing fallback commands.
+for name in ar strings; do
+    path=/usr/bin/$name
+    if [ ! -e "$path" ] && [ ! -L "$path" ]; then
+        /bin/busybox ln -s /bin/busybox "$path"
+    fi
+done

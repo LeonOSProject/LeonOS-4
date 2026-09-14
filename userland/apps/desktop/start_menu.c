@@ -1,9 +1,13 @@
+#include <leonos/pam_session.h>
 #include "desktop.h"
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <string.h>
 
 /* Generated per image. Unknown (for example, post-install) programs remain
  * visible; only build-managed packages are listed here. */
-#define START_MENU_ENTRY_POLICY_PATH "/system/config/desktop-entries.conf"
+#define START_MENU_ENTRY_POLICY_PATH LEONOS_PATH_DESKTOP_ENTRIES
 #define START_MENU_ENTRY_POLICY_BYTES 4096U
 #define START_MENU_ENTRY_POLICY_MAX 96U
 
@@ -64,8 +68,8 @@ static uint32_t start_menu_disabled_package_count;
 static uint8_t start_menu_apps_started;
 static uint32_t start_menu_registry_count;
 static uint8_t start_menu_docs_started;
-static int start_menu_docs_fd = -1;
-static struct leonos_dir_entry start_menu_doc_entry;
+static DIR *start_menu_docs_dir;
+static struct dirent *start_menu_doc_entry;
 static void start_menu_collect_apps(void);
 static int start_menu_kernel_debug_enabled(void)
 {
@@ -108,7 +112,7 @@ static void start_menu_load_entry_policy(void)
     uint32_t offset = 0;
 
     start_menu_disabled_package_count = 0;
-    fd = open(START_MENU_ENTRY_POLICY_PATH, LEONOS_O_RDONLY, 0);
+    fd = open(START_MENU_ENTRY_POLICY_PATH, O_RDONLY);
     if (fd < 0) {
         return;
     }
@@ -332,7 +336,7 @@ static int read_hlp_menu_title(const char *path, char *dst, uint32_t cap)
     char fallback[48];
     const char *wanted = leonos_i18n_language() == LEONOS_LANG_ZH ? "title.zh" : "title.en";
     const char *other = leonos_i18n_language() == LEONOS_LANG_ZH ? "title.en" : "title.zh";
-    int fd = open(path, LEONOS_O_RDONLY, 0);
+    int fd = open(path, O_RDONLY);
     long got;
     uint32_t pos = 0;
     if (fd < 0) {
@@ -381,8 +385,8 @@ void start_menu_load_docs(void)
         return;
     }
     start_menu_doc_count = 0;
-    start_menu_docs_fd = open("/docs", LEONOS_O_RDONLY, 0);
-    if (start_menu_docs_fd < 0) {
+    start_menu_docs_dir = opendir(LEONOS_LAYOUT_LEONOS_DOC);
+    if (!start_menu_docs_dir) {
         return;
     }
     start_menu_docs_started = 1;
@@ -403,25 +407,28 @@ void start_menu_ensure_docs(void)
 static void start_menu_collect_docs(void)
 {
     uint32_t pos = 0;
-    if (start_menu_doc_entry.type != LEONOS_FS_TYPE_FILE ||
-        !text_ends_with(start_menu_doc_entry.name, ".hlp") ||
+    if (!start_menu_doc_entry ||
+        (start_menu_doc_entry->d_type != DT_REG &&
+         start_menu_doc_entry->d_type != DT_UNKNOWN) ||
+        !text_ends_with(start_menu_doc_entry->d_name, ".hlp") ||
         start_menu_doc_count >= START_MENU_MAX_DOCS) {
         return;
     }
     copy_text(start_menu_doc_paths[start_menu_doc_count],
-              sizeof(start_menu_doc_paths[start_menu_doc_count]), "/docs/");
+              sizeof(start_menu_doc_paths[start_menu_doc_count]),
+              LEONOS_LAYOUT_LEONOS_DOC "/");
     while (start_menu_doc_paths[start_menu_doc_count][pos]) {
         ++pos;
     }
     append_text(start_menu_doc_paths[start_menu_doc_count], &pos,
                 sizeof(start_menu_doc_paths[start_menu_doc_count]),
-                start_menu_doc_entry.name);
+                start_menu_doc_entry->d_name);
     if (read_hlp_menu_title(start_menu_doc_paths[start_menu_doc_count],
                             start_menu_doc_labels[start_menu_doc_count],
                             sizeof(start_menu_doc_labels[start_menu_doc_count])) < 0) {
         copy_hlp_filename_label(start_menu_doc_labels[start_menu_doc_count],
                                 sizeof(start_menu_doc_labels[start_menu_doc_count]),
-                                start_menu_doc_entry.name);
+                                start_menu_doc_entry->d_name);
     }
     ++start_menu_doc_count;
 }
@@ -555,17 +562,18 @@ int start_menu_update(void)
         }
     }
     if (start_menu_docs_started) {
-        int ret = leonos_readdir(start_menu_docs_fd, &start_menu_doc_entry);
-        if (ret < 0) {
-            close(start_menu_docs_fd);
-            start_menu_docs_fd = -1;
+        errno = 0;
+        start_menu_doc_entry = readdir(start_menu_docs_dir);
+        if (!start_menu_doc_entry && errno != 0) {
+            closedir(start_menu_docs_dir);
+            start_menu_docs_dir = 0;
             start_menu_docs_started = 0;
             start_menu_docs_loaded = 0;
             start_menu_doc_count = 0;
             start_menu_docs_retry_ms = now + 1000UL;
-        } else if (ret == 0) {
-            close(start_menu_docs_fd);
-            start_menu_docs_fd = -1;
+        } else if (!start_menu_doc_entry) {
+            closedir(start_menu_docs_dir);
+            start_menu_docs_dir = 0;
             start_menu_docs_started = 0;
             start_menu_docs_loaded = 1;
             start_menu_sort_docs();
@@ -770,7 +778,7 @@ static void start_menu_draw_header(const struct start_panel_layout *panel)
                    START_PANEL_HEADER_H, LEONOS_UI_ACTIVE_TITLE);
     leonos_ui_text(&ui, panel->x + 12U, panel->y + 7U, "LeonOS 4",
                    LEONOS_UI_WHITE, LEONOS_UI_ACTIVE_TITLE);
-    if (leonos_auth_current(&user) == 0 && user.uid && user.username[0]) {
+    if (leonos_session_current(&user) == 0 && user.username[0]) {
         session = user.username;
     }
     leonos_ui_text_clipped(&ui, panel->x + 12U, panel->y + 24U,
@@ -1046,6 +1054,10 @@ void draw_start_menu(void)
     }
     panel = start_menu_panel_layout();
     progress = start_menu_progress();
+    if (start_menu_animating) {
+        printf("[desktop.elf] DBG menu-draw progress=%u t=%lu\n",
+               progress, leonos_uptime_ms());
+    }
     visible_h = (panel.h * progress + 99U) / 100U;
     if (visible_h < panel.h) {
         uint32_t visible_y = taskbar_y() > visible_h ? taskbar_y() - visible_h : 0U;

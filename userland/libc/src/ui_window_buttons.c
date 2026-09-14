@@ -1,15 +1,16 @@
 #include <leonos/syscall.h>
 #include <leonos/ui.h>
+#include <leonos/layout.h>
 
 #include "ui_internal.h"
 
 #define UI_WINDOW_BUTTON_ICON_W 16U
 #define UI_WINDOW_BUTTON_ICON_H 16U
 #define UI_WINDOW_BUTTON_ICON_MAX_BYTES (UI_WINDOW_BUTTON_ICON_W * UI_WINDOW_BUTTON_ICON_H * 4U + 128U)
-#define UI_WINDOW_BUTTON_MINIMIZE_ICON_PATH "/system/resources/window-button-minimize.bmp"
-#define UI_WINDOW_BUTTON_MAXIMIZE_ICON_PATH "/system/resources/window-button-maximize.bmp"
-#define UI_WINDOW_BUTTON_RESTORE_ICON_PATH "/system/resources/window-button-restore.bmp"
-#define UI_WINDOW_BUTTON_CLOSE_ICON_PATH "/system/resources/window-button-close.bmp"
+#define UI_WINDOW_BUTTON_MINIMIZE_ICON_PATH LEONOS_PATH_WINDOW_MINIMIZE_BMP
+#define UI_WINDOW_BUTTON_MAXIMIZE_ICON_PATH LEONOS_PATH_WINDOW_MAXIMIZE_BMP
+#define UI_WINDOW_BUTTON_RESTORE_ICON_PATH LEONOS_PATH_WINDOW_RESTORE_BMP
+#define UI_WINDOW_BUTTON_CLOSE_ICON_PATH LEONOS_PATH_WINDOW_CLOSE_BMP
 
 static uint16_t ui_read_le16(const uint8_t *p)
 {
@@ -74,7 +75,7 @@ static int ui_load_bmp_argb(const char *path, uint32_t max_w, uint32_t max_h,
         out_stride < max_w || max_bytes > sizeof(bmp)) {
         return 0;
     }
-    if (stat(path, &st) < 0 || st.type != LEONOS_FS_TYPE_FILE ||
+    if (leonos_stat_legacy(path, &st) < 0 || st.type != LEONOS_FS_TYPE_FILE ||
         st.size < 54 || st.size > max_bytes) {
         return 0;
     }

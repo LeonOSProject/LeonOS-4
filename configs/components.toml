@@ -17,6 +17,32 @@ sdk = false
 api = false
 
 [[components]]
+id = "imd"
+symbol = "APP_IMD"
+label = "Input method daemon"
+category = "Core services"
+kind = "system-app"
+default = true
+required = true
+stage = true
+entry = false
+sdk = false
+api = false
+
+[[components]]
+id = "windowd"
+symbol = "APP_WINDOWD"
+label = "Window server daemon"
+category = "Core services"
+kind = "system-app"
+default = true
+required = true
+stage = true
+entry = false
+sdk = false
+api = false
+
+[[components]]
 id = "desktop"
 symbol = "APP_DESKTOP"
 label = "Desktop window server"
@@ -38,19 +64,6 @@ kind = "system-app"
 default = true
 required = true
 stage = false
-entry = false
-sdk = false
-api = false
-
-[[components]]
-id = "oobe"
-symbol = "APP_OOBE"
-label = "First-run setup"
-category = "System applications"
-kind = "system-app"
-default = true
-required = false
-stage = true
 entry = false
 sdk = false
 api = false
@@ -266,6 +279,46 @@ open_with = true
 extensions = [".api"]
 
 [[components]]
+id = "sudo"
+symbol = "APP_SUDO"
+label = "sudo"
+category = "System applications"
+kind = "program-app"
+default = true
+required = false
+stage = true
+entry = false
+sdk = false
+api = false
+
+[[components]]
+id = "su"
+symbol = "APP_SU"
+label = "su"
+category = "System applications"
+kind = "program-app"
+default = true
+required = false
+stage = true
+entry = false
+sdk = false
+api = false
+
+[[components]]
+# Fixed worker and askpass UI launched through upstream sudo.
+id = "sudod"
+symbol = "APP_SUDOD"
+label = "Privileged file-operation worker"
+category = "Core services"
+kind = "system-app"
+default = true
+required = true
+stage = true
+entry = false
+sdk = false
+api = false
+
+[[components]]
 id = "hello"
 symbol = "APP_HELLO"
 label = "Hello"
@@ -388,6 +441,32 @@ api = false
 id = "smptest"
 symbol = "APP_SMPTEST"
 label = "SMP test"
+category = "Developer applications"
+kind = "program-app"
+default = true
+required = false
+stage = true
+entry = false
+sdk = false
+api = false
+
+[[components]]
+id = "abittest"
+symbol = "APP_ABITEST"
+label = "Linux ABI runtime tests"
+category = "Developer applications"
+kind = "program-app"
+default = true
+required = false
+stage = true
+entry = false
+sdk = false
+api = false
+
+[[components]]
+id = "ipctest"
+symbol = "APP_IPCTEST"
+label = "Unix IPC smoke test"
 category = "Developer applications"
 kind = "program-app"
 default = true
@@ -580,6 +659,33 @@ sdk = false
 api = false
 
 [[components]]
+id = "vim"
+symbol = "TOOL_VIM"
+label = "Vim"
+category = "Developer applications"
+kind = "tool"
+default = true
+required = false
+stage = true
+entry = false
+sdk = false
+api = false
+depends = ["ncurses"]
+
+[[components]]
+id = "ncurses"
+symbol = "LIB_NCURSES"
+label = "ncurses wide-character terminal library"
+category = "Libraries"
+kind = "library"
+default = true
+required = false
+stage = true
+entry = false
+sdk = true
+api = false
+
+[[components]]
 id = "fastfetch"
 symbol = "APP_FASTFETCH"
 label = "fastfetch system summary"
@@ -733,19 +839,6 @@ api = false
 id = "file"
 symbol = "TOOL_FILE"
 label = "file and libmagic"
-category = "Developer applications"
-kind = "tool"
-default = true
-required = false
-stage = true
-entry = false
-sdk = true
-api = false
-
-[[components]]
-id = "tcc"
-symbol = "TOOL_TCC"
-label = "Tiny C Compiler"
 category = "Developer applications"
 kind = "tool"
 default = true

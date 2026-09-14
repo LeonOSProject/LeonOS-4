@@ -10,6 +10,8 @@
 #define NTCLKS_TICK_HZ 100ULL
 
 struct leonos_time_info;
+struct linux_timespec;
+int time_clock_get(int32_t clock, struct linux_timespec *value);
 
 /**
  * @brief Initialize the tick counter and read the RTC wall clock.
@@ -43,6 +45,7 @@ int time_wall_clock(struct leonos_time_info *info);
  * @brief Set the wall clock to unix_seconds (Unix epoch); 0 on success.
  */
 int time_set_wall_clock(uint64_t unix_seconds);
+int time_set_wall_clock_ns(uint64_t unix_seconds, uint32_t nanoseconds);
 /**
  * @brief Busy-sleep the current CPU for ms milliseconds.
  */

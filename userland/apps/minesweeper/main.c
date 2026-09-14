@@ -1,10 +1,14 @@
-#include <leonos/fs.h>
 #include <leonos/gui.h>
 #include <leonos/i18n.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
-#include <leonos/syscall.h>
 #include <leonos/ui.h>
+#include <leonos/layout.h>
+#include <fcntl.h>
+#include <poll.h>
+#include <stdint.h>
+#include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 #define MS_COLS 9
@@ -20,8 +24,8 @@
 #define MS_H (MS_BOARD_Y + MS_ROWS * MS_TILE + 18)
 #define MS_SPRITE_SIZE 20
 #define MS_SPRITE_BMP_MAX_BYTES (MS_SPRITE_SIZE * MS_SPRITE_SIZE * 4U + 128U)
-#define MS_MINE_SPRITE_PATH "minesweeper-mine.bmp"
-#define MS_FLAG_SPRITE_PATH "minesweeper-flag.bmp"
+#define MS_MINE_SPRITE_PATH LEONOS_PATH_MINESWEEPER_MINE_BMP
+#define MS_FLAG_SPRITE_PATH LEONOS_PATH_MINESWEEPER_FLAG_BMP
 
 #define CELL_MINE 0x01u
 #define CELL_REVEALED 0x02u
@@ -65,29 +69,6 @@ static void copy_text(char *dst, uint32_t cap, const char *src)
     dst[i] = 0;
 }
 
-static int change_to_executable_directory(const char *path)
-{
-    char directory[LEONOS_FS_PATH_LEN];
-    uint32_t length = 0;
-    uint32_t last_separator = 0;
-
-    if (!path || !path[0]) {
-        return chdir("/programs/minesweeper");
-    }
-    while (path[length]) {
-        if (path[length] == '/') {
-            last_separator = length;
-        }
-        ++length;
-    }
-    if (last_separator == 0 || last_separator >= sizeof(directory)) {
-        return chdir("/programs/minesweeper");
-    }
-    copy_text(directory, sizeof(directory), path);
-    directory[last_separator] = 0;
-    return chdir(directory);
-}
-
 static uint32_t text_len(const char *text)
 {
     uint32_t n = 0;
@@ -116,7 +97,7 @@ static int32_t read_le32s(const uint8_t *p)
 static int load_sprite_bmp(const char *path, struct minesweeper_sprite *sprite)
 {
     uint8_t bmp[MS_SPRITE_BMP_MAX_BYTES];
-    struct leonos_stat st;
+    struct stat st;
     uint32_t len = 0;
     uint32_t pixel_offset;
     uint32_t row_stride;
@@ -127,16 +108,16 @@ static int load_sprite_bmp(const char *path, struct minesweeper_sprite *sprite)
     int fd;
 
     if (!path || !sprite || stat(path, &st) < 0 ||
-        st.type != LEONOS_FS_TYPE_FILE || st.size < 54 ||
-        st.size > sizeof(bmp)) {
+        !S_ISREG(st.st_mode) || st.st_size < 54 ||
+        (uint64_t)st.st_size > sizeof(bmp)) {
         return 0;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, O_RDONLY);
     if (fd < 0) {
         return 0;
     }
-    while (len < st.size) {
-        long got = read(fd, bmp + len, (uint32_t)st.size - len);
+    while (len < (uint32_t)st.st_size) {
+        long got = read(fd, bmp + len, (uint32_t)st.st_size - len);
         if (got <= 0) {
             close(fd);
             return 0;
@@ -233,7 +214,11 @@ static void reset_game(void)
     won = 0;
     revealed_count = 0;
     flagged_count = 0;
-    rng_state = (uint32_t)leonos_uptime_ms() ^ 0xa5c35a1du;
+    {
+        struct timespec now = {0};
+        (void)clock_gettime(CLOCK_MONOTONIC, &now);
+        rng_state = (uint32_t)now.tv_nsec ^ (uint32_t)now.tv_sec ^ 0xa5c35a1du;
+    }
     if (!rng_state) {
         rng_state = 1;
     }
@@ -453,15 +438,12 @@ static int board_pos(int32_t px, int32_t py, int *out_x, int *out_y)
     return in_board(*out_x, *out_y);
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
 
-    if (change_to_executable_directory(argc > 0 ? argv[0] : 0) < 0) {
-        puts("[minesweeper.elf] could not change to executable directory");
-    }
     puts("[minesweeper.elf] starting");
     if (!load_game_assets()) {
         puts("[minesweeper.elf] required BMP assets unavailable");
@@ -508,7 +490,7 @@ int main(int argc, char **argv)
                 leonos_gui_present_window((uint32_t)window_id, MS_W, MS_H, MS_W, pixels);
             }
         } else {
-            sleep_ms(10);
+            (void)poll(0, 0, 10);
         }
     }
     leonos_gui_destroy_app_window((uint32_t)window_id);

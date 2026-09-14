@@ -23,6 +23,8 @@ int kernel_wait_queue_add(struct kernel_wait_queue *queue, struct task *task)
     if (!queue || !task) {
         return -1;
     }
+    if (task->waiting_queue && task->waiting_queue != queue)
+        kernel_wait_queue_remove(task->waiting_queue, task);
     kernel_spin_lock_irqsave(&queue->lock, &flags);
     for (uint32_t i = 0; i < queue->count; ++i) {
         if (queue->waiters[i] == task) {
@@ -35,6 +37,7 @@ int kernel_wait_queue_add(struct kernel_wait_queue *queue, struct task *task)
         return -1;
     }
     queue->waiters[queue->count++] = task;
+    task->waiting_queue = queue;
     kernel_spin_unlock_irqrestore(&queue->lock, flags);
     return 0;
 }
@@ -52,6 +55,7 @@ void kernel_wait_queue_remove(struct kernel_wait_queue *queue, struct task *task
                 queue->waiters[j - 1] = queue->waiters[j];
             }
             queue->waiters[--queue->count] = NULL;
+            if (task->waiting_queue == queue) task->waiting_queue = NULL;
             break;
         }
     }
@@ -72,6 +76,7 @@ uint32_t kernel_wait_queue_wake_one(struct kernel_wait_queue *queue)
             queue->waiters[i - 1] = queue->waiters[i];
         }
         queue->waiters[--queue->count] = NULL;
+        if (task->waiting_queue == queue) task->waiting_queue = NULL;
     }
     kernel_spin_unlock_irqrestore(&queue->lock, flags);
     if (task) {
@@ -88,4 +93,23 @@ uint32_t kernel_wait_queue_wake_all(struct kernel_wait_queue *queue)
         ++count;
     }
     return count;
+}
+
+void kernel_wait_queue_block_current(struct kernel_wait_queue *queue)
+{
+    struct task *task;
+    if (!queue) {
+        return;
+    }
+    task = sched_current_task();
+    if (!task || task->pid == 0 || task->state == TASK_EXITED) {
+        return;
+    }
+    if (kernel_wait_queue_add(queue, task) < 0) {
+        return;
+    }
+    /* The syscall epilogue rewinds the interrupted int 0x80 and retries it
+     * after wakeup, so returning EAGAIN internally is not observable to user
+     * space unless the descriptor is O_NONBLOCK (handled by the caller). */
+    sched_block_current();
 }

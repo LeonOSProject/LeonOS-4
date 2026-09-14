@@ -1,14 +1,17 @@
-#include <leonos/fs.h>
 #include <leonos/gui.h>
 #include <leonos/i18n.h>
 #include <leonos/png.h>
 #include <leonos/stdio.h>
-#include <leonos/syscall.h>
 #include <leonos/ui.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <poll.h>
 #include <png.h>
+#include <sys/stat.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define PAINT_W 1000U
 #define PAINT_H 700U
@@ -17,7 +20,7 @@
 #define PAINT_MAX_W LEONOS_GUI_MAX_WINDOW_WIDTH
 #define PAINT_MAX_H LEONOS_GUI_MAX_WINDOW_HEIGHT
 #define PAINT_MAX_PIXELS (1024U * 1024U)
-#define PAINT_PATH_CAP LEONOS_FS_PATH_LEN
+#define PAINT_PATH_CAP PATH_MAX
 #define TOOLBAR_H 44U
 #define STATUS_H 26U
 #define CANVAS_MARGIN 10U
@@ -179,21 +182,21 @@ static int new_canvas(uint32_t width, uint32_t height)
 
 static int read_file(const char *path, uint8_t **out, uint32_t *out_len)
 {
-    struct leonos_stat st;
+    struct stat st;
     uint8_t *data;
     uint32_t offset = 0;
     int fd;
     if (!path || !out || !out_len || stat(path, &st) < 0 ||
-        st.type != LEONOS_FS_TYPE_FILE || st.size == 0 ||
-        st.size > LEONOS_PNG_MAX_FILE_BYTES) {
+        !S_ISREG(st.st_mode) || st.st_size <= 0 ||
+        (uint64_t)st.st_size > LEONOS_PNG_MAX_FILE_BYTES) {
         return -1;
     }
-    data = (uint8_t *)malloc((size_t)st.size);
+    data = (uint8_t *)malloc((size_t)st.st_size);
     if (!data) return -1;
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, O_RDONLY);
     if (fd < 0) { free(data); return fd; }
-    while (offset < (uint32_t)st.size) {
-        long got = read(fd, data + offset, (uint32_t)st.size - offset);
+    while (offset < (uint32_t)st.st_size) {
+        long got = read(fd, data + offset, (uint32_t)st.st_size - offset);
         if (got <= 0) { close(fd); free(data); return -1; }
         offset += (uint32_t)got;
     }
@@ -299,7 +302,7 @@ static int save_bmp(const char *path)
     write_le16(header + 26, 1U);
     write_le16(header + 28, 24U);
     write_le32(header + 34, stride * canvas_h);
-    fd = open(path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0);
+    fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (fd < 0) return fd;
     row = (uint8_t *)malloc(stride);
     if (!row || write_all(fd, header, sizeof(header)) < 0) {
@@ -565,7 +568,7 @@ int main(int argc, char **argv, char **envp)
     for (;;) {
         event.window_id = (uint32_t)window_id;
         if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) <= 0) {
-            sleep_ms(10);
+            (void)poll(0, 0, 10);
             continue;
         }
         if (event.type == LEONOS_GUI_APP_EVENT_CLOSE ||

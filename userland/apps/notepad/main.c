@@ -357,7 +357,7 @@ static int load_document(const char *path)
         begin_new_document();
         return 0;
     }
-    ret = stat(path, &st);
+    ret = leonos_stat_legacy(path, &st);
     if (ret < 0) {
         set_error_status(T("stat failed ", "状态读取失败 "), ret);
         return ret;
@@ -488,7 +488,7 @@ static int save_document_to_path(const char *path, uint32_t encoding)
         return 0;
     }
     flags = LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC;
-    fd = open(path, flags, 0);
+    fd = open(path, flags, 0666);
     if (fd < 0) {
         set_error_status(T("save open failed ", "保存打开失败 "), fd);
         return 0;

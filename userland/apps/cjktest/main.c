@@ -66,8 +66,8 @@ static void run_file_test(void)
     struct leonos_stat st;
     struct leonos_dir_entry entry;
     uint32_t pos = 0;
-    int mkdir_ret = mkdir(dir, 0);
-    int fd = open(path, LEONOS_O_CREAT | LEONOS_O_TRUNC | LEONOS_O_WRONLY, 0);
+    int mkdir_ret = mkdir(dir, 0777);
+    int fd = open(path, LEONOS_O_CREAT | LEONOS_O_TRUNC | LEONOS_O_WRONLY, 0666);
     int write_ret = -1;
     int stat_ret;
     int readdir_seen = 0;
@@ -76,7 +76,7 @@ static void run_file_test(void)
         write_ret = (int)write(fd, content, strlen(content));
         close(fd);
     }
-    stat_ret = stat(path, &st);
+    stat_ret = leonos_stat_legacy(path, &st);
     fd = open(dir, LEONOS_O_RDONLY, 0);
     if (fd >= 0) {
         while (leonos_readdir(fd, &entry) > 0) {

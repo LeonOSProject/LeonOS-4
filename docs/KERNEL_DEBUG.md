@@ -2,15 +2,15 @@
 
 LeonOS 4 includes an optional Ring-0 diagnostic mode. Open **About LeonOS**
 (`osver`) and click the Logo five times within two seconds. The enabled state
-is stored at `/system/state/kerneldebug.enabled`.
+is stored at `/var/lib/leonos/kerneldebug.enabled`.
 
 When enabled, the Start menu exposes **Restart into kernel debugger**. That
 action writes a one-shot marker to the boot ESP at
-`/boot/system/state/kerneldebug.next`. The loader consumes and deletes the marker
+`/boot/leonos/state/kerneldebug.next`. The loader consumes and deletes the marker
 before entering the kernel, so an interrupted debug session cannot create a
 permanent boot loop.
 
-The kernel then validates `/system/kerneldebug.sys` as an x86_64 `ET_REL`
+The kernel then validates `/usr/lib/leonos/kerneldebug.sys` as an x86_64 `ET_REL`
 module and enters its `ostui` diagnostic interface before starting Ring-3
 userland. The module must contain the `LEONKDBG` ELF note (ABI 1 and the fixed
 entry-name hash), have no dynamic segment or TLS, and use only the supported
@@ -28,6 +28,14 @@ Choosing **Continue normal startup** clears the persistent debug flag and
 continues the already initialized kernel through the ordinary init/desktop
 path. If the ESP cannot be written, the Start menu reports the error and does
 not reboot.
+
+## TTY display diagnostic
+
+While the kernel-created TTY is active, press `Ctrl+Alt+Shift+F12`. The
+kernel writes `Test message` directly to the framebuffer TTY and the serial
+console without a timestamp. If the serial log contains the message but the
+screen does not, the TTY renderer or framebuffer path is stuck; if neither
+contains it, keyboard interrupt delivery or the kernel is not responding.
 
 ## API diagnostics
 

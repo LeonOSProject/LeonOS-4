@@ -8,7 +8,6 @@
 #include <ntclks/console.h>
 #include <ntclks/driver_manager.h>
 #include <ntclks/framebuffer.h>
-#include <ntclks/gui_ipc.h>
 #include <ntclks/input.h>
 #include <ntclks/kernel_debug.h>
 #include <ntclks/kernel.h>
@@ -97,7 +96,7 @@ static int boot_text_eq(const char *a, const char *b)
  */
 static void boot_log_wait_for_enter(void)
 {
-    struct input_event event;
+    struct input_raw_event event;
     while (input_pop(&event)) {
     }
     console_printf("[boot] Boot log paused. Press Enter to continue.\n");
@@ -224,11 +223,9 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
     time_init();
     input_init();
     pty_init();
-    gui_ipc_init();
-    gui_ipc_set_boot_theme(handoff && handoff->magic == LEONOS_BOOT_HANDOFF_MAGIC
-                               ? handoff->ui_theme
-                               : 1u);
-    console_set_ui_theme(gui_ipc_appearance_theme());
+    console_set_ui_theme(handoff && handoff->magic == LEONOS_BOOT_HANDOFF_MAGIC
+                              ? handoff->ui_theme
+                              : 1u);
     if (boot_log_screen || startup_tty) {
         console_enable_framebuffer(handoff && handoff->magic == LEONOS_BOOT_HANDOFF_MAGIC
                                        ? &handoff->boot_log
@@ -238,6 +235,7 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
     sched_init();
     sched_create_idle_task();
     syscall_init();
+    syscall_trace_configure(boot.cmdline);
     arch_userland_init(kernel_ring0_stack + sizeof(kernel_ring0_stack));
     /* The bootstrap page tables are complete now, so SVGA BARs can be marked
      * UC before any 3D FIFO or guest-memory command is issued. */
@@ -259,11 +257,12 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
         int policy_ret = osmlayer_bridge_mount_policy(&boot, &mount_policy);
         if (policy_ret == 0) {
             storage_apply_mount_policy(&mount_policy);
-            if (cmdline_has(&boot, "mode=installer") && !storage_ready()) {
+            if ((cmdline_has(&boot, "mode=installer") || cmdline_has(&boot, "mode=live")) &&
+                !storage_ready()) {
                 console_printf("[ntclks] installer mount policy did not produce a ready root, retrying handoff module\n");
                 storage_init_installer_root(&boot);
             }
-        } else if (cmdline_has(&boot, "mode=installer")) {
+        } else if (cmdline_has(&boot, "mode=installer") || cmdline_has(&boot, "mode=live")) {
             console_printf("[ntclks] middlelayer mount policy unavailable ret=%d, using installer fallback\n",
                            policy_ret);
             storage_init();

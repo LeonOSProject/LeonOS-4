@@ -3,16 +3,16 @@
 
 #include <stdint.h>
 
-#define LEONOS_IOCTL_AUDIO_CONFIGURE 0x4c415543UL
-#define LEONOS_IOCTL_AUDIO_WRITE 0x4c415557UL
-#define LEONOS_IOCTL_AUDIO_GET_STATE 0x4c415553UL
 
 #define LEONOS_AUDIO_MAX_WRITE (64U * 1024U)
+/* Audio drivers poll hardware synchronously; keep each kernel call bounded. */
+#define LEONOS_AUDIO_IO_SLICE_BYTES 4096U
 
 #define LEONOS_AUDIO_STATUS_OK 0U
 #define LEONOS_AUDIO_STATUS_NO_DEVICE 1U
 #define LEONOS_AUDIO_STATUS_BAD_FORMAT 2U
 #define LEONOS_AUDIO_STATUS_PLAYBACK_FAILED 3U
+#define LEONOS_AUDIO_STATUS_WOULD_BLOCK 4U
 
 struct leonos_audio_format {
     uint32_t sample_rate;

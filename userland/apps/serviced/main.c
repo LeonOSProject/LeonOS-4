@@ -1,13 +1,21 @@
 #include <leonos/fs.h>
 #include <leonos/gui.h>
-#include <leonos/net.h>
+#include <leonos/net_service.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
 #include <leonos/system.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
 
-#define SERVICE_CONFIG_PATH "/system/config/services.cfg"
-#define SERVICE_STATE_PATH "/var/run/services.state"
-#define SERVICE_COMMAND_PATH "/var/run/services.cmd"
+#include "devmand.h"
+#include "netmand.h"
+#include "sessiond.h"
+#include <leonos/layout.h>
+
+#define SERVICE_CONFIG_PATH LEONOS_PATH_SERVICES_CFG
+#define SERVICE_STATE_PATH LEONOS_PATH_SERVICES_STATE
+#define SERVICE_COMMAND_PATH LEONOS_PATH_SERVICES_CMD
 #define SERVICE_LOG_PATH "/var/log/services.log"
 #define SERVICE_CONFIG_MAX 512U
 #define SERVICE_COMMAND_MAX 512U
@@ -167,7 +175,7 @@ static int write_file_text(const char *path, const char *buffer, uint32_t len,
     int fd;
     long wrote;
     flags |= append ? LEONOS_O_APPEND : LEONOS_O_TRUNC;
-    fd = open(path, flags, 0);
+    fd = open(path, flags, 0666);
     if (fd < 0) {
         return fd;
     }
@@ -195,20 +203,24 @@ static void log_line(const char *message)
 static const char *net_status_name(uint32_t status)
 {
     switch (status) {
-    case LEONOS_NET_STATUS_OK:
+    case NET_SERVICE_STATUS_OK:
         return "OK";
-    case LEONOS_NET_STATUS_NO_DEVICE:
+    case NET_SERVICE_STATUS_NO_DEVICE:
         return "no e1000 adapter";
-    case LEONOS_NET_STATUS_DHCP_TIMEOUT:
+    case NET_SERVICE_STATUS_DHCP_TIMEOUT:
         return "DHCP timeout";
-    case LEONOS_NET_STATUS_DHCP_FAILED:
+    case NET_SERVICE_STATUS_DHCP_FAILED:
         return "DHCP failed";
-    case LEONOS_NET_STATUS_TX_FAILED:
+    case NET_SERVICE_STATUS_TX_FAILED:
         return "transmit failed";
-    case LEONOS_NET_STATUS_DNS_TIMEOUT:
+    case NET_SERVICE_STATUS_DNS_TIMEOUT:
         return "DNS timeout";
-    case LEONOS_NET_STATUS_DNS_FAILED:
+    case NET_SERVICE_STATUS_DNS_FAILED:
         return "DNS failed";
+    case LEONOS_NET_STATUS_NTP_TIMEOUT:
+        return "timeout";
+    case LEONOS_NET_STATUS_NTP_INVALID:
+        return "invalid server response";
     default:
         return "network error";
     }
@@ -382,7 +394,8 @@ static void process_commands(void)
 
 static void update_dhcp(unsigned long now)
 {
-    struct leonos_net_config config;
+    static uint64_t renew_after_ms;
+    net_service_config_t config;
     uint32_t pid = (uint32_t)getpid();
     char detail[SERVICE_DETAIL_LEN];
     uint32_t pos = 0;
@@ -391,14 +404,16 @@ static void update_dhcp(unsigned long now)
         set_service_state(1, "stopped", "disabled by policy", 0);
         return;
     }
-    if (leonos_net_config(&config) < 0) {
+    if (netmand_config(&config) < 0) {
         set_service_state(1, "failed", "network config query failed", pid);
         return;
     }
-    if ((config.flags & LEONOS_NET_CONFIG_FLAG_ACTIVE) &&
-        (config.flags & LEONOS_NET_CONFIG_FLAG_DHCP) &&
-        config.source == LEONOS_NET_CONFIG_SOURCE_DHCP &&
-        config.local_ip && config.gateway_ip) {
+    if ((config.flags & NET_SERVICE_CONFIG_FLAG_ACTIVE) &&
+        (config.flags & NET_SERVICE_CONFIG_FLAG_DHCP) &&
+        config.source == NET_SERVICE_CONFIG_SOURCE_DHCP &&
+        config.local_ip && !force_dhcp_renew && (!renew_after_ms || now < renew_after_ms)) {
+        if (!renew_after_ms && config.lease_seconds != UINT32_MAX)
+            renew_after_ms = now + (uint64_t)config.lease_seconds * 500;
         detail[0] = 0;
         append_text(detail, &pos, sizeof(detail), "DHCP lease active ip=");
         append_ipv4(detail, &pos, sizeof(detail), config.local_ip);
@@ -408,14 +423,15 @@ static void update_dhcp(unsigned long now)
     }
     if (force_dhcp_renew || !dhcp_attempted ||
         now - last_dhcp_attempt_ms >= DHCP_RETRY_MS) {
-        struct leonos_net_dhcp dhcp;
+        net_service_dhcp_t dhcp;
         int ret;
         last_dhcp_attempt_ms = now;
         dhcp_attempted = 1;
         force_dhcp_renew = 0;
         log_line("DHCP renew attempt");
-        ret = leonos_net_dhcp_renew(DHCP_TIMEOUT_MS, &dhcp);
-        if (ret == 0 && dhcp.status == LEONOS_NET_STATUS_OK) {
+        ret = netmand_dhcp(DHCP_TIMEOUT_MS, &dhcp);
+        if (ret == 0 && dhcp.status == NET_SERVICE_STATUS_OK) {
+            renew_after_ms = dhcp.config.lease_seconds == UINT32_MAX ? 0 : now + (uint64_t)dhcp.config.lease_seconds * 500;
             detail[0] = 0;
             pos = 0;
             append_text(detail, &pos, sizeof(detail), "DHCP lease active ip=");
@@ -427,12 +443,12 @@ static void update_dhcp(unsigned long now)
         detail[0] = 0;
         pos = 0;
         append_text(detail, &pos, sizeof(detail), net_status_name(dhcp.status));
-        append_text(detail, &pos, sizeof(detail), "; static fallback active");
+        append_text(detail, &pos, sizeof(detail), "; no DHCP address");
         set_service_state(1, "failed", detail, pid);
         log_line("DHCP renew failed");
         return;
     }
-    set_service_state(1, "failed", "static fallback active; retry pending", pid);
+    set_service_state(1, "failed", "no DHCP address; retry pending", pid);
 }
 
 static void update_simple_services(void)
@@ -473,7 +489,7 @@ static void update_ntp(unsigned long now)
     ntp_attempted = 1;
     sync = (struct leonos_time_sync){0};
     ret = leonos_time_ntp_sync(NTP_TIMEOUT_MS, &sync);
-    if (ret == 0 && sync.status == LEONOS_NET_STATUS_OK && sync.valid) {
+    if (ret == 0 && sync.status == NET_SERVICE_STATUS_OK && sync.valid) {
         ntp_last_result_ok = 1;
         detail[0] = 0;
         append_text(detail, &pos, sizeof(detail), "synced from ");
@@ -484,8 +500,8 @@ static void update_ntp(unsigned long now)
     }
     ntp_last_result_ok = 0;
     detail[0] = 0;
-    append_text(detail, &pos, sizeof(detail), ret < 0 ? "NTP permission failure: " : "NTP ");
-    append_text(detail, &pos, sizeof(detail), net_status_name(sync.status));
+    append_text(detail, &pos, sizeof(detail), "NTP ");
+    append_text(detail, &pos, sizeof(detail), ret < 0 ? strerror(errno) : net_status_name(sync.status));
     set_service_state(4, "failed", detail, (uint32_t)getpid());
     log_line("NTP clock synchronization failed");
 }
@@ -519,15 +535,20 @@ static void write_state(void)
 
 static void ensure_runtime_dirs(void)
 {
-    (void)mkdir("/var", 0);
-    (void)mkdir("/var/run", 0);
-    (void)mkdir("/var/log", 0);
+    (void)mkdir("/var", 0755);
+    (void)mkdir("/run", 0755);
+    (void)mkdir(LEONOS_LAYOUT_RUN_LEONOS, 0755);
+    (void)mkdir("/var/log", 0755);
 }
 
 int main(void)
 {
     puts("[serviced.elf] service runtime starting");
     ensure_runtime_dirs();
+    if (unlink(SERVICE_COMMAND_PATH) < 0 && errno != ENOENT) {
+        printf("[serviced.elf] reset pending commands failed errno=%d\n", errno);
+        return 1;
+    }
     log_line("service runtime starting");
     load_config();
     update_services();
@@ -535,8 +556,11 @@ int main(void)
     for (;;) {
         load_config();
         process_commands();
+        netmand_poll();
+        sessiond_poll();
+        devmand_poll();
         update_services();
         write_state();
-        sleep_ms(1000);
+        sleep_ms(100);
     }
 }

@@ -118,12 +118,14 @@ static void cookie_build_store_path(char *dst, uint32_t cap)
     if (leonos_auth_current(&user) == 0 && user.uid && user.home[0]) {
         cookie_append_path(dir, sizeof(dir), user.home,
                            BROWSER_COOKIE_STORE_DIR);
-        (void)mkdir(dir, 0);
+        (void)mkdir(dir, 0700);
     } else {
-        (void)mkdir("/var", 0);
-        cookie_append_path(dir, sizeof(dir), "/var",
+        (void)mkdir("/var", 0755);
+        (void)mkdir("/var/lib", 0755);
+        (void)mkdir("/var/lib/leonos", 0750);
+        cookie_append_path(dir, sizeof(dir), "/var/lib/leonos",
                            BROWSER_COOKIE_STORE_DIR);
-        (void)mkdir(dir, 0);
+        (void)mkdir(dir, 0700);
     }
     cookie_append_path(dst, cap, dir, BROWSER_COOKIE_STORE_FILE);
 }
@@ -270,7 +272,7 @@ static void cookie_save(void)
                     sizeof(browser_cookie_file_buffer), '\n');
     }
     fd = open(browser_cookie_store_path,
-              LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0);
+              LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0600);
     if (fd >= 0) {
         (void)write(fd, browser_cookie_file_buffer,
                     cookie_text_len(browser_cookie_file_buffer));
@@ -798,9 +800,9 @@ static int browser_http_request_with_cookies(
         if (response_headers && response_headers_capacity) {
             cookie_accept_response_headers(current_url, response_headers);
         }
-        if (response->net_status != LEONOS_NET_STATUS_OK ||
+        if (response->net_status != NET_SERVICE_STATUS_OK ||
             !browser_http_is_redirect(response->http_status)) {
-            if (response->net_status == LEONOS_NET_STATUS_OK &&
+            if (response->net_status == NET_SERVICE_STATUS_OK &&
                 response->http_status == 401U && !auth_retry_done &&
                 browser_auth_retry_from_challenge(current_url,
                                                   response_headers)) {
@@ -817,7 +819,7 @@ static int browser_http_request_with_cookies(
         if (redirect_count >= LEONOS_HTTP_DEFAULT_REDIRECTS ||
             leonos_http_resolve_url(current_url, location,
                                     next_url, sizeof(next_url)) < 0) {
-            response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+            response->net_status = NET_SERVICE_STATUS_HTTP_FAILED;
             return 0;
         }
         copy_text(current_url, sizeof(current_url), next_url);

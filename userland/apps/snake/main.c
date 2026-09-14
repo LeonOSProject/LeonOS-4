@@ -1,10 +1,10 @@
-#include <leonos/pty.h>
-#include <leonos/syscall.h>
+#include <fcntl.h>
+#include <poll.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/termios.h>
+#include <termios.h>
 #include <unistd.h>
 
 #define SNAKE_MAX_WIDTH 32U
@@ -236,7 +236,7 @@ static unsigned load_high_score(void)
     if (score_path(path, sizeof(path)) != 0) {
         return 0;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, O_RDONLY);
     if (fd < 0) {
         return 0;
     }
@@ -292,7 +292,7 @@ static void save_high_score(unsigned score)
     if (length <= 0 || (size_t)length >= sizeof(text)) {
         return;
     }
-    fd = open(path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0);
+    fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (fd < 0) {
         return;
     }
@@ -358,14 +358,16 @@ static void render(const struct snake_game *game)
 
 static int read_byte(unsigned char *value)
 {
-    int available;
+    struct pollfd input;
     if (!value) {
         return 0;
     }
     /* libc intentionally keeps read(0) blocking for normal terminal apps.
      * Snake needs a polling read so its animation clock can run without input. */
-    available = leonos_pty_input_available();
-    if (available <= 0) {
+    input.fd = STDIN_FILENO;
+    input.events = POLLIN;
+    input.revents = 0;
+    if (poll(&input, 1, 0) <= 0 || !(input.revents & POLLIN)) {
         return 0;
     }
     return read(STDIN_FILENO, value, 1) == 1;
@@ -378,7 +380,7 @@ static int read_escape_byte(unsigned char *value)
         if (read_byte(value)) {
             return 1;
         }
-        sleep_ms(1);
+        (void)poll(0, 0, 1);
     }
     return 0;
 }
@@ -516,7 +518,7 @@ int main(void)
                 process_key(&game, key, &running);
                 render(&game);
             }
-            sleep_ms(SNAKE_POLL_MS);
+            (void)poll(0, 0, SNAKE_POLL_MS);
             waited += SNAKE_POLL_MS;
         }
         if (running && !game.paused && !game.game_over) {

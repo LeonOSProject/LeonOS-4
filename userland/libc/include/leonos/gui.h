@@ -2,56 +2,14 @@
 #define LEONOS_GUI_H
 
 #include <stdint.h>
+#include <leonos/fb.h>
 #include <leonos/fs.h>
 
-#define LEONOS_GUI_IOCTL_VERSION 0x4c475549UL
-#define LEONOS_GUI_IOCTL_PATH_TEST 0x4c504154UL
-#define LEONOS_GUI_IOCTL_EVENT 0x4c455654UL
-#define LEONOS_GUI_IOCTL_UPTIME_MS 0x4c555054UL
-#define LEONOS_GUI_IOCTL_FB_INFO 0x4c464249UL
-#define LEONOS_GUI_IOCTL_FB_FILL 0x4c464246UL
-#define LEONOS_GUI_IOCTL_FB_RECT 0x4c464252UL
-#define LEONOS_GUI_IOCTL_FB_TEXT 0x4c464254UL
-#define LEONOS_GUI_IOCTL_FB_PIXEL 0x4c464250UL
-#define LEONOS_GUI_IOCTL_FB_BLIT 0x4c46424cUL
-#define LEONOS_GUI_IOCTL_FB_SET_MODE 0x4c46424dUL
-#define LEONOS_GUI_IOCTL_FB_CAPS 0x4c464243UL
-#define LEONOS_GUI_IOCTL_CREATE_WINDOW 0x4c475743UL
-#define LEONOS_GUI_IOCTL_POLL_WINDOW 0x4c475750UL
-#define LEONOS_GUI_IOCTL_TASKS 0x4c54534bUL
-#define LEONOS_GUI_IOCTL_PRESENT_WINDOW 0x4c475046UL
-#define LEONOS_GUI_IOCTL_FETCH_WINDOW 0x4c475746UL
-#define LEONOS_GUI_IOCTL_WINDOW_EVENT 0x4c475745UL
-#define LEONOS_GUI_IOCTL_WAIT_WINDOW_EVENT 0x4c475457UL
-#define LEONOS_GUI_IOCTL_SEND_WINDOW_EVENT 0x4c475753UL
-#define LEONOS_GUI_IOCTL_DESTROY_WINDOW 0x4c475744UL
-#define LEONOS_GUI_IOCTL_TASK_KILL 0x4c544b49UL
-#define LEONOS_GUI_IOCTL_REBOOT 0x4c524254UL
-#define LEONOS_GUI_IOCTL_SHUTDOWN 0x4c534844UL
-#define LEONOS_GUI_IOCTL_DISPLAY_STATE 0x4c445350UL
-#define LEONOS_GUI_IOCTL_DISPLAY_REQUEST 0x4c445351UL
-#define LEONOS_GUI_IOCTL_POLL_DISPLAY_REQUEST 0x4c445352UL
-#define LEONOS_GUI_IOCTL_PUBLISH_DISPLAY_STATE 0x4c445353UL
-#define LEONOS_GUI_IOCTL_APPEARANCE_STATE 0x4c415053UL
-#define LEONOS_GUI_IOCTL_APPEARANCE_REQUEST 0x4c415052UL
-#define LEONOS_GUI_IOCTL_POLL_APPEARANCE_REQUEST 0x4c415050UL
-#define LEONOS_GUI_IOCTL_PUBLISH_APPEARANCE_STATE 0x4c415042UL
-#define LEONOS_GUI_IOCTL_SET_MOUSE_VISIBLE 0x4c4d4f55UL
-#define LEONOS_GUI_IOCTL_UPDATE_WINDOW 0x4c475755UL
-#define LEONOS_GUI_IOCTL_SET_TASKBAR_VISIBLE 0x4c475442UL
-#define LEONOS_GUI_IOCTL_CURSOR_REQUEST 0x4c474352UL
-#define LEONOS_GUI_IOCTL_MOUSE_STATE 0x4c4d5354UL
-#define LEONOS_GUI_IOCTL_CURSOR_REGION 0x4c474347UL
 
 #define LEONOS_DISPLAY_REQUEST_APPLY 1U
 #define LEONOS_DISPLAY_REQUEST_KEEP 2U
 #define LEONOS_DISPLAY_REQUEST_REVERT 3U
 #define LEONOS_DISPLAY_REQUEST_REFRESH 4U
-
-#define LEONOS_FB_CAP_MODE_SET 0x0001U
-#define LEONOS_FB_BACKEND_BOOT 0U
-#define LEONOS_FB_BACKEND_BOCHS_VBE 1U
-#define LEONOS_FB_BACKEND_VMWARE_SVGA 2U
 
 #define LEONOS_WALLPAPER_MODE_FILL 0U
 #define LEONOS_WALLPAPER_MODE_FIT 1U
@@ -77,6 +35,7 @@
 #define LEONOS_KEY_LEFT_ALT 56U
 #define LEONOS_KEY_SPACE 57U
 #define LEONOS_KEY_CAPS_LOCK 58U
+#define LEONOS_INPUT_MOD_CAPS_LOCK 0x01U
 #define LEONOS_KEY_HOME 71U
 #define LEONOS_KEY_UP 72U
 #define LEONOS_KEY_PAGE_UP 73U
@@ -167,6 +126,7 @@ struct leonos_input_event {
     uint8_t buttons;
     uint8_t keycode;
     uint8_t pressed;
+    uint8_t modifiers;
 };
 
 struct leonos_fb_info {
@@ -174,16 +134,6 @@ struct leonos_fb_info {
     uint32_t height;
     uint32_t pitch;
     uint8_t bpp;
-};
-
-struct leonos_fb_capabilities {
-    uint8_t bytes_per_pixel;
-    uint8_t reserved;
-    uint16_t capabilities;
-    uint32_t max_width;
-    uint32_t max_height;
-    uint32_t max_bytes;
-    uint32_t backend;
 };
 
 struct leonos_fb_mode {
@@ -314,7 +264,7 @@ struct leonos_gui_app_event {
     uint8_t buttons;
     uint8_t keycode;
     uint8_t pressed;
-    uint8_t reserved;
+    uint8_t modifiers;
 };
 
 struct leonos_gui_wait_app_event {
@@ -387,6 +337,7 @@ struct leonos_appearance_request {
 };
 
 int leonos_gui_connect(void);
+int leonos_gui_policy_connect(void);
 int leonos_gui_create_window(const struct leonos_gui_window *window);
 int leonos_gui_next_event(struct leonos_input_event *event);
 unsigned long leonos_uptime_ms(void);
@@ -407,6 +358,8 @@ int leonos_gui_set_window_borderless(uint32_t window_id, uint32_t borderless);
 int leonos_gui_set_window_taskbar_visible(uint32_t window_id, uint32_t visible);
 int leonos_gui_set_taskbar_visible(uint32_t window_id, uint32_t visible);
 int leonos_gui_poll_window(struct leonos_gui_window_msg *message);
+/* Wait for policy messages/input without consuming queued events. */
+int leonos_gui_wait_policy(uint32_t timeout_ms);
 int leonos_gui_present_window(uint32_t window_id, uint32_t width, uint32_t height,
                               uint32_t stride, const uint32_t *pixels);
 int leonos_gui_fetch_window(uint32_t window_id, uint32_t capacity_width, uint32_t capacity_height,
@@ -417,6 +370,10 @@ int leonos_gui_wait_app_event(struct leonos_gui_app_event *event, uint32_t timeo
 int leonos_gui_send_app_event(const struct leonos_gui_app_event *event);
 int leonos_gui_set_mouse_visible(uint32_t window_id, uint32_t visible);
 int leonos_gui_mouse_visible(void);
+int leonos_gui_cursor_request(const struct leonos_gui_cursor_request *request);
+int leonos_gui_set_cursor_position(uint32_t window_id, int32_t x, int32_t y);
+int leonos_gui_set_cursor_style(uint32_t window_id, uint32_t style);
+int leonos_gui_set_cursor_auto(uint32_t window_id);
 int leonos_mouse_get_state(struct leonos_mouse_state *state);
 int leonos_task_snapshot(struct leonos_task_info *tasks, uint32_t capacity, uint64_t *tick);
 int leonos_task_kill(uint32_t pid);

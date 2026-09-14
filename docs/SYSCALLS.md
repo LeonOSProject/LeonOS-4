@@ -1,12 +1,14 @@
 # Syscalls
 
-LeonOS 4 exposes a small Linux-numbered x86_64 syscall ABI to Ring-3
-applications. The ABI is intentionally close to Linux where it is useful, but
-only the calls listed here are implemented.
+LeonOS targets the native Linux v6.12 x86-64 user ABI. The current full
+status is recorded in `LINUX_ABI_SYSCALLS_2026-09-07.csv` and
+`LINUX_ABI_PROGRESS_2026-09-08.md`. The tables below are an extension reference
+and historical subset, not a complete compatibility claim.
 
 ## Entry Convention
 
-Userland enters the kernel with `int $0x80`. The libc assembly helpers in
+musl enters the kernel with the native `syscall` instruction. The LeonOS
+extension assembly helpers in
 `userland/libc/src/syscall.S` translate C call arguments into the syscall ABI:
 
 - `rax`: syscall number.
@@ -71,7 +73,7 @@ Only the creator can use a render handle. See [SVGA3D.md](SVGA3D.md) for details
 
 ## File and Directory Calls
 
-Paths use Unix syntax such as `/system/apps/desktop/desktop.elf`. Relative
+Paths use Unix syntax such as `/usr/lib/leonos/apps/desktop/desktop.elf`. Relative
 paths are resolved against the task current directory through the middlelayer
 VFS resolver when available, with a kernel fallback. Inputs containing `:`
 are rejected.
@@ -169,7 +171,7 @@ implementation.
 dedicated syscall numbers. Current request groups:
 
 All libc wrappers now open a matching synthetic `/dev` node before issuing an
-ioctl (`/dev/fb0`, `/dev/input/event0`, `/dev/audio0`, `/dev/net0`,
+ioctl (`/dev/fb0`, `/dev/input-method`, `/dev/dsp`, `/dev/net0`,
 `/dev/disk0`, `/dev/ptmx`, or `/dev/tty`). The kernel still accepts the legacy fd 3 control
 channel for ABI compatibility with older binaries.
 
@@ -183,6 +185,21 @@ channel for ABI compatibility with older binaries.
 - Text layout and Unicode services: `include/leonos/text.h`
 - PTY creation, I/O, and spawn: `include/leonos/pty.h`
 - Minimal signal dispositions: `include/leonos/signal.h`
+
+Raw input uses `read(2)` rather than LeonOS request codes: `/dev/input/event0`
+and `/dev/input/event1` return Linux `struct input_event` records. The kernel
+implements `EVIOCGVERSION`, `EVIOCGID`, `EVIOCGNAME`, `EVIOCGPHYS`,
+`EVIOCGBIT`, `EVIOCGKEY`, and no-op `EVIOCGRAB`, plus `O_NONBLOCK` and
+`poll(POLLIN)`. Text-input methods remain a separate transition service at
+`/dev/input-method` until the GUI socket protocol replaces it.
+
+PCM playback uses the OSS `/dev/dsp` interface rather than a LeonOS request
+code. Include `<linux/soundcard.h>`, set `AFMT_S16_LE`, two channels and the
+desired 8-48 kHz rate with `SNDCTL_DSP_*`, then use `write(2)`. The initial
+subset includes format/rate/channel setup, `GETFMTS`, `GETCAPS`,
+`GETBLKSIZE`, `GETOSPACE`, `GETODELAY`, `NONBLOCK`, and `poll(POLLOUT)`.
+`/dev/audio0` is only a compatibility endpoint for old private audio ioctl
+clients.
 
 Important requests include:
 
@@ -220,22 +237,10 @@ Important requests include:
 - `LEONOS_IOCTL_NET_SOCKET_OPEN`, `LEONOS_IOCTL_NET_SOCKET_CONNECT`,
   `LEONOS_IOCTL_NET_SOCKET_SEND`, `LEONOS_IOCTL_NET_SOCKET_RECV`,
   `LEONOS_IOCTL_NET_SOCKET_CLOSE`, `LEONOS_IOCTL_NET_CONNECTIONS`
-- `LEONOS_INSTALL_IOCTL_LIST_DISKS`, `LEONOS_INSTALL_IOCTL_FORMAT_TARGET`
-  (with `LEONOS_INSTALL_IOCTL_FORMAT_ESP` retained as an ABI alias),
-  `LEONOS_INSTALL_IOCTL_MOUNT_TARGET`
-- `LEONOS_DISK_IOCTL_LIST_PARTITIONS`, `LEONOS_DISK_IOCTL_FORMAT_PARTITION`,
-  `LEONOS_DISK_IOCTL_DELETE_PARTITION`, `LEONOS_DISK_IOCTL_CREATE_PARTITION`,
-  `LEONOS_DISK_IOCTL_MOUNT_PARTITION`,
-  `LEONOS_DISK_IOCTL_UNMOUNT_PARTITION`, `LEONOS_DISK_IOCTL_EDIT_PARTITION`,
-  and `LEONOS_DISK_IOCTL_INITIALIZE_GPT`.
-  These use the fixed-size records in
-  `leonos/fs.h`; listing reads a GPT table, while create/format/delete/mount/
-  unmount/edit/initialize require administrator install authorization and
-  reject current boot or mounted installer-target disks. GPT initialization
-  writes a protective MBR and both GPT copies and is intended for the
-  installer-only `gptinit` utility. A data mount returns a stable
-  `/mnt/disk<N>p<M>` path; unmount is rejected with busy while a live process
-  holds a CWD, descriptor, executable image, or file mapping on that volume.
+- Block storage uses `/dev/diskN` and `/dev/diskNpN` with `BLKGETSIZE64`,
+  `BLKSSZGET`, `BLKRRPART`, aligned `read`/`write`/`lseek`, and
+  `mount(2)`/`umount2(2)`. The former LeonOS disk-management ioctl ABI is
+  removed from the public SDK and syscall dispatcher.
 - `LEONOS_TEXT_IOCTL_LAYOUT_UTF8`
 - `LEONOS_PTY_IOCTL_CREATE`, `LEONOS_PTY_IOCTL_SELF`,
   `LEONOS_PTY_IOCTL_READ_OUTPUT`, `LEONOS_PTY_IOCTL_WRITE_INPUT`,
@@ -272,7 +277,7 @@ ICMP Echo, a small DHCP client, UDP transmit/receive for DHCP/DNS, DNS A record
 lookups, a small ARP cache, active-open TCP client sockets, and a compatibility
 `HTTP/1.0` GET helper over TCP. Boot starts with the QEMU user-network fallback so
 early networking is usable, then automatically tries DHCP three times unless
-`/system/config/services.cfg` contains `dhcp=0`. If DHCP succeeds, the active config
+`/etc/leonos/services.cfg` contains `dhcp=0`. If DHCP succeeds, the active config
 switches to the lease; if it fails or is disabled, the fallback remains active:
 
 - guest IPv4: `10.0.2.15/24`
@@ -284,7 +289,7 @@ running to manually renew or recover a lease when the caller is an
 administrator. Non-admin users may read network status and use DNS/HTTP/socket
 APIs, but DHCP renew changes the global IPv4 configuration and returns
 `EPERM` unless the caller is an administrator or trusted service task. The only
-pre-login exception is `/system/apps/oobe/oobe.elf` while `/system/state/oobe.done` is
+pre-login exception is `/usr/lib/leonos/apps/oobe/oobe.elf` while `/var/lib/leonos/oobe.done` is
 absent, so the license screen can expose a narrow `Renew DHCP` recovery button.
 `netctl.elf` also queries `leonos_net_connections` and displays TCP client
 sockets in `SYN_SENT`, `ESTABLISHED`, `TIME_WAIT`, or `CLOSED`. Administrators
@@ -293,9 +298,9 @@ connections owned by their uid.
 
 `serviced.elf` now runs as a protected service task started by the desktop. It
 uses the same `leonos_net_config` and `leonos_net_dhcp_renew` wrappers to keep
-retrying DHCP in the background when `/system/config/services.cfg` has `dhcp=1` and the
+retrying DHCP in the background when `/etc/leonos/services.cfg` has `dhcp=1` and the
 kernel is still using the static fallback. It publishes status to
-`/var/run/services.state` for `servicemgr.elf`.
+`/run/leonos/services.state` for `servicemgr.elf`.
 
 `leonos_socket_tcp` returns an integer socket handle owned by the current task.
 `leonos_socket_connect` accepts a host name or IPv4 literal, resolves DNS A
@@ -359,37 +364,24 @@ by default, while administrators retain full control. Administrators can manage
 users and can take ownership or repair corrupt ACL metadata. Shutdown and reboot
 remain available to any logged-in user.
 
-## Current Limitations
+## Current behavior and limitations
 
-- `fork`, `vfork`, `pipe`, process groups and default signal actions are
-  available; user-installed signal handlers and `clone` are not yet supported.
-- Networking has TCP client sockets and a TLS 1.2 HTTPS client path, but no TCP
-  listener/server mode, UDP socket API, or full retransmission/window-management
-  surface yet.
-- `execve` replaces the caller; use `fork` followed by `execve` to launch a
-  child process.
-- `libleonos.so.1` owns the common process, descriptor, pipe, process-group,
-  PTY foreground-group, priority, resource-limit, and wait wrappers. Their
-  standard declarations come from the SDK's Picolibc headers. `waitpid` with
-  `WNOHANG` returns `0` when no child state is available; blocking waits yield
-  across the kernel's temporary `EAGAIN` response. `vfork` currently has the
-  same COW semantics as `fork`.
-- `nice` and `getpriority` return standard priorities in the `-20..19` range.
-  Raw syscall users receive `priority + 20` and must subtract 20 after checking
-  for a negative errno; the shared runtime performs that decoding.
-- Terminal Ctrl+C/Ctrl+Z actions are delivered to the foreground process group.
-  `signal()` and `sigaction()` support only `SIG_DFL` and `SIG_IGN` dispositions;
-  `sigprocmask` and arbitrary user-installed signal handlers remain unavailable.
-- The shared runtime contains the common ANSI curses subset used by Nano and
-  `sl`; applications should include the SDK's `<curses.h>` or `<ncurses.h>`
-  instead of carrying a private terminal shim.
-- `libleonos.so.1` also supplies the common POSIX adapters for file status,
-  directory iteration and `fcntl`; third-party ports should use the SDK's
-  normal Picolibc headers rather than copying those wrappers into each port.
-- File-backed `mmap` is private and read-only.
-- Open permissions are ACL checks, not a full Unix permission model.
-- FAT32 and the supported ext2 subset do not expose LeonOS ACLs as native
-  ownership/mode metadata; LeonOS stores ACL metadata in hidden `LEONACL.SYS`
-  sidecar files and enforces it at syscall/ioctl boundaries.
-- `ioctl` is intentionally broad and should be split into dedicated syscalls or
-  narrower devices as the ABI stabilizes.
+Standard C/POSIX wrappers, pthread and signals use musl. The kernel supports
+native signal frames, a clone/futex thread subset and Unix STREAM/DGRAM/
+SEQPACKET sockets including SCM_RIGHTS. Tested behavior and outstanding flags,
+errors, lifecycle and concurrency cases remain itemized in the ABI ledger.
+
+- True parent-suspending vfork, complete wait4 options/rusage and full clone
+  semantics remain incomplete. SIGCHLD group-exit notification is implemented;
+  complete siginfo, automatic reaping and reparenting remain outstanding.
+- Raw getpriority returns `20 - priority`; libc performs the API conversion.
+- NOFILE/AS soft/hard limits and prlimit64 share state across pthreads and copy
+  at fork; other resources and complete enforcement remain incomplete.
+- File access enforces owner/group/other Unix DAC with mode, UID and GID.
+  chmod/chown work for the verified subset. ext2 stores native metadata;
+  FAT/exFAT use LeonOS metadata records. Full inode lifetime and special-bit
+  behavior remain outstanding.
+- File-backed mappings, INET servers/UDP/IPv6, PTY lock/hangup, event APIs and
+  all remaining audit rows are still in scope. AP user scheduling is disabled;
+  BSP preemption tests do not establish SMP compatibility.
+

@@ -7,7 +7,7 @@
 #include <leonos/http.h>
 #include <leonos/i18n.h>
 #include <leonos/launch.h>
-#include <leonos/net.h>
+#include <leonos/net_service.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
@@ -15,6 +15,7 @@
 #include <leonos/ui.h>
 
 #include "litehtml_core.h"
+#include <leonos/layout.h>
 
 #define BROWSER_INITIAL_W 860U
 #define BROWSER_INITIAL_H 600U
@@ -79,8 +80,8 @@
 #define BROWSER_GO_W 54U
 #define BROWSER_DEVTOOLS_MIN_H 118U
 #define BROWSER_DEVTOOLS_MAX_H 142U
-#define BROWSER_FONT_PATH "/system/fonts/times-new-roman.ttf"
-#define BROWSER_FONT_FALLBACK_PATH "/system/fonts/simsun.ttc"
+#define BROWSER_FONT_PATH LEONOS_PATH_BROWSER_FONT
+#define BROWSER_FONT_FALLBACK_PATH LEONOS_PATH_BROWSER_CJK_FONT
 #define BROWSER_USER_AGENT                                                   \
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "        \
     "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
@@ -128,8 +129,8 @@ enum browser_menu_command {
 };
 
 struct parsed_http_url {
-    char host[LEONOS_NET_HOSTNAME_LEN];
-    char path[LEONOS_NET_HTTP_PATH_LEN];
+    char host[NET_SERVICE_HOSTNAME_LEN];
+    char path[NET_SERVICE_HTTP_PATH_LEN];
     uint32_t port;
     uint8_t secure;
 };
@@ -193,7 +194,7 @@ struct browser_bookmark {
 };
 
 struct browser_basic_auth {
-    char host[LEONOS_NET_HOSTNAME_LEN];
+    char host[NET_SERVICE_HOSTNAME_LEN];
     uint32_t port;
     char header[256];
 };

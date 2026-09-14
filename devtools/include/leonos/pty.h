@@ -2,94 +2,37 @@
 #define LEONOS_PTY_H
 
 #include <stdint.h>
-
-#define LEONOS_PTY_IOCTL_CREATE 0x4c505443UL
-#define LEONOS_PTY_IOCTL_READ_OUTPUT 0x4c505452UL
-#define LEONOS_PTY_IOCTL_WRITE_INPUT 0x4c505457UL
-#define LEONOS_PTY_IOCTL_SPAWN 0x4c505453UL
-#define LEONOS_PTY_IOCTL_SELF 0x4c505449UL
-#define LEONOS_PTY_IOCTL_INPUT_AVAILABLE 0x4c505441UL
-#define LEONOS_PTY_IOCTL_GET_ATTR 0x4c505447UL
-#define LEONOS_PTY_IOCTL_SET_ATTR 0x4c505454UL
-#define LEONOS_PTY_IOCTL_OWNER_GET_ATTR 0x4c50544dUL
-#define LEONOS_PTY_IOCTL_OWNER_SET_ATTR 0x4c50544eUL
-#define LEONOS_PTY_IOCTL_OWNER_GET_WINSIZE 0x4c50544fUL
-#define LEONOS_PTY_IOCTL_OWNER_SET_WINSIZE 0x4c505450UL
-#define LEONOS_PTY_IOCTL_GET_WINSIZE 0x5401UL
-#define LEONOS_PTY_IOCTL_SET_WINSIZE 0x5402UL
-/* Linux-compatible process-group TTY requests used by Picolibc. */
-#define LEONOS_PTY_IOCTL_GET_PGRP 0x540fUL
-#define LEONOS_PTY_IOCTL_SET_PGRP 0x5410UL
+#include <linux/termios.h>
 
 #define LEONOS_PTY_PATH_LEN 160U
-#define LEONOS_PTY_NCCS 11U
-#define LEONOS_PTY_IFLAG_ICRNL 0x0002U
+#define LEONOS_PTY_NCCS LINUX_NCCS
+#define LEONOS_PTY_IFLAG_ICRNL LINUX_ICRNL
+#define LEONOS_PTY_LFLAG_ECHO LINUX_ECHO
+#define LEONOS_PTY_LFLAG_ECHONL LINUX_ECHONL
+#define LEONOS_PTY_LFLAG_ICANON LINUX_ICANON
+#define LEONOS_PTY_LFLAG_IEXTEN LINUX_IEXTEN
+#define LEONOS_PTY_LFLAG_ISIG LINUX_ISIG
 
-struct leonos_pty_io {
-    uint32_t pty_id;
-    uint32_t length;
-    char *buffer;
-};
+#define LEONOS_PTY_CC_VEOF LINUX_VEOF
+#define LEONOS_PTY_CC_VEOL LINUX_VEOL
+#define LEONOS_PTY_CC_VERASE LINUX_VERASE
+#define LEONOS_PTY_CC_VINTR LINUX_VINTR
+#define LEONOS_PTY_CC_VKILL LINUX_VKILL
+#define LEONOS_PTY_CC_VMIN LINUX_VMIN
+#define LEONOS_PTY_CC_VQUIT LINUX_VQUIT
+#define LEONOS_PTY_CC_VSTART LINUX_VSTART
+#define LEONOS_PTY_CC_VSTOP LINUX_VSTOP
+#define LEONOS_PTY_CC_VSUSP LINUX_VSUSP
+#define LEONOS_PTY_CC_VTIME LINUX_VTIME
 
-struct leonos_pty_spawn {
-    uint32_t pty_id;
-    const char *path;
-    char *const *argv;
-    char *const *envp;
-    int32_t stdin_fd;
-    int32_t stdout_fd;
-    int32_t stderr_fd;
-};
+/* Source compatibility only: old Picolibc wire layouts require rebuilding. */
+#define leonos_pty_termios linux_termios2
 
-struct leonos_pty_termios {
-    uint32_t c_iflag;
-    uint32_t c_oflag;
-    uint32_t c_cflag;
-    uint32_t c_lflag;
-    uint8_t c_cc[LEONOS_PTY_NCCS];
-    uint8_t reserved;
-    uint32_t c_ispeed;
-    uint32_t c_ospeed;
-};
-
-struct leonos_pty_termios_request {
-    uint32_t action;
-    uint32_t reserved;
-    struct leonos_pty_termios termios;
-};
-
-struct leonos_pty_termios_io {
-    uint32_t pty_id;
-    uint32_t action;
-    struct leonos_pty_termios termios;
-};
-
+/* The terminal host owns a session but is not itself attached to it. Keep
+ * host-side controls separate from the stdio-based child-process requests. */
 struct leonos_pty_winsize {
     uint16_t ws_row;
     uint16_t ws_col;
 };
-
-struct leonos_pty_winsize_io {
-    uint32_t pty_id;
-    struct leonos_pty_winsize winsize;
-};
-
-int leonos_pty_create(void);
-int leonos_pty_read_output(uint32_t pty_id, char *buffer, uint32_t length);
-int leonos_pty_write_input(uint32_t pty_id, const char *buffer, uint32_t length);
-int leonos_pty_spawn(const char *path, uint32_t pty_id);
-int leonos_pty_spawn_argv(const char *path, uint32_t pty_id,
-                          char *const argv[], char *const envp[]);
-int leonos_pty_spawn_argv_with_fds(const char *path, uint32_t pty_id,
-                                   char *const argv[], char *const envp[],
-                                   int stdin_fd, int stdout_fd, int stderr_fd);
-int leonos_pty_self(void);
-int leonos_pty_input_available(void);
-int leonos_pty_get_termios(uint32_t pty_id, struct leonos_pty_termios *termios);
-int leonos_pty_set_termios(uint32_t pty_id,
-                           const struct leonos_pty_termios *termios);
-int leonos_pty_get_winsize(uint32_t pty_id, struct leonos_pty_winsize *winsize);
-int leonos_pty_set_winsize(uint32_t pty_id,
-                           const struct leonos_pty_winsize *winsize);
 
 #endif

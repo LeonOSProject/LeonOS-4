@@ -2,26 +2,29 @@
 #include <leonos/fs.h>
 #include <leonos/ini.h>
 #include <errno.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
-#define APP_ROOT_SYSTEM "/system/apps"
-#define APP_ROOT_PROGRAMS "/programs"
+#include <leonos/layout.h>
+
+/* One registry root serves both the former system-app and program-app
+ * packages; the manifest's ``system`` key preserves the system flag. */
+#define APP_ROOT LEONOS_LAYOUT_LEONOS_APPS
 
 static struct leonos_app_info registry[LEONOS_APP_REGISTRY_MAX];
 static uint32_t registry_count;
 static uint8_t registry_loaded;
 static uint8_t registry_scanning;
 static uint8_t registry_root_index;
-static int registry_scan_fd = -1;
+static DIR *registry_scan_dir;
 static int registry_scan_error;
-static struct leonos_dir_entry registry_scan_entry;
 
 static const char *const registry_roots[] = {
-    APP_ROOT_SYSTEM,
-    APP_ROOT_PROGRAMS,
+    APP_ROOT,
 };
 
 static void copy_text(char *dst, uint32_t capacity, const char *src)
@@ -123,8 +126,8 @@ static int read_key(const char *manifest, const char *key, char *value,
 
 static int manifest_exists(const char *path)
 {
-    struct leonos_stat st;
-    return path && stat(path, &st) == 0 && st.type == LEONOS_FS_TYPE_FILE;
+    struct stat st;
+    return path && stat(path, &st) == 0 && S_ISREG(st.st_mode);
 }
 
 /* Manifest paths are package metadata, not arbitrary filesystem paths.  Keep
@@ -217,7 +220,7 @@ static int derive_icon(char *icon, uint32_t capacity, const char *exec,
 static int add_package(const char *root, const char *package)
 {
     struct leonos_app_info info;
-    struct leonos_stat st;
+    struct stat st;
     char package_dir[LEONOS_APP_PATH_LEN];
     char manifest[LEONOS_APP_PATH_LEN];
     char legacy_manifest[LEONOS_APP_PATH_LEN];
@@ -248,7 +251,7 @@ static int add_package(const char *root, const char *package)
     copy_text(info.name, sizeof(info.name), package);
     copy_text(info.version, sizeof(info.version), "system");
     copy_text(info.category, sizeof(info.category), "Applications");
-    info.flags = text_eq(root, APP_ROOT_SYSTEM) ? LEONOS_APP_FLAG_SYSTEM : 0U;
+    info.flags = 0;
     package_len = text_len(package);
     if (package_len + 5U >= sizeof(fallback_exec) ||
         !join_path(fallback_exec, sizeof(fallback_exec), package_dir, package)) return 0;
@@ -270,6 +273,7 @@ static int add_package(const char *root, const char *package)
         }
         if (read_key(manifest_path, "commands", value, sizeof(value))) copy_text(info.commands, sizeof(info.commands), value);
         if (read_key(manifest_path, "extensions", value, sizeof(value))) copy_text(info.extensions, sizeof(info.extensions), value);
+        if (read_key(manifest_path, "system", value, sizeof(value)) && bool_value(value, 0)) info.flags |= LEONOS_APP_FLAG_SYSTEM;
         if (read_key(manifest_path, "entry", value, sizeof(value)) && bool_value(value, 1)) info.flags |= LEONOS_APP_FLAG_ENTRY;
         if (read_key(manifest_path, "terminal", value, sizeof(value)) && bool_value(value, 0)) info.flags |= LEONOS_APP_FLAG_TERMINAL;
         if (read_key(manifest_path, "hidden", value, sizeof(value)) && bool_value(value, 0)) info.flags |= LEONOS_APP_FLAG_HIDDEN;
@@ -282,7 +286,7 @@ static int add_package(const char *root, const char *package)
         }
     }
     if (!info.icon[0]) derive_icon(info.icon, sizeof(info.icon), info.exec, package_dir, 0);
-    if (stat(info.exec, &st) != 0 || st.type != LEONOS_FS_TYPE_FILE || app_has_id(info.id)) return 0;
+    if (stat(info.exec, &st) != 0 || !S_ISREG(st.st_mode) || app_has_id(info.id)) return 0;
     if (!info.commands[0]) copy_text(info.commands, sizeof(info.commands), info.id);
     registry[registry_count++] = info;
     return 1;
@@ -290,9 +294,9 @@ static int add_package(const char *root, const char *package)
 
 int leonos_app_registry_begin_refresh(void)
 {
-    if (registry_scan_fd >= 0) {
-        close(registry_scan_fd);
-        registry_scan_fd = -1;
+    if (registry_scan_dir) {
+        closedir(registry_scan_dir);
+        registry_scan_dir = 0;
     }
     registry_count = 0;
     registry_loaded = 0;
@@ -308,47 +312,51 @@ int leonos_app_registry_refresh_step(uint32_t budget)
     if (!registry_scanning) return registry_scan_error < 0 ? registry_scan_error : -1;
     if (budget == 0) budget = 1;
     while (budget) {
-        int ret;
-        if (registry_scan_fd < 0) {
+        if (!registry_scan_dir) {
             while (registry_root_index < sizeof(registry_roots) / sizeof(registry_roots[0])) {
-                registry_scan_fd = open(registry_roots[registry_root_index], LEONOS_O_RDONLY, 0);
-                if (registry_scan_fd >= 0) break;
-                if (registry_scan_fd != -ENOENT) {
-                    registry_scan_error = registry_scan_fd;
+                registry_scan_dir = opendir(registry_roots[registry_root_index]);
+                if (registry_scan_dir) break;
+                if (errno != ENOENT) {
+                    registry_scan_error = -errno;
                     registry_scanning = 0;
                     return registry_scan_error;
                 }
                 ++registry_root_index;
             }
-            if (registry_scan_fd < 0) {
+            if (!registry_scan_dir) {
                 registry_scanning = 0;
                 registry_loaded = 1;
                 return 0;
             }
         }
-        ret = leonos_readdir(registry_scan_fd, &registry_scan_entry);
-        if (ret < 0) {
-            close(registry_scan_fd);
-            registry_scan_fd = -1;
-            registry_scan_error = ret;
-            registry_scanning = 0;
-            return ret;
+        errno = 0;
+        {
+            struct dirent *entry = readdir(registry_scan_dir);
+            if (!entry && errno != 0) {
+                registry_scan_error = -errno;
+                closedir(registry_scan_dir);
+                registry_scan_dir = 0;
+                registry_scanning = 0;
+                return registry_scan_error;
+            }
+            if (!entry) {
+                closedir(registry_scan_dir);
+                registry_scan_dir = 0;
+                ++registry_root_index;
+                continue;
+            }
+            if (entry->d_type == DT_DIR) {
+                (void)add_package(registry_roots[registry_root_index], entry->d_name);
+            }
         }
-        if (ret == 0) {
-            close(registry_scan_fd);
-            registry_scan_fd = -1;
-            ++registry_root_index;
-            continue;
-        }
-        if (registry_scan_entry.type == LEONOS_FS_TYPE_DIR) {
-            (void)add_package(registry_roots[registry_root_index],
-                              registry_scan_entry.name);
-        }
+        /* A single directory record consumes one refresh budget. */
         --budget;
     }
     return 1;
 }
 
+/* Keep the synchronous API as a thin wrapper over the incremental scanner so
+ * callers and the desktop share one registry implementation. */
 int leonos_app_registry_refresh(void)
 {
     int ret;

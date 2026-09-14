@@ -56,8 +56,15 @@ def main() -> int:
     generated = generate(components)
     assert "config LEON_COMPONENT_APP_HELLO_BUILD" in generated
     assert "config LEON_COMPONENT_APP_HELLOWORLD_API" in generated
-    assert "config LEON_COMPONENT_TOOL_TCC_API" not in generated
     assert "select LEON_COMPONENT_LIB_STARDUSTUI_BUILD" in generated
+    assert "select LEON_COMPONENT_LIB_NCURSES_BUILD" in generated
+    vim_only = {component.build_symbol: "n" for component in components}
+    vim_only["CONFIG_LEON_COMPONENT_TOOL_VIM_BUILD"] = "y"
+    selected = resolve_components(components, vim_only)
+    assert selected["vim"]["build"] and selected["ncurses"]["build"]
+    shipped = resolve_components(components, {})
+    assert shipped["vim"]["image"] and shipped["ncurses"]["image"]
+    assert shipped["ncurses"]["sdk"]
 
     defaults = {
         component.build_symbol: "n"
@@ -81,10 +88,10 @@ def main() -> int:
     unsupported_api_values = {
         component.build_symbol: "n" for component in components
     }
-    unsupported_api_values["CONFIG_LEON_COMPONENT_TOOL_TCC_BUILD"] = "y"
-    unsupported_api_values["CONFIG_LEON_COMPONENT_TOOL_TCC_API"] = "y"
+    unsupported_api_values["CONFIG_LEON_COMPONENT_TOOL_FILE_BUILD"] = "y"
+    unsupported_api_values["CONFIG_LEON_COMPONENT_TOOL_FILE_API"] = "y"
     unsupported_api_selection = resolve_components(components, unsupported_api_values)
-    assert not unsupported_api_selection["tcc"]["api"], (
+    assert not unsupported_api_selection["file"]["api"], (
         "components without an API package must ignore stale API symbols"
     )
 

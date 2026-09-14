@@ -23,6 +23,9 @@ int net_is_ready(void);
  * @brief Copy the current interface configuration (IP, MAC, flags) into config; 0 on success.
  */
 int net_get_config(struct leonos_net_config *config);
+void net_poll_packets(void);
+int net_ipv4_send_udp(uint32_t source, uint32_t destination, uint16_t source_port,
+                       uint16_t destination_port, const void *data, uint32_t length);
 /**
  * @brief Read or change the DNS resolver mode and server; results and status are written back into request.
  */
@@ -72,6 +75,22 @@ int net_socket_close(struct leonos_net_socket_close *request, uint32_t owner_pid
  * @brief List the connections visible to viewer into request; 0 on success.
  */
 int net_connections(struct leonos_net_connection_list *request, const struct task *viewer);
+/**
+ * @brief Report poll readiness for an AF_INET fd socket.
+ */
+short net_socket_poll_fd(int32_t handle, uint32_t owner_pid, short events);
+void net_socket_pin_fd(int32_t handle);
+void net_socket_release_fd(int32_t handle);
+int net_socket_error(int32_t handle, bool clear);
+int net_socket_available(int32_t handle);
+int net_socket_connect_fd(int32_t handle, uint32_t ip, uint16_t port, bool nonblock);
+int net_socket_shutdown_fd(int32_t handle, int how);
+/**
+ * @brief Fill local/remote IPv4 endpoints for getsockname/getpeername.
+ */
+int net_socket_address(int32_t handle, uint32_t owner_pid,
+                       uint32_t *local_ip, uint16_t *local_port,
+                       uint32_t *remote_ip, uint16_t *remote_port);
 /**
  * @brief Close every socket owned by owner_pid (used when a process exits).
  */

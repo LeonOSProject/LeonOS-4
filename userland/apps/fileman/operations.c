@@ -40,7 +40,7 @@ static int build_recycle_dir(char *dst, uint32_t cap)
         return -1;
     }
     build_path_join(dst, cap, home_path, "recycle-bin");
-    return mkdir(dst, 0) < 0 && stat(dst, &(struct leonos_stat){0}) < 0 ? -1 : 0;
+    return mkdir(dst, 0777) < 0 && leonos_stat_legacy(dst, &(struct leonos_stat){0}) < 0 ? -1 : 0;
 }
 
 static void build_path_in_dir(char *dst, uint32_t cap, const char *dir,
@@ -101,7 +101,7 @@ static int choose_target_path(const char *dir, const char *name,
     struct leonos_stat st;
     char candidate[LEONOS_FS_NAME_LEN];
     build_path_in_dir(dst, cap, dir, name);
-    if (stat(dst, &st) < 0) {
+    if (leonos_stat_legacy(dst, &st) < 0) {
         return 0;
     }
     if (leonos_ui_show_confirm_dialog(T("File Conflict", "文件冲突"),
@@ -114,7 +114,7 @@ static int choose_target_path(const char *dir, const char *name,
     for (uint32_t serial = 2; serial < 100U; ++serial) {
         build_copy_name(candidate, sizeof(candidate), name, serial);
         build_path_in_dir(dst, cap, dir, candidate);
-        if (stat(dst, &st) < 0) {
+        if (leonos_stat_legacy(dst, &st) < 0) {
             return 0;
         }
     }
@@ -127,13 +127,13 @@ static int choose_free_target_path(const char *dir, const char *name,
     struct leonos_stat st;
     char candidate[LEONOS_FS_NAME_LEN];
     build_path_in_dir(dst, cap, dir, name);
-    if (stat(dst, &st) < 0) {
+    if (leonos_stat_legacy(dst, &st) < 0) {
         return 0;
     }
     for (uint32_t serial = 2; serial < 100U; ++serial) {
         build_copy_name(candidate, sizeof(candidate), name, serial);
         build_path_in_dir(dst, cap, dir, candidate);
-        if (stat(dst, &st) < 0) {
+        if (leonos_stat_legacy(dst, &st) < 0) {
             return 0;
         }
     }
@@ -145,7 +145,7 @@ static int remove_tree(const char *path, uint32_t depth)
     struct leonos_stat st;
     int fd;
     int ret;
-    if (depth > FILEMAN_COPY_MAX_DEPTH || stat(path, &st) < 0) {
+    if (depth > FILEMAN_COPY_MAX_DEPTH || leonos_stat_legacy(path, &st) < 0) {
         return -1;
     }
     if (st.type != LEONOS_FS_TYPE_DIR) {
@@ -183,7 +183,9 @@ static int copy_file(const char *src, const char *dst, uint64_t total,
     if (in < 0) {
         return in;
     }
-    out = open(dst, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0);
+    struct stat source;
+    if (fstat(in, &source) < 0) { close(in); return -1; }
+    out = open(dst, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, source.st_mode & 0777);
     if (out < 0) {
         close(in);
         return out;
@@ -221,14 +223,14 @@ static int copy_tree(const char *src, const char *dst, uint64_t total,
 {
     struct leonos_stat st;
     int ret;
-    if (depth > FILEMAN_COPY_MAX_DEPTH || stat(src, &st) < 0) {
+    if (depth > FILEMAN_COPY_MAX_DEPTH || leonos_stat_legacy(src, &st) < 0) {
         return -1;
     }
     if (st.type != LEONOS_FS_TYPE_DIR) {
         return copy_file(src, dst, total, done, base_percent, span_percent);
     }
-    ret = mkdir(dst, 0);
-    if (ret < 0 && stat(dst, &(struct leonos_stat){0}) < 0) {
+    ret = mkdir(dst, 0777);
+    if (ret < 0 && leonos_stat_legacy(dst, &(struct leonos_stat){0}) < 0) {
         return ret;
     }
     {
@@ -262,7 +264,7 @@ static uint64_t path_bytes(const char *path)
 {
     struct leonos_stat st;
     struct folder_size_info info = {0};
-    if (stat(path, &st) < 0) {
+    if (leonos_stat_legacy(path, &st) < 0) {
         return 0;
     }
     if (st.type == LEONOS_FS_TYPE_DIR) {
@@ -283,7 +285,7 @@ void copy_selected_entries(uint8_t cut)
     for (uint32_t i = 0; i < entry_count && i < FILEMAN_CLIPBOARD_MAX; ++i) {
         if (fileman_entry_marked(i) ||
             (!fileman_selected_count() && i == (uint32_t)(file_list.selected < 0 ? entry_count : file_list.selected))) {
-            if (entries[i].type == LEONOS_FS_TYPE_DEVICE) {
+            if (fileman_entry_is_device(i)) {
                 continue;
             }
             build_child_path(clipboard_paths[count], sizeof(clipboard_paths[count]),
@@ -418,7 +420,7 @@ static void recycle_map_save(const char *dir)
     char path[LEONOS_FS_PATH_LEN];
     int fd;
     build_path_in_dir(path, sizeof(path), dir, FILEMAN_RECYCLE_MAP);
-    fd = open(path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0);
+    fd = open(path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
     if (fd >= 0) {
         (void)write(fd, recycle_map, text_len(recycle_map));
         close(fd);
@@ -521,7 +523,7 @@ void recycle_selected_entries(void)
         char dst[LEONOS_FS_PATH_LEN];
         int selected = fileman_entry_marked(i) ||
             (!fileman_selected_count() && i == (uint32_t)file_list.selected);
-        if (!selected || entries[i].type == LEONOS_FS_TYPE_DEVICE) {
+        if (!selected || fileman_entry_is_device(i)) {
             continue;
         }
         build_child_path(src, sizeof(src), entries[i].name);
@@ -558,12 +560,12 @@ void restore_selected_entry(void)
         return;
     }
     build_child_path(src, sizeof(src), entries[file_list.selected].name);
-    if (stat(origin, &(struct leonos_stat){0}) == 0 &&
+    if (leonos_stat_legacy(origin, &(struct leonos_stat){0}) == 0 &&
         !leonos_ui_show_confirm_dialog(T("Restore Conflict", "还原冲突"),
                                        T("Original path exists. Replace it?", "原始路径已存在。要替换它吗？"), 0)) {
         return;
     }
-    if (stat(origin, &(struct leonos_stat){0}) == 0 && remove_tree(origin, 0) < 0) {
+    if (leonos_stat_legacy(origin, &(struct leonos_stat){0}) == 0 && remove_tree(origin, 0) < 0) {
         set_status(T("Could not replace original item", "无法替换原始项目"));
         return;
     }
@@ -624,7 +626,7 @@ void permanent_delete_selected_entries(void)
         char path[LEONOS_FS_PATH_LEN];
         int selected = fileman_entry_marked(i) ||
             (!fileman_selected_count() && i == (uint32_t)file_list.selected);
-        if (!selected || entries[i].type == LEONOS_FS_TYPE_DEVICE) {
+        if (!selected || fileman_entry_is_device(i)) {
             continue;
         }
         build_child_path(path, sizeof(path), entries[i].name);

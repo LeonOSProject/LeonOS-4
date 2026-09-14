@@ -496,7 +496,7 @@ int leonos_ui_show_password_dialog(const char *title, const char *label,
                          i + 1 < capacity && value[i]; ++i) {
         original[i] = value[i];
     }
-    window_id = leonos_gui_create_app_window_ex(title ? title : "Password",
+    window_id = leonos_gui_create_app_window_ex(title ? title : UI_T("Password", "密码"),
                                                  label ? label : "",
                                                  W, H,
                                                  LEONOS_GUI_WINDOW_NO_RESIZE);
@@ -523,9 +523,9 @@ int leonos_ui_show_password_dialog(const char *title, const char *label,
         leonos_ui_edit_state_draw(&surface, 16, 46, W - 32, &shown,
                                   LEONOS_UI_EDIT_SECURE);
         leonos_ui_button(&surface, W - 168, H - 38, 72, LEONOS_UI_BUTTON_H,
-                         "OK", 0);
+                         UI_T("OK", "确定"), 0);
         leonos_ui_button(&surface, W - 88, H - 38, 72, LEONOS_UI_BUTTON_H,
-                         "Cancel", 0);
+                         UI_T("Cancel", "取消"), 0);
         leonos_gui_present_window((uint32_t)window_id, W, H, W, pixels);
         event.window_id = (uint32_t)window_id;
         if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
@@ -997,7 +997,7 @@ static int ui_file_dialog_activate(const char *title, int save_mode,
             return 0;
         }
         ui_build_child_path(full_path, sizeof(full_path), dir_path, filename);
-        if (stat(full_path, &st) < 0 || st.type != LEONOS_FS_TYPE_FILE) {
+        if (leonos_stat_legacy(full_path, &st) < 0 || st.type != LEONOS_FS_TYPE_FILE) {
             ui_file_dialog_status(status, status_cap,
                                   UI_T("File not found ", "找不到文件："), full_path);
             return 0;
@@ -1021,7 +1021,7 @@ static int ui_file_dialog_activate(const char *title, int save_mode,
     } else {
         ui_build_child_path(full_path, sizeof(full_path), dir_path, filename);
     }
-    if (stat(full_path, &st) == 0 && st.type == LEONOS_FS_TYPE_FILE) {
+    if (leonos_stat_legacy(full_path, &st) == 0 && st.type == LEONOS_FS_TYPE_FILE) {
         if (!leonos_ui_show_confirm_dialog(title ? title : UI_T("Save As", "另存为"),
                                            UI_T("This file already exists. Replace it?",
                                                 "文件已存在。是否替换？"),

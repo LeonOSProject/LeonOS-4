@@ -1,9 +1,8 @@
-#include <leonos/pty.h>
-#include <leonos/syscall.h>
+#include <poll.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/termios.h>
+#include <termios.h>
 #include <unistd.h>
 
 #define MATRIX_MAX_COLUMNS 120U
@@ -242,7 +241,8 @@ static void render_matrix(const struct matrix_state *state)
 static int read_key(void)
 {
     unsigned char character;
-    if (leonos_pty_input_available() <= 0 ||
+    struct pollfd input = {STDIN_FILENO, POLLIN, 0};
+    if (poll(&input, 1, 0) <= 0 || !(input.revents & POLLIN) ||
         read(STDIN_FILENO, &character, 1) != 1) {
         return 0;
     }
@@ -286,7 +286,7 @@ int main(void)
             update_matrix(&state);
         }
         render_matrix(&state);
-        sleep_ms(MATRIX_FRAME_MS);
+        (void)poll(0, 0, MATRIX_FRAME_MS);
     }
     restore_terminal();
     write_all("\n");

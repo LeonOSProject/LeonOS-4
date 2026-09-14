@@ -12,6 +12,7 @@
 #include <ntclks/pci.h>
 #include <ntclks/storage.h>
 #include <ntclks/time.h>
+#include <leonos/layout.h>
 
 #include "arch/x86_64/port.h"
 
@@ -45,8 +46,8 @@ static void early_serial_write(const char *text)
     }
 }
 
-#define DRIVER_DIRECTORY "/drivers"
-#define DRIVER_CONFIG_PATH "/system/config/drivers.conf"
+#define DRIVER_DIRECTORY LEONOS_LAYOUT_LEONOS_DRIVERS
+#define DRIVER_CONFIG_PATH LEONOS_PATH_DRIVERS_CONF
 #define DRIVER_CONFIG_CAP 1024U
 #define DRIVER_ELF_MAX_SECTIONS 64U
 #define DRIVER_ELF_MAX_IMAGE (4U * 1024U * 1024U)
@@ -269,7 +270,7 @@ static int driver_load_order_compare(const char *left, const char *right)
 }
 
 /**
- * @brief Build "/drivers/<file>" into dst, clamped to cap bytes and NUL-terminated.
+ * @brief Build "/usr/lib/leonos/drivers/<file>" into dst, clamped to cap bytes and NUL-terminated.
  */
 static void driver_make_path(char *dst, uint32_t cap, const char *file)
 {
@@ -1351,7 +1352,7 @@ int e1000_is_ready(void)
  */
 const uint8_t *e1000_mac(void)
 {
-    return e1000_is_ready() ? e1000_ops->mac() : e1000_empty_mac;
+    return e1000_ops && e1000_ops->mac ? e1000_ops->mac() : e1000_empty_mac;
 }
 
 /**
@@ -1371,7 +1372,7 @@ int e1000_poll(void *frame, uint32_t capacity, uint32_t *out_len)
 }
 
 /**
- * @brief Copy the driver's NIC info into info, zeroing it first when no driver is ready.
+ * @brief Copy NIC identity independently of carrier state.
  */
 void e1000_get_info(struct e1000_info *info)
 {
@@ -1380,7 +1381,7 @@ void e1000_get_info(struct e1000_info *info)
         return;
     }
     *info = (struct e1000_info){0};
-    if (!e1000_is_ready()) {
+    if (!e1000_ops || !e1000_ops->get_info) {
         return;
     }
     e1000_ops->get_info(&source);

@@ -1,16 +1,19 @@
 # LeonOS BusyBox profile
 
-The image builds BusyBox 1.36.1 as `/programs/busybox/busybox.elf` with a
+The image builds BusyBox 1.36.1 as `/bin/busybox` with a
 small, static collection of file and text applets. Double-clicking it opens a
 terminal and prints the applet list. Invoke a specific applet with:
 
 ```text
-/programs/busybox/busybox.elf ls /
+/bin/busybox ls /
 ```
 
 The profile includes BusyBox `ash` behind the `sh` applet with native
-`fork`/`exec`, pipelines, redirections, background jobs, and `jobs`/`fg`/`bg`.
-It supports simple command lines, shell built-ins, and the bundled applets (`ls`, `pwd`, `cat`,
+`fork`/`exec`, pipelines, redirections, and background process creation.
+Interactive ash job-control (`jobs`/`fg`/`bg`) is disabled until the kernel
+implements the Linux SIGTTIN/SIGTTOU stop-and-continue protocol; this avoids
+an initialization loop before the first TTY prompt. It supports simple
+command lines, shell built-ins, and the bundled applets (`ls`, `pwd`, `cat`,
 `echo`, `clear`, `grep`, `head`, `tail`, `wc`, `sha256sum`, `basename`, `dirname`, `printf`, `diff`,
 `less`, `ps`, and `kill`,
 `mkdir`, `rmdir`, `cp`, `mv`, `rm`, `unlink`, `printenv`, `uname`, `sleep`,
@@ -30,7 +33,7 @@ than Linux block-device ioctls. Formatting, partition changes, and mount
 operations require an administrator account; the running boot disk is
 protected.
 
-The installer ISO additionally provides `/programs/gptinit/gptinit.elf` for
+The installer ISO additionally provides `/usr/lib/leonos/apps/gptinit/gptinit.elf` for
 blank disks. `gptinit /dev/diskN` initializes a protective MBR and empty
 primary/backup GPT pair after an explicit `YES` confirmation;
 `gptinit --force /dev/diskN` skips confirmation and may replace a valid GPT.
@@ -84,22 +87,24 @@ LeonOS filesystem ABI. Symbolic links, ownership changes, and special device
 nodes remain unsupported by the filesystem and return an error.
 
 The `file` command is provided as an external program backed by upstream
-libmagic. Ash resolves it to `/programs/file/file.elf`; the matching
-compiled database is installed at `/system/share/misc/magic.mgc`.
-`fastfetch` is likewise resolved to `/programs/fastfetch/fastfetch.elf`.
-The `sl` terminal joke is resolved to `/programs/sl/sl.elf`.
+libmagic. Ash resolves it to `/usr/bin/file`; the matching
+compiled database is installed at `/usr/share/misc/magic.mgc`.
+`fastfetch` is likewise resolved to `/usr/lib/leonos/apps/fastfetch/fastfetch.elf`.
+The `sl` terminal joke is resolved to `/usr/bin/sl`.
 
 The kernel provides process inspection through the task snapshot ABI,
 same-user signal termination, COW `fork`, `execve`, process groups, foreground
 PTY groups, and nice-style priorities. `kill` and graphical task tools use
 those interfaces. Ash uses normal pipelines and redirections (`<`, `>`, `>>`,
-`2>`), and handles `Ctrl+C`/`Ctrl+Z` through the PTY foreground group. The
+`2>`), and handles `Ctrl+C` through the PTY input path. Interactive ash job
+control remains disabled because the kernel does not yet implement the
+SIGTTIN/SIGTTOU stop-and-continue protocol. The
 POSIX `SIG_DFL` and `SIG_IGN` dispositions are available; arbitrary user-space
 signal handlers and shared file offsets after `fork` are not yet exposed.
 Ash does not use the legacy PTY-launch adapter: its commands use the upstream
 MMU `fork`/`pipe`/`dup2`/`execvp`/`waitpid` flow. The remaining
 BusyBox adapter only maps bare applet names to the single
-`/programs/busybox/busybox.elf` executable and maps bundled external tools
+`/bin/busybox` executable and maps bundled external tools
 to their installed paths.
 
 BusyBox is GPL-2.0-only; `LICENSE` and upstream version information are staged

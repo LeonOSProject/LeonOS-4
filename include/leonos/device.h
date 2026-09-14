@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-#define LEONOS_IOCTL_DEVICE_LIST 0x4c444556UL
 
 #define LEONOS_DEVICE_MAX 24U
 #define LEONOS_DEVICE_NAME_LEN 32U
@@ -23,8 +22,8 @@
 #define LEONOS_DEVICE_FLAG_BOOT 0x00000004U
 #define LEONOS_DEVICE_FLAG_REMOVABLE 0x00000008U
 
-/* Canonical devfs paths.  Applications should use these names instead of
- * relying on the historical control descriptor (fd 3). */
+/* Canonical devfs paths. The historical fd 3 control descriptor no longer
+ * exists; applications must open the device node they intend to use. */
 #define LEONOS_DEV_NULL "/dev/null"
 #define LEONOS_DEV_ZERO "/dev/zero"
 #define LEONOS_DEV_FULL "/dev/full"
@@ -35,11 +34,13 @@
 #define LEONOS_DEV_PTMX "/dev/ptmx"
 #define LEONOS_DEV_FB0 "/dev/fb0"
 #define LEONOS_DEV_INPUT_EVENT0 "/dev/input/event0"
-#define LEONOS_DEV_AUDIO0 "/dev/audio0"
+#define LEONOS_DEV_INPUT_EVENT1 "/dev/input/event1"
+/* Linux OSS PCM playback device. */
+#define LEONOS_DEV_DSP "/dev/dsp"
 #define LEONOS_DEV_SERIAL0 "/dev/serial0"
-#define LEONOS_DEV_NET0 "/dev/net0"
 #define LEONOS_DEV_DISK0 "/dev/disk0"
-#define LEONOS_DEV_DRIVERCTL "/dev/driverctl"
+#define LEONOS_DEV_GPU "/dev/gpu"
+#define LEONOS_DEV_SHM0 "/dev/shm0"
 
 struct leonos_device_info {
     uint32_t id;

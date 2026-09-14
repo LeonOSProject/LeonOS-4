@@ -96,6 +96,9 @@ static int fat32_read_fat_entry(uint32_t cluster, uint32_t *out_next)
     }
     offset += (uint32_t)(sector - storage_fat_cache.first_lba) * SECTOR_SIZE;
     if (offset + sizeof(uint32_t) > storage_fat_cache.sector_count * SECTOR_SIZE) {
+        console_printf("[storage] fat entry range cluster=%u sector=%llu offset=%u cache_sectors=%u\n",
+                       cluster, (unsigned long long)sector, offset,
+                       storage_fat_cache.sector_count);
         return -5;
     }
     uint32_t value = *(const uint32_t *)(const void *)(storage_fat_cache_data + offset);
@@ -261,16 +264,17 @@ static int fat32_write_fsinfo(void)
     storage_put_u32(storage_scratch + 492u, g_storage.next_free_cluster);
     storage_put_u32(storage_scratch + 508u, 0xaa550000u);
     primary_lba = g_storage.esp_start_lba + g_storage.fat_fs_info_sector;
-    if (storage_write_sectors(primary_lba, 1u, storage_scratch) < 0) {
-        return -5;
+    int ret = storage_write_sectors(primary_lba, 1u, storage_scratch);
+    if (ret < 0) {
+        return ret;
     }
     if (g_storage.fat_backup_boot_sector &&
         (uint32_t)g_storage.fat_backup_boot_sector + g_storage.fat_fs_info_sector <
             g_storage.fat_start_sector &&
-        storage_write_sectors(g_storage.esp_start_lba + g_storage.fat_backup_boot_sector +
-                                  g_storage.fat_fs_info_sector,
-                              1u, storage_scratch) < 0) {
-        return -5;
+        (ret = storage_write_sectors(g_storage.esp_start_lba + g_storage.fat_backup_boot_sector +
+                                     g_storage.fat_fs_info_sector,
+                                     1u, storage_scratch)) < 0) {
+        return ret;
     }
     return 0;
 }

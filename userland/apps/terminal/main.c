@@ -2,13 +2,17 @@
 #include <leonos/environment.h>
 #include <leonos/launch.h>
 #include <leonos/i18n.h>
-#include <leonos/pty.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
 #include <leonos/ui.h>
+#include <pty.h>
+#include <errno.h>
 #include <stdio.h>
+#include <signal.h>
+#include <fcntl.h>
 #include <termios.h>
+#include <unistd.h>
 
 #define TERMINAL_DEFAULT_W 760U
 #define TERMINAL_DEFAULT_H 480U
@@ -22,6 +26,9 @@
 #define TERMINAL_BODY_X 0U
 #define TERMINAL_MAX_COLUMNS (TERMINAL_MAX_W / LEONOS_FONT_W)
 #define TERMINAL_CSI_PARAM_CAP 12U
+#define TERMINAL_OSC_CAP 64U
+#define TERMINAL_DEFAULT_FOREGROUND 0x00d7e3f4U
+#define TERMINAL_DEFAULT_BACKGROUND 0x00000000U
 /* Keep a complete typical curses redraw in one terminal frame.  Smaller
  * batches make full-screen programs redraw and present the window repeatedly. */
 #define TERMINAL_OUTPUT_BUDGET 8192U
@@ -34,6 +41,8 @@ enum terminal_escape_state {
     TERMINAL_TEXT,
     TERMINAL_ESCAPE,
     TERMINAL_CSI,
+    TERMINAL_OSC,
+    TERMINAL_OSC_ESCAPE,
 };
 
 struct terminal_cell {
@@ -77,7 +86,8 @@ struct terminal_session {
     uint32_t cursor_column;
     uint32_t saved_line;
     uint32_t saved_column;
-    uint32_t pty_id;
+    int pty_fd;
+    pid_t child_pid;
     uint32_t text_foreground;
     uint32_t text_background;
     int8_t foreground_index;
@@ -93,6 +103,9 @@ struct terminal_session {
     uint16_t csi_params[TERMINAL_CSI_PARAM_CAP];
     uint8_t csi_param_count;
     uint8_t csi_private;
+    char osc[TERMINAL_OSC_CAP];
+    uint8_t osc_length;
+    uint8_t osc_overflow;
     uint8_t utf8_bytes[4];
     uint8_t utf8_length;
     uint8_t utf8_expected;
@@ -119,7 +132,7 @@ static const char *const terminal_tab_labels[TERMINAL_MAX_SESSIONS] = {
 #define cursor_column (active_session->cursor_column)
 #define saved_line (active_session->saved_line)
 #define saved_column (active_session->saved_column)
-#define active_pty_id (active_session->pty_id)
+#define active_pty_fd (active_session->pty_fd)
 #define text_foreground (active_session->text_foreground)
 #define text_background (active_session->text_background)
 #define foreground_index (active_session->foreground_index)
@@ -202,8 +215,8 @@ static uint32_t terminal_style_background(void)
 
 static void terminal_reset_style(void)
 {
-    text_foreground = 0x00d7e3f4U;
-    text_background = 0x00000000U;
+    text_foreground = TERMINAL_DEFAULT_FOREGROUND;
+    text_background = TERMINAL_DEFAULT_BACKGROUND;
     foreground_index = -1;
     background_index = -1;
     text_bright = 0;
@@ -363,13 +376,13 @@ static void terminal_resize_active_session_grid(void)
 
 static void terminal_sync_session_winsize(const struct terminal_session *session)
 {
-    struct leonos_pty_winsize winsize;
-    if (!session || !session->used || !session->pty_id) {
+    struct winsize winsize;
+    if (!session || !session->used || session->pty_fd < 0) {
         return;
     }
     winsize.ws_row = (uint16_t)terminal_visible_rows();
     winsize.ws_col = (uint16_t)terminal_columns();
-    (void)leonos_pty_set_winsize(session->pty_id, &winsize);
+    (void)tcsetwinsize(session->pty_fd, &winsize);
 }
 
 static int terminal_resize_view(uint32_t width, uint32_t height)
@@ -629,6 +642,9 @@ static void terminal_move_down(uint32_t amount)
         amount = TERMINAL_HISTORY_ROWS - 1U;
     }
     uint32_t target = row + amount;
+    if (target >= TERMINAL_HISTORY_ROWS) {
+        target = TERMINAL_HISTORY_ROWS - 1U;
+    }
     while (target >= history_count) {
         terminal_append_line();
     }
@@ -743,8 +759,10 @@ static void terminal_apply_sgr(uint16_t code)
         text_inverse = 0;
     } else if (code == 39) {
         foreground_index = -1;
+        text_foreground = TERMINAL_DEFAULT_FOREGROUND;
     } else if (code == 49) {
         background_index = -1;
+        text_background = TERMINAL_DEFAULT_BACKGROUND;
     } else if (code >= 30 && code <= 37) {
         foreground_index = (int8_t)(code - 30U);
     } else if (code >= 40 && code <= 47) {
@@ -757,6 +775,17 @@ static void terminal_apply_sgr(uint16_t code)
         background_index = (int8_t)(code - 100U);
         background_bright = 1;
     }
+}
+
+static uint32_t terminal_palette_color(uint16_t index)
+{
+    if (index < 8) return ansi_normal[index];
+    if (index < 16) return ansi_bright[index - 8];
+    if (index >= 232) return (8U + (index - 232U) * 10U) * 0x010101U;
+    static const uint8_t levels[6] = {0, 95, 135, 175, 215, 255};
+    index -= 16;
+    return ((uint32_t)levels[index / 36] << 16) |
+           ((uint32_t)levels[(index / 6) % 6] << 8) | levels[index % 6];
 }
 
 static void terminal_csi_begin(void)
@@ -788,6 +817,31 @@ static void terminal_finish_csi(char final)
     if (final == 'm') {
         uint32_t index;
         for (index = 0; index < csi_param_count; ++index) {
+            if (csi_params[index] == 38 || csi_params[index] == 48) {
+                int background = csi_params[index] == 48;
+                uint32_t color;
+                if (++index >= csi_param_count) break;
+                if (csi_params[index] == 2) {
+                    if (index + 3 >= csi_param_count) break;
+                    index += 3;
+                    if (csi_params[index - 2] > 255 || csi_params[index - 1] > 255 ||
+                        csi_params[index] > 255) continue;
+                    color = ((uint32_t)csi_params[index - 2] << 16) |
+                            ((uint32_t)csi_params[index - 1] << 8) | csi_params[index];
+                } else if (csi_params[index] == 5) {
+                    if (++index >= csi_param_count) break;
+                    if (csi_params[index] > 255) continue;
+                    color = terminal_palette_color(csi_params[index]);
+                } else continue;
+                if (background) {
+                    background_index = -1;
+                    text_background = color;
+                } else {
+                    foreground_index = -1;
+                    text_foreground = color;
+                }
+                continue;
+            }
             terminal_apply_sgr(csi_params[index]);
         }
     } else if (final == 'A') {
@@ -861,6 +915,9 @@ static void terminal_finish_csi(char final)
         }
     } else if (final == 'd') {
         terminal_move_home(amount, 1);
+    } else if (final == 'c' && !csi_private && csi_params[0] == 0) {
+        /* Primary device attributes: VT100 with no optional hardware. */
+        (void)terminal_write_input("\033[?1;0c", 7);
     } else if (final == 'n' && csi_params[0] == 6) {
         char response[32];
         uint32_t row = terminal_logical_active();
@@ -871,7 +928,7 @@ static void terminal_finish_csi(char final)
         length = snprintf(response, sizeof(response), "\033[%u;%uR", row,
                           cursor_column + 1U);
         if (length > 0) {
-            (void)leonos_pty_write_input(active_pty_id, response, (uint32_t)length);
+            (void)write(active_pty_fd, response, (size_t)length);
         }
     } else if (final == 's') {
         terminal_save_cursor();
@@ -889,13 +946,56 @@ static void terminal_finish_csi(char final)
     escape_state = TERMINAL_TEXT;
 }
 
+static void terminal_finish_osc(int bell)
+{
+    struct terminal_session *session = active_session;
+    session->osc[session->osc_length] = 0;
+    if (!session->osc_overflow &&
+        (terminal_arg_eq(session->osc, "10;?") ||
+         terminal_arg_eq(session->osc, "11;?"))) {
+        uint32_t color = session->osc[1] == '0' ? TERMINAL_DEFAULT_FOREGROUND :
+                                                TERMINAL_DEFAULT_BACKGROUND;
+        char response[40];
+        int length = snprintf(response, sizeof(response),
+                              "\033]%c%c;rgb:%04x/%04x/%04x%s",
+                              session->osc[0], session->osc[1],
+                              ((color >> 16) & 255U) * 257U,
+                              ((color >> 8) & 255U) * 257U,
+                              (color & 255U) * 257U, bell ? "\007" : "\033\\");
+        if (length > 0 && (size_t)length < sizeof(response))
+            (void)terminal_write_input(response, (uint32_t)length);
+    }
+    escape_state = TERMINAL_TEXT;
+}
+
 static void terminal_put_char(char value)
 {
     uint8_t byte = (uint8_t)value;
+    if (escape_state == TERMINAL_OSC || escape_state == TERMINAL_OSC_ESCAPE) {
+        if (byte == 24 || byte == 26) {
+            escape_state = TERMINAL_TEXT;
+        } else if (byte == 7 || (escape_state == TERMINAL_OSC_ESCAPE && value == '\\')) {
+            terminal_finish_osc(byte == 7);
+        } else if (byte == 27) {
+            escape_state = TERMINAL_OSC_ESCAPE;
+        } else if (escape_state == TERMINAL_OSC_ESCAPE) {
+            /* An unexpected escape cancels the string and starts a new one. */
+            escape_state = TERMINAL_ESCAPE;
+            terminal_put_char(value);
+        } else if (active_session->osc_length + 1U < TERMINAL_OSC_CAP) {
+            active_session->osc[active_session->osc_length++] = value;
+        } else {
+            active_session->osc_overflow = 1;
+        }
+        return;
+    }
     if (escape_state == TERMINAL_ESCAPE) {
         if (value == '[') {
             escape_state = TERMINAL_CSI;
             terminal_csi_begin();
+        } else if (value == ']') {
+            escape_state = TERMINAL_OSC;
+            active_session->osc_length = active_session->osc_overflow = 0;
         } else {
             if (value == '7') {
                 terminal_save_cursor();
@@ -952,11 +1052,11 @@ static void terminal_put_char(char value)
         terminal_clear();
     } else if (value == '\t') {
         uint32_t next_stop;
+        uint32_t columns = terminal_columns();
         terminal_flush_utf8();
         next_stop = (cursor_column + 4U) & ~3U;
-        while (cursor_column < next_stop) {
-            terminal_put_codepoint(' ');
-        }
+        /* A tab moves the cursor without wrapping or erasing existing text. */
+        cursor_column = next_stop < columns ? next_stop : columns - 1U;
     } else if (byte >= 32U) {
         terminal_put_utf8_byte(byte);
     }
@@ -1067,7 +1167,7 @@ static int terminal_pump_output(void)
         if (request > sizeof(buffer)) {
             request = sizeof(buffer);
         }
-        received = leonos_pty_read_output(active_pty_id, buffer, request);
+        received = (int)read(active_pty_fd, buffer, request);
         if (received > 0) {
             int index;
             for (index = 0; index < received; ++index) {
@@ -1100,7 +1200,7 @@ static int terminal_pump_all_output(void)
 
 static int terminal_write_input(const char *buffer, uint32_t length)
 {
-    return leonos_pty_write_input(active_pty_id, buffer, length) == (int)length;
+    return write(active_pty_fd, buffer, length) == (long)length;
 }
 
 static int terminal_control_character(char character, uint8_t ctrl, char *out)
@@ -1138,10 +1238,9 @@ static int terminal_send_key(uint8_t keycode, uint8_t pressed,
     char character;
     char sequence[8];
     uint32_t sequence_length = 0;
-    struct leonos_pty_termios termios;
+    struct termios termios;
     int have_termios;
     int local_echo;
-    leonos_ui_caps_lock_event(keycode, pressed);
     if (keycode == LEONOS_KEY_CAPS_LOCK) {
         return 0;
     }
@@ -1160,7 +1259,7 @@ static int terminal_send_key(uint8_t keycode, uint8_t pressed,
     if (!pressed) {
         return 0;
     }
-    have_termios = leonos_pty_get_termios(active_pty_id, &termios) == 0;
+    have_termios = tcgetattr(active_pty_fd, &termios) == 0;
     if (keycode == LEONOS_KEY_ESCAPE) {
         sequence[0] = '\033';
         sequence_length = 1;
@@ -1192,8 +1291,8 @@ static int terminal_send_key(uint8_t keycode, uint8_t pressed,
         /* Send the configured erase byte.  The default is DEL (0x7f), which
          * lets the PTY remove it in ICANON mode and is also understood by
          * nano, BusyBox vi and other raw-mode editors. */
-        character = have_termios && termios.c_cc[LEONOS_PTY_CC_VERASE] ?
-                    (char)termios.c_cc[LEONOS_PTY_CC_VERASE] : '\177';
+        character = have_termios && termios.c_cc[VERASE] ?
+                    (char)termios.c_cc[VERASE] : '\177';
     } else if (keycode == LEONOS_KEY_TAB) {
         character = '\t';
     } else if (!leonos_ui_keycode_to_char_shift(keycode, *shift_down, &character)) {
@@ -1232,8 +1331,7 @@ static int terminal_send_key(uint8_t keycode, uint8_t pressed,
     if (keycode == LEONOS_KEY_TAB) {
         return 1;
     }
-    local_echo = !have_termios ||
-                 (termios.c_lflag & LEONOS_PTY_LFLAG_ECHO) != 0;
+    local_echo = !have_termios || (termios.c_lflag & ECHO) != 0;
     if (local_echo) {
         if (keycode == LEONOS_KEY_BACKSPACE) {
             if (local_echoed_input_count) {
@@ -1243,8 +1341,8 @@ static int terminal_send_key(uint8_t keycode, uint8_t pressed,
                 --local_echoed_input_count;
             }
         } else if (have_termios &&
-                   (termios.c_lflag & LEONOS_PTY_LFLAG_ICANON) != 0 &&
-                   character == (char)termios.c_cc[LEONOS_PTY_CC_VKILL]) {
+                   (termios.c_lflag & ICANON) != 0 &&
+                   character == (char)termios.c_cc[VKILL]) {
             while (local_echoed_input_count) {
                 terminal_put_char('\b');
                 terminal_put_char(' ');
@@ -1252,10 +1350,10 @@ static int terminal_send_key(uint8_t keycode, uint8_t pressed,
                 --local_echoed_input_count;
             }
         } else if (!(have_termios &&
-                     (termios.c_lflag & LEONOS_PTY_LFLAG_ICANON) != 0 &&
-                     character == (char)termios.c_cc[LEONOS_PTY_CC_VEOF])) {
+                     (termios.c_lflag & ICANON) != 0 &&
+                     character == (char)termios.c_cc[VEOF])) {
             if (character == '\r' && have_termios &&
-                (termios.c_iflag & LEONOS_PTY_IFLAG_ICRNL)) {
+                (termios.c_iflag & ICRNL)) {
                 terminal_put_char('\n');
                 local_echoed_input_count = 0;
             } else {
@@ -1334,8 +1432,11 @@ static int terminal_close_session(uint32_t id)
         return 0;
     }
     session = &sessions[id - 1U];
-    if (leonos_pty_destroy(session->pty_id) < 0) {
-        return 0;
+    if (session->child_pid > 0) {
+        (void)kill(session->child_pid, SIGHUP);
+    }
+    if (session->pty_fd >= 0) {
+        (void)close(session->pty_fd);
     }
     index = (int)(session - sessions);
     session->used = 0;
@@ -1362,7 +1463,12 @@ static void terminal_close_all_sessions(void)
 {
     for (uint32_t index = 0; index < TERMINAL_MAX_SESSIONS; ++index) {
         if (sessions[index].used) {
-            (void)leonos_pty_destroy(sessions[index].pty_id);
+            if (sessions[index].child_pid > 0) {
+                (void)kill(sessions[index].child_pid, SIGHUP);
+            }
+            if (sessions[index].pty_fd >= 0) {
+                (void)close(sessions[index].pty_fd);
+            }
             sessions[index].used = 0;
         }
     }
@@ -1374,8 +1480,9 @@ static struct terminal_session *terminal_open_session(const char *path,
                                                       char *const command_envp[])
 {
     struct terminal_session *session = 0;
-    int new_pty;
-    int shell_result;
+    int new_pty = -1;
+    pid_t child_pid;
+    struct winsize initial_winsize;
 
     if (!path || !path[0]) {
         return 0;
@@ -1390,23 +1497,41 @@ static struct terminal_session *terminal_open_session(const char *path,
         return 0;
     }
 
-    new_pty = leonos_pty_create();
-    if (new_pty <= 0) {
+    initial_winsize = (struct winsize){
+        .ws_row = (uint16_t)terminal_visible_rows(),
+        .ws_col = (uint16_t)terminal_columns(),
+    };
+    child_pid = forkpty(&new_pty, 0, 0, &initial_winsize);
+    /* forkpty returns the master only to the parent; the child uses stdio. */
+    if (child_pid == 0) {
+        (void)execve(path, command_argv, command_envp);
+        fprintf(stderr, "terminal: exec %s failed errno=%d\n", path, errno);
+        _exit(127);
+    }
+    if (child_pid < 0 || new_pty < 0) {
+        if (new_pty >= 0) {
+            (void)close(new_pty);
+        }
+        printf("terminal: PTY creation failed errno=%d\n", errno);
         return 0;
+    }
+    {
+        int flags = fcntl(new_pty, F_GETFL);
+        if (flags >= 0) {
+            (void)fcntl(new_pty, F_SETFL, flags | O_NONBLOCK);
+        }
+        printf("terminal: PTY ready master=%d child=%d flags=%d\n",
+               new_pty, child_pid, flags);
     }
     *session = (struct terminal_session){0};
     session->used = 1;
+    session->pty_fd = new_pty;
+    session->child_pid = child_pid;
     active_session = session;
-    active_pty_id = (uint32_t)new_pty;
     cursor_visible = 1;
     terminal_reset_style();
     terminal_clear();
     terminal_sync_session_winsize(session);
-    shell_result = leonos_pty_spawn_argv(path, active_pty_id, command_argv,
-                                         command_envp);
-    if (shell_result < 0) {
-        terminal_put_text("! shell start failed");
-    }
     (void)terminal_select_tab((uint32_t)(session - sessions) + 1U);
     return session;
 }
@@ -1446,11 +1571,13 @@ int main(int argc, char **argv, char **envp)
     char *shell_argv[4];
     char shell_prompt[] = "PS1=\\w \\$ ";
     char shell_term[] = "TERM=xterm";
-    char *shell_envp[] = { shell_prompt, shell_term, 0 };
+    char terminal_program[] = "TERM_PROGRAM=LeonOS Terminal";
+    char *terminal_envp[] = { shell_term, terminal_program, 0 };
+    char *shell_envp[] = { shell_prompt, shell_term, terminal_program, 0 };
     char **command_env_owned = 0;
     char *const *command_argv;
     char *const *command_envp;
-    char *const *environment_overrides = 0;
+    char *const *environment_overrides = terminal_envp;
     const char *command_path;
     uint8_t shift_down = 0;
     uint8_t ctrl_down = 0;
@@ -1464,8 +1591,8 @@ int main(int argc, char **argv, char **envp)
         command_argv = &argv[2];
         command_envp = 0;
     } else {
-        shell_argv[0] = (char *)leonos_launch_builtin_path("busybox");
-        shell_argv[1] = "sh";
+        shell_argv[0] = "/bin/sh";
+        shell_argv[1] = 0;
         shell_argv[2] = 0;
         shell_argv[3] = 0;
         command_path = shell_argv[0];
@@ -1557,8 +1684,9 @@ int main(int argc, char **argv, char **envp)
             }
         }
         if (redraw) {
-            leonos_ui_bind(&ui, pixels, terminal_view_width, terminal_view_height,
-                           TERMINAL_MAX_W);
+            if (ui.width != terminal_view_width || ui.height != terminal_view_height)
+                leonos_ui_bind(&ui, pixels, terminal_view_width, terminal_view_height,
+                               TERMINAL_MAX_W);
             terminal_draw(&ui);
             leonos_gui_present_window((uint32_t)window_id, terminal_view_width,
                                       terminal_view_height, TERMINAL_MAX_W, pixels);
