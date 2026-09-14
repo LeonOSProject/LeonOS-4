@@ -1662,6 +1662,27 @@ static void task_console_materialize_stdio(struct task *task)
     }
 }
 
+static int64_t syscall_ioctl_nonblock(struct task *task, int fd, uint64_t argument)
+{
+    int32_t enabled;
+    struct task_file *file = task_file_for_fd(task, fd);
+    if (!user_range_ok(argument, sizeof(enabled))) return -LEONOS_EFAULT;
+    __builtin_memcpy(&enabled, (const void *)(uintptr_t)argument, sizeof(enabled));
+    /* Linux fs/ioctl.c updates the shared open description, not the
+     * descriptor flags. Preserve access mode, append and internal kind bits. */
+    if (file) {
+        if (enabled) file->flags |= LEONOS_O_NONBLOCK;
+        else file->flags &= ~LEONOS_O_NONBLOCK;
+    } else {
+        struct task_pty_fd *entry;
+        int ret = task_pty_ensure_fd(task, fd, &entry);
+        if (ret < 0) return ret;
+        if (enabled) entry->description->status_flags |= LEONOS_O_NONBLOCK;
+        else entry->description->status_flags &= ~LEONOS_O_NONBLOCK;
+    }
+    return 0;
+}
+
 static int task_pty_materialize_stdio(struct task *task)
 {
     task_console_materialize_stdio(task);
@@ -3941,7 +3962,11 @@ static int64_t syscall_epoll_ctl(uint64_t epfd_arg, uint64_t op_arg,
     if (!task || epfd_arg > INT32_MAX || fd_arg > INT32_MAX) return -LEONOS_EBADF;
     epoll = task_epoll_for_fd(task, epfd);
     target = task_file_for_fd(task, fd);
-    if (!epoll || !target || fd == epfd) return -LEONOS_EBADF;
+    /* PTY endpoints use a separate descriptor table. poll_impl also handles
+     * them and the implicit standard streams of legacy PTY tasks. */
+    int target_open = target != NULL || task_pty_endpoint_for_fd(task, fd) != NULL ||
+                      task_pty_stream_for_fd(task, fd) >= 0;
+    if (!epoll || !target_open || fd == epfd) return -LEONOS_EBADF;
     if (op != EPOLL_CTL_DEL && (!event_ptr || !user_range_ok(event_ptr, sizeof(event))))
         return -LEONOS_EFAULT;
     if (op != EPOLL_CTL_DEL) {
@@ -3989,20 +4014,26 @@ static int64_t syscall_epoll_wait_common(struct task *task, struct task_epoll *e
                                          int64_t timeout_ms)
 {
     uint32_t written = 0;
-    if (!maxevents || maxevents > TASK_EPOLL_MAX_ENTRIES)
+    /* Linux validates maxevents as the caller's output capacity.  It is
+     * independent from the number of descriptors currently registered in
+     * this epoll instance (which is an internal implementation limit). */
+    if (!maxevents || maxevents > INT32_MAX / sizeof(struct epoll_event))
         return -LEONOS_EINVAL;
     if (!user_range_writable(events_ptr, (uint64_t)maxevents * sizeof(struct epoll_event)))
         return -LEONOS_EFAULT;
     if (timeout_ms < -1) return -LEONOS_EINVAL;
-    if (timeout_ms != 0 && task->poll_deadline_ticks && time_ticks() >= task->poll_deadline_ticks)
-        task->poll_deadline_ticks = 0;
     for (uint32_t i = 0; i < TASK_EPOLL_MAX_ENTRIES && written < maxevents; ++i) {
         struct task_epoll_entry *entry = &epoll->item[i];
         struct pollfd pollfd;
         uint32_t ready;
+        uint64_t deadline = task->poll_deadline_ticks;
         if (!entry->active || !entry->events) continue;
         pollfd = (struct pollfd){.fd = entry->fd, .events = (int16_t)epoll_to_poll(entry->events)};
         (void)syscall_poll_impl(task, &pollfd, 1, 0);
+        /* poll(..., 0) is only a readiness probe here. Its zero-timeout
+         * cleanup must not erase epoll_wait's blocking deadline. */
+        if (timeout_ms != 0 && deadline)
+            task->poll_deadline_ticks = deadline;
         ready = poll_to_epoll(pollfd.revents);
         if (!ready) {
             entry->ready = 0;
@@ -4021,7 +4052,8 @@ static int64_t syscall_epoll_wait_common(struct task *task, struct task_epoll *e
         task->poll_deadline_ticks = 0;
         return written;
     }
-    if (timeout_ms == 0) {
+    if (timeout_ms == 0 || (task->poll_deadline_ticks &&
+                            time_ticks() >= task->poll_deadline_ticks)) {
         task->poll_deadline_ticks = 0;
         return 0;
     }
@@ -6755,16 +6787,7 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         struct task *task = sched_current_task();
         struct task_file *file = task_file_for_fd(task, (int)a0);
         if (file && file->kind == TASK_FILE_KIND_SIGNALFD) {
-            /* FIOCLEX/FIONCLEX are handled generically before device dispatch;
-             * only signalfd-specific requests remain here. */
-            if ((uint32_t)a1 == FIONBIO) {
-                int32_t nonblock;
-                if (!user_range_ok(a2, sizeof(nonblock))) return -LINUX_EFAULT;
-                __builtin_memcpy(&nonblock, (const void *)(uintptr_t)a2, sizeof(nonblock));
-                if (nonblock) file->flags |= LINUX_O_NONBLOCK;
-                else file->flags &= ~LINUX_O_NONBLOCK;
-                return 0;
-            }
+            /* Generic ioctl requests have already been handled. */
             return -LINUX_ENOTTY;
         }
         if (file && (file->flags & TASK_FILE_FLAG_SOCKET_UNIX))
@@ -7068,6 +7091,9 @@ static int64_t syscall_dispatch_regs(uint64_t number, uint64_t a0, uint64_t a1,
         ((uint32_t)a1 == FIOCLEX || (uint32_t)a1 == FIONCLEX)) {
         return syscall_ioctl_descriptor_flags(sched_current_task(), a0,
                                               (uint32_t)a1);
+    }
+    if (number == LINUX_SYS_IOCTL && a1 == FIONBIO) {
+        return syscall_ioctl_nonblock(sched_current_task(), (int)a0, a2);
     }
 
     if (syscall_fs_owns(number)) {

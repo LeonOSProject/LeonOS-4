@@ -20,6 +20,11 @@ files from the distribution staging root are deliberately owned by
 BusyBox's `ar` and `strings` fallback links are explicitly script-managed,
 following Alpine's trigger model: binutils may own these paths, and removing it
 restores only missing links. The BusyBox executable remains package-owned.
+The package advertises its actual `/bin/sh` provider so shell script
+dependencies do not pull in a conflicting second BusyBox. `/bin/bash` is
+reserved for upstream GNU Bash; the former ash alias is no longer shipped.
+Upstream BusyBox `add-shell` and `remove-shell` register shell packages in
+`/etc/shells` during their original installation/removal scripts.
 This coarse package split can be refined in a future signed package migration.
 
 The actual nano payload and CA bundle now have their own `nano` and
@@ -67,10 +72,19 @@ native x86_64:
 ```text
 https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main
 https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/community
+@testing https://mirrors.tuna.tsinghua.edu.cn/alpine/edge/testing
 ```
 
 The release branch remains v3.24. The same repositories retain `@alpine` aliases for existing world entries.
 Ordinary `apk add NAME` can select upstream packages without a tag.
+Testing exists only on the rolling edge branch and is opt-in: use
+`apk add hyfetch@testing` for the native x86_64 HyFetch package. Its current
+dependencies resolve against v3.24 and the local musl runtime. The `@testing`
+tag keeps unrelated stable installs and upgrades from selecting testing
+packages by default; edge main/community are not enabled. Future testing
+packages may require newer dependencies than v3.24 provides.
+Existing installations can add the tagged line above to `/etc/apk/repositories`
+and run `apk update`; installer upgrades preserve locally edited configuration.
 `/etc/os-release` remains LeonOS, with the Alpine non-usr-merge layout.
 
 Alpine signing keys and the Web PKI bundle have separate roles. Both signature
@@ -147,6 +161,7 @@ apk info --who-owns /usr/bin/fastfetch
 apk add zlib
 apk del zlib
 apk add gcc make
+apk add hyfetch@testing
 gcc hello.c -o hello
 ./hello
 ```
@@ -157,6 +172,77 @@ Never remove the working libc/authentication/base merely to make the solver
 accept a package.
 
 ## Verification
+
+The 2026-09-13 testing-repository regression uses unmodified x86_64
+`hyfetch-2.0.5-r0` and `bash-5.3.9-r1`. A clean host root transaction and QEMU/KVM
+(one socket, two cores, e1000) both install without BusyBox or Bash ownership
+conflicts. `tools/test_apk_qemu.py --testing-only` passes 28 checks: HTTPS and
+index signatures, installation/removal, `/etc/shells` scripts, Bash arrays,
+HyFetch version/help, retained custom Fastfetch ownership and real `MAP_STACK`
+guard-page/signal-stack behavior. Evidence: `build/apk-testing/qemu-test.log`.
+The same raw mapping test passes on host Linux. Linux v6.12 accepts `MAP_STACK`
+and maps it to `VM_NOHUGEPAGE`; NTCLKS user mappings already use only 4 KiB pages.
+This fixes Rust's startup failure without modifying the Alpine binary.
+
+The 2026-09-14 follow-up reproduces and repairs the interactive failure with
+the unchanged Alpine HyFetch binary. Its terminal-color query registers PTY
+stderr with epoll: the separate PTY descriptor table was rejected with EBADF,
+and a 1024-event output buffer was wrongly limited to the 64 registered-entry
+capacity. Readiness probes also cleared the deadline, causing finite waits to
+restart indefinitely. PTYs are now accepted, output capacity uses Linux's
+`INT_MAX / sizeof(struct epoll_event)` bound, and finite waits retain their
+deadline and return zero after expiry when no event is ready.
+
+Rust's child-output capture additionally requires generic `ioctl(FIONBIO)` on
+pipes. The generic VFS path now changes the shared open description's nonblocking
+flag, preserving descriptor-local CLOEXEC and other status flags. Terminal
+answers OSC 10/11 and primary device-attribute queries, consumes split and
+oversized OSC strings safely, and renders semicolon-form RGB/256-color SGR.
+
+The Linux userspace personality now returns `Linux` from `uname.sysname` and
+`/proc/sys/kernel/ostype`. The embedded neofetch script otherwise rejects
+`ntclks` as an unknown OS. This is an ABI personality name, not a claim that
+NTCLKS is the Linux kernel: `uname.release` remains the actual NTCLKS version,
+`/proc/version` retains the NTCLKS identity, and `/etc/os-release` remains LeonOS.
+Fastfetch's Kernel name consequently reads `Linux` with the NTCLKS version.
+
+`tools/test_hyfetch_qemu.py` stages the real signed `hyfetch@testing` package and
+its dependencies, runs the same static musl raw-syscall probe on host Linux and
+NTCLKS, and drives the default wizard through the Live desktop's Terminal.
+It checks `sudo hyfetch --config-file /tmp/hyfetch-wizard.json`, persisted JSON
+with automatic background detection, and a normal `hyfetch` run using the
+packaged LeonOS defaults. The raw probe covers PTY readiness,
+1024-event capacity, repeated finite timeouts, one-shot rearming, FIONBIO's
+dup-shared flags, actual empty-pipe EAGAIN, and invalid-fd/pointer/O_PATH errors.
+Evidence and the diagnostic ISO are under `build/hyfetch-qemu`.
+
+`leonos-fastfetch` owns `/usr/share/fastfetch/leonos-ascii.txt` (the same LeonOS
+art as its pinned binary) and `/etc/skel/.config/hyfetch.json`. Standalone
+images seed the root/test homes; the installer seeds root and the chosen user
+without replacing existing configurations. HyFetch applies its RGB palette
+to this custom ASCII instead of falling back to the generic Linux logo.
+Existing users can set `custom_ascii_path` to that absolute path in their own
+HyFetch JSON, or pass `--ascii-file /usr/share/fastfetch/leonos-ascii.txt` when
+no custom path is configured. No HyFetch binary or APK patch is required.
+
+LeonOS-logo validation on 2026-09-14: five Fastfetch packaging tests, four
+installer setup tests and three APK ownership tests passed. `build.py run
+apk-root` completed with zero errors; both new files belong to
+`leonos-fastfetch` in the generated ownership inventory. QEMU/KVM with the
+signed Alpine HyFetch package passed the fresh wizard and normal default-logo
+run (both exit 0), and the raw epoll/PTYS probe reported zero failures.
+`build/hyfetch-qemu/terminal-hyfetch.png` shows the recolored LeonOS art;
+`logo-build.log`, `logo-qemu.log` and `guest-serial.log` in that directory retain
+the build and guest evidence. Installer config initialization was covered on
+the host, not by a complete install/reboot cycle in this logo follow-up.
+
+The test exercises a Live root session. An earlier image with the installed
+login marker stalled while opening a PAM session; that separate failure is
+preserved in `build/hyfetch-qemu/login-stalled.log` and is not certified by this
+test. VMware and installed-system login were not verified in this follow-up.
+The pre-existing whole-UAPI header check still fails
+because `include/uapi/leonos/net_control.h` includes `leonos/net.h` outside the
+UAPI include root; the changed `linux/mman.h` passes standalone C/C++ checks.
 
 The TCP/e1000 receive-path correction is covered by `tools/test_network.py`,
 `tools/test_e1000.py` and `tools/test_tcp_download_qemu.py`. In an isolated local
@@ -169,6 +255,11 @@ VMware speeds. See `docs/NETWORK_STATUS_2026-09-13.md` for evidence and scope.
 ```sh
 python3 build.py run test-apk-distribution
 python3 tools/test_apk_qemu.py
+python3 tools/test_apk_qemu.py --testing-only
+python3 tools/test_terminal.py
+python3 tools/test_linux_ioctl_cloexec.py
+# Requires current kernel, app:terminal and apk-root build outputs.
+python3 tools/test_hyfetch_qemu.py
 python3 tools/test_alpine_runtime_qemu.py
 python3 tools/test_apk_qemu.py --package-cache build/alpine-runtime/cache
 python3 build.py run images-iso

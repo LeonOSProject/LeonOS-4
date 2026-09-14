@@ -15,7 +15,7 @@ import test_linux_ioctl_cloexec as iso_tools
 WORK = ROOT / "build/apk-qemu"
 
 
-def prepare(package_cache=None, guest_proxy=None):
+def prepare(package_cache=None, guest_proxy=None, testing_only=False):
     apk, key = bootstrap(), signing_key()
     managed = ROOT / "build/apk/root"
     if not (managed / "lib/apk/db/installed").is_file():
@@ -23,7 +23,9 @@ def prepare(package_cache=None, guest_proxy=None):
     sysroot = ROOT / "build/musl/sysroot"
     run(["clang", "--target=x86_64-linux-musl", "-fuse-ld=lld", "-nostdlib", "-nostdinc",
          "-isystem", sysroot / "include", "-static", "-O2", "-Wall", "-Wextra",
+         *(["-DAPK_TESTING_ONLY"] if testing_only else []),
          sysroot / "lib/crt1.o", sysroot / "lib/crti.o", ROOT / "tools/tests/apk_guest_probe.c",
+         ROOT / "tools/tests/linux_map_stack_test.c",
          sysroot / "lib/libc.a", sysroot / "lib/crtn.o", "-o", WORK / "probe.elf"])
     run(["clang", "--target=x86_64-linux-musl", "-fuse-ld=lld", "-nostdlib", "-nostdinc",
          "-isystem", sysroot / "include", "-O2", "-Wall", "-Wextra",
@@ -128,6 +130,8 @@ def guest(timeout):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-only", action="store_true")
+    parser.add_argument("--testing-only", action="store_true",
+                        help="install and run upstream HyFetch from the tagged testing repository")
     parser.add_argument("--guest-proxy", help="optional proxy URL reachable from QEMU; default is direct access")
     parser.add_argument("--package-cache", type=Path,
                         help="seed the GCC transaction from real APK cache files; earlier HTTPS tests stay online")
@@ -135,5 +139,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     WORK.mkdir(parents=True, exist_ok=True)
     if not args.run_only:
-        prepare(args.package_cache, args.guest_proxy)
+        prepare(args.package_cache, args.guest_proxy, args.testing_only)
     guest(args.timeout)

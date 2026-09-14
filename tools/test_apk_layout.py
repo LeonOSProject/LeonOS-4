@@ -77,6 +77,7 @@ class ApkSeedTests(unittest.TestCase):
             "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/community",
             "@alpine https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main",
             "@alpine https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/community",
+            "@testing https://mirrors.tuna.tsinghua.edu.cn/alpine/edge/testing",
         ])
         options = (SEED / "etc/apk/config").read_text().splitlines()
         self.assertEqual([line for line in options if line and not line.startswith("#")],
@@ -181,9 +182,14 @@ def check_upstream(apk: Path):
         result = subprocess.run(command + ["--no-network", "search", "--exact", "zlib"],
                                 env=env, check=True, text=True, capture_output=True, timeout=30)
         assert re.search(r"^zlib-", result.stdout, re.M), result.stdout + result.stderr
+        result = subprocess.run(command + ["--initdb", "--simulate", "add", "hyfetch@testing"],
+                                env=env, text=True, capture_output=True, timeout=30)
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert re.search(r"Installing hyfetch@testing\b", result.stdout), result.stdout + result.stderr
+        assert "WARNING" not in result.stderr and "ERROR" not in result.stderr, result.stderr
         assert not (root / "etc/apk/world").read_text().strip()
         assert not (root / "lib/apk/db/installed").exists()
-        print("PASS upstream apk HTTPS + signed v3.24 indexes, cached search, no packages installed (host Linux only)")
+        print("PASS upstream apk HTTPS + signed v3.24/edge testing indexes, cached search and HyFetch resolution (host Linux only)")
 
 
 if __name__ == "__main__":

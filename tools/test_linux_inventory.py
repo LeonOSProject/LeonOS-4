@@ -89,7 +89,7 @@ def guest(args):
     enabled_cpus=int(cpu_match[1]); managed_memory=int(memory_match[1])*1024
     kernel_match=re.search(r'\[inventory\] uname release=(\S+) version=([^\n]+)',text)
     assert kernel_match, 'missing native uname identity'
-    assert f'Kernel: ntclks {kernel_match[1]}' in default_output[1], 'default Kernel row missing'
+    assert f'Kernel: Linux {kernel_match[1]}' in default_output[1], 'default Kernel row missing'
     assert 'OS:' in default_output[1] and 'Memory:' in default_output[1], 'default information modules missing'
     modes={tuple(map(int,m)) for m in re.findall(r'framebuffer[^\n]*?(\d+)x(\d+)',text)}
     for label in ('console-json','terminal-json'):
@@ -100,7 +100,7 @@ def guest(args):
         for name in ('OS','Host','Kernel','Uptime','CPU','Memory','Swap','Disk','Display','GPU'):
             assert 'result' in modules[name], (name,modules[name])
         assert modules['Host']['result']['name']=='Inventory-Machine', modules['Host']
-        assert modules['Kernel']['result']['name']=='ntclks', modules['Kernel']
+        assert modules['Kernel']['result']['name']=='Linux', modules['Kernel']
         assert modules['Kernel']['result']['release']==kernel_match[1], modules['Kernel']
         assert modules['Kernel']['result']['version']==kernel_match[2], modules['Kernel']
         assert modules['CPU']['result']['cores']['online']==enabled_cpus, modules['CPU']

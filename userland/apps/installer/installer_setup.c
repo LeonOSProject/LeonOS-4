@@ -3,6 +3,7 @@
 #include <leonos/launch.h>
 #include <leonos/layout.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -20,6 +21,58 @@ int installer_setup_valid(const struct installer_setup *setup)
         if (!leonos_auth_password_valid(passwords[i], LEONOS_AUTH_PASSWORD_LEN)) return 0;
     return !strcmp(setup->password, setup->password_confirm) &&
            !strcmp(setup->root_password, setup->root_password_confirm);
+}
+
+/* Fastfetch is optional. Seed its HyFetch defaults without replacing user choices
+ * or following links out of the destination home. */
+static int prepare_hyfetch_config(const char *target, const struct leonos_user_info *user)
+{
+    char path[512], buffer[4096];
+    int n = snprintf(path, sizeof(path), "%s/etc/skel/.config/hyfetch.json", target);
+    if (n < 0 || (size_t)n >= sizeof(path)) { errno = ENAMETOOLONG; return -1; }
+    int source = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    if (source < 0) return errno == ENOENT ? 0 : -1;
+    int home = -1, directory = -1, output = -1, result = -1, created = 0;
+    struct stat st;
+    if (fstat(source, &st) < 0) goto out;
+    if (!S_ISREG(st.st_mode)) { errno = EINVAL; goto out; }
+    n = snprintf(path, sizeof(path), "%s%s", target, user->home);
+    if (n < 0 || (size_t)n >= sizeof(path)) { errno = ENAMETOOLONG; goto out; }
+    home = open(path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+    if (home < 0) goto out;
+    if (mkdirat(home, ".config", 0700) < 0 && errno != EEXIST) goto out;
+    directory = openat(home, ".config", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+    if (directory < 0 || fchown(directory, user->uid, user->uid) < 0) goto out;
+    output = openat(directory, "hyfetch.json", O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
+    if (output < 0) {
+        if (errno == EEXIST) result = 0;
+        goto out;
+    }
+    created = 1;
+    for (;;) {
+        ssize_t count = read(source, buffer, sizeof(buffer));
+        if (count < 0 && errno == EINTR) continue;
+        if (count < 0) goto out;
+        if (!count) break;
+        for (ssize_t offset = 0; offset < count;) {
+            ssize_t written = write(output, buffer + offset, (size_t)(count - offset));
+            if (written < 0 && errno == EINTR) continue;
+            if (written <= 0) { if (!written) errno = EIO; goto out; }
+            offset += written;
+        }
+    }
+    if (fchown(output, user->uid, user->uid) < 0 || fchmod(output, 0600) < 0 || fsync(output) < 0)
+        goto out;
+    result = 0;
+out:;
+    int error = errno;
+    if (output >= 0 && close(output) < 0 && !result) { result = -1; error = errno; }
+    if (created && result < 0) unlinkat(directory, "hyfetch.json", 0);
+    if (directory >= 0) close(directory);
+    if (home >= 0) close(home);
+    close(source);
+    errno = error;
+    return result;
 }
 
 static int prepare_home(const char *target, const struct leonos_user_info *user)
@@ -44,7 +97,7 @@ static int prepare_home(const char *target, const struct leonos_user_info *user)
         if (leonos_launch_create_shortcut_in_dir(desktop, executable, path, sizeof(path)) < 0 ||
             chown(path, user->uid, user->uid) < 0 || chmod(path, 0600) < 0) return -1;
     }
-    return 0;
+    return prepare_hyfetch_config(target, user);
 }
 
 int installer_setup_write(const struct installer_setup *setup, const char *target)

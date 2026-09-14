@@ -32,11 +32,32 @@ staging use this same payload. `/etc/fastfetch/config.jsonc` selects the built-i
 The component's MIT license is installed in `/usr/share/licenses/fastfetch`.
 Its `package.json` records the release URL, version, and binary hash.
 
-The Kernel row reports NTCLKS metadata: `uname().sysname` is the kernel's
-`ntclks` name, `release` is the generated `4.6.2-<build>` kernel version, and
-`version` is its build time. The corresponding procfs files expose the same
-values. LeonOS distribution identity remains in `/etc/os-release` for the OS
-row. No application-side output substitution is used.
+The Kernel row reports `Linux` as the native ABI personality name and the
+generated `4.6.2-<build>` NTCLKS release. `uname().version` is the build time;
+`/proc/version` retains the NTCLKS name. LeonOS distribution identity remains
+in `/etc/os-release` for the OS row. No application-side output substitution
+is used.
+
+HyFetch supplies its own ASCII art to Fastfetch, so Fastfetch's default logo
+does not select HyFetch's logo. The package also ships the same LeonOS art in
+`/usr/share/fastfetch/leonos-ascii.txt` and a HyFetch configuration template in
+`/etc/skel/.config/hyfetch.json`. New standalone-image and installer accounts
+receive this template, which selects RGB rainbow coloring and the Fastfetch
+backend. HyFetch itself remains the unmodified Alpine package, installed with
+`apk add hyfetch@testing`; it is not bundled by this component. Disabling the
+Fastfetch component also removes these defaults from staging.
+
+Existing user configurations are preserved. For an existing configuration
+with no custom ASCII path, use:
+
+```sh
+hyfetch --ascii-file /usr/share/fastfetch/leonos-ascii.txt
+```
+
+To persist the selection while choosing a palette, run `hyfetch --config` and
+select that file when asked for custom ASCII art. Users can also set the
+`custom_ascii_path` field in their existing `~/.config/hyfetch.json` to that
+absolute path without changing the other settings.
 
 The guest inventory test checks the binary actually staged at
 `build/esp/usr/bin/fastfetch`, including Kernel, hardware and resource JSON,

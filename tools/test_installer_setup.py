@@ -1,5 +1,6 @@
 """Installer input validation and retained legacy account regressions."""
 import hashlib
+import errno
 import os
 from pathlib import Path
 import subprocess
@@ -12,6 +13,49 @@ CRYPTO = [f"third_party/mbedtls/library/{name}.c" for name in
 
 
 class InstallerSetupTests(unittest.TestCase):
+    def test_hyfetch_defaults(self):
+        with tempfile.TemporaryDirectory(prefix="leonos-hyfetch-home-") as temporary:
+            work = Path(temporary)
+            executable = work / "prepare-home"
+            subprocess.run([
+                "cc", "-std=gnu11", "-O1", "-g", "-fsanitize=address,undefined",
+                "-fno-omit-frame-pointer", "-ffunction-sections", "-fdata-sections",
+                "-Wl,--gc-sections", "-Iinclude", "-Iinclude/uapi",
+                "-idirafter", "userland/libc/include",
+                "tools/tests/installer_hyfetch_config_test.c", "-o", str(executable),
+            ], cwd=ROOT, check=True)
+            root = work / "root"
+            home = root / "home/test"
+            home.mkdir(parents=True)
+            subprocess.run([executable, root], check=True)
+            self.assertFalse((home / ".config").exists())
+            template = root / "etc/skel/.config/hyfetch.json"
+            template.parent.mkdir(parents=True)
+            template.write_bytes((ROOT / "userland/fastfetch/hyfetch.json").read_bytes())
+            subprocess.run([executable, root], check=True)
+            config = home / ".config/hyfetch.json"
+            self.assertEqual(config.read_bytes(), template.read_bytes())
+            self.assertEqual(config.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(config.stat().st_uid, os.getuid())
+            config.write_text('{"preset":"custom"}\n')
+            subprocess.run([executable, root], check=True)
+            self.assertEqual(config.read_text(), '{"preset":"custom"}\n')
+            config.unlink()
+            protected = work / "protected"
+            protected.write_text("untouched")
+            config.symlink_to(protected)
+            subprocess.run([executable, root], check=True)
+            self.assertTrue(config.is_symlink())
+            self.assertEqual(protected.read_text(), "untouched")
+            config.unlink()
+            config.parent.rmdir()
+            outside = work / "outside"
+            outside.mkdir()
+            config.parent.symlink_to(outside, target_is_directory=True)
+            result = subprocess.run([executable, root])
+            self.assertIn(result.returncode, (errno.ELOOP, errno.ENOTDIR))
+            self.assertEqual(list(outside.iterdir()), [])
+
     def test_tty_input(self):
         with tempfile.TemporaryDirectory(prefix="leonos-login-input-") as temporary:
             executable = Path(temporary) / "login-input"

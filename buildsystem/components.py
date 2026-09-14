@@ -325,7 +325,8 @@ def validate_component_targets(components: tuple[Component, ...], root: Path) ->
         if component.kind in {"system-app", "program-app", "package-app"}:
             if component.id == "fastfetch":
                 for name in ("tools/package_fastfetch.py", "userland/fastfetch/LICENSE",
-                             "userland/fastfetch/config.jsonc"):
+                             "userland/fastfetch/config.jsonc", "userland/fastfetch/hyfetch.json",
+                             "userland/fastfetch/leonos-ascii.txt"):
                     if not (root / name).is_file():
                         raise ComponentError(f"fastfetch package input is missing: {name}")
                 continue

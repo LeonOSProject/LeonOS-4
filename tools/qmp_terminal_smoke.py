@@ -68,6 +68,7 @@ def main() -> int:
     editor = "nano"
     fastfetch_smoke = False
     fastfetch_single = False
+    hyfetch_smoke = False
     sl_smoke = False
     less_smoke = False
     serial_log_path: Path | None = None
@@ -94,6 +95,9 @@ def main() -> int:
         arguments = arguments[1:]
     if arguments and arguments[0] == "--fastfetch-single":
         fastfetch_single = True
+        arguments = arguments[1:]
+    if arguments and arguments[0] == "--hyfetch":
+        hyfetch_smoke = True
         arguments = arguments[1:]
     if arguments and arguments[0] == "--sl":
         sl_smoke = True
@@ -135,7 +139,7 @@ def main() -> int:
         return 2
     if desktop_app is not None and (not desktop_app.isascii() or not desktop_app.isalnum()):
         return 2
-    if desktop_app is not None and (tcc_smoke or fastfetch_smoke or fastfetch_single or sl_smoke or less_smoke or start_menu_smoke or iso9660_smoke or
+    if desktop_app is not None and (tcc_smoke or fastfetch_smoke or fastfetch_single or hyfetch_smoke or sl_smoke or less_smoke or start_menu_smoke or iso9660_smoke or
                                     dynlinkerror_smoke or cmd_pipeline_smoke or fancy_prompt_smoke or abittest_smoke or exit_only):
         return 2
     if len(arguments) != 1 or (login_password is not None and not skip_oobe):
@@ -225,6 +229,20 @@ def main() -> int:
         send_keys(sock, text_keys("fastfetch") + ("ret",))
         time.sleep(3.0)
         hmp(sock, "screendump build/images/fastfetch-single-qmp-smoke.ppm", 0.4)
+        send(sock, {"execute": "quit"}, 0.2)
+        return 0
+
+    if hyfetch_smoke:
+        send_keys(sock, text_keys("sh /usr/lib/leonos/tests/hyfetch.sh") + ("ret",))
+        time.sleep(6.0)
+        # Accept the upstream wizard's defaults. Stop as soon as the wrapper
+        # reports its repeated run, so keystrokes cannot run shell commands.
+        for _ in range(14):
+            if serial_log_path and "[hyfetch] repeat-status=" in serial_log_path.read_text(errors="replace"):
+                break
+            send_keys(sock, ("ret",))
+            time.sleep(3.0)
+        hmp(sock, "screendump build/images/hyfetch-qmp-smoke.ppm", 0.4)
         send(sock, {"execute": "quit"}, 0.2)
         return 0
 

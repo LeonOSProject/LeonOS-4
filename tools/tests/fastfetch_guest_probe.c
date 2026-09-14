@@ -71,7 +71,7 @@ int main(void)
         const char *paths[] = {"/proc/sys/kernel/ostype", "/proc/sys/kernel/osrelease",
                                "/proc/sys/kernel/version"};
         const char *fields[] = {uts.sysname, uts.release, uts.version};
-        check(!strcmp(uts.sysname, "ntclks"), "uname identifies the NTCLKS kernel");
+        check(!strcmp(uts.sysname, "Linux"), "uname identifies the Linux userspace personality");
         for (unsigned i = 0; i < 3; ++i) {
             char actual[128], expected[128];
             snprintf(expected, sizeof(expected), "%s\n", fields[i]);

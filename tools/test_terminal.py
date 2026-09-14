@@ -34,6 +34,12 @@ class TerminalTests(unittest.TestCase):
     def test_cursor_down_at_full_history_returns_without_spinning(self):
         self.run_scenario("cursor-down")
 
+    def test_terminal_color_query_and_device_attributes(self):
+        self.run_scenario("color-query")
+
+    def test_extended_colors_and_default_reset(self):
+        self.run_scenario("extended-colors")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -701,10 +701,8 @@ int64_t syscall_process_control(uint64_t number, uint64_t a0,
         if (!a0 || !user_range_writable(a0, sizeof(info))) return -LEONOS_EFAULT;
         {
             uint32_t i;
+            __builtin_memcpy(info.sysname, LINUX_UTS_SYSNAME, sizeof(LINUX_UTS_SYSNAME));
             if (system) {
-                for (i = 0; i < sizeof(info.sysname) - 1u && system->kernel_name[i]; ++i) {
-                    info.sysname[i] = system->kernel_name[i];
-                }
                 for (i = 0; i < sizeof(info.release) - 1u && system->kernel_version[i]; ++i) {
                     info.release[i] = system->kernel_version[i];
                 }

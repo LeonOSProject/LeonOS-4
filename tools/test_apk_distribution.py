@@ -33,6 +33,7 @@ class DistributionTests(unittest.TestCase):
             (source / "bin").mkdir()
             shutil.copy2(ROOT / "build/userland/busybox.elf", source / "bin/busybox")
             (source / "bin/sh").symlink_to("busybox")
+            (source / "bin/bash").symlink_to("busybox")
             (source / "lib").mkdir()
             shutil.copy2(ROOT / "build/musl/sysroot/lib/libc.so", source / "lib/ld-musl-x86_64.so.1")
             for applet in ("ar", "strings"):
@@ -70,6 +71,15 @@ class DistributionTests(unittest.TestCase):
             self.assertIn("leonos-fastfetch-", result.stdout)
             self.assertEqual((output / "usr/bin/fastfetch").read_bytes(), b"LeonOS Logo fixture\n")
             self.assertTrue((output / "lib/apk/db/installed").stat().st_size)
+            self.assertFalse((output / "bin/bash").exists())
+            result = run("info", "--provides", "leonos-busybox")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("/bin/sh", result.stdout.splitlines())
+            shell_consumer = distribution.make_package(apk, key, work / "empty",
+                work / "shell-consumer.apk", "shell-consumer", "1.0-r0", ["/bin/sh"])
+            result = run("add", str(shell_consumer))
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(run("del", "shell-consumer").returncode, 0)
             self.assertEqual((output / "etc/sudoers.d").stat().st_mode & 0o7777, 0o750)
             result = run("info", "--exists", "leonos-musl-dev")
             self.assertEqual(result.returncode, 0, result.stderr)

@@ -90,12 +90,67 @@ static void test_cursor_down(void)
     puts("Terminal: cursor down at full history remains bounded");
 }
 
+static void test_color_query(void)
+{
+    int fds[2];
+    assert(pipe2(fds, O_NONBLOCK) == 0);
+    active_session = &sessions[0];
+    active_pty_fd = fds[1];
+    terminal_reset_style();
+    terminal_clear();
+    /* Queries can be split over arbitrary PTY reads and use BEL or ST. */
+    terminal_put_text("\033[38;2;255;0;0;48;2;255;255;255m");
+    terminal_put_text("\033]11;");
+    terminal_put_text("?\007\033]10;?\033");
+    terminal_put_text("\\\033[c");
+    const char *expected = "\033]11;rgb:0000/0000/0000\007"
+                           "\033]10;rgb:d7d7/e3e3/f4f4\033\\\033[?1;0c";
+    char reply[128] = {0};
+    assert(read(fds[0], reply, sizeof(reply)) == (ssize_t)strlen(expected));
+    assert(strcmp(reply, expected) == 0);
+    assert(cursor_column == 0);
+    /* Unsupported, malformed and oversized strings stay out of the grid. */
+    terminal_put_text("\033]0;ignored title\007\033]11;?garbage\007\033]11;?");
+    for (unsigned i = 0; i < 256; ++i) terminal_put_char('x');
+    terminal_put_text("\033\\\033]11;?\030X");
+    assert(cursor_column == 1 && history[0].cells[0].codepoint == 'X');
+    assert(read(fds[0], reply, sizeof(reply)) == -1 && errno == EAGAIN);
+    close(fds[0]);
+    close(fds[1]);
+    puts("Terminal: fragmented OSC color queries, DA1 and malformed strings passed");
+}
+
+static void test_extended_colors(void)
+{
+    active_session = &sessions[0];
+    terminal_reset_style();
+    terminal_clear();
+    terminal_put_text("\033[38;2;18;52;86;48;2;101;67;33mA");
+    assert(history[0].cells[0].foreground == 0x123456);
+    assert(history[0].cells[0].background == 0x654321);
+    assert(!text_dim && !text_bright);
+    terminal_put_text("\033[38;5;196;48;5;232mB");
+    assert(history[0].cells[1].foreground == 0xff0000);
+    assert(history[0].cells[1].background == 0x080808);
+    terminal_put_text("\033[38;5;255;48;5;16mC");
+    assert(history[0].cells[2].foreground == 0xeeeeee);
+    assert(history[0].cells[2].background == 0x000000);
+    terminal_put_text("\033[39;49mD");
+    assert(history[0].cells[3].foreground == 0xd7e3f4);
+    assert(history[0].cells[3].background == 0);
+    terminal_put_text("\033[38;2;256;0;0m\033[38;2;12mE");
+    assert(history[0].cells[4].foreground == 0xd7e3f4 && !text_dim);
+    puts("Terminal: RGB, 256-color, default reset and malformed SGR passed");
+}
+
 int main(int argc, char **argv)
 {
     assert(argc == 2);
     if (strcmp(argv[1], "shell") == 0) test_shell();
     else if (strcmp(argv[1], "tab") == 0) test_tab();
     else if (strcmp(argv[1], "cursor-down") == 0) test_cursor_down();
+    else if (strcmp(argv[1], "color-query") == 0) test_color_query();
+    else if (strcmp(argv[1], "extended-colors") == 0) test_extended_colors();
     else abort();
     return 0;
 }

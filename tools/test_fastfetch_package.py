@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -23,6 +24,7 @@ class FastfetchPackageTests(unittest.TestCase):
             config = paths.root / "config"
             config.write_text("CONFIG_LEON_COMPONENT_APP_FASTFETCH_BUILD=n\n")
             owned = ("etc/fastfetch/config.jsonc", "usr/share/licenses/fastfetch/LICENSE",
+                     "usr/share/fastfetch/leonos-ascii.txt", "etc/skel/.config/hyfetch.json",
                      "usr/lib/leonos/apps/fastfetch/fastfetch.elf")
             for name in (*owned, "etc/unrelated.conf"):
                 path = paths.staging / name
@@ -30,6 +32,8 @@ class FastfetchPackageTests(unittest.TestCase):
                 path.write_text("fixture")
             graph = build_graph(paths, config)
             self.assertNotIn("esp:fastfetch:config", graph.targets)
+            self.assertNotIn("esp:fastfetch:ascii", graph.targets)
+            self.assertNotIn("esp:fastfetch:hyfetch-config", graph.targets)
             graph.targets["staging-prune"].action(SimpleNamespace(detail=lambda text: None))
             for name in owned:
                 self.assertFalse((paths.staging / name).exists())
@@ -119,6 +123,44 @@ class FastfetchPackageTests(unittest.TestCase):
             binary, "--config", "none", "--print-structure"
         ], text=True, timeout=15).strip().split(":")
         self.assertEqual(json.loads(Path(config).read_text())["modules"], upstream_modules)
+
+    def test_hyfetch_uses_the_packaged_leonos_logo(self):
+        sys.path.insert(0, str(ROOT))
+        from build import build_graph
+        from buildsystem.core.state import BuildPaths
+        from image_test_accounts import seed_test_accounts
+        from buildsystem.core.runner import ActionContext
+        from leonos_layout import tool_payload_paths
+        logo_path = "usr/share/fastfetch/leonos-ascii.txt"
+        template_path = "etc/skel/.config/hyfetch.json"
+        logo = (ROOT / "userland/fastfetch/leonos-ascii.txt").read_text()
+        upstream = subprocess.check_output([
+            str(CACHE), "--config", "none", "--logo", "LeonOS", "--structure", "Break",
+            "--pipe", "--logo-padding", "0"
+        ], text=True, timeout=15)
+        self.assertEqual(logo.splitlines(), [line.rstrip() for line in upstream.splitlines()])
+        self.assertIn(logo_path, tool_payload_paths("fastfetch"))
+        self.assertIn(template_path, tool_payload_paths("fastfetch"))
+        with tempfile.TemporaryDirectory(prefix="hyfetch-defaults-", dir=ROOT / "build") as directory:
+            paths = BuildPaths(Path(directory))
+            config = paths.root / "config"
+            config.write_text("CONFIG_LEON_COMPONENT_APP_FASTFETCH_BUILD=y\n"
+                              "CONFIG_LEON_COMPONENT_APP_FASTFETCH_IMAGE=y\n")
+            graph = build_graph(paths, config)
+            shutil.copytree(ROOT / "system/rootfs", paths.staging, symlinks=True, dirs_exist_ok=True)
+            for name in ("ascii", "hyfetch-config"):
+                target = graph.targets[f"esp:fastfetch:{name}"]
+                context = ActionContext(SimpleNamespace(paths=paths,
+                    logger=SimpleNamespace(detail=lambda text: None)), target, 0)
+                target.action(context)
+            self.assertEqual((paths.staging / logo_path).read_text(), logo)
+            (paths.staging / "etc/leonos").mkdir(parents=True, exist_ok=True)
+            seed_test_accounts(paths.staging)
+            for home in ("root", "home/test"):
+                value = json.loads((paths.staging / home / ".config/hyfetch.json").read_text())
+                self.assertEqual(value["custom_ascii_path"], "/" + logo_path)
+                self.assertEqual(value["backend"], "fastfetch")
+                self.assertEqual(value["mode"], "rgb")
 
 
 if __name__ == "__main__":
