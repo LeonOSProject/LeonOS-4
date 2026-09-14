@@ -129,14 +129,16 @@ jobs:
         run: |
           set -euo pipefail
 
-          : "${KCONFIG_INSTALLER_ROOT_SIZE_MIB:=128}"
-          : "${KCONFIG_INSTALLER_INSTALLED_REQUIRE_LICENSE:=true}"
+          : "${KCONFIG_INSTALLER_ROOT_SIZE_MIB:=400}"
+          : "${KCONFIG_INSTALLER_INSTALLED_REQUIRE_LICENSE:=false}"
           : "${KCONFIG_LICENSE_SERVER_URL:=http://127.0.0.1:30301}"
           : "${KCONFIG_LICENSE_DEBUG_LOG:=true}"
 
           config_path=buildsystem/config/leonos.conf
-          mkdir -p "$(dirname "$config_path")"
-          cp configs/default.conf "$config_path"
+          # Always start from the checked-in defconfig.  This also runs the
+          # component/Kconfig synchronizer, so removed symbols cannot leak
+          # into a fresh CI checkout from a stale workspace configuration.
+          python3 ./build.py run defconfig
 
           set_config() {
             local key=$1
@@ -178,9 +180,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          python3 tools/generate_component_kconfig.py \
-            --output build/generated/ci-Kconfig.components \
-            --json build/generated/ci-components.json
           python3 tools/test_component_config.py
           python3 build.py info release --profile default >/dev/null
           python3 build.py info installer-root --profile default \
