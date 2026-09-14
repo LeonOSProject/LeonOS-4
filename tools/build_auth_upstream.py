@@ -42,6 +42,22 @@ def run(command: list[str], cwd: Path, env: dict, log: Path) -> None:
         raise SystemExit(f"exit {result.returncode}: {log}")
 
 
+def normalize_libbsd_linker_script(root: Path) -> None:
+    """Make the staged libbsd linker script resolve inside its -L directory."""
+    script = root / "lib/libbsd.so"
+    lines = script.read_text(encoding="utf-8").splitlines(keepends=True)
+    matches = [
+        index for index, line in enumerate(lines)
+        if line.startswith("GROUP(/lib/libbsd.so.")
+        and line.rstrip().endswith(" AS_NEEDED(-lmd))")
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(f"unexpected libbsd linker script: {script}")
+    index = matches[0]
+    lines[index] = lines[index].replace("GROUP(/lib/", "GROUP(", 1)
+    script.write_text("".join(lines), encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("packages", nargs="*")
@@ -179,6 +195,8 @@ def main() -> None:
             commands = [configure, ["make", f"-j{args.jobs}"], install]
         for command in commands:
             run(command, output, package_env, log)
+        if package == "libbsd":
+            normalize_libbsd_linker_script(root)
         if package in ("libmd", "libbsd"):
             # Installed libtool archives contain absolute target dependency
             # paths. Link consumers through the ELF libraries/pkg-config.
