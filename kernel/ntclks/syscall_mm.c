@@ -16,7 +16,6 @@
 #include <ntclks/usercopy.h>
 #include <ntclks/userland.h>
 #include <linux/mman.h>
-#include <string.h>
 
 #define PAGE_SIZE 4096ULL
 /* Linux MAP_STACK inhibits THP, not automatic growth. User mappings here use
@@ -1202,8 +1201,8 @@ int64_t syscall_mm_mremap(uint64_t old_addr, uint64_t old_len, uint64_t new_len,
     if (flags & LINUX_MREMAP_FIXED) map_flags |= LINUX_MAP_FIXED;
     moved = syscall_mm_mmap(new_addr, new_mapped, vma->prot, map_flags, UINT64_MAX, 0);
     if (moved < 0) return moved;
-    memcpy((void *)(uintptr_t)moved, (const void *)(uintptr_t)old_addr,
-           old_mapped < new_mapped ? old_mapped : new_mapped);
+    __builtin_memcpy((void *)(uintptr_t)moved, (const void *)(uintptr_t)old_addr,
+                     old_mapped < new_mapped ? old_mapped : new_mapped);
     if (syscall_mm_munmap(old_addr, old_mapped) < 0) {
         (void)syscall_mm_munmap((uint64_t)moved, new_mapped);
         return -LEONOS_EFAULT;

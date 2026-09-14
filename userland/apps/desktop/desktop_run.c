@@ -122,7 +122,6 @@ void desktop_run(void)
         desktop_handle_display_requests();
         desktop_handle_appearance_requests();
         desktop_lifecycle_update();
-        oobe_lock_update();
         login_lock_update();
         desktop_update_window_animations();
 
@@ -165,7 +164,6 @@ void desktop_run(void)
                 handle_mouse_wheel((uint32_t)event.x, (uint32_t)event.y,
                                    event.dy, event.buttons);
             } else if (event.type == LEONOS_INPUT_KEYBOARD) {
-                leonos_ui_caps_lock_event(event.keycode, event.pressed);
                 if (desktop_lifecycle_handle_key(event.keycode, event.pressed)) {
                     continue;
                 }
