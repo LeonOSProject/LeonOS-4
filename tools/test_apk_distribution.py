@@ -36,8 +36,9 @@ class DistributionTests(unittest.TestCase):
 
         self.assertEqual(commands[0][0:2], ["fakeroot", "/tmp/apk.static"])
         self.assertEqual(commands[0][2], "mkpkg")
-        self.assertEqual(commands[1][0:3], ["fakeroot", "/tmp/apk.static", "--usermode"])
-        self.assertEqual(commands[1][3:], ["--root", "/tmp/root", "add", "fixture"])
+        self.assertEqual(commands[1][0:4],
+                         ["fakeroot", "/tmp/apk.static", "--usermode", "--force-no-chroot"])
+        self.assertEqual(commands[1][4:], ["--root", "/tmp/root", "add", "fixture"])
 
     def test_signed_install_and_fastfetch_conflict(self):
         module = ROOT / "tools/apk_distribution.py"

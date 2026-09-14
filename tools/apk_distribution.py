@@ -57,7 +57,7 @@ def _run_apk(apk, arguments, *, usermode=False):
         raise RuntimeError("apk packaging requires unshare user namespaces or fakeroot")
     command = ["fakeroot", apk]
     if usermode:
-        command.append("--usermode")
+        command += ["--usermode", "--force-no-chroot"]
     run(command + list(arguments))
 
 
