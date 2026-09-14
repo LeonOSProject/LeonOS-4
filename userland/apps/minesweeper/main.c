@@ -2,9 +2,14 @@
 #include <leonos/i18n.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
-#include <leonos/syscall.h>
 #include <leonos/ui.h>
 #include <leonos/layout.h>
+#include <fcntl.h>
+#include <poll.h>
+#include <stdint.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
 
 #define MS_COLS 9
 #define MS_ROWS 9
@@ -92,7 +97,7 @@ static int32_t read_le32s(const uint8_t *p)
 static int load_sprite_bmp(const char *path, struct minesweeper_sprite *sprite)
 {
     uint8_t bmp[MS_SPRITE_BMP_MAX_BYTES];
-    struct leonos_stat st;
+    struct stat st;
     uint32_t len = 0;
     uint32_t pixel_offset;
     uint32_t row_stride;
@@ -102,17 +107,17 @@ static int load_sprite_bmp(const char *path, struct minesweeper_sprite *sprite)
     int top_down;
     int fd;
 
-    if (!path || !sprite || leonos_stat_legacy(path, &st) < 0 ||
-        st.type != LEONOS_FS_TYPE_FILE || st.size < 54 ||
-        st.size > sizeof(bmp)) {
+    if (!path || !sprite || stat(path, &st) < 0 ||
+        !S_ISREG(st.st_mode) || st.st_size < 54 ||
+        (uint64_t)st.st_size > sizeof(bmp)) {
         return 0;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, O_RDONLY);
     if (fd < 0) {
         return 0;
     }
-    while (len < st.size) {
-        long got = read(fd, bmp + len, (uint32_t)st.size - len);
+    while (len < (uint32_t)st.st_size) {
+        long got = read(fd, bmp + len, (uint32_t)st.st_size - len);
         if (got <= 0) {
             close(fd);
             return 0;
@@ -209,7 +214,11 @@ static void reset_game(void)
     won = 0;
     revealed_count = 0;
     flagged_count = 0;
-    rng_state = (uint32_t)leonos_uptime_ms() ^ 0xa5c35a1du;
+    {
+        struct timespec now = {0};
+        (void)clock_gettime(CLOCK_MONOTONIC, &now);
+        rng_state = (uint32_t)now.tv_nsec ^ (uint32_t)now.tv_sec ^ 0xa5c35a1du;
+    }
     if (!rng_state) {
         rng_state = 1;
     }
@@ -434,6 +443,7 @@ int main(void)
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
+
     puts("[minesweeper.elf] starting");
     if (!load_game_assets()) {
         puts("[minesweeper.elf] required BMP assets unavailable");
@@ -480,7 +490,7 @@ int main(void)
                 leonos_gui_present_window((uint32_t)window_id, MS_W, MS_H, MS_W, pixels);
             }
         } else {
-            sleep_ms(10);
+            (void)poll(0, 0, 10);
         }
     }
     leonos_gui_destroy_app_window((uint32_t)window_id);

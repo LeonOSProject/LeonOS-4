@@ -117,6 +117,25 @@ config LEON_COMPONENT_APP_IMAGEVIEW_SDK
     default n
     depends on LEON_COMPONENT_APP_IMAGEVIEW_BUILD
 
+config LEON_COMPONENT_APP_PAINT_BUILD
+    bool "Build Paint"
+    default y
+
+config LEON_COMPONENT_APP_PAINT_IMAGE
+    bool "Include Paint in system images"
+    default y
+    depends on LEON_COMPONENT_APP_PAINT_BUILD
+
+config LEON_COMPONENT_APP_PAINT_ENTRY
+    bool "Generate a desktop entry for Paint"
+    default y
+    depends on LEON_COMPONENT_APP_PAINT_BUILD
+
+config LEON_COMPONENT_APP_PAINT_SDK
+    bool "Include Paint in the developer SDK"
+    default n
+    depends on LEON_COMPONENT_APP_PAINT_BUILD
+
 config LEON_COMPONENT_APP_OSHLP_BUILD
     bool "Build Help viewer"
     default y
@@ -607,6 +626,44 @@ config LEON_COMPONENT_APP_MINESWEEPER_SDK
     bool "Include Minesweeper in the developer SDK"
     default n
     depends on LEON_COMPONENT_APP_MINESWEEPER_BUILD
+
+config LEON_COMPONENT_APP_SNAKE_BUILD
+    bool "Build Snake"
+    default y
+
+config LEON_COMPONENT_APP_SNAKE_IMAGE
+    bool "Include Snake in system images"
+    default y
+    depends on LEON_COMPONENT_APP_SNAKE_BUILD
+
+config LEON_COMPONENT_APP_SNAKE_ENTRY
+    bool "Generate a desktop entry for Snake"
+    default n
+    depends on LEON_COMPONENT_APP_SNAKE_BUILD
+
+config LEON_COMPONENT_APP_SNAKE_SDK
+    bool "Include Snake in the developer SDK"
+    default n
+    depends on LEON_COMPONENT_APP_SNAKE_BUILD
+
+config LEON_COMPONENT_APP_MATRIX_BUILD
+    bool "Build Matrix"
+    default y
+
+config LEON_COMPONENT_APP_MATRIX_IMAGE
+    bool "Include Matrix in system images"
+    default y
+    depends on LEON_COMPONENT_APP_MATRIX_BUILD
+
+config LEON_COMPONENT_APP_MATRIX_ENTRY
+    bool "Generate a desktop entry for Matrix"
+    default n
+    depends on LEON_COMPONENT_APP_MATRIX_BUILD
+
+config LEON_COMPONENT_APP_MATRIX_SDK
+    bool "Include Matrix in the developer SDK"
+    default n
+    depends on LEON_COMPONENT_APP_MATRIX_BUILD
 
 config LEON_COMPONENT_APP_DOOMLAUNCHER_BUILD
     bool "Build DOOM launcher"

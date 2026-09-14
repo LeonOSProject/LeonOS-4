@@ -1,11 +1,16 @@
-#include <leonos/fs.h>
 #include <leonos/gui.h>
 #include <leonos/i18n.h>
+#include <leonos/png.h>
 #include <leonos/stdio.h>
-#include <leonos/syscall.h>
 #include <leonos/ui.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <poll.h>
+#include <sys/stat.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define IMAGEVIEW_W 760U
 #define IMAGEVIEW_H 520U
@@ -18,7 +23,7 @@
 #define IMAGEVIEW_STATUS_H 28U
 #define IMAGEVIEW_DETAIL_H 22U
 #define IMAGEVIEW_MAX_PIXELS (1024U * 1024U)
-#define IMAGEVIEW_ROWS_MAX LEONOS_FS_MAX_ENTRIES
+#define IMAGEVIEW_ROWS_MAX 64U
 #define IMAGEVIEW_OPEN_X 12U
 #define IMAGEVIEW_OPEN_W 56U
 #define IMAGEVIEW_PREVIOUS_X 76U
@@ -42,11 +47,11 @@ static uint32_t image_h;
 static uint32_t view_w = IMAGEVIEW_W;
 static uint32_t view_h = IMAGEVIEW_H;
 static uint8_t zoom_mode = ZOOM_FIT;
-static char current_path[LEONOS_FS_PATH_LEN];
-static char current_dir[LEONOS_FS_PATH_LEN];
-static char status_text[160] = "Use Open to choose a BMP image.";
+static char current_path[PATH_MAX];
+static char current_dir[PATH_MAX];
+static char status_text[160] = "Use Open to choose a BMP or PNG image.";
 static char detail_text[192] = "";
-static char sibling_names[IMAGEVIEW_ROWS_MAX][LEONOS_FS_NAME_LEN];
+static char sibling_names[IMAGEVIEW_ROWS_MAX][NAME_MAX + 1U];
 static uint32_t sibling_count;
 static uint32_t sibling_index;
 
@@ -193,36 +198,41 @@ static void build_child_path(char *dst, uint32_t cap, const char *dir,
 
 static void free_image(void)
 {
-    if (image_pixels) {
-        free(image_pixels);
-        image_pixels = 0;
-    }
+    leonos_png_free(image_pixels);
+    image_pixels = 0;
     image_w = 0;
     image_h = 0;
 }
 
+static int is_supported_image_path(const char *path)
+{
+    return ends_with_ignore_case(path, ".bmp") ||
+           ends_with_ignore_case(path, ".dib") ||
+           ends_with_ignore_case(path, ".png");
+}
+
 static int read_file_all(const char *path, uint8_t **out_data, uint32_t *out_len)
 {
-    struct leonos_stat st;
+    struct stat st;
     uint8_t *data;
     uint32_t len = 0;
     int fd;
-    if (!out_data || !out_len || leonos_stat_legacy(path, &st) < 0 ||
-        st.type != LEONOS_FS_TYPE_FILE || st.size == 0 ||
-        st.size > 8U * 1024U * 1024U) {
+    if (!out_data || !out_len || stat(path, &st) < 0 ||
+        !S_ISREG(st.st_mode) || st.st_size <= 0 ||
+        (uint64_t)st.st_size > 8U * 1024U * 1024U) {
         return -1;
     }
-    data = (uint8_t *)malloc((size_t)st.size);
+    data = (uint8_t *)malloc((size_t)st.st_size);
     if (!data) {
         return -1;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, O_RDONLY);
     if (fd < 0) {
         free(data);
         return fd;
     }
-    while (len < (uint32_t)st.size) {
-        long got = read(fd, data + len, (uint32_t)st.size - len);
+    while (len < (uint32_t)st.st_size) {
+        long got = read(fd, data + len, (uint32_t)st.st_size - len);
         if (got < 0) {
             close(fd);
             free(data);
@@ -234,7 +244,7 @@ static int read_file_all(const char *path, uint8_t **out_data, uint32_t *out_len
         len += (uint32_t)got;
     }
     close(fd);
-    if (len != (uint32_t)st.size) {
+    if (len != (uint32_t)st.st_size) {
         free(data);
         return -1;
     }
@@ -307,26 +317,28 @@ static int decode_bmp(const uint8_t *data, uint32_t len)
 
 static void rebuild_siblings(void)
 {
-    struct leonos_dir_entry entries[LEONOS_FS_MAX_ENTRIES];
-    uint32_t count = 0;
+    DIR *directory;
+    struct dirent *entry;
     const char *base = path_basename(current_path);
     sibling_count = 0;
     sibling_index = 0;
     path_parent(current_dir, sizeof(current_dir), current_path);
-    if (leonos_list_dir(current_dir, entries, LEONOS_FS_MAX_ENTRIES, &count) < 0) {
+    directory = opendir(current_dir);
+    if (!directory) {
         return;
     }
-    for (uint32_t i = 0; i < count && sibling_count < IMAGEVIEW_ROWS_MAX; ++i) {
-        if (entries[i].type == LEONOS_FS_TYPE_FILE &&
-            ends_with_ignore_case(entries[i].name, ".bmp")) {
+    while (sibling_count < IMAGEVIEW_ROWS_MAX && (entry = readdir(directory)) != 0) {
+        if ((entry->d_type == DT_REG || entry->d_type == DT_UNKNOWN) &&
+            is_supported_image_path(entry->d_name)) {
             copy_text(sibling_names[sibling_count],
-                      sizeof(sibling_names[0]), entries[i].name);
-            if (text_eq_ignore_case(entries[i].name, base)) {
+                      sizeof(sibling_names[0]), entry->d_name);
+            if (text_eq_ignore_case(entry->d_name, base)) {
                 sibling_index = sibling_count;
             }
             ++sibling_count;
         }
     }
+    closedir(directory);
 }
 
 static void rebuild_detail(void)
@@ -355,23 +367,45 @@ static void rebuild_detail(void)
 static int load_image_path(const char *path)
 {
     uint8_t *data = 0;
+    uint32_t *decoded = 0;
     uint32_t len = 0;
+    uint32_t decoded_w = 0;
+    uint32_t decoded_h = 0;
     int ret;
-    if (!path || !path[0]) {
+
+    if (!path || !path[0] || !is_supported_image_path(path)) {
+        copy_text(status_text, sizeof(status_text),
+                  T("Unsupported image format. Use BMP, DIB, or PNG.",
+                    "不支持的图片格式，请使用 BMP、DIB 或 PNG。"));
         return -1;
     }
-    ret = read_file_all(path, &data, &len);
-    if (ret < 0) {
-        copy_text(status_text, sizeof(status_text),
-                  T("Could not read image.", "无法读取图片。"));
-        return ret;
-    }
-    ret = decode_bmp(data, len);
-    free(data);
-    if (ret < 0) {
-        copy_text(status_text, sizeof(status_text),
-                  T("Unsupported BMP. Use uncompressed 24/32-bit BMP.", "不支持的 BMP，请使用未压缩 24/32 位 BMP。"));
-        return ret;
+    if (ends_with_ignore_case(path, ".png")) {
+        ret = leonos_png_decode_file(path, &decoded, &decoded_w, &decoded_h);
+        if (ret < 0) {
+            copy_text(status_text, sizeof(status_text),
+                      T("Could not decode PNG (maximum 1024x1024).",
+                        "无法解码 PNG（最大 1024x1024）。"));
+            return ret;
+        }
+        free_image();
+        image_pixels = decoded;
+        image_w = decoded_w;
+        image_h = decoded_h;
+    } else {
+        ret = read_file_all(path, &data, &len);
+        if (ret < 0) {
+            copy_text(status_text, sizeof(status_text),
+                      T("Could not read image.", "无法读取图片。"));
+            return ret;
+        }
+        ret = decode_bmp(data, len);
+        free(data);
+        if (ret < 0) {
+            copy_text(status_text, sizeof(status_text),
+                      T("Unsupported BMP. Use uncompressed 24/32-bit BMP.",
+                        "不支持的 BMP，请使用未压缩 24/32 位 BMP。"));
+            return ret;
+        }
     }
     copy_text(current_path, sizeof(current_path), path);
     rebuild_siblings();
@@ -427,8 +461,8 @@ static void draw_scaled_image(struct leonos_ui_surface *ui)
     leonos_ui_inset(ui, x0, y0, w0, h0, LEONOS_UI_WHITE);
     if (!image_pixels || !image_w || !image_h) {
         leonos_ui_text_clipped(ui, x0 + 18U, y0 + 18U, w0 > 36U ? w0 - 36U : w0,
-                                T("Use Open, File Manager, Run, or the command line to open a .bmp file.",
-                                  "请使用打开、文件资源管理器、运行或命令行打开 .bmp 文件。"),
+                                T("Use Open, File Manager, Run, or the command line to open a BMP or PNG file.",
+                                  "请使用打开、文件资源管理器、运行或命令行打开 BMP 或 PNG 文件。"),
                                 LEONOS_UI_DARK, LEONOS_UI_WHITE);
         return;
     }
@@ -516,7 +550,7 @@ static int hit_rect(int32_t px, int32_t py, uint32_t x, uint32_t y,
 
 static void load_sibling_delta(int delta)
 {
-    char next_path[LEONOS_FS_PATH_LEN];
+    char next_path[PATH_MAX];
     if (sibling_count <= 1U) {
         return;
     }
@@ -532,11 +566,11 @@ static void load_sibling_delta(int delta)
 
 static void open_image_via_dialog(void)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[PATH_MAX];
     path[0] = 0;
     if (leonos_ui_show_open_dialog(T("Open image", "打开图片"), path, sizeof(path),
-                                   T("BMP images (*.bmp)", "BMP 图片 (*.bmp)"),
-                                   ".bmp") > 0 && path[0]) {
+                                   T("Images (*.bmp; *.dib; *.png)", "图片 (*.bmp; *.dib; *.png)"),
+                                   ".bmp;.dib;.png") > 0 && path[0]) {
         (void)load_image_path(path);
     }
 }
@@ -581,7 +615,7 @@ int main(int argc, char **argv, char **envp)
                   T("No image loaded.", "未加载图片。"));
     }
     window_id = leonos_gui_create_app_window_ex(T("Image Viewer", "图片查看器"),
-                                                T("BMP image viewer", "BMP 图片查看器"),
+                                                T("BMP and PNG image viewer", "BMP 和 PNG 图片查看器"),
                                                 view_w, view_h, 0);
     if (window_id <= 0) {
         printf("[imageview.elf] create window failed=%d\n", window_id);
@@ -623,7 +657,7 @@ int main(int argc, char **argv, char **envp)
                 present(window_id, &ui);
             }
         } else {
-            sleep_ms(10);
+            (void)poll(0, 0, 10);
         }
     }
 }
