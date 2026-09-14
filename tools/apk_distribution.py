@@ -23,6 +23,10 @@ ARCHIVE_SHA256 = "c8e2c88c13ba12a12269b79a3543e1190ff8c0ab0beb32b58cadfd5881c619
 BINARY_SHA256 = "5118a57ae7c07e13268a754f78aa9c7d39a0bed708bb11c101d78e2a884cee5d"
 LICENSE_SHA256 = "b3c87315aae4c9f276c37168f2655dd8bd990544d7a0bbfb929664155c7ab257"
 URL = "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/apk-tools-static-3.0.8-r0.apk"
+LICENSE_URLS = (
+    "https://raw.githubusercontent.com/alpinelinux/apk-tools/v3.0.8/LICENSE",
+    "https://gitlab.alpinelinux.org/alpine/apk-tools/-/raw/v3.0.8/LICENSE",
+)
 REPOSITORY = "usr/share/leonos/apk/repository"
 EXTERNAL = {"EFI", "grub", "leonos", "loader.elf", "install"}
 
@@ -34,6 +38,24 @@ def run(args, **kwargs):
 def digest(path):
     with Path(path).open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def download_verified(urls, destination, expected_sha256):
+    destination = Path(destination)
+    temporary = destination.with_name(destination.name + ".download")
+    try:
+        for url in urls:
+            try:
+                run(["curl", "--fail", "--location", "--retry", "3",
+                     "--output", temporary, url])
+            except subprocess.CalledProcessError:
+                continue
+            if digest(temporary) == expected_sha256:
+                temporary.replace(destination)
+                return
+        raise RuntimeError(f"unable to download verified file: {destination.name}")
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def bootstrap():
@@ -51,11 +73,7 @@ def _bootstrap_locked(directory):
         if reference.is_file() and digest(reference) == ARCHIVE_SHA256:
             shutil.copyfile(reference, archive)
         else:
-            temporary = archive.with_suffix(".download")
-            run(["curl", "--fail", "--location", "--retry", "3", "--output", temporary, URL])
-            if digest(temporary) != ARCHIVE_SHA256:
-                raise ValueError("apk-tools archive checksum mismatch")
-            temporary.replace(archive)
+            download_verified((URL,), archive, ARCHIVE_SHA256)
     if digest(archive) != ARCHIVE_SHA256:
         raise ValueError("apk-tools archive checksum mismatch")
     binary = directory / "apk.static"
@@ -79,8 +97,7 @@ def _bootstrap_locked(directory):
     binary.chmod(0o755)
     license_file = directory / "LICENSE"
     if not license_file.exists():
-        run(["curl", "--fail", "--location", "--retry", "3",
-             "--output", license_file, "https://gitlab.alpinelinux.org/alpine/apk-tools/-/raw/v3.0.8/LICENSE"])
+        download_verified(LICENSE_URLS, license_file, LICENSE_SHA256)
     if digest(license_file) != LICENSE_SHA256:
         raise ValueError("apk-tools license checksum mismatch")
     return binary.resolve()
