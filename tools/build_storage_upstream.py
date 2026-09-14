@@ -39,6 +39,7 @@ def main():
     resource = subprocess.check_output(["clang", "-print-resource-dir"], text=True).strip()
     compiler = ["clang", "--target=x86_64-linux-musl", f"--sysroot={musl}",
                 "--gcc-toolchain=/nonexistent", "-fuse-ld=lld", "--rtlib=compiler-rt",
+                "--unwindlib=none",
                 "-nostdinc", "-isystem", str(musl / "include"),
                 "-isystem", str(Path(resource) / "include"),
                 "-idirafter", str(args.linux_headers.resolve()), "-L" + str(musl / "lib")]

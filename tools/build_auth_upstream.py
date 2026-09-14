@@ -72,6 +72,7 @@ def main() -> None:
     resource = Path(subprocess.check_output(["clang", "-print-resource-dir"], text=True).strip())
     compiler = ["clang", "--target=x86_64-linux-musl", f"--sysroot={musl}",
                 "--gcc-toolchain=/nonexistent", "-fuse-ld=lld", "--rtlib=compiler-rt",
+                "--unwindlib=none",
                 "-nostdinc", "-isystem", str(musl / "include"),
                 "-isystem", str(resource / "include"), "-idirafter", str(args.linux_headers.resolve())]
     env = {**os.environ, "CC": shlex.join(compiler), "AR": "llvm-ar", "RANLIB": "llvm-ranlib",

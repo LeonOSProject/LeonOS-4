@@ -32,7 +32,8 @@ def main() -> None:
         probe = work / "ncurses-test"
         subprocess.run([
             "clang", "--target=x86_64-linux-musl", "--gcc-toolchain=/nonexistent",
-            f"--sysroot={musl}", "--rtlib=compiler-rt", "-fuse-ld=lld", "-static",
+            f"--sysroot={musl}", "--rtlib=compiler-rt", "--unwindlib=none",
+            "-fuse-ld=lld", "-static",
             "-I" + str(ncurses / "include"), str(ROOT / "tools/tests/ncurses_runtime_test.c"),
             "-L" + str(ncurses / "lib"), "-lncursesw", "-ltinfow", "-o", str(probe),
         ], check=True)
