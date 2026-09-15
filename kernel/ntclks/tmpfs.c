@@ -67,6 +67,7 @@ static void tmpfs_node(struct tmpfs_super *fs, struct tmpfs_inode *n, struct sto
                               .flags = STORAGE_NODE_FLAG_TMPFS | (n == fs->root ? STORAGE_NODE_FLAG_ROOT : 0),
                               .type = mode == LINUX_S_IFDIR    ? LEONOS_FS_TYPE_DIR
                                       : mode == LINUX_S_IFLNK  ? LEONOS_FS_TYPE_SYMLINK
+                                      : mode == LINUX_S_IFIFO  ? LEONOS_FS_TYPE_FIFO
                                       : mode == LINUX_S_IFSOCK ? LEONOS_FS_TYPE_SOCKET
                                                                : LEONOS_FS_TYPE_FILE};
 }
@@ -382,7 +383,7 @@ int tmpfs_create(struct tmpfs_super *fs, const char *path, uint32_t mode, const 
     if (*tmpfs_find(parent, name))
         return -17;
     uint32_t type = mode & LINUX_S_IFMT;
-    if (type != LINUX_S_IFDIR && type != LINUX_S_IFREG && type != LINUX_S_IFLNK && type != LINUX_S_IFSOCK)
+    if (type != LINUX_S_IFDIR && type != LINUX_S_IFREG && type != LINUX_S_IFLNK && type != LINUX_S_IFSOCK && type != LINUX_S_IFIFO)
         return -95;
     if (type == LINUX_S_IFLNK && (!target || !*target))
         return -2;

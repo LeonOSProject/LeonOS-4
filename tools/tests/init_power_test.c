@@ -3,44 +3,18 @@
 #include <signal.h>
 #include <sys/reboot.h>
 #include <sys/wait.h>
-#define main init_program_main
-#include "../../userland/apps/init/main.c"
-#undef main
-
-static unsigned sync_calls, reboot_calls;
-static int last_command;
-void sync(void) { ++sync_calls; }
-int reboot(int command)
-{
-    assert(sync_calls == reboot_calls + 1);
-    ++reboot_calls;
-    last_command = command;
-    errno = EPERM;
-    return -1;
-}
-
+#include "../../userland/libc/src/auth_accounts.c"
+static int last_signal, sends;
+uid_t geteuid(void) { return 0; }
+int kill(pid_t pid, int sig) { assert(pid == 1); last_signal = sig; ++sends; return 0; }
+int reboot(int command) { (void)command; assert(!"GUI must signal PID 1, never reboot directly"); return -1; }
+int leonos_sudo_run(const char *user, const char *password, char *const args[], uint32_t *pid)
+{ (void)user; (void)password; (void)args; (void)pid; assert(0); return -1; }
+int leonos_sudo_wait_command(uint32_t pid, int *status) { (void)pid; (void)status; assert(0); return -1; }
 int main(void)
 {
-    sigset_t set, previous;
-    assert(sigprocmask(SIG_SETMASK, NULL, &previous) == 0);
-    assert(init_block_signals(&set) == 0);
-    const int signals[] = {SIGUSR1, SIGUSR2, SIGTERM};
-    const int commands[] = {RB_HALT_SYSTEM, RB_POWER_OFF, RB_AUTOBOOT};
-    for (unsigned i = 0; i < 3; ++i) {
-        assert(kill(getpid(), signals[i]) == 0);
-        int received = sigwaitinfo(&set, NULL);
-        assert(received == signals[i]);
-        assert(init_dispatch_signal(received) == -1 && errno == EPERM);
-        assert(reboot_calls == i + 1 && last_command == commands[i]);
-    }
-    pid_t child = fork();
-    assert(child >= 0);
-    if (!child) _exit(23);
-    assert(sigwaitinfo(&set, NULL) == SIGCHLD);
-    assert(init_dispatch_signal(SIGCHLD) == 0 && reboot_calls == 3);
-    int status;
-    assert(waitpid(child, &status, 0) == child && WEXITSTATUS(status) == 23);
-    assert(init_dispatch_signal(SIGWINCH) == 0 && reboot_calls == 3);
-    assert(sigprocmask(SIG_SETMASK, &previous, NULL) == 0);
-    puts("PASS init handles upstream BusyBox power signals and survives failed reboot");
+    assert(leonos_auth_request_power(RB_AUTOBOOT) == 0 && last_signal == SIGTERM && sends == 1);
+    assert(leonos_auth_request_power(RB_POWER_OFF) == 0 && last_signal == SIGUSR2 && sends == 2);
+    assert(leonos_auth_request_power(123) == -1 && errno == EINVAL && sends == 2);
+    puts("PASS GUI/installer power requests follow BusyBox PID 1 protocol");
 }

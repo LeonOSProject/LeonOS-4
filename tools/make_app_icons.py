@@ -437,7 +437,7 @@ def draw_icon(name: str) -> list[list[tuple[int, int, int, int]]]:
         icon_ping(c)
     elif name == "netctl":
         icon_netctl(c)
-    elif name == "serviced":
+    elif name in {"sessiond", "device-agent"}:
         icon_servicemgr(c)
     elif name == "servicemgr":
         icon_servicemgr(c)

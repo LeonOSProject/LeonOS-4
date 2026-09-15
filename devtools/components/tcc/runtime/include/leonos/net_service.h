@@ -3,7 +3,7 @@
 
 /* Versioned LeonOS network service SDK.
  *
- * Consumers talk to netmand (hosted by serviced) over /run/leonos/net.sock
+ * Consumers talk to the kernel query adapter and authenticated OpenRC commands
  * through this library; /dev/net0 and the fd 3 network channel are gone.
  * Data traffic uses standard AF_INET sockets.
  */

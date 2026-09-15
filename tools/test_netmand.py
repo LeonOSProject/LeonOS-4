@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the real management daemon, client and Unix framing on host Linux."""
+"""Exercise the production network adapter and its error propagation on host Linux."""
 from pathlib import Path
 import subprocess
 import tempfile
@@ -9,7 +9,7 @@ with tempfile.TemporaryDirectory(prefix="leonos-netmand-") as temporary:
     work = Path(temporary)
     headers = work / "include/leonos"
     headers.mkdir(parents=True)
-    for name in ("unix_ipc", "netmand"):
+    for name in ("unix_ipc",):
         (headers / f"{name}.h").symlink_to(ROOT / f"userland/libc/include/leonos/{name}.h")
     binary = work / "netmand-test"
     subprocess.run(["cc", "-std=c11", "-O1", "-g", "-D_GNU_SOURCE", "-DLEONOS_USE_MUSL",

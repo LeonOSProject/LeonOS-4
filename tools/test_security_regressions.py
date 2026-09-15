@@ -1,16 +1,7 @@
 #!/usr/bin/env python3
-"""LeonOS 4 Unix-IPC migration security regression audit.
+"""Audit current IPC peer boundaries and execute capability/PAM/OpenRC regressions.
 
-Strict mode asserts the new invariants:
-* no private service-request ioctl family remains in kernel source;
-* windowd/authd/netmand use SO_PEERCRED as their peer trust boundary;
-* production credential tests enforce capabilities for setuid and reboot(2);
-* every privileged authd message is served by a *_from_peer handler, and each
-  of those takes its caller identity from the accept-time SO_PEERCRED slot
-  rather than from the request payload. authd additionally validates the kernel
-  credentials on every frame fragment; stable PID lifetime binding is pending.
-
-Source lint alone does not establish ABI or authentication compatibility.
+Source lint and host behavior tests do not establish target-kernel compatibility.
 """
 
 from __future__ import annotations
@@ -34,8 +25,8 @@ FORBIDDEN_KERNEL_RE = re.compile(
 KERNEL_ROOTS = ("kernel/ntclks", "drivers/bootstrap")
 PEERCRED_PATHS = (
     "userland/apps/windowd/main.c",
-    "userland/apps/authd/main.c",
-    "userland/apps/serviced/netmand.c",
+    "userland/apps/device-agent/main.c",
+    "userland/apps/sessiond/main.c",
 )
 
 
@@ -75,52 +66,19 @@ def credential_regressions() -> list[str]:
     return []
 
 
-SUDO_PRIVILEGED_MESSAGES = (
-    "LEONOS_AUTHD_MSG_RUN",
-    "LEONOS_AUTHD_MSG_WAIT",
-    "LEONOS_AUTHD_MSG_SUDO_KILL",
-    "LEONOS_AUTHD_MSG_SUDO_CHECK",
-    "LEONOS_AUTHD_MSG_SUDO_VERIFY",
-    "LEONOS_AUTHD_MSG_FILEOP",
-)
+def authorization_regressions() -> list[str]:
+    """Execute the current PAM boundary and narrow OpenRC authorization adapter.
 
-
-def missing_from_peer_handlers() -> list[str]:
-    """Every privileged message must be dispatched to a *_from_peer handler.
-
-    The handler naming is the audit hook: it forces the caller identity to be an
-    explicit parameter that the daemon fills from SO_PEERCRED, so a new message
-    cannot quietly serve itself from request fields.
+    authd was removed by the earlier PAM migration; historical handler-name
+    checks cannot test the production sudo/PAM implementation.
     """
-    missing = []
-    dispatch = read("userland/apps/authd/main.c")
-    for message in SUDO_PRIVILEGED_MESSAGES:
-        marker = f"type == {message}"
-        if marker not in dispatch:
-            missing.append(f"userland/apps/authd/main.c: {message} 未分发")
-            continue
-        call = "_from_peer("
-        if call not in dispatch:
-            missing.append(f"userland/apps/authd/main.c: {message} 未交给 *_from_peer 处理")
-    return missing
-
-
-def missing_from_peer_identity() -> list[str]:
-    """A *_from_peer handler must consume the peer uid, not a payload field."""
-    missing = []
-    source = read("userland/apps/authd/authd_sudo.c")
-    text = read("userland/apps/authd/main.c")
-    if "requester_uid" not in source:
-        missing.append("userland/apps/authd/authd_sudo.c: 处理函数未接收 requester_uid")
-    # The daemon must pass the accept-time slot uid into every privileged call.
-    for message in SUDO_PRIVILEGED_MESSAGES:
-        if message in ("LEONOS_AUTHD_MSG_RUN", "LEONOS_AUTHD_MSG_WAIT",
-                       "LEONOS_AUTHD_MSG_SUDO_KILL", "LEONOS_AUTHD_MSG_SUDO_CHECK",
-                       "LEONOS_AUTHD_MSG_SUDO_VERIFY", "LEONOS_AUTHD_MSG_FILEOP"):
-            if "client->uid" not in text:
-                missing.append("userland/apps/authd/main.c: 分发未使用 SO_PEERCRED 记录的 client->uid")
-                break
-    return missing
+    failures = []
+    for script in ("tools/test_pam_login_case.py", "tools/test_openrc_authorization.py"):
+        result = subprocess.run([sys.executable, script], cwd=ROOT,
+                                capture_output=True, text=True, timeout=90)
+        if result.returncode:
+            failures.append(script + ": " + (result.stdout + result.stderr)[-4000:])
+    return failures
 
 
 def main() -> int:
@@ -132,7 +90,7 @@ def main() -> int:
     violations = kernel_violations()
     peercred = missing_peercred()
     gates = credential_regressions()
-    from_peer = missing_from_peer_handlers() + missing_from_peer_identity()
+    from_peer = authorization_regressions()
     failures = violations + peercred + gates + from_peer
 
     if args.json:
@@ -143,7 +101,7 @@ def main() -> int:
             "kernel_private_ioctl_violations": violations,
             "missing_so_peercred": peercred,
             "credential_regression_failures": gates,
-            "missing_from_peer_handlers": from_peer,
+            "authorization_regression_failures": from_peer,
         }, indent=2))
     else:
         print("LeonOS 4 Unix-IPC 安全回归源码检测")
@@ -156,7 +114,7 @@ def main() -> int:
         print(f"凭据/capability 行为回归失败: {len(gates)}")
         for item in gates:
             print(f"  FAIL {item}")
-        print(f"提权消息 SO_PEERCRED 处理缺失: {len(from_peer)}")
+        print(f"PAM/OpenRC 授权行为回归失败: {len(from_peer)}")
         for item in from_peer:
             print(f"  FAIL {item}")
         print("source lint and focused credential check " + ("passed" if not failures else "failed"))

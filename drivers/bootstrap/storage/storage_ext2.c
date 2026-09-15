@@ -37,6 +37,7 @@ static int ext2_fast_symlink(const struct ext2_inode *inode)
 static uint8_t ext2_dirent_type(const struct storage_node *node)
 {
     if (node->type == LEONOS_FS_TYPE_DIR) return EXT2_FT_DIR;
+    if (node->type == LEONOS_FS_TYPE_FIFO) return 5u;
     if (node->type == LEONOS_FS_TYPE_SOCKET) return EXT2_FT_SOCK;
     if (node->type == LEONOS_FS_TYPE_SYMLINK) return EXT2_FT_SYMLINK;
     return EXT2_FT_REG_FILE;
@@ -254,6 +255,7 @@ static int ext2_write_inode(uint32_t number, const struct ext2_inode *in)
 /** @brief Converts ext2 inode mode bits to the public LeonOS node kind. */
 static uint32_t ext2_node_type(const struct ext2_inode *inode)
 {
+    if ((inode->mode & EXT2_S_IFMT) == LINUX_S_IFIFO) return LEONOS_FS_TYPE_FIFO;
     if ((inode->mode & EXT2_S_IFMT) == LINUX_S_IFSOCK) return LEONOS_FS_TYPE_SOCKET;
     if ((inode->mode & EXT2_S_IFMT) == EXT2_S_IFLNK) return LEONOS_FS_TYPE_SYMLINK;
     return (inode->mode & EXT2_S_IFMT) == EXT2_S_IFDIR ? LEONOS_FS_TYPE_DIR : LEONOS_FS_TYPE_FILE;
@@ -1727,7 +1729,14 @@ static int ext2_rename(const char *old_path, const char *new_path)
     return 0;
 }
 
-static int ext2_mark_socket(const char *path, const struct storage_node *node)
+/**
+ * @brief Convert a newly created empty inode and its directory entry to a special type.
+ * @param path Backend path with the storage volume selected and execution lock held.
+ * @param node Newly created inode; no data blocks have been allocated.
+ * @param mode S_IFSOCK or S_IFIFO, validated by the VFS caller.
+ * @return Zero or negative storage errno; caller removes the entry on failure.
+ */
+static int ext2_mark_special(const char *path, const struct storage_node *node, uint32_t mode)
 {
     char parent[LEONOS_FS_PATH_LEN], name[LEONOS_FS_NAME_LEN];
     struct storage_node directory;
@@ -1736,11 +1745,11 @@ static int ext2_mark_socket(const char *path, const struct storage_node *node)
     if (!ret) ret = ext2_lookup_path(parent, &directory);
     if (!ret) ret = ext2_read_inode(node->first_cluster, &inode);
     if (!ret) {
-        inode.mode = LINUX_S_IFSOCK | 0777;
+        inode.mode = mode | 0777;
         ret = ext2_write_inode(node->first_cluster, &inode);
     }
     if (!ret) ret = ext2_change_dir_entry(directory.first_cluster, name, NULL, NULL,
-                                          node->first_cluster, EXT2_FT_SOCK);
+                                          node->first_cluster, mode == LINUX_S_IFSOCK ? EXT2_FT_SOCK : 5u);
     storage_cache_invalidate();
     return ret;
 }

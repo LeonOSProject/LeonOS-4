@@ -88,6 +88,14 @@ int storage_inode_permissions(const struct storage_node *node,
 int storage_inode_stat(const struct storage_node *node, struct linux_stat_abi *value);
 int storage_inode_utimensat(const struct storage_node *node, int64_t atime, int64_t mtime,
                             bool set_atime, bool set_mtime);
+/**
+ * @brief Create a socket or FIFO inode on a supporting filesystem.
+ * @param path Resolved, parent-authorized absolute path.
+ * @param mode S_IFSOCK or S_IFIFO; permissions are applied separately.
+ * @param out Receives the created inode identity.
+ * @return Zero or negative errno, including EOPNOTSUPP for unsupported backends.
+ */
+int storage_create_special(const char *path, uint32_t mode, struct storage_node *out);
 int storage_create_socket(const char *path, struct storage_node *out);
 /**
  * @brief Creates a symbolic link on the filesystem containing a resolved parent.
@@ -180,6 +188,7 @@ static inline uint64_t storage_block_rdev(uint32_t value)
 #define STORAGE_DEV_KIND_SHM         25u
 #define STORAGE_DEV_KIND_DISK_DIR    26u
 #define STORAGE_DEV_KIND_PARTUUID_DIR 27u
+#define STORAGE_DEV_KIND_DRIVERCTL 28u
 
 struct boot_info;
 

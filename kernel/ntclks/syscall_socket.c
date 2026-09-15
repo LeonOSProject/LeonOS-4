@@ -2,6 +2,7 @@
 #include <ntclks/heap.h>
 #include <ntclks/net.h>
 #include <ntclks/net_udp.h>
+#include <ntclks/net_packet.h>
 #include <ntclks/object.h>
 #include <ntclks/sched.h>
 #include <ntclks/syscall.h>
@@ -875,6 +876,7 @@ int task_socket_ioctl(struct task_file *file, uint64_t request, uint64_t address
 
 int task_inet_read(struct task_file *file, void *buffer, uint32_t length)
 {
+    if (file && file->kind == TASK_FILE_KIND_PACKET) return task_packet_recv(file, buffer, length, 0, 0, 0);
     if (file && file->kind == TASK_FILE_KIND_UDP) return task_udp_recv(file, buffer, length, 0, 0, 0);
     struct leonos_net_socket_io request = {0};
     struct task *task = sched_current_task();
@@ -903,6 +905,7 @@ int task_inet_read(struct task_file *file, void *buffer, uint32_t length)
 
 int task_inet_write(struct task_file *file, const void *buffer, uint32_t length)
 {
+    if (file && file->kind == TASK_FILE_KIND_PACKET) return task_packet_send(file, buffer, length, 0, 0, 0);
     if (file && file->kind == TASK_FILE_KIND_UDP) return task_udp_send(file, buffer, length, 0, 0, 0);
     struct leonos_net_socket_io request = {0};
     if (!file || !(file->flags & TASK_FILE_FLAG_SOCKET_INET)) return -LEONOS_EBADF;
@@ -921,6 +924,7 @@ int task_inet_write(struct task_file *file, const void *buffer, uint32_t length)
 
 short task_inet_poll(const struct task_file *file, short events)
 {
+    if (file && file->kind == TASK_FILE_KIND_PACKET) return task_packet_poll((struct task_file *)file, events);
     if (file && file->kind == TASK_FILE_KIND_UDP) return task_udp_poll((struct task_file *)file, events);
     if (!file || !(file->flags & TASK_FILE_FLAG_SOCKET_INET)) return POLLNVAL;
     return net_socket_poll_fd((int32_t)file->aux, 0, events);
@@ -933,6 +937,7 @@ void task_inet_retain(struct task_file *file)
 
 void task_inet_release(struct task_file *file)
 {
+    if (file && file->kind == TASK_FILE_KIND_PACKET) { task_packet_release(file); return; }
     if (file && file->kind == TASK_FILE_KIND_UDP) { task_udp_release(file); return; }
     if (file && (file->flags & TASK_FILE_FLAG_SOCKET_INET)) net_socket_release_fd((int32_t)file->aux);
 }
@@ -944,10 +949,14 @@ static int64_t inet_socket_dispatch(uint64_t number, uint64_t a0, uint64_t a1,
     struct task_file *file;
     (void)a3;
     if (!task) return -LEONOS_EPERM;
+    if (number == __NR_socket && ((int)a0 == AF_PACKET || (a1 & 15) == SOCK_RAW))
+        return syscall_packet(number, a0, a1, a2, a3, a4, 0);
     if (number == __NR_socket && (a1 & 0xfu) == SOCK_DGRAM)
         return syscall_udp(number, a0, a1, a2, a3, a4, 0);
     if (number != __NR_socket) {
         file = task_file_for_fd(task, (int32_t)a0);
+        if (file && file->kind == TASK_FILE_KIND_PACKET)
+            return syscall_packet(number, a0, a1, a2, a3, a4, 0);
         if (file && file->kind == TASK_FILE_KIND_UDP)
             return syscall_udp(number, a0, a1, a2, a3, a4, 0);
     }
@@ -1350,11 +1359,12 @@ static int64_t inet_message(struct task_file *file, uint64_t user_header,
                             struct msghdr message, uint32_t flags, bool receiving,
                             uint64_t total, struct socket_message_result *output)
 {
-    bool datagram = file->kind == TASK_FILE_KIND_UDP;
+    bool packet = file->kind == TASK_FILE_KIND_PACKET;
+    bool datagram = file->kind == TASK_FILE_KIND_UDP || packet;
     if (flags & ~(MSG_DONTWAIT | MSG_NOSIGNAL | MSG_PEEK | MSG_TRUNC | MSG_WAITALL | MSG_CMSG_CLOEXEC))
         return -LINUX_EOPNOTSUPP;
     if (!receiving && message.msg_controllen) return -LINUX_EINVAL;
-    if (!receiving && datagram && total > 1472) return -LINUX_EMSGSIZE;
+    if (!receiving && datagram && total > (packet ? 1514u : 1472u)) return -LINUX_EMSGSIZE;
     if (receiving && !user_range_writable(user_header, sizeof(message))) return -LINUX_EFAULT;
     uint32_t size = total > 16384 ? 16384 : (uint32_t)total;
     uint8_t *data = size ? kernel_malloc(size) : NULL;
@@ -1373,7 +1383,9 @@ static int64_t inet_message(struct task_file *file, uint64_t user_header,
     if (flags & MSG_DONTWAIT) local.flags |= LEONOS_O_NONBLOCK;
     struct msghdr *destination = (void *)(uintptr_t)user_header;
     if (receiving) {
-        if (datagram) ret = task_udp_recv(file, data, size, (flags & ~MSG_CMSG_CLOEXEC) | MSG_TRUNC,
+        if (packet) ret = task_packet_recv(file, data, size, (flags & ~MSG_CMSG_CLOEXEC) | MSG_TRUNC,
+            (uintptr_t)message.msg_name, (uintptr_t)&destination->msg_namelen);
+        else if (datagram) ret = task_udp_recv(file, data, size, (flags & ~MSG_CMSG_CLOEXEC) | MSG_TRUNC,
             (uintptr_t)message.msg_name, (uintptr_t)&destination->msg_namelen);
         else if (flags & (MSG_PEEK | MSG_TRUNC)) ret = -LINUX_EOPNOTSUPP;
         else ret = task_inet_read(&local, data, size);
@@ -1391,7 +1403,8 @@ static int64_t inet_message(struct task_file *file, uint64_t user_header,
         if (!message.msg_name || !datagram) destination->msg_namelen = 0;
         if (!(flags & MSG_TRUNC)) ret = copied;
     } else {
-        if (datagram) ret = task_udp_send(file, data, size, flags, (uintptr_t)message.msg_name, message.msg_namelen);
+        if (packet) ret = task_packet_send(file, data, size, flags, (uintptr_t)message.msg_name, message.msg_namelen);
+        else if (datagram) ret = task_udp_send(file, data, size, flags, (uintptr_t)message.msg_name, message.msg_namelen);
         else ret = task_inet_write(&local, data, size);
     }
 done:
@@ -1810,6 +1823,8 @@ int64_t syscall_socket_dispatch(uint64_t number, uint64_t a0, uint64_t a1,
         if (!file) return -LEONOS_EBADF;
         if (a2 && !user_range_ok(a1, a2)) return -LEONOS_EFAULT;
         if (file->flags & TASK_FILE_FLAG_SOCKET_INET) {
+            if (file->kind == TASK_FILE_KIND_PACKET)
+                return task_packet_send(file, (void *)(uintptr_t)a1, (uint32_t)a2, (uint32_t)a3, a4, (uint32_t)a5);
             if (file->kind == TASK_FILE_KIND_UDP)
                 return task_udp_send(file, (void *)(uintptr_t)a1, (uint32_t)a2, (uint32_t)a3, a4, (uint32_t)a5);
             return task_inet_write(file, (const void *)(uintptr_t)a1, (uint32_t)a2);
@@ -1839,6 +1854,8 @@ int64_t syscall_socket_dispatch(uint64_t number, uint64_t a0, uint64_t a1,
         if (!file) return -LEONOS_EBADF;
         if (a2 && !user_range_writable(a1, a2)) return -LEONOS_EFAULT;
         if (file->flags & TASK_FILE_FLAG_SOCKET_INET) {
+            if (file->kind == TASK_FILE_KIND_PACKET)
+                return task_packet_recv(file, (void *)(uintptr_t)a1, (uint32_t)a2, (uint32_t)a3, a4, a5);
             if (file->kind == TASK_FILE_KIND_UDP)
                 return task_udp_recv(file, (void *)(uintptr_t)a1, (uint32_t)a2, (uint32_t)a3, a4, a5);
             return task_inet_read(file, (void *)(uintptr_t)a1, (uint32_t)a2);
@@ -1866,7 +1883,7 @@ int64_t syscall_socket_dispatch(uint64_t number, uint64_t a0, uint64_t a1,
         return ret;
     }
     task = sched_current_task();
-    if (number == __NR_socket && (int)a0 == AF_INET) return inet_socket_dispatch(number, a0, a1, a2, a3, a4);
+    if (number == __NR_socket && ((int)a0 == AF_INET || (int)a0 == AF_PACKET)) return inet_socket_dispatch(number, a0, a1, a2, a3, a4);
     file = task_file_for_fd(task, (int)a0);
     if (number != __NR_socket && file && (file->flags & TASK_FILE_FLAG_SOCKET_INET)) {
         return inet_socket_dispatch(number, a0, a1, a2, a3, a4);

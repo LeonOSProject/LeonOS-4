@@ -17,6 +17,7 @@
 #include <linux/time.h>
 #include <linux/errno.h>
 #include <ntclks/time.h>
+#include <ntclks/power.h>
 
 static struct kernel_signal_action *signal_action(struct task *task, int sig)
 {
@@ -82,6 +83,14 @@ static void signal_context_restore(struct trap_frame *frame,
 static void signal_default_action(struct task *task, int sig)
 {
     if (!task || task->state == TASK_EXITED) return;
+    /* BusyBox reboot/poweroff follows the traditional init protocol and
+     * signals PID 1 after OpenRC has stopped its services.  PID 1 is
+     * deliberately non-terminable in NTCLKS; translate those two power
+     * signals into the machine transition instead of attempting sched_exit. */
+    if (task->pid == 1 && (sig == 15 || sig == 12)) {
+        if (sig == 15) power_reboot();
+        power_shutdown();
+    }
     switch (sig) {
     case 19: /* SIGSTOP */
     case 20: /* SIGTSTP */
@@ -246,7 +255,7 @@ static int signal_setup_frame(struct task *task, int sig,
     if (task->restart_syscall) {
         uint64_t nr = task->restart_syscall - 1;
         bool sleeping = nr == __NR_nanosleep || nr == __NR_clock_nanosleep;
-        bool interruptible = nr == __NR_read || nr == __NR_write || nr == __NR_readv ||
+        bool interruptible = task->fifo_open_file != NULL || nr == __NR_read || nr == __NR_write || nr == __NR_readv ||
             nr == __NR_pread64 || nr == __NR_pwrite64 ||
             nr == __NR_preadv || nr == __NR_preadv2 || nr == __NR_pwritev || nr == __NR_pwritev2 ||
             nr == __NR_writev || nr == __NR_recvfrom || nr == __NR_sendto ||

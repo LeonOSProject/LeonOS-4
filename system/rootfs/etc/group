@@ -1,3 +1,4 @@
 root:x:0:
+uucp:x:14:
 wheel:x:10:
 nobody:x:65534:

@@ -74,6 +74,20 @@ struct task_file *task_file_for_fd(struct task *task, int fd);
 int file_can_read(const struct task_file *file);
 int file_can_write(const struct task_file *file);
 int storage_errno(int ret);
+/**
+ * @brief Open a named FIFO, retaining a private endpoint across blocking retries.
+ * @param task Current task under the kernel execution lock.
+ * @param node Resolved FIFO inode, or NULL when resuming its open.
+ * @param flags Linux open flags.
+ * @param path Resolved absolute path for fd metadata.
+ * @return Descriptor, negative errno, or KERNEL_SYSCALL_BLOCKED for an interruptible wait.
+ */
+int task_fifo_open(struct task *task, const struct storage_node *node, uint32_t flags, const char *path);
+/**
+ * @brief Cancel an unpublished FIFO endpoint on signal, exit or failed open.
+ * @param task Task whose pending FIFO open should be released; may be NULL.
+ */
+void task_fifo_cancel(struct task *task);
 void task_pipe_retain(struct task_file *file);
 void task_pipe_release(struct task_file *file);
 int task_pipe_read(struct task_file *file, void *buffer, uint32_t length);
@@ -147,5 +161,11 @@ void clear_task_file(struct task_file *file);
 int64_t syscall_record_lock(int fd, uint32_t command, uint64_t pointer);
 void syscall_record_locks_close(struct task *task, struct task_file *descriptor);
 void syscall_record_lock_cancel(struct task *task);
+
+/** @brief Execute a native realtime clock discipline request. */
+int64_t syscall_adjtimex(int32_t clock, uint64_t address);
+
+/** @brief Check CAP_SYS_MODULE and execute a native driver control request. */
+int64_t syscall_driver_control(uint32_t request, uint64_t address);
 
 #endif

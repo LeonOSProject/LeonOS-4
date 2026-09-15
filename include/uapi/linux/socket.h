@@ -33,6 +33,7 @@ struct sockaddr_un {
 #define AF_UNIX 1
 #define AF_INET 2
 #define AF_INET6 10
+#define AF_PACKET 17
 
 #define SOCK_STREAM 1
 #define SOCK_DGRAM 2
@@ -52,6 +53,7 @@ struct sockaddr_un {
 #define SO_RCVTIMEO_NEW 66
 #define SO_SNDTIMEO_NEW 67
 #define SO_ACCEPTCONN 30
+#define SO_BINDTODEVICE 25
 #define SO_PROTOCOL 38
 #define SO_DOMAIN 39
 

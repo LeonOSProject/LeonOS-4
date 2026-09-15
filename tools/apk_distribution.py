@@ -210,6 +210,8 @@ def musl_development_payload(tree, destination):
 
 
 def build_distribution(source, output, work, apk, key):
+    from openrc_packages import packages as openrc_packages
+    upstream, upstream_paths, upstream_manifest = openrc_packages(apk)
     source, output, work = (Path(p).absolute() for p in (source, output, work))
     if output == source or output.is_relative_to(source) or source.is_relative_to(output):
         raise ValueError("managed output must be separate from source")
@@ -229,6 +231,16 @@ def build_distribution(source, output, work, apk, key):
             shutil.rmtree(path, ignore_errors=True)
         (tree / "etc/apk/world").unlink(missing_ok=True)
         (tree / "var/log/apk.log").unlink(missing_ok=True)
+        # Upstream package files retain their original signatures and ownership,
+        # including when repackaging the installer runtime. Local producers may
+        # not overwrite them. Configuration is in LeonOS-specific scripts.
+        for name in upstream_paths:
+            path = tree / name
+            if path.is_file() or path.is_symlink(): path.unlink()
+        for name in ("run", "tmp"):
+            path = tree / name
+            if path.is_symlink(): raise ValueError(f"invalid runtime symlink: {name}")
+            shutil.rmtree(path, ignore_errors=True)
         layout_directories(tree)
         apply_root_symlinks(tree)
         if not (tree / "bin/busybox").is_file() or not (tree / "bin/sh").is_file():
@@ -288,6 +300,9 @@ def build_distribution(source, output, work, apk, key):
         rules["sbin/apk"] = "leonos-apk-tools"
         rules["usr/lib/leonos/leonos-apk-update"] = "leonos-apk-tools"
         rules["usr/share/licenses/apk-tools"] = "leonos-apk-tools"
+        source_record = tree / "usr/share/licenses/leonos-openrc/SOURCE.json"
+        source_record.parent.mkdir(parents=True, exist_ok=True)
+        source_record.write_text(json.dumps(upstream_manifest, indent=2) + "\n")
         development = scratch / "musl-dev"
         development_entries = []
         if loader.is_file():
@@ -327,6 +342,11 @@ def build_distribution(source, output, work, apk, key):
         if loader.is_file():
             providers["libc.musl-x86_64.so.1"] = "leonos-musl"
             provides["leonos-musl"].add("so:libc.musl-x86_64.so.1=1")
+        # BusyBox's actual ifup/ifdown implementation is the ifupdown provider.
+        applets = set(subprocess.check_output([tree / "bin/busybox", "--list"], text=True).splitlines())
+        if not {"init", "ifup", "ifdown", "udhcpc", "ntpd"} <= applets:
+            raise ValueError("BusyBox is missing required init/network applets")
+        provides["leonos-busybox"].add("ifupdown-any")
         dependencies = defaultdict(set)
         dependencies["leonos-apk-tools"].add("leonos-busybox")
         if "ca-certificates-bundle" in groups:
@@ -351,6 +371,10 @@ def build_distribution(source, output, work, apk, key):
             shutil.rmtree(repository)
         repository.mkdir()
         packages = []
+        for archive in upstream:
+            destination = repository / archive.name
+            shutil.copy2(archive, destination)
+            packages.append(destination)
         for name, files in sorted(groups.items()):
             payload_root = development if name == "leonos-musl-dev" else tree
             payload = scratch / name
@@ -384,10 +408,11 @@ def build_distribution(source, output, work, apk, key):
              "--output", repository / "packages.adb", *packages])
         managed = scratch / "managed"
         layout_directories(managed)
+        shutil.copytree(ROOT / "system/rootfs/etc/apk/keys", managed / "etc/apk/keys", dirs_exist_ok=True)
         shutil.copyfile(public, managed / "etc/apk/keys" / public_name)
         _run_apk(apk, ["--root", managed, "--arch", "x86_64", "--initdb",
                        "--repositories-file", "/dev/null", "--repository", repository / "packages.adb",
-                       "add", *sorted(groups)], usermode=True)
+                       "add", *sorted(groups), *[entry["name"] + "=" + entry["version"] for entry in upstream_manifest["packages"]]], usermode=True)
         apply_root_symlinks(managed)
         shutil.copytree(repository, managed / REPOSITORY)
         for name in EXTERNAL - {"install"}:
@@ -396,7 +421,7 @@ def build_distribution(source, output, work, apk, key):
                 shutil.copytree(path, managed / name, symlinks=True)
             elif path.exists():
                 copy_entry(path, managed / name)
-        manifest = {"version": version, "packages": sorted(groups), "optional_packages": [],
+        manifest = {"version": version, "packages": sorted(groups) + [entry["name"] for entry in upstream_manifest["packages"]], "upstream": upstream_manifest, "optional_packages": [],
                     "signing_public_key": public_name, "files": entries,
                     "database": "created-by-upstream-apk", "source": URL,
                     "bootstrap_sha256": BINARY_SHA256}

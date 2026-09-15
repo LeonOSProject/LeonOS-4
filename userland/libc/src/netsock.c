@@ -1,39 +1,30 @@
-/* libnet: netmand management client plus the standard AF_INET data plane.
+/* libnet: credential-checked query adapter plus the standard AF_INET data plane.
  * Exports the historical leonos_net_* and leonos_socket_* entry points. */
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #endif
 #include <errno.h>
+#include <fcntl.h>
+#include <arpa/inet.h>
 #include <leonos/http.h>
 #include <leonos/net.h>
-#include <leonos/netmand.h>
+#include <leonos/net_control.h>
+#include <leonos/openrc.h>
+#include <netdb.h>
+#include <stdlib.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 #include <leonos/unix_ipc.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <time.h>
 #include <unistd.h>
-
-#define NET_FRAME_CAP 4096u
-#define NET_REMOTE_ERROR (-2)
-/* A caller must never stall for seconds on a daemon that may not exist at
- * all (installer/recovery images). Each call retries briefly to absorb a
- * daemon still starting, then backs off before probing again. */
-#define NET_CONNECT_ATTEMPT_MS 50u
-#define NET_CONNECT_BACKOFF_MS 1000u
-
-static int netmand_fd = -1;
-static uint32_t netmand_retry_after_ms;
-
-static uint32_t net_now_ms(void)
-{
-    struct timespec ts;
-    (void)clock_gettime(1, &ts);
-    return (uint32_t)((uint64_t)ts.tv_sec * 1000u + (uint64_t)ts.tv_nsec / 1000000u);
-}
 
 static void net_copy_text(char *dst, uint32_t capacity, const char *src)
 {
@@ -46,189 +37,180 @@ static void net_copy_text(char *dst, uint32_t capacity, const char *src)
     dst[i] = 0;
 }
 
-static int net_wait_response(uint32_t expected, void *payload, uint32_t capacity,
-                             uint32_t *length)
+/* Read-only queries use the kernel's credential-checked interface. Network
+ * lifecycle requests go exclusively to OpenRC's standard DHCP service. */
+static int net_control(struct leonos_net_control *control)
 {
-    uint32_t deadline = net_now_ms() + ((expected == LEONOS_NET_MSG_DHCP ||
-        expected == LEONOS_NET_MSG_PING || expected == LEONOS_NET_MSG_DNS) ? 15000u : 3000u);
-    for (;;) {
-        uint8_t buffer[NET_FRAME_CAP];
-        uint32_t type = 0;
-        uint32_t got = 0;
-        if (leonos_ipc_recv(netmand_fd, &type, buffer, sizeof(buffer), &got) == 0) {
-            if (type == LEONOS_NET_MSG_ERROR) {
-                struct leonos_netmand_error error;
-                if (got != sizeof(error)) { errno = EPROTO; return -1; }
-                memcpy(&error, buffer, sizeof(error));
-                if (error.request_type != expected || error.error <= 0 || error.error > 4095) {
-                    errno = EPROTO; return -1;
-                }
-                errno = error.error;
-                return NET_REMOTE_ERROR;
-            }
-            if (type == expected) {
-                if (got > capacity || (!length && got != capacity)) { errno = EPROTO; return -1; }
-                if (got) memcpy(payload, buffer, got);
-                if (length) *length = got;
-                return 0;
-            }
-            errno = EPROTO;
-            return -1;
-        } else if (errno != EAGAIN && errno != EINTR) return -1;
-        if ((int32_t)(net_now_ms() - deadline) >= 0) { errno = ETIMEDOUT; return -1; }
-        (void)poll(0, 0, 2);
-    }
+    int fd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+    if (fd < 0) return -1;
+    control->version = LEONOS_NET_CONTROL_VERSION;
+    int ret = ioctl(fd, LEONOS_NET_CONTROL_IOCTL, control), error = errno;
+    close(fd);
+    if (!ret && control->result < 0) { error = -control->result; ret = -1; }
+    errno = error;
+    return ret;
 }
 
-static int net_open(void)
+/* The lease is data published atomically by the root-owned udhcpc hook.
+ * Verify it against the current interface; it is not a source of kernel state. */
+static void net_merge_dhcp_lease(struct leonos_net_config *config)
 {
-    struct leonos_netmand_hello hello;
-    struct leonos_netmand_ack ack;
-    uint32_t deadline;
-    if (netmand_fd >= 0) return netmand_fd;
-    if (netmand_retry_after_ms && (int32_t)(net_now_ms() - netmand_retry_after_ms) < 0) {
-        errno = EAGAIN; return -1;
+    int fd = open("/run/leonos/dhcp-lease", O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    if (fd < 0) return;
+    struct stat st;
+    if (fstat(fd, &st) || !S_ISREG(st.st_mode) || st.st_uid || (st.st_mode & 022)) {
+        close(fd); return;
     }
-    deadline = net_now_ms() + NET_CONNECT_ATTEMPT_MS;
-    while (netmand_fd < 0 && net_now_ms() < deadline) {
-        netmand_fd = leonos_ipc_connect(LEONOS_IPC_SOCK_NET);
-        if (netmand_fd < 0) (void)poll(0, 0, 10);
+    FILE *stream = fdopen(fd, "r");
+    if (!stream) { close(fd); return; }
+    char line[512];
+    uint32_t ip = 0, mask = 0, dns = 0;
+    unsigned long long lease = 0, acquired = ~0ULL;
+    while (fgets(line, sizeof(line), stream)) {
+        char *equals = strchr(line, '=');
+        if (!equals) continue;
+        *equals++ = 0;
+        equals[strcspn(equals, "\r\n")] = 0;
+        if (!strcmp(line, "lease") || !strcmp(line, "acquired")) {
+            char *end;
+            errno = 0;
+            unsigned long long value = strtoull(equals, &end, 10);
+            if (errno || !*equals || *equals == '-' || *end) continue;
+            if (!strcmp(line, "lease")) lease = value;
+            else acquired = value;
+        } else {
+            /* Display the first DNS server; libc still consumes resolv.conf. */
+            equals[strcspn(equals, " \t")] = 0;
+            struct in_addr address;
+            if (inet_pton(AF_INET, equals, &address) != 1) continue;
+            if (!strcmp(line, "ip")) ip = ntohl(address.s_addr);
+            else if (!strcmp(line, "subnet")) mask = ntohl(address.s_addr);
+            else if (!strcmp(line, "dns")) dns = ntohl(address.s_addr);
+        }
     }
-    if (netmand_fd < 0) {
-        netmand_retry_after_ms = net_now_ms() + NET_CONNECT_BACKOFF_MS;
-        return -1;
-    }
-    (void)leonos_ipc_set_nonblock(netmand_fd, 1);
-    hello.pid = (uint32_t)getpid();
-    if (leonos_ipc_send(netmand_fd, LEONOS_NET_MSG_HELLO, &hello,
-                        sizeof(hello)) < 0 ||
-        net_wait_response(LEONOS_NET_MSG_ACK, &ack, sizeof(ack), 0) < 0) {
-        int saved = errno;
-        leonos_ipc_close(netmand_fd);
-        netmand_fd = -1;
-        netmand_retry_after_ms = net_now_ms() + NET_CONNECT_BACKOFF_MS;
-        errno = saved;
-        return -1;
-    }
-    if (ack.code != 1 || ack.reserved) {
-        leonos_ipc_close(netmand_fd);
-        netmand_fd = -1;
-        errno = EPROTO;
-        return -1;
-    }
-    return netmand_fd;
-}
-
-static int net_request(uint32_t type, const void *request, uint32_t request_len,
-                       void *response, uint32_t response_capacity)
-{
-    if (net_open() < 0) return -1;
-    if (leonos_ipc_send(netmand_fd, type, request, request_len) == 0) {
-        int ret = net_wait_response(type, response, response_capacity, 0);
-        if (!ret) return 0;
-        if (ret == NET_REMOTE_ERROR) return -1;
-    }
-    int saved = errno;
-    leonos_ipc_close(netmand_fd);
-    netmand_fd = -1;
-    netmand_retry_after_ms = net_now_ms() + NET_CONNECT_BACKOFF_MS;
-    errno = saved;
-    return -1;
+    bool failed = ferror(stream);
+    fclose(stream);
+    struct timespec now;
+    if (failed || clock_gettime(CLOCK_MONOTONIC, &now) || now.tv_sec < 0 ||
+        acquired > (unsigned long long)now.tv_sec || !lease || lease > UINT32_MAX ||
+        (lease != UINT32_MAX && (unsigned long long)now.tv_sec - acquired >= lease) ||
+        !ip || ip != config->local_ip || mask != config->subnet_mask) return;
+    config->source = LEONOS_NET_CONFIG_SOURCE_DHCP;
+    config->flags |= LEONOS_NET_CONFIG_FLAG_DHCP;
+    config->lease_seconds = (uint32_t)lease;
+    if (dns && !config->dns_ip) config->dns_ip = dns;
 }
 
 int leonos_net_config(struct leonos_net_config *config)
 {
     if (!config) { errno = EINVAL; return -1; }
-    if (net_request(LEONOS_NET_MSG_CONFIG, 0, 0, config, sizeof(*config)) < 0) return -1;
+    struct leonos_net_control control = {.operation = LEONOS_NET_CONTROL_CONFIG};
+    if (net_control(&control) < 0) return -1;
+    *config = control.data.config;
+    int saved_errno = errno;
+    net_merge_dhcp_lease(config);
+    errno = saved_errno;
     return 0;
 }
 
 int leonos_net_get_dns_policy(struct leonos_net_dns_policy *result)
 {
-    struct leonos_net_dns_policy query = {
-        .mode = LEONOS_NET_DNS_MODE_QUERY,
-        .status = LEONOS_NET_STATUS_BAD_ARGUMENT,
-    };
     if (!result) { errno = EINVAL; return -1; }
-    if (net_request(LEONOS_NET_MSG_DNS_POLICY, &query, sizeof(query),
-                    result, sizeof(*result)) < 0) return -1;
+    struct leonos_net_control control = {.operation = LEONOS_NET_CONTROL_DNS_POLICY,
+        .data.dns_policy.mode = LEONOS_NET_DNS_MODE_QUERY};
+    if (net_control(&control) < 0) return -1;
+    *result = control.data.dns_policy;
     return 0;
 }
 
 int leonos_net_set_dns_policy(uint32_t mode, uint32_t custom_dns_ip,
                               struct leonos_net_dns_policy *result)
 {
-    struct leonos_net_dns_policy query = {
-        .mode = mode,
-        .custom_dns_ip = custom_dns_ip,
-        .status = LEONOS_NET_STATUS_BAD_ARGUMENT,
-    };
-    if (!result) { errno = EINVAL; return -1; }
-    if (net_request(LEONOS_NET_MSG_DNS_POLICY, &query, sizeof(query),
-                    result, sizeof(*result)) < 0) return -1;
+    if (!result || mode > LEONOS_NET_DNS_MODE_CUSTOM) { errno = EINVAL; return -1; }
+    if (geteuid()) { errno = EPERM; return -1; }
+    char temporary[] = "/etc/udhcpc/.dns.XXXXXX";
+    int fd = mkstemp(temporary);
+    if (fd < 0) return -1;
+    char text[64];
+    int size = snprintf(text, sizeof(text), "%u %u.%u.%u.%u\n", mode,
+        custom_dns_ip >> 24, (custom_dns_ip >> 16) & 255, (custom_dns_ip >> 8) & 255, custom_dns_ip & 255);
+    int ret = write(fd, text, size) == size && fchmod(fd, 0644) == 0 && fsync(fd) == 0 ? 0 : -1;
+    if (close(fd) < 0) ret = -1;
+    if (!ret) ret = rename(temporary, "/etc/udhcpc/leonos-dns");
+    if (ret) { unlink(temporary); return -1; }
+    pid_t child = fork();
+    if (child < 0) return -1;
+    if (!child) { execl("/usr/lib/leonos/publish-resolver", "publish-resolver", (char *)NULL); _exit(127); }
+    int status;
+    while (waitpid(child, &status, 0) < 0) if (errno != EINTR) return -1;
+    if (!WIFEXITED(status) || WEXITSTATUS(status)) { errno = EIO; return -1; }
+    struct leonos_net_control control = {.operation = LEONOS_NET_CONTROL_DNS_POLICY,
+        .data.dns_policy = {.mode = mode, .custom_dns_ip = custom_dns_ip}};
+    if (net_control(&control) < 0) return -1;
+    *result = control.data.dns_policy;
     return 0;
 }
 
 int leonos_net_dhcp_renew(uint32_t timeout_ms, struct leonos_net_dhcp *result)
 {
-    struct leonos_net_dhcp query = {
-        .timeout_ms = timeout_ms,
-        .status = LEONOS_NET_STATUS_DHCP_FAILED,
-    };
     if (!result) { errno = EINVAL; return -1; }
-    if (net_request(LEONOS_NET_MSG_DHCP, &query, sizeof(query),
-                    result, sizeof(*result)) < 0) return -1;
-    return 0;
-}
-
-int leonos_net_ping(uint32_t target_ip, uint32_t timeout_ms,
-                    struct leonos_net_ping *result)
-{
-    struct leonos_net_ping query = {
-        .target_ip = target_ip,
-        .timeout_ms = timeout_ms,
-        .status = LEONOS_NET_STATUS_BAD_ARGUMENT,
-    };
-    if (!result) { errno = EINVAL; return -1; }
-    if (net_request(LEONOS_NET_MSG_PING, &query, sizeof(query),
-                    result, sizeof(*result)) < 0) return -1;
-    return 0;
-}
-
-int leonos_net_dns_resolve(const char *name, uint32_t timeout_ms,
-                           struct leonos_net_dns *result)
-{
-    struct leonos_net_dns query;
-    if (!name || !result) { errno = EINVAL; return -1; }
-    memset(&query, 0, sizeof(query));
-    query.timeout_ms = timeout_ms;
-    query.status = LEONOS_NET_STATUS_DNS_FAILED;
-    net_copy_text(query.name, sizeof(query.name), name);
-    if (net_request(LEONOS_NET_MSG_DNS, &query, sizeof(query),
-                    result, sizeof(*result)) < 0) return -1;
-    return 0;
-}
-
-int leonos_net_connections(struct leonos_net_connection_info *entries,
-                           uint32_t capacity, uint32_t *out_count)
-{
-    struct leonos_netmand_connections_ack ack;
-    uint8_t buffer[NET_FRAME_CAP];
-    uint32_t length = 0;
-    if (out_count) *out_count = 0;
-    if (net_open() < 0) return -1;
-    if (leonos_ipc_send(netmand_fd, LEONOS_NET_MSG_CONNECTIONS, 0, 0) < 0) return -1;
-    if (net_wait_response(LEONOS_NET_MSG_CONNECTIONS, buffer, sizeof(buffer),
-                          &length) < 0) return -1;
-    if (length < sizeof(ack)) return -1;
-    memcpy(&ack, buffer, sizeof(ack));
-    if (out_count) *out_count = ack.count;
-    if (entries && capacity) {
-        uint32_t count = ack.count < capacity ? ack.count : capacity;
-        if (length - sizeof(ack) >= count * sizeof(*entries)) {
-            memcpy(entries, buffer + sizeof(ack), count * sizeof(*entries));
+    *result = (struct leonos_net_dhcp){.timeout_ms = timeout_ms, .status = LEONOS_NET_STATUS_DHCP_FAILED};
+    if (leonos_openrc_run("leonos-dhcp", "restart")) { errno = EIO; return -1; }
+    struct timespec started, now;
+    if (clock_gettime(CLOCK_MONOTONIC, &started)) return -1;
+    uint64_t budget = timeout_ms ? timeout_ms : 3000;
+    for (;;) {
+        if (leonos_net_config(&result->config) < 0) return -1;
+        if (result->config.local_ip && result->config.source == LEONOS_NET_CONFIG_SOURCE_DHCP) {
+            result->status = LEONOS_NET_STATUS_OK;
+            break;
         }
+        if (clock_gettime(CLOCK_MONOTONIC, &now)) return -1;
+        int64_t elapsed = (now.tv_sec - started.tv_sec) * 1000 +
+            (now.tv_nsec - started.tv_nsec) / 1000000;
+        if (elapsed >= (int64_t)budget) {
+            result->status = LEONOS_NET_STATUS_DHCP_TIMEOUT;
+            break;
+        }
+        struct timespec interval = {.tv_nsec = 50000000};
+        if (nanosleep(&interval, NULL) && errno != EINTR) return -1;
     }
+    return 0;
+}
+
+int leonos_net_ping(uint32_t target_ip, uint32_t timeout_ms, struct leonos_net_ping *result)
+{
+    if (!result) { errno = EINVAL; return -1; }
+    struct leonos_net_control control = {.operation = LEONOS_NET_CONTROL_PING,
+        .data.ping = {.target_ip = target_ip, .timeout_ms = timeout_ms}};
+    if (net_control(&control) < 0) return -1;
+    *result = control.data.ping;
+    return 0;
+}
+
+int leonos_net_dns_resolve(const char *name, uint32_t timeout_ms, struct leonos_net_dns *result)
+{
+    if (!name || !result) { errno = EINVAL; return -1; }
+    *result = (struct leonos_net_dns){.timeout_ms = timeout_ms};
+    net_copy_text(result->name, sizeof(result->name), name);
+    struct addrinfo hint = {.ai_family = AF_INET, .ai_socktype = SOCK_STREAM}, *list = NULL;
+    int error = getaddrinfo(name, NULL, &hint, &list);
+    for (struct addrinfo *entry = list; entry && result->address_count < LEONOS_NET_DNS_MAX_ADDRESSES; entry = entry->ai_next)
+        if (entry->ai_family == AF_INET)
+            result->addresses[result->address_count++] = ntohl(((struct sockaddr_in *)entry->ai_addr)->sin_addr.s_addr);
+    if (list) freeaddrinfo(list);
+    result->status = !error && result->address_count ? LEONOS_NET_STATUS_OK : LEONOS_NET_STATUS_DNS_NO_ANSWER;
+    return 0;
+}
+
+int leonos_net_connections(struct leonos_net_connection_info *entries, uint32_t capacity, uint32_t *out_count)
+{
+    if (!out_count || (!entries && capacity)) { errno = EINVAL; return -1; }
+    struct leonos_net_control control = {.operation = LEONOS_NET_CONTROL_CONNECTIONS};
+    if (net_control(&control) < 0) return -1;
+    *out_count = control.data.connections.count;
+    uint32_t count = *out_count < capacity ? *out_count : capacity;
+    if (count) memcpy(entries, control.data.connections.entries, count * sizeof(*entries));
     return 0;
 }
 

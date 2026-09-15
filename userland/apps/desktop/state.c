@@ -102,8 +102,6 @@ uint8_t desktop_wallpaper_mode = LEONOS_WALLPAPER_MODE_FILL;
 char desktop_wallpaper_path[LEONOS_FS_PATH_LEN] = DESKTOP_DEFAULT_WALLPAPER_PATH;
 uint8_t desktop_service_network_icon = 1;
 uint8_t desktop_service_rtc_clock = 1;
-uint8_t desktop_service_daemon_started;
-unsigned long desktop_service_daemon_last_spawn_ms;
 uint8_t full_redraw_pending;
 uint8_t desktop_damage_pending;
 uint8_t desktop_damage_cursor_only;

@@ -1,0 +1,9 @@
+# BusyBox PID 1. Every environment executes the same initialization chain.
+::sysinit:/sbin/openrc sysinit
+::wait:/sbin/openrc boot
+::wait:/usr/lib/leonos/rc-default
+::respawn:/usr/lib/leonos/console-session
+::ctrlaltdel:/sbin/reboot
+::shutdown:/sbin/openrc shutdown
+::shutdown:/bin/sync
+::shutdown:/bin/umount -a -r

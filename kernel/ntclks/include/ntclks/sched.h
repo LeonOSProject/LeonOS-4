@@ -437,6 +437,7 @@ struct task {
     uint64_t socket_receive_name;
     unsigned char socket_receive_path[111];
     struct task_file *syscall_file;
+    struct task_file *fifo_open_file; /* Unpublished endpoint held during FIFO rendezvous. */
     uint32_t tty_old_pgrp;
     struct task_pty_fd syscall_pty;
     int32_t syscall_fd;

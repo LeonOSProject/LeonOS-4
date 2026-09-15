@@ -36,6 +36,7 @@ static const struct storage_dev_entry storage_dev_entries[] = {
     {"disk0",     STORAGE_DEV_KIND_DISK,     LEONOS_FS_TYPE_DEVICE, 0},
     {"ethernet0", STORAGE_DEV_KIND_NET,      LEONOS_FS_TYPE_DEVICE, 0},
     {"rtc",       STORAGE_DEV_KIND_RTC,      LEONOS_FS_TYPE_DEVICE, 0},
+    {"driverctl", STORAGE_DEV_KIND_DRIVERCTL, LEONOS_FS_TYPE_DEVICE, 0},
     {"kmsg",      STORAGE_DEV_KIND_KMSG,      LEONOS_FS_TYPE_DEVICE, 0},
     {"gpu",         STORAGE_DEV_KIND_GPU,          LEONOS_FS_TYPE_DEVICE, 0},
     {"shm0",       STORAGE_DEV_KIND_SHM,          LEONOS_FS_TYPE_DEVICE, 0},
@@ -2141,8 +2142,16 @@ int storage_stat_path(const char *path, struct leonos_stat *st)
     return 0;
 }
 
-int storage_create_socket(const char *path, struct storage_node *out)
+/**
+ * @brief Create a socket or FIFO inode on a supporting filesystem.
+ * @param path Resolved, parent-authorized absolute path.
+ * @param mode S_IFSOCK or S_IFIFO, without permission bits.
+ * @param out Receives the created inode identity.
+ * @return Zero or negative errno; unsupported FIFO backends are unchanged.
+ */
+int storage_create_special(const char *path, uint32_t mode, struct storage_node *out)
 {
+    if (mode != LINUX_S_IFSOCK && mode != LINUX_S_IFIFO) return -22;
     struct storage_node existing;
     int ret = storage_lookup_path(path, &existing);
     if (!ret) return -17;
@@ -2153,8 +2162,9 @@ int storage_create_socket(const char *path, struct storage_node *out)
     if (ret < 0) return ret;
     if (volume->filesystem == STORAGE_FILESYSTEM_TMPFS) {
         storage_begin_mutation();
-        return tmpfs_create(volume->tmpfs, backend, LINUX_S_IFSOCK | 0777, NULL, out);
+        return tmpfs_create(volume->tmpfs, backend, mode | 0777, NULL, out);
     }
+    if (mode == LINUX_S_IFIFO && volume->filesystem != STORAGE_FILESYSTEM_EXT2) return -95;
     ret = storage_write_file(path, "", 0);
     if (ret < 0) return ret;
     ret = storage_lookup_path(path, out);
@@ -2164,12 +2174,23 @@ int storage_create_socket(const char *path, struct storage_node *out)
         char backend[LEONOS_FS_PATH_LEN];
         ret = storage_select_node_volume(out, &previous);
         if (!ret) ret = storage_backend_path(path, backend, sizeof(backend));
-        if (!ret) ret = ext2_mark_socket(backend, out);
+        if (!ret) ret = ext2_mark_special(backend, out, mode);
         storage_restore_volume(previous);
     }
     if (ret < 0) { (void)storage_unlink(path); return ret; }
     /* FAT/exFAT retain the directory entry; its type and DAC metadata are
      * persisted in LEONACL.SYS by fs_permissions_create. */
-    out->type = LEONOS_FS_TYPE_SOCKET;
+    out->type = mode == LINUX_S_IFSOCK ? LEONOS_FS_TYPE_SOCKET : LEONOS_FS_TYPE_FIFO;
     return 0;
+}
+
+/**
+ * @brief Create a filesystem socket inode.
+ * @param path Resolved, authorized absolute path.
+ * @param out Receives the created inode.
+ * @return Zero or negative errno.
+ */
+int storage_create_socket(const char *path, struct storage_node *out)
+{
+    return storage_create_special(path, LINUX_S_IFSOCK, out);
 }

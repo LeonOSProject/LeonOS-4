@@ -3,6 +3,7 @@
  * Selects runnable tasks, handles waits/exits, and switches address spaces.
  */
 #include <ntclks/console.h>
+#include <ntclks/bugcheck.h>
 #include <ntclks/arch.h>
 #include <ntclks/paging.h>
 #include <ntclks/pty.h>
@@ -940,6 +941,7 @@ int64_t sched_clone_current(const struct trap_frame *parent_frame, uint64_t flag
     child->sysv_sem = (struct task_sysv_sem_state){0};
     child->sysv_undo = NULL;
     child->syscall_file = NULL;
+    child->fifo_open_file = NULL;
     __builtin_memset(&child->regular_io, 0, sizeof(child->regular_io));
     child->tty_old_pgrp = 0;
     child->syscall_pty = (struct task_pty_fd){0};
@@ -1287,7 +1289,9 @@ void sched_exit(uint32_t pid, uint64_t code)
 {
     uint64_t flags;
     bool gpu_owner_quiescent = false;
+    bool adopted_zombie = false;
     struct task *exiting = NULL;
+    if (pid == 1) bugcheck_panic("Attempted to exit PID 1");
 
     /* Publish the terminal state atomically, but preserve running_cpu until
      * its owner reaches a scheduling boundary.  A remote CPU may still be
@@ -1320,8 +1324,23 @@ void sched_exit(uint32_t pid, uint64_t code)
             if (tasks[i]->process_session == exiting->process_session &&
                 tasks[i]->process_group != exiting->process_group)
                 sched_mark_orphaned_group(tasks[i]->process_group);
-            tasks[i]->parent_pid = 0;
-            tasks[i]->flags &= ~TASK_FLAG_WAITABLE_CHILD;
+            struct task *reaper = sched_find(1);
+            if (reaper && reaper != exiting && reaper->state != TASK_EXITED) {
+                tasks[i]->parent_pid = 1;
+                /* Thread siblings follow the parent relationship, but only
+                 * process leaders become waitable children of PID 1. */
+                if (tasks[i]->pid == sched_task_tgid(tasks[i])) {
+                    tasks[i]->parent_exit_signal = 17;
+                    tasks[i]->parent_exit_notified = 0;
+                    tasks[i]->flags |= TASK_FLAG_WAITABLE_CHILD;
+                    if (tasks[i]->state == TASK_EXITED &&
+                        tasks[i]->running_cpu == SCHED_CPU_NONE &&
+                        !thread_group_pending(tasks[i]->pid, tasks[i])) adopted_zombie = true;
+                }
+            } else {
+                tasks[i]->parent_pid = 0;
+                tasks[i]->flags &= ~TASK_FLAG_WAITABLE_CHILD;
+            }
         }
     }
     if (exiting) {
@@ -1331,6 +1350,10 @@ void sched_exit(uint32_t pid, uint64_t code)
          * after retirement and the mm_release futex work below. */
     }
     kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
+    if (adopted_zombie) {
+        struct task *reaper = sched_find(1);
+        if (reaper && reaper->state != TASK_EXITED) sched_signal_user_process(1, 17);
+    }
     /* Signal delivery takes scheduler locks itself and may terminate a group. */
     for (uint32_t i = 0; i < task_count; ++i) {
         struct task *task = tasks[i];

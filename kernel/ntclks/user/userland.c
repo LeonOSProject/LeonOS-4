@@ -171,14 +171,6 @@ static int path_is_system_desktop(const char *path)
 }
 
 /**
- * @brief Return 1 if path is the serviced.elf daemon path.
- */
-static int path_is_system_service_daemon(const char *path)
-{
-    return path_eq_ignore_case(path, LEONOS_LAYOUT_LEONOS_APPS "/serviced/serviced.elf");
-}
-
-/**
  * @brief Return 1 if path is the userspace windowd daemon.
  */
 static int path_is_windowd(const char *path)
@@ -545,7 +537,11 @@ static int userland_load_task_image_locked(struct task *task, const struct task 
     if (entropy_result < 0) return entropy_result;
     if (task->flags & TASK_FLAG_PENDING_LOAD) {
         if (task->image_node.type != LEONOS_FS_TYPE_FILE) {
-            int ret = storage_lookup_path(task->path, &task->image_node);
+            char resolved[LEONOS_FS_PATH_LEN];
+            int ret = fs_permissions_resolve(task, sched_task_cwd(task), task->path,
+                                             resolved, sizeof(resolved), false);
+            if (!ret) ret = storage_lookup_path(resolved, &task->image_node);
+            if (!ret) copy_text(task->path, sizeof(task->path), resolved);
             if (ret < 0 || task->image_node.type != LEONOS_FS_TYPE_FILE) {
                 console_printf("[ntclks] executable lookup failed path=%s ret=%d\n",
                                task->path, ret < 0 ? ret : -21);
@@ -681,20 +677,6 @@ static int64_t spawn_path_internal_ex(const char *path, const char *task_name,
 {
     struct storage_node node;
     int ret;
-    if (path_is_system_desktop(path)) {
-        /* The desktop is a privileged service for window-server IPC, but it
-         * is also the session's identity root.  Keep the window-server bit so
-         * auth_apply_session_login/sched_set_session_identity can update its
-         * uid, role, home, and session along with the login task. */
-        flags |= TASK_FLAG_SERVICE | TASK_FLAG_WINDOW_SERVER;
-    } else if (path_is_windowd(path) || path_is_imd(path) ||
-               path_is_system_service_daemon(path)) {
-        flags |= TASK_FLAG_SERVICE;
-    }
-    if (path_is_system_service_daemon(path) && sched_find_by_path(path)) {
-        console_printf("[ntclks] refusing second service daemon path=%s\n", path);
-        return -LEONOS_EEXIST;
-    }
     if (flags & TASK_FLAG_SERVICE) {
         ret = storage_lookup_path(path, &node);
         if (ret < 0 || node.type != LEONOS_FS_TYPE_FILE) {
@@ -920,15 +902,13 @@ static int userland_prepare_runtime(void)
 }
 
 /**
- * @brief Parse autospawn cmdline flags, then seed the installer desktop or the
- * normal init plus the configured desktop/TTY interface.
+ * @brief Prepare the root and console, then execute only the configured PID 1.
  */
 void userland_init(const struct boot_info *boot)
 {
     int64_t pid;
     int tty_mode;
     int installer_mode;
-    int installer_advanced;
 
     console_printf("[ntclks] userland storage load started modules=%u\n",
                    boot ? boot->module_count : 0);
@@ -936,7 +916,7 @@ void userland_init(const struct boot_info *boot)
     autospawn_uidemo = boot && name_contains(boot->cmdline, "autospawn=uidemo");
     autospawn_terminal = boot && name_contains(boot->cmdline, "autospawn=terminal");
     autospawn_memtest = boot && name_contains(boot->cmdline, "autospawn=memtest");
-    autospawn_installer = boot && name_contains(boot->cmdline, "autospawn=installer");
+    autospawn_installer = false;
     autospawn_linuxabi = boot && name_contains(boot->cmdline, "autospawn=linuxabi");
     autospawn_ltp = boot && name_contains(boot->cmdline, "autospawn=ltp");
     autospawn_gcc = boot && name_contains(boot->cmdline, "autospawn=gcc");
@@ -972,7 +952,6 @@ void userland_init(const struct boot_info *boot)
     }
 
     installer_mode = boot && name_contains(boot->cmdline, "mode=installer");
-    installer_advanced = boot && name_contains(boot->cmdline, "installer_advanced=1");
 
 #ifdef CONFIG_STARTUP_TTY
     tty_mode = 1;
@@ -985,157 +964,51 @@ void userland_init(const struct boot_info *boot)
         tty_mode = 0;
     }
 
-    if (installer_mode && tty_mode) {
-        static const char *advanced_argv[] = {
-            "busybox", "sh", 0
-        };
-        static const char *vim_argv[] = {
-            "vim", "-u", "NONE", "-n", 0
-        };
-        static const char *advanced_envp[] = {
-            "PATH=" LEONOS_DEFAULT_PATH,
-            "HOME=/root", "PWD=/", "PS1=\\w \\$ ",
-            "TERM=xterm-256color", "COLORTERM=truecolor", 0
-        };
-        struct exec_launch advanced_launch = {0};
-        struct exec_launch vim_launch = {0};
-        int32_t pty_id;
-        if (autospawn_vim &&
-            build_exec_launch(&vim_launch, "/usr/bin/vim",
-                              vim_argv, 0) < 0) {
-            console_printf("[ntclks] failed to prepare Linux Vim arguments\n");
-            kernel_idle_loop();
+    /* The boot environment selects policy; it never grants image privileges. */
+    const char *boot_mode = installer_mode ? (tty_mode ? "LEONOS_BOOT_MODE=installer-tty" :
+                                                       "LEONOS_BOOT_MODE=installer") :
+                                           (tty_mode ? "LEONOS_BOOT_MODE=tty" : "LEONOS_BOOT_MODE=default");
+    const char *env[] = {"PATH=" LEONOS_DEFAULT_PATH, "HOME=/root", "PWD=/",
+                        "TERM=xterm-256color", boot_mode, NULL};
+    char init_path[256] = "/sbin/init";
+    if (boot) {
+        const char *arg = boot->cmdline;
+        while (*arg) {
+            while (*arg == ' ') ++arg;
+            const char *end = arg;
+            while (*end && *end != ' ') ++end;
+            if (end - arg > 5 && __builtin_memcmp(arg, "init=", 5) == 0) {
+                size_t length = (size_t)(end - arg - 5);
+                if (arg[5] != '/' || length >= sizeof(init_path)) {
+                    console_printf("[ntclks] invalid init= override\n");
+                    kernel_idle_loop();
+                }
+                __builtin_memcpy(init_path, arg + 5, length);
+                init_path[length] = 0;
+            }
+            arg = end;
         }
-        if (installer_advanced &&
-            build_exec_launch(&advanced_launch, "/bin/busybox",
-                              advanced_argv, advanced_envp) < 0) {
-            console_printf("[ntclks] failed to prepare advanced installer shell arguments\n");
-            kernel_idle_loop();
-        }
-        pid = autospawn_vim
-                  ? spawn_path_internal_deferred("/usr/bin/vim",
-                                                  "vim.elf Linux binary", &vim_launch,
-                                                  0, 0, 0, -1, -1, -1)
-                  : installer_advanced
-                  ? spawn_path_internal_deferred("/bin/busybox",
-                                                  "busybox.elf installer advanced", &advanced_launch,
-                                                  0, 0, 0, -1, -1, -1)
-                  : spawn_path_internal_deferred(LEONOS_LAYOUT_LEONOS_APPS "/installer/installer.elf",
-                                                  "installer.elf tty", 0, 0, 0, 0, -1, -1, -1);
-        if (pid <= 0) {
-            console_printf("[ntclks] failed to load installer TTY environment ret=%lld\n",
-                           (long long)pid);
-            kernel_idle_loop();
-        }
-        tty_pid = (uint32_t)pid;
-        pty_id = pty_create(tty_pid);
-        if (pty_id <= 0 || pty_bind_console((uint32_t)pty_id, tty_pid) < 0) {
-            console_printf("[ntclks] failed to bind installer console PTY ret=%d\n",
-                           (int)pty_id);
-            sched_exit(tty_pid, 127);
-            tty_pid = 0;
-            kernel_idle_loop();
-        }
-        console_printf("[ntclks] installer %s TTY selected; pid=%u pty=%d\n",
-                       autospawn_vim ? "Linux Vim" :
-                       (installer_advanced ? "advanced shell" : "application"),
-                       tty_pid, (int)pty_id);
-        sched_mark_ready(tty_pid);
-        return;
     }
-
-    if (installer_mode) {
-        pid = spawn_path_internal(LEONOS_LAYOUT_LEONOS_APPS "/imd/imd.elf", "imd.elf input method",
-                                  0, 0, TASK_FLAG_SERVICE, 0, -1, -1, -1);
-        if (pid <= 0) {
-            console_printf("[ntclks] failed to load installer imd.elf ret=%lld\n", (long long)pid);
-            kernel_idle_loop();
-        }
-        imd_pid = (uint32_t)pid;
-        pid = spawn_path_internal(LEONOS_LAYOUT_LEONOS_APPS "/windowd/windowd.elf", "windowd.elf window server",
-                                  0, 0, TASK_FLAG_SERVICE, 0, -1, -1, -1);
-        if (pid <= 0) {
-            console_printf("[ntclks] failed to load installer windowd.elf ret=%lld\n", (long long)pid);
-            kernel_idle_loop();
-        }
-        windowd_pid = (uint32_t)pid;
-        pid = spawn_path_internal(LEONOS_LAYOUT_LEONOS_APPS "/desktop/desktop.elf", "desktop.elf shell",
-                                  0, 0, TASK_FLAG_SERVICE, 0, -1, -1, -1);
-        if (pid <= 0) {
-            console_printf("[ntclks] failed to load installer desktop.elf ret=%lld\n", (long long)pid);
-            kernel_idle_loop();
-        }
-        desktop_pid = (uint32_t)pid;
-        console_printf("[ntclks] installer mode windowd+desktop selected\n");
-        return;
+    const char *argv[] = {init_path, NULL};
+    struct exec_launch launch = {0};
+    if (build_exec_launch(&launch, init_path, argv, env) < 0) {
+        console_printf("[ntclks] cannot prepare PID 1 arguments\n");
+        kernel_idle_loop();
     }
-
-    pid = spawn_path_internal(LEONOS_LAYOUT_LEONOS_APPS "/init/init.elf", "init.elf", 0, 0, 0, 0, -1, -1, -1);
-    if (pid <= 0) {
-        console_printf("[ntclks] failed to load init.elf ret=%lld\n", (long long)pid);
+    pid = spawn_path_internal_deferred(init_path, "init", &launch, 0, 0, 0, -1, -1, -1);
+    if (pid != 1) {
+        console_printf("[ntclks] cannot execute PID 1 path=%s ret=%lld; boot stopped\n",
+                       init_path, (long long)pid);
         kernel_idle_loop();
     }
     init_pid = (uint32_t)pid;
-
-    if (tty_mode) {
-        static const char *tty_argv[] = {
-            "login", 0
-        };
-        static const char *tty_envp[] = {
-            "PATH=" LEONOS_DEFAULT_PATH,
-            "HOME=/root", "PWD=/", "PS1=\\w \\$ ",
-            "TERM=xterm-256color", "COLORTERM=truecolor", 0
-        };
-        struct exec_launch launch = {0};
-        int32_t pty_id;
-        if (build_exec_launch(&launch, LEONOS_LAYOUT_LEONOS_APPS "/login/login.elf",
-                              tty_argv, tty_envp) < 0) {
-            console_printf("[ntclks] failed to prepare TTY shell arguments\n");
-            kernel_idle_loop();
-        }
-        pid = spawn_path_internal_deferred(LEONOS_LAYOUT_LEONOS_APPS "/login/login.elf", "login.elf tty",
-                                          &launch, init_pid, 0, 0, -1, -1, -1);
-        if (pid <= 0) {
-            console_printf("[ntclks] failed to load busybox.elf for TTY ret=%lld\n",
-                           (long long)pid);
-            kernel_idle_loop();
-        }
-        tty_pid = (uint32_t)pid;
-        pty_id = pty_create(tty_pid);
-        if (pty_id <= 0 || pty_bind_console((uint32_t)pty_id, tty_pid) < 0) {
-            console_printf("[ntclks] failed to bind console PTY ret=%d\n", (int)pty_id);
-            sched_exit(tty_pid, 127);
-            tty_pid = 0;
-            kernel_idle_loop();
-        }
-        console_printf("[ntclks] TTY startup selected; busybox shell pid=%u pty=%d\n",
-                       tty_pid, (int)pty_id);
-        sched_mark_ready(tty_pid);
-        return;
-    }
-
-    pid = spawn_path_internal(LEONOS_LAYOUT_LEONOS_APPS "/imd/imd.elf", "imd.elf input method",
-                              0, init_pid, TASK_FLAG_SERVICE, 0, -1, -1, -1);
-    if (pid <= 0) {
-        console_printf("[ntclks] failed to load imd.elf ret=%lld\n", (long long)pid);
+    int32_t pty = pty_create(init_pid);
+    if (pty <= 0 || pty_bind_console((uint32_t)pty, init_pid) < 0) {
+        console_printf("[ntclks] cannot attach PID 1 console pty=%d\n", pty);
         kernel_idle_loop();
     }
-    imd_pid = (uint32_t)pid;
-    pid = spawn_path_internal(LEONOS_LAYOUT_LEONOS_APPS "/windowd/windowd.elf", "windowd.elf window server",
-                              0, init_pid, TASK_FLAG_SERVICE, 0, -1, -1, -1);
-    if (pid <= 0) {
-        console_printf("[ntclks] failed to load windowd.elf ret=%lld\n", (long long)pid);
-        kernel_idle_loop();
-    }
-    windowd_pid = (uint32_t)pid;
-    pid = spawn_path_internal(LEONOS_LAYOUT_LEONOS_APPS "/desktop/desktop.elf", "desktop.elf shell",
-                              0, init_pid, TASK_FLAG_SERVICE, 0, -1, -1, -1);
-    if (pid <= 0) {
-        console_printf("[ntclks] failed to load desktop.elf ret=%lld\n", (long long)pid);
-        kernel_idle_loop();
-    }
-    desktop_pid = (uint32_t)pid;
-    console_printf("[ntclks] windowd.elf + desktop.elf selected for Ring-3 GUI\n");
+    console_printf("[ntclks] PID 1 path=%s mode=%s console-pty=%d\n", init_path, boot_mode, pty);
+    sched_mark_ready(init_pid);
 }
 
 /**
@@ -1256,8 +1129,22 @@ int userland_exec_current_node(const char *path, const struct storage_node *held
  * @brief exec replaces the image and its authority. A child of the desktop is never allowed to retain window-server/service privileges across exec.
  */
     preserved_flags = task->flags & (TASK_FLAG_ELEVATED_ADMIN | TASK_FLAG_WAITABLE_CHILD);
-    if (path_is_system_service_daemon(path)) {
-        preserved_flags |= TASK_FLAG_SERVICE;
+    /* Authority is tied to a root-owned, non-writable image and root
+     * credentials, never to ancestry, argv, or a user-selected path alone. */
+    struct leonos_permissions permissions;
+    if (!task->uid && !task->euid &&
+        storage_inode_permissions(&node, &permissions, false) == 0 &&
+        permissions.uid == 0 && !(permissions.mode & 0022)) {
+        if (path_is_system_desktop(path)) {
+            preserved_flags |= TASK_FLAG_SERVICE | TASK_FLAG_WINDOW_SERVER;
+            desktop_pid = task->pid;
+        } else if (path_is_windowd(path)) {
+            preserved_flags |= TASK_FLAG_SERVICE;
+            windowd_pid = task->pid;
+        } else if (path_is_imd(path)) {
+            preserved_flags |= TASK_FLAG_SERVICE;
+            imd_pid = task->pid;
+        }
     }
     task->flags = preserved_flags | TASK_FLAG_STARTED;
     copy_text(task->name_storage, sizeof(task->name_storage), task_name);

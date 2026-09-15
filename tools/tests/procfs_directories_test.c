@@ -4,11 +4,13 @@
 #include "../../kernel/ntclks/procfs.c"
 
 static struct task current = {.pid = 42, .name = "test", .uid = 1000};
+static struct task foreign = {.pid = 43, .name = "foreign", .uid = 2000};
+static bool expose_foreign;
 uint32_t address_space_user_resident_kib(const struct address_space *as)
 { assert(as == sched_task_as(&current)); return 12; }
 struct task *sched_current_task(void) { return &current; }
 uint32_t sched_current_pid(void) { return current.pid; }
-struct task *sched_find(uint32_t pid) { return pid == current.pid ? &current : NULL; }
+struct task *sched_find(uint32_t pid) { return pid == current.pid ? &current : expose_foreign && pid == foreign.pid ? &foreign : NULL; }
 uint32_t sched_snapshot(struct task_snapshot_info *out, uint32_t capacity, uint64_t *tick)
 {
     if (tick) *tick = 123;
@@ -46,6 +48,7 @@ int sysfs_readdir(const char *p,uint64_t *o,struct leonos_dir_entry *e) { (void)
 #endif
 struct task_vma *sched_task_vma_at(struct task *t,uint32_t i) { return i<SCHED_TASK_VMA_MAX? &sched_task_mm(t)->vmas[i]:NULL; }
 int pty_get_foreground_pgid(uint32_t p,uint32_t *g) { (void)p;*g=0;return -2; }
+int driver_manager_list(struct leonos_driver_list *query) { query->count = 0; return 0; }
 static char argument_pages[8192];
 bool address_space_user_page_readable(const struct address_space *a,uint64_t v) { (void)a;return v>=0x400000 && v<0x402000; }
 uint64_t address_space_user_page_phys(const struct address_space *a,uint64_t v) { (void)a;return (v&~4095ULL)-0x400000+0x1000; }
@@ -83,6 +86,30 @@ int main(void)
     assert(strstr(contents, "Uid:\t1000\t1001\t1001\t1001\n"));
     assert(strstr(contents, "Gid:\t4000000000\t4000000001\t4000000001\t4000000001\n"));
     assert(strstr(contents, "VmRSS:\t12 kB\n"));
+    sched_task_mm(&current)->env_start = 0x400ffc;
+    sched_task_mm(&current)->env_end = 0x401008;
+    memcpy(argument_pages + 4092, "VAR=a\0X=two\0", 12);
+    assert(proc_lookup("/proc/self/environ", &node) == 0);
+    assert(proc_read("/proc/self/environ", 0, contents, sizeof(contents), &got) == 0 && got == 12);
+    assert(!memcmp(contents, "VAR=a\0X=two\0", 12));
+    argument_pages[4096] = 'b';
+    assert(proc_read("/proc/self/environ", 4, contents, 3, &got) == 0 && got == 3);
+    assert(!memcmp(contents, "b\0X", 3));
+    assert(proc_read("/proc/self/environ", 12, contents, sizeof(contents), &got) == 0 && got == 0);
+    expose_foreign = true;
+    sched_task_mm(&foreign)->as.cr3 = 4096;
+    sched_task_mm(&foreign)->env_start = sched_task_mm(&current)->env_start;
+    sched_task_mm(&foreign)->env_end = sched_task_mm(&current)->env_end;
+    assert(proc_read("/proc/43/environ", 0, contents, sizeof(contents), &got) == -LEONOS_EACCES && got == 0);
+    foreign.uid = foreign.euid = foreign.suid = current.fsuid;
+    foreign.gid = foreign.egid = foreign.sgid = current.fsgid;
+    assert(proc_read("/proc/43/environ", 0, contents, sizeof(contents), &got) == 0 && got == 12);
+    sched_task_mm(&foreign)->nondumpable = true;
+    assert(proc_read("/proc/43/environ", 0, contents, sizeof(contents), &got) == -LEONOS_EACCES && got == 0);
+    current.cap_effective |= 1ULL << CAP_SYS_PTRACE;
+    assert(proc_read("/proc/43/environ", 0, contents, sizeof(contents), &got) == 0 && got == 12);
+    current.cap_effective = 0;
+    expose_foreign = false;
     uint64_t offset = 0;
     struct leonos_dir_entry entry;
     assert(proc_readdir("/proc/42", &offset, &entry) == 1 && !strcmp(entry.name, "stat"));
@@ -94,6 +121,7 @@ int main(void)
         assert(entry.type == (i >= 2 ? LEONOS_FS_TYPE_SYMLINK : LEONOS_FS_TYPE_FILE));
     }
     assert(proc_readdir("/proc/42", &offset, &entry) == 1 && !strcmp(entry.name, "comm"));
+    assert(proc_readdir("/proc/42", &offset, &entry) == 1 && !strcmp(entry.name, "environ"));
     assert(proc_readdir("/proc/42", &offset, &entry) == 0);
     assert(proc_lookup("/proc/mounts", &node) == 0 && node.type == LEONOS_FS_TYPE_SYMLINK);
     memset(link, '#', sizeof(link));
@@ -104,7 +132,8 @@ int main(void)
     assert(proc_read("/proc/self/mountinfo", 0, contents, sizeof(contents), &got) == 0 && got == 1);
     assert(proc_read("/proc/filesystems", 0, contents, sizeof(contents) - 1, &got) == 0);
     contents[got] = 0;
-    assert(strstr(contents, "\text2\n") && !strstr(contents, "tmpfs"));
+    /* tmpfs now has a real mount backend, also exercised by the FIFO VM probe. */
+    assert(strstr(contents, "\text2\n") && strstr(contents, "\ttmpfs\n"));
     assert(proc_read("/proc/sys/kernel/hostname", 0, contents, sizeof(contents) - 1, &got) == 0);
     contents[got] = 0;
     assert(!strcmp(contents, "fixture-host\n"));

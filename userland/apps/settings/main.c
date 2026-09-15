@@ -1,3 +1,4 @@
+#include <leonos/openrc.h>
 #include <pwd.h>
 #include <unistd.h>
 #include <leonos/auth.h>
@@ -30,8 +31,7 @@
 #define SETTINGS_DEFAULT_WALLPAPER_PATH LEONOS_PATH_WALLPAPER_BMP
 #define SETTINGS_TAB_Y 14
 #define SETTINGS_BODY_Y 44
-#define SETTINGS_SERVICES_PATH LEONOS_PATH_SERVICES_CFG
-#define SETTINGS_SERVICES_STATE_PATH LEONOS_PATH_SERVICES_STATE
+#define SETTINGS_SERVICES_PATH LEONOS_PATH_TASKBAR_CFG
 #define SETTINGS_SERVICES_CONFIG_MAX 512U
 #define SETTINGS_INPUTM_CONFIG_MAX 2048U
 #define SETTINGS_INPUTM_ROWS (TEXT_INPUT_MAX_PROVIDERS + 1U)
@@ -544,6 +544,8 @@ static void load_services_config(void)
     char cfg[SETTINGS_SERVICES_CONFIG_MAX];
     uint32_t len = 0;
     uint32_t pos = 0;
+    service_rows[1].enabled = leonos_openrc_enabled("leonos-dhcp") == 1;
+    service_rows[4].enabled = leonos_openrc_enabled("leonos-ntp") == 1;
     int fd = open(SETTINGS_SERVICES_PATH, LEONOS_O_RDONLY, 0);
     if (fd < 0) {
         return;
@@ -573,7 +575,7 @@ static void load_services_config(void)
         }
         for (uint32_t i = 0; i < SETTINGS_SERVICE_ROWS; ++i) {
             uint8_t value = 0;
-            if (!service_rows[i].locked &&
+            if ((i == 2 || i == 3) &&
                 service_line_matches(cfg + start, line_len,
                                      service_rows[i].key, &value)) {
                 service_rows[i].enabled = value;
@@ -582,74 +584,35 @@ static void load_services_config(void)
     }
 }
 
+static int settings_rc_child, settings_rc_kind, settings_rc_save;
+static uint8_t settings_rc_dhcp, settings_rc_ntp;
+
 static void refresh_ntp_runtime_state(void)
 {
-    char state[1024];
-    uint32_t len = 0;
-    uint32_t pos = 0;
-    int fd = open(SETTINGS_SERVICES_STATE_PATH, LEONOS_O_RDONLY, 0);
-    copy_text(ntp_runtime_state, sizeof(ntp_runtime_state), "unknown");
-    copy_text(ntp_runtime_detail, sizeof(ntp_runtime_detail),
-              T("runtime state unavailable", "运行状态不可用"));
-    if (fd < 0) {
-        return;
-    }
-    while (len + 1U < sizeof(state)) {
-        long got = read(fd, state + len, sizeof(state) - len - 1U);
-        if (got <= 0) {
-            break;
-        }
-        len += (uint32_t)got;
-    }
-    close(fd);
-    state[len] = 0;
-    while (pos < len) {
-        uint32_t start = pos;
-        uint32_t first = len;
-        uint32_t second = len;
-        uint32_t third = len;
-        while (pos < len && state[pos] != '\n' && state[pos] != '\r') {
-            if (state[pos] == '|') {
-                if (first == len) {
-                    first = pos;
-                } else if (second == len) {
-                    second = pos;
-                } else if (third == len) {
-                    third = pos;
-                }
-            }
-            ++pos;
-        }
-        if (first > start && second < len && third < len &&
-            first - start == 8U && state[start] == 'n' && state[start + 1U] == 't' &&
-            state[start + 2U] == 'p' && state[start + 3U] == '_' &&
-            state[start + 4U] == 's' && state[start + 5U] == 'y' &&
-            state[start + 6U] == 'n' && state[start + 7U] == 'c') {
-            uint32_t state_len = second - first - 1U;
-            uint32_t detail_len = pos - third - 1U;
-            if (state_len >= sizeof(ntp_runtime_state)) {
-                state_len = sizeof(ntp_runtime_state) - 1U;
-            }
-            if (detail_len >= sizeof(ntp_runtime_detail)) {
-                detail_len = sizeof(ntp_runtime_detail) - 1U;
-            }
-            for (uint32_t i = 0; i < state_len; ++i) {
-                ntp_runtime_state[i] = state[first + 1U + i];
-            }
-            ntp_runtime_state[state_len] = 0;
-            for (uint32_t i = 0; i < detail_len; ++i) {
-                ntp_runtime_detail[i] = state[third + 1U + i];
-            }
-            ntp_runtime_detail[detail_len] = 0;
-            return;
-        }
-        while (pos < len && (state[pos] == '\n' || state[pos] == '\r')) {
-            ++pos;
-        }
+    if (settings_rc_child || settings_rc_save) return;
+    settings_rc_kind = 1;
+    settings_rc_child = leonos_openrc_spawn("leonos-ntp", "status");
+    if (settings_rc_child < 0) {
+        settings_rc_child = 0;
+        copy_text(ntp_runtime_state, sizeof(ntp_runtime_state), "failed");
+        copy_text(ntp_runtime_detail, sizeof(ntp_runtime_detail), "OpenRC worker failed");
     }
 }
 
 static void save_services_config(void)
+{
+    if (current_user.role != LEONOS_AUTH_ROLE_ADMIN) {
+        copy_text(status_text, sizeof(status_text), T("Administrator rights required", "需要管理员权限"));
+        return;
+    }
+    if (settings_rc_save || settings_rc_kind > 1) return;
+    settings_rc_dhcp = service_rows[1].enabled;
+    settings_rc_ntp = service_rows[4].enabled;
+    settings_rc_save = 1;
+    copy_text(status_text, sizeof(status_text), T("Updating OpenRC...", "正在更新 OpenRC…"));
+}
+
+static void write_services_preferences(void)
 {
     char cfg[SETTINGS_SERVICES_CONFIG_MAX];
     uint32_t pos = 0;
@@ -660,21 +623,21 @@ static void save_services_config(void)
         return;
     }
     cfg[0] = 0;
-    append_text(cfg, &pos, sizeof(cfg), "# LeonOS service startup settings\n");
-    for (uint32_t i = 0; i < SETTINGS_SERVICE_ROWS; ++i) {
+    append_text(cfg, &pos, sizeof(cfg), "# LeonOS taskbar preferences\n");
+    for (uint32_t i = 2; i <= 3; ++i) {
         append_text(cfg, &pos, sizeof(cfg), service_rows[i].key);
         append_char(cfg, &pos, sizeof(cfg), '=');
         append_char(cfg, &pos, sizeof(cfg), service_rows[i].enabled ? '1' : '0');
         append_char(cfg, &pos, sizeof(cfg), '\n');
     }
     fd = open(SETTINGS_SERVICES_PATH,
-              LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
+              LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0644);
     if (fd < 0) {
         copy_text(status_text, sizeof(status_text),
                   T("Could not save services.", "无法保存服务设置。"));
         return;
     }
-    if (write(fd, cfg, pos) < 0) {
+    if (write(fd, cfg, pos) != (long)pos) {
         copy_text(status_text, sizeof(status_text),
                   T("Could not save services.", "无法保存服务设置。"));
     } else {
@@ -682,6 +645,43 @@ static void save_services_config(void)
                   T("Service settings saved", "服务设置已保存"));
     }
     close(fd);
+}
+
+static int poll_settings_openrc(void)
+{
+    int changed = 0;
+    if (settings_rc_child) {
+        int result = 125, ready = leonos_openrc_poll(settings_rc_child, &result);
+        if (!ready) return 0;
+        settings_rc_child = 0;
+        if (ready < 0) result = 125;
+        changed = 1;
+        if (settings_rc_kind == 1) {
+            copy_text(ntp_runtime_state, sizeof(ntp_runtime_state), result == 0 ? "running" : result == 3 ? "stopped" : "failed");
+            snprintf(ntp_runtime_detail, sizeof(ntp_runtime_detail), "OpenRC exit=%d (daemon status, not sync proof)", result);
+            settings_rc_kind = 0;
+        } else if (result) {
+            snprintf(status_text, sizeof(status_text), "OpenRC update failed: exit=%d", result);
+            settings_rc_kind = settings_rc_save = 0;
+            load_services_config();
+        } else if (settings_rc_kind == 2) {
+            settings_rc_kind = 3;
+            settings_rc_child = leonos_openrc_spawn("leonos-ntp", settings_rc_ntp ? "enable" : "disable");
+        } else {
+            settings_rc_kind = settings_rc_save = 0;
+            write_services_preferences();
+        }
+    }
+    if (!settings_rc_child && settings_rc_save && settings_rc_kind == 0) {
+        settings_rc_kind = 2;
+        settings_rc_child = leonos_openrc_spawn("leonos-dhcp", settings_rc_dhcp ? "enable" : "disable");
+    }
+    if (settings_rc_child < 0) {
+        settings_rc_child = settings_rc_kind = settings_rc_save = 0;
+        copy_text(status_text, sizeof(status_text), "OpenRC worker failed");
+        changed = 1;
+    }
+    return changed;
 }
 
 static int mode_supported(uint32_t mode, uint32_t scale_index)
@@ -2262,6 +2262,10 @@ int main(void)
     draw_settings(&ui);
     leonos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
     for (;;) {
+        if (poll_settings_openrc()) {
+            draw_settings(&ui);
+            leonos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
+        }
         event.window_id = (uint32_t)window_id;
         if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
             if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {

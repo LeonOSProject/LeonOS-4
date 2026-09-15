@@ -1,0 +1,32 @@
+#!/bin/sh
+# DHCP protocol/renewal is upstream BusyBox. This hook applies its lease.
+# One interface and one client; no competing ifup DHCP provider.
+set -eu
+test "${interface:-}" = eth0 || exit 1
+case "${1:-}" in
+    bound|renew)
+        /sbin/ifconfig "$interface" "$ip" netmask "$subnet" ${broadcast:+broadcast "$broadcast"} up
+        # This is the sole route owner for eth0.
+        /sbin/route del default dev "$interface" 2>/dev/null || :
+        for gateway in ${router:-}; do /sbin/route add default gw "$gateway" dev "$interface"; break; done
+        tmp=$(mktemp /run/leonos/.dhcp-dns.XXXXXX)
+        printf '%s\n' "${dns:-}" > "$tmp"
+        mv -f "$tmp" /run/leonos/dhcp-dns
+        /usr/lib/leonos/publish-resolver
+        read -r uptime rest < /proc/uptime
+        acquired=${uptime%%.*}
+        lease_tmp=$(mktemp /run/leonos/.dhcp-lease.XXXXXX)
+        trap 'rm -f "$lease_tmp"' EXIT HUP INT TERM
+        printf 'ip=%s\nsubnet=%s\nrouter=%s\ndns=%s\nlease=%s\nacquired=%s\n' "$ip" "$subnet" "${router:-}" "${dns:-}" "${lease:-}" "$acquired" > "$lease_tmp"
+        chmod 0644 "$lease_tmp"
+        mv -f "$lease_tmp" /run/leonos/dhcp-lease
+        trap - EXIT HUP INT TERM
+        ;;
+    deconfig)
+        /sbin/ifconfig "$interface" 0.0.0.0
+        rm -f /run/leonos/dhcp-dns /run/leonos/dhcp-lease
+        /usr/lib/leonos/publish-resolver
+        ;;
+    leasefail|nak) echo "DHCP $1 on $interface" >&2; exit 1 ;;
+    *) exit 2 ;;
+esac

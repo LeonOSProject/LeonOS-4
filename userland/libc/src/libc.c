@@ -1679,16 +1679,12 @@ static void libc_clear_secret(void *data, uint32_t len)
 
 int leonos_system_reboot(void)
 {
-    if (getuid() != 0) return leonos_auth_request_power(RB_AUTOBOOT);
-    sync();
-    return reboot(RB_AUTOBOOT);
+    return leonos_auth_request_power(RB_AUTOBOOT);
 }
 
 int leonos_system_shutdown(void)
 {
-    if (getuid() != 0) return leonos_auth_request_power(RB_POWER_OFF);
-    sync();
-    return reboot(RB_POWER_OFF);
+    return leonos_auth_request_power(RB_POWER_OFF);
 }
 
 int leonos_kernel_debug_get_state(uint32_t *flags)

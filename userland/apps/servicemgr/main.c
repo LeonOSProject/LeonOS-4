@@ -1,3 +1,6 @@
+#include <leonos/openrc.h>
+#include <errno.h>
+#include <string.h>
 #include <leonos/auth.h>
 #include <leonos/fs.h>
 #include <leonos/gui.h>
@@ -10,9 +13,6 @@
 #define SERVICEMGR_W 780U
 #define SERVICEMGR_H 430U
 #define SERVICEMGR_ROWS 5U
-#define SERVICEMGR_CONFIG_PATH LEONOS_PATH_SERVICES_CFG
-#define SERVICEMGR_STATE_PATH LEONOS_PATH_SERVICES_STATE
-#define SERVICEMGR_COMMAND_PATH LEONOS_PATH_SERVICES_CMD
 #define SERVICEMGR_CONFIG_MAX 512U
 #define SERVICEMGR_STATE_MAX 1024U
 #define SERVICEMGR_ROW_Y 60U
@@ -40,21 +40,11 @@ static char status_text[180] = "Ready";
 static unsigned long last_state_refresh_ms;
 
 static struct service_row service_rows[SERVICEMGR_ROWS] = {
-    {"desktop", "Desktop", "桌面",
-     "Required shell and window manager.", "必需的外壳和窗口管理器。", 1, 1,
-     "unknown", "runtime state unavailable", 0},
-    {"dhcp", "DHCP", "DHCP",
-     "Keeps trying DHCP when static fallback is active.", "静态回退时持续重试 DHCP。", 1, 0,
-     "unknown", "runtime state unavailable", 0},
-    {"network_icon", "Network icon", "网络图标",
-     "Desktop taskbar network indicator.", "桌面任务栏网络指示器。", 1, 0,
-     "unknown", "runtime state unavailable", 0},
-    {"rtc_clock", "RTC clock", "RTC 时钟",
-     "Desktop taskbar HH:MM:SS clock.", "桌面任务栏 HH:MM:SS 时钟。", 1, 0,
-     "unknown", "runtime state unavailable", 0},
-    {"ntp_sync", "Time sync", "网络校时",
-     "Synchronize the software clock through pool.ntp.org.", "通过 pool.ntp.org 同步软件时钟。", 0, 0,
-     "unknown", "runtime state unavailable", 0},
+    {"leonos-desktop", "Desktop", "桌面", "OpenRC graphical session", "OpenRC 图形会话", 1, 0, "unknown", "", 0},
+    {"leonos-dhcp", "DHCP", "DHCP", "BusyBox udhcpc", "BusyBox udhcpc", 1, 0, "unknown", "", 0},
+    {"leonos-session", "User startup", "用户启动项", "Session IPC", "会话 IPC", 1, 0, "unknown", "", 0},
+    {"leonos-device", "Devices", "设备", "LeonOS device protocol", "LeonOS 设备协议", 1, 0, "unknown", "", 0},
+    {"leonos-ntp", "Time sync", "网络校时", "BusyBox ntpd", "BusyBox ntpd", 1, 0, "unknown", "", 0},
 };
 
 static void copy_text(char *dst, uint32_t cap, const char *src)
@@ -125,70 +115,6 @@ static int text_eq(const char *a, const char *b)
     return *a == 0 && *b == 0;
 }
 
-static int read_file_text(const char *path, char *buffer, uint32_t cap,
-                          uint32_t *out_len)
-{
-    uint32_t len = 0;
-    int fd;
-    if (!buffer || cap == 0) {
-        return -1;
-    }
-    buffer[0] = 0;
-    fd = open(path, LEONOS_O_RDONLY, 0);
-    if (fd < 0) {
-        if (out_len) {
-            *out_len = 0;
-        }
-        return fd;
-    }
-    while (len + 1U < cap) {
-        long got = read(fd, buffer + len, cap - len - 1U);
-        if (got < 0) {
-            close(fd);
-            return (int)got;
-        }
-        if (got == 0) {
-            break;
-        }
-        len += (uint32_t)got;
-    }
-    close(fd);
-    buffer[len] = 0;
-    if (out_len) {
-        *out_len = len;
-    }
-    return 0;
-}
-
-static int service_line_matches(const char *line, uint32_t len,
-                                const char *key, uint8_t *value)
-{
-    uint32_t key_len = text_len(key);
-    if (!line || !key || !value || key_len == 0 || len <= key_len ||
-        line[key_len] != '=') {
-        return 0;
-    }
-    for (uint32_t i = 0; i < key_len; ++i) {
-        if (line[i] != key[i]) {
-            return 0;
-        }
-    }
-    *value = line[key_len + 1U] == '1' ||
-             line[key_len + 1U] == 'y' ||
-             line[key_len + 1U] == 'Y';
-    return 1;
-}
-
-static int find_service(const char *key)
-{
-    for (uint32_t i = 0; i < SERVICEMGR_ROWS; ++i) {
-        if (text_eq(key, service_rows[i].key)) {
-            return (int)i;
-        }
-    }
-    return -1;
-}
-
 static void refresh_user(void)
 {
     current_user = (struct leonos_user_info){0};
@@ -201,234 +127,73 @@ static void refresh_user(void)
 
 static void load_config(void)
 {
-    char cfg[SERVICEMGR_CONFIG_MAX];
-    uint32_t len = 0;
-    uint32_t pos = 0;
-    for (uint32_t i = 0; i < SERVICEMGR_ROWS; ++i) {
-        if (!service_rows[i].locked) {
-            service_rows[i].enabled = i == 4U ? 0 : 1;
-        }
-    }
-    if (read_file_text(SERVICEMGR_CONFIG_PATH, cfg, sizeof(cfg), &len) < 0) {
-        copy_text(status_text, sizeof(status_text),
-                  T("Using default service policy", "正在使用默认服务策略"));
-        return;
-    }
-    while (pos < len) {
-        uint32_t start = pos;
-        uint32_t line_len;
-        while (pos < len && cfg[pos] != '\n' && cfg[pos] != '\r') {
-            ++pos;
-        }
-        line_len = pos - start;
-        while (pos < len && (cfg[pos] == '\n' || cfg[pos] == '\r')) {
-            ++pos;
-        }
-        for (uint32_t i = 0; i < SERVICEMGR_ROWS; ++i) {
-            uint8_t value = 0;
-            if (!service_rows[i].locked &&
-                service_line_matches(cfg + start, line_len,
-                                     service_rows[i].key, &value)) {
-                service_rows[i].enabled = value;
-            }
-        }
-    }
-    copy_text(status_text, sizeof(status_text),
-              T("Service policy loaded", "服务策略已加载"));
+    for (unsigned i = 0; i < SERVICEMGR_ROWS; ++i)
+        service_rows[i].enabled = leonos_openrc_enabled(service_rows[i].key) == 1;
 }
+
+/* Keep authentication and OpenRC waits outside the GUI event loop. */
+static int rc_child, rc_kind;
+static unsigned rc_row;
+static const char *rc_action;
+static void load_state(uint8_t quiet);
 
 static void save_config(void)
 {
-    char cfg[SERVICEMGR_CONFIG_MAX];
-    uint32_t pos = 0;
-    int fd;
-    long wrote;
-    if (!can_manage) {
-        copy_text(status_text, sizeof(status_text),
-                  T("Administrator rights required", "需要管理员权限"));
+    if (!can_manage || rc_child) return;
+    for (unsigned i = 0; i < SERVICEMGR_ROWS; ++i) {
+        if (leonos_openrc_enabled(service_rows[i].key) == service_rows[i].enabled) continue;
+        rc_row = i; rc_kind = 3;
+        rc_action = service_rows[i].enabled ? "enable" : "disable";
+        rc_child = leonos_openrc_spawn(service_rows[i].key, rc_action);
+        if (rc_child < 0) { rc_child = 0; copy_text(status_text, sizeof(status_text), "OpenRC worker failed"); }
+        else copy_text(status_text, sizeof(status_text), T("Updating runlevel...", "正在更新运行级别…"));
         return;
     }
-    cfg[0] = 0;
-    append_text(cfg, &pos, sizeof(cfg), "# LeonOS service startup settings\n");
-    for (uint32_t i = 0; i < SERVICEMGR_ROWS; ++i) {
-        append_text(cfg, &pos, sizeof(cfg), service_rows[i].key);
-        append_char(cfg, &pos, sizeof(cfg), '=');
-        append_char(cfg, &pos, sizeof(cfg), service_rows[i].enabled ? '1' : '0');
-        append_char(cfg, &pos, sizeof(cfg), '\n');
-    }
-    fd = open(SERVICEMGR_CONFIG_PATH,
-              LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
-    if (fd < 0) {
-        copy_text(status_text, sizeof(status_text),
-                  T("Could not save service policy", "无法保存服务策略"));
-        return;
-    }
-    wrote = write(fd, cfg, pos);
-    close(fd);
-    if (wrote < 0 || (uint32_t)wrote != pos) {
-        copy_text(status_text, sizeof(status_text),
-                  T("Could not save service policy", "无法保存服务策略"));
-    } else {
-        copy_text(status_text, sizeof(status_text),
-                  T("Service policy saved", "服务策略已保存"));
-    }
-}
-
-static void reset_state(void)
-{
-    for (uint32_t i = 0; i < SERVICEMGR_ROWS; ++i) {
-        copy_text(service_rows[i].state, sizeof(service_rows[i].state), "unknown");
-        copy_text(service_rows[i].state_detail,
-                  sizeof(service_rows[i].state_detail),
-                  "runtime state unavailable");
-        service_rows[i].pid = 0;
-    }
-}
-
-static void copy_segment(char *dst, uint32_t cap, const char *line,
-                         uint32_t start, uint32_t end)
-{
-    uint32_t out = 0;
-    if (!dst || cap == 0) {
-        return;
-    }
-    while (start < end && out + 1U < cap) {
-        dst[out++] = line[start++];
-    }
-    dst[out] = 0;
-}
-
-static uint32_t parse_u32(const char *text)
-{
-    uint32_t value = 0;
-    uint32_t i = 0;
-    while (text && text[i] >= '0' && text[i] <= '9') {
-        value = value * 10U + (uint32_t)(text[i] - '0');
-        ++i;
-    }
-    return value;
-}
-
-static void parse_state_line(const char *line, uint32_t len)
-{
-    char key[32];
-    char state[16];
-    char pid_text[16];
-    uint32_t a = 0;
-    uint32_t b;
-    uint32_t c;
-    int index;
-    if (!line || len == 0 || line[0] == '#') {
-        return;
-    }
-    while (a < len && line[a] != '|') {
-        ++a;
-    }
-    if (a >= len) {
-        return;
-    }
-    b = a + 1U;
-    while (b < len && line[b] != '|') {
-        ++b;
-    }
-    if (b >= len) {
-        return;
-    }
-    c = b + 1U;
-    while (c < len && line[c] != '|') {
-        ++c;
-    }
-    if (c >= len) {
-        return;
-    }
-    copy_segment(key, sizeof(key), line, 0, a);
-    index = find_service(key);
-    if (index < 0) {
-        return;
-    }
-    copy_segment(state, sizeof(state), line, a + 1U, b);
-    copy_segment(pid_text, sizeof(pid_text), line, b + 1U, c);
-    copy_text(service_rows[index].state, sizeof(service_rows[index].state), state);
-    service_rows[index].pid = parse_u32(pid_text);
-    copy_segment(service_rows[index].state_detail,
-                 sizeof(service_rows[index].state_detail), line, c + 1U, len);
+    copy_text(status_text, sizeof(status_text), T("Default runlevel updated", "默认运行级别已更新"));
 }
 
 static void load_state(uint8_t quiet)
 {
-    char state[SERVICEMGR_STATE_MAX];
-    uint32_t len = 0;
-    uint32_t pos = 0;
-    reset_state();
-    if (read_file_text(SERVICEMGR_STATE_PATH, state, sizeof(state), &len) < 0) {
-        if (!quiet) {
-            copy_text(status_text, sizeof(status_text),
-                      T("Service runtime state unavailable",
-                        "服务运行状态不可用"));
-        }
-        return;
-    }
-    while (pos < len) {
-        uint32_t start = pos;
-        while (pos < len && state[pos] != '\n' && state[pos] != '\r') {
-            ++pos;
-        }
-        parse_state_line(state + start, pos - start);
-        while (pos < len && (state[pos] == '\n' || state[pos] == '\r')) {
-            ++pos;
-        }
-    }
-    if (!quiet) {
-        copy_text(status_text, sizeof(status_text),
-                  T("Runtime state refreshed", "运行状态已刷新"));
-    }
+    if (rc_child) return;
+    rc_row = 0; rc_kind = 1; rc_action = "status";
+    rc_child = leonos_openrc_spawn(service_rows[0].key, "status");
+    if (rc_child < 0) { rc_child = 0; copy_text(status_text, sizeof(status_text), "OpenRC worker failed"); }
+    else if (!quiet) copy_text(status_text, sizeof(status_text), T("Refreshing OpenRC...", "正在查询 OpenRC…"));
 }
 
 static void write_command(const char *action, uint32_t row)
 {
-    char cmd[64];
-    uint32_t pos = 0;
-    int fd;
-    long wrote;
-    if (!can_manage) {
-        copy_text(status_text, sizeof(status_text),
-                  T("Administrator rights required", "需要管理员权限"));
-        return;
-    }
-    if (row >= SERVICEMGR_ROWS || service_rows[row].locked) {
-        copy_text(status_text, sizeof(status_text),
-                  T("This service is protected", "该服务受保护"));
-        return;
-    }
-    cmd[0] = 0;
-    append_text(cmd, &pos, sizeof(cmd), action);
-    append_char(cmd, &pos, sizeof(cmd), ' ');
-    append_text(cmd, &pos, sizeof(cmd), service_rows[row].key);
-    append_char(cmd, &pos, sizeof(cmd), '\n');
-    (void)mkdir("/var", 0777);
-    (void)mkdir(LEONOS_LAYOUT_RUN_LEONOS, 0755);
-    fd = open(SERVICEMGR_COMMAND_PATH,
-              LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
-    if (fd < 0) {
-        copy_text(status_text, sizeof(status_text),
-                  T("Could not queue service command", "无法写入服务命令"));
-        return;
-    }
-    wrote = write(fd, cmd, pos);
-    close(fd);
-    if (wrote < 0 || (uint32_t)wrote != pos) {
-        copy_text(status_text, sizeof(status_text),
-                  T("Could not queue service command", "无法写入服务命令"));
-        return;
-    }
-    if (text_eq(action, "stop")) {
-        service_rows[row].enabled = 0;
+    if (!can_manage || row >= SERVICEMGR_ROWS || rc_child) return;
+    rc_row = row; rc_kind = 2; rc_action = action;
+    rc_child = leonos_openrc_spawn(service_rows[row].key, action);
+    if (rc_child < 0) rc_child = 0;
+    snprintf(status_text, sizeof(status_text), "OpenRC %s %s: %s", service_rows[row].key, action,
+             rc_child ? "pending" : "worker failed");
+}
+
+static int poll_openrc(void)
+{
+    if (!rc_child) return 0;
+    int result = 125, ready = leonos_openrc_poll(rc_child, &result);
+    if (!ready) return 0;
+    rc_child = 0;
+    if (ready < 0) result = 125;
+    if (rc_kind == 1) {
+        copy_text(service_rows[rc_row].state, sizeof(service_rows[rc_row].state),
+                  result == 0 ? "running" : result == 3 ? "stopped" : "failed");
+        snprintf(service_rows[rc_row].state_detail, sizeof(service_rows[rc_row].state_detail),
+                 "OpenRC exit=%d; default=%s", result,
+                 leonos_openrc_enabled(service_rows[rc_row].key) == 1 ? "yes" : "no");
+        if (++rc_row < SERVICEMGR_ROWS) {
+            rc_child = leonos_openrc_spawn(service_rows[rc_row].key, "status");
+            if (rc_child < 0) rc_child = 0;
+        }
     } else {
-        service_rows[row].enabled = 1;
+        snprintf(status_text, sizeof(status_text), "OpenRC %s %s: exit=%d", service_rows[rc_row].key, rc_action, result);
+        if (rc_kind == 3 && !result) save_config();
+        else if (result) load_config();
     }
-    save_config();
-    copy_text(status_text, sizeof(status_text),
-              T("Service command queued", "服务命令已提交"));
+    return 1;
 }
 
 static const char *localized_state(const char *state)
@@ -474,7 +239,8 @@ static void draw_servicemgr(struct leonos_ui_surface *ui)
                              ? LEONOS_UI_BUTTON_DISABLED
                              : 0;
         pid_text[0] = 0;
-        append_u32(pid_text, &pos, sizeof(pid_text), service_rows[i].pid);
+        (void)pos;
+        copy_text(pid_text, sizeof(pid_text), "—");
         leonos_ui_panel(ui, 24, y, SERVICEMGR_W - 48U, 44U, row_bg);
         leonos_ui_checkbox(ui, 36, y + 12U,
                            T(service_rows[i].name_en, service_rows[i].name_zh),
@@ -536,6 +302,7 @@ static int hit_rect(int32_t px, int32_t py, uint32_t x, uint32_t y,
 
 static void handle_click(int32_t x, int32_t y)
 {
+    if (rc_child) return;
     for (uint32_t i = 0; i < SERVICEMGR_ROWS; ++i) {
         uint32_t row_y = SERVICEMGR_ROW_Y + i * SERVICEMGR_ROW_H;
         if (hit_rect(x, y, 24, row_y, SERVICEMGR_W - 48U, 44U)) {
@@ -591,6 +358,7 @@ int main(void)
     leonos_ui_bind(&ui, pixels, SERVICEMGR_W, SERVICEMGR_H, SERVICEMGR_W);
     present(window_id, &ui);
     for (;;) {
+        if (poll_openrc()) present(window_id, &ui);
         event.window_id = (uint32_t)window_id;
         if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
             if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {

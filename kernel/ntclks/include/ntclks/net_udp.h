@@ -13,5 +13,5 @@ short task_udp_poll(struct task_file *file, short events);
 void task_udp_release(struct task_file *file);
 int task_udp_available(struct task_file *file);
 void net_udp_input(uint32_t source, uint32_t destination, uint16_t source_port,
-                    uint16_t destination_port, const void *data, uint32_t length);
+                    uint16_t destination_port, const void *data, uint32_t length, int ifindex);
 #endif

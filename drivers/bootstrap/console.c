@@ -23,6 +23,7 @@ static uint32_t fb_row;
 static uint32_t console_ui_theme = 1u;
 static bool console_line_start = true;
 static bool console_runtime_quiet;
+static bool console_service_logs_only;
 static uint64_t console_boot_uptime_us;
 static bool console_presenting;
 static uint32_t fb_saved_col;
@@ -796,10 +797,12 @@ static void console_emit_raw(char ch)
     fb_console_hide_tty_cursor();
     log_store(ch);
     serial_write(s);
-    if (vga_console_enabled) {
+    if (vga_console_enabled && !console_service_logs_only) {
         vga_putc(ch);
     }
-    fb_console_putc(ch);
+    if (!console_service_logs_only) {
+        fb_console_putc(ch);
+    }
     console_line_start = ch == '\n';
 }
 
@@ -936,6 +939,28 @@ void console_enter_tty_runtime(void)
         console_present();
     } else if (vga_console_enabled) {
         vga_init();
+    }
+}
+
+void console_enter_graphical_runtime(void)
+{
+    /* Keep diagnostics on serial, but never paint kernel/OpenRC output over
+     * the desktop surface after the window server takes ownership. */
+    console_runtime_quiet = true;
+    if (!fb_console_enabled) return;
+    fb_console_hide_tty_cursor();
+    fb_console_initialize_fullscreen();
+    fb_console_clear_log();
+    console_present();
+}
+
+void console_show_service_logs_only(void)
+{
+    console_service_logs_only = true;
+    if (fb_console_enabled) {
+        fb_console_initialize_fullscreen();
+        fb_console_clear_log();
+        console_present();
     }
 }
 

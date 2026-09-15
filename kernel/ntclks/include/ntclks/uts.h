@@ -2,7 +2,7 @@
 #define NTCLKS_UTS_H
 #include <stdint.h>
 /* The native userspace personality is Linux; version metadata stays NTCLKS. */
-#define LINUX_UTS_SYSNAME "Linux"
+#define LINUX_UTS_SYSNAME "NTCLKS"
 /**
  * @brief Copy a coherent snapshot under the UTS spinlock.
  * @param hostname Writable 65-byte kernel buffer for the hostname.

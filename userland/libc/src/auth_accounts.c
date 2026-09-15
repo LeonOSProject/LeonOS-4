@@ -161,7 +161,12 @@ int leonos_auth_update_user(uint32_t uid, uint32_t mask, uint32_t role, uint32_t
 int leonos_auth_request_power(uint32_t command)
 {
     if (command != RB_AUTOBOOT && command != RB_POWER_OFF) { errno = EINVAL; return -1; }
-    if (geteuid() == 0) return reboot(command);
+    /* PID 1 is a non-exiting init task.  Signalling it directly makes the
+     * default SIGTERM action try to terminate PID 1, which the kernel
+     * correctly rejects and turns the installer reboot into a panic.  Route
+     * privileged requests through the same reboot/poweroff helper used by
+     * unprivileged callers so OpenRC can shut down first and the kernel power
+     * path performs the final transition. */
     char *args[] = {command == RB_AUTOBOOT ? "/sbin/reboot" : "/sbin/poweroff", NULL};
     uint32_t pid;
     int status;

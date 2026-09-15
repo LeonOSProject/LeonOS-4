@@ -24,6 +24,18 @@ int net_is_ready(void);
  */
 int net_get_config(struct leonos_net_config *config);
 void net_poll_packets(void);
+/**
+ * @brief Transmit a raw IPv4 message over the configured Ethernet route.
+ * @param destination Host-order destination address.
+ * @param source Host-order bound source, zero selects the interface address.
+ * @param protocol Protocol for a generated IP header.
+ * @param header_included Whether data already contains an IPv4 header.
+ * @param data Validated message bytes, borrowed under the execution lock.
+ * @param length Message length.
+ * @return Bytes sent or negative errno, including EMSGSIZE without fragmentation.
+ */
+int net_ipv4_send_raw(uint32_t destination, uint32_t source, uint8_t protocol,
+                      bool header_included, const void *data, uint32_t length);
 int net_ipv4_send_udp(uint32_t source, uint32_t destination, uint16_t source_port,
                        uint16_t destination_port, const void *data, uint32_t length);
 /**
@@ -103,5 +115,11 @@ void net_driver_detached(void);
  * @brief Report the NIC's presence/active flags, 48-bit MAC, and current local IPv4 address.
  */
 void net_device_info(uint32_t *flags, uint64_t *mac_value, uint32_t *local_ip);
+
+/** @brief Execute a native Linux interface/route ioctl with checked user memory. */
+int net_interface_ioctl(uint32_t request, uint64_t address);
+
+/** @brief Report whether eth0 is administratively up and ready. */
+bool net_interface_ready(void);
 
 #endif

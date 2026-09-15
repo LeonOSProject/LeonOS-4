@@ -143,17 +143,17 @@ int leonos_driver_list(struct leonos_driver_info *drivers, uint32_t capacity,
 
 int leonos_driver_control(uint32_t action, const char *file)
 {
-    struct leonos_driver_module request;
+    struct leonos_driver_control request;
     struct leonos_devmand_ack ack;
-    if (!file && action != LEONOS_DRIVER_CONTROL_RESCAN) { errno = EINVAL; return -1; }
+    if ((!file && action != LEONOS_DRIVER_CONTROL_RESCAN) ||
+        (file && strlen(file) >= sizeof(request.file))) { errno = EINVAL; return -1; }
     memset(&request, 0, sizeof(request));
-    request.magic = LEONOS_DRIVER_MODULE_MAGIC;
-    request.abi_version = LEONOS_DRIVER_ABI_VERSION;
-    request.kind = action;
-    if (file) devmand_copy(request.name, sizeof(request.name), file);
+    request.action = action;
+    if (file) devmand_copy(request.file, sizeof(request.file), file);
     if (devmand_open() < 0) return -1;
     if (leonos_ipc_send(devmand_fd, LEONOS_DEVMAND_MSG_DRIVER_CONTROL, &request,
                         sizeof(request)) < 0) return -1;
     if (devmand_wait(LEONOS_DEVMAND_MSG_ACK, &ack, sizeof(ack), 0) < 0) return -1;
+    if (ack.code < 0) { errno = -ack.code; return -1; }
     return ack.code;
 }

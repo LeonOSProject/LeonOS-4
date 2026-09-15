@@ -122,7 +122,7 @@ int main(void)
     failures += test_linux_map_stack();
     if (configure_proxy() < 0) return 1;
     setenv("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", 1);
-    /* This QEMU user-network fixture gets its resolver from serviced's DHCP. */
+    /* This QEMU user-network fixture gets its resolver from the OpenRC udhcpc service. */
     for (unsigned i = 0; i < 100 && !contains("/etc/resolv.conf", "nameserver 10.0.2.3"); ++i)
         usleep(100000);
     check(contains("/etc/resolv.conf", "nameserver 10.0.2.3"), "DHCP resolver ready before APK");

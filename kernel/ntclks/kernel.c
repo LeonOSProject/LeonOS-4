@@ -230,6 +230,9 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
         console_enable_framebuffer(handoff && handoff->magic == LEONOS_BOOT_HANDOFF_MAGIC
                                        ? &handoff->boot_log
                                        : 0);
+        if (boot_log_screen && !startup_tty) {
+            console_show_service_logs_only();
+        }
     }
     console_enable_vga_fallback();
     sched_init();
@@ -333,6 +336,8 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
 
     if (startup_tty) {
         console_enter_tty_runtime();
+    } else if (boot_log_screen) {
+        console_enter_graphical_runtime();
     }
 
     userland_enter_first();

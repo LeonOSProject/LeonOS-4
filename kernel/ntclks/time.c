@@ -8,6 +8,9 @@
 #include <ntclks/time.h>
 #include <ntclks/usb.h>
 #include <linux/time.h>
+#include <linux/timex.h>
+#include <ntclks/time_discipline.h>
+#include <ntclks/lock.h>
 #include <linux/errno.h>
 
 #include "arch/x86_64/port.h"
@@ -30,7 +33,8 @@
 
 static volatile uint64_t ticks;
 static uint64_t wall_unix_seconds;
-static uint64_t wall_subticks;
+static uint64_t monotonic_seconds, monotonic_ns;
+static struct kernel_spinlock clock_lock = KERNEL_SPINLOCK_INIT;
 static uint64_t wall_fraction_ns;
 static uint8_t wall_clock_valid;
 static volatile uint16_t pit_divisor;
@@ -221,7 +225,7 @@ void time_init(void)
 {
     ticks = 0;
     wall_unix_seconds = 0;
-    wall_subticks = 0;
+    monotonic_seconds = monotonic_ns = 0;
     wall_fraction_ns = 0;
     wall_clock_valid = 0;
     pit_divisor = 0;
@@ -242,14 +246,21 @@ void time_init(void)
  */
 void time_on_tick(void)
 {
+    uint64_t flags;
+    kernel_spin_lock_irqsave(&clock_lock, &flags);
     ++ticks;
+    uint64_t elapsed = time_discipline_tick_ns();
+    monotonic_ns += elapsed;
+    if (monotonic_ns >= 1000000000) { monotonic_ns -= 1000000000; ++monotonic_seconds; }
     if (wall_clock_valid) {
-        ++wall_subticks;
-        if (wall_subticks >= NTCLKS_TICK_HZ) {
-            wall_subticks = 0;
+        wall_fraction_ns += elapsed;
+        if (wall_fraction_ns >= 1000000000) {
+            wall_fraction_ns -= 1000000000;
             ++wall_unix_seconds;
+            wall_unix_seconds += time_discipline_second(wall_unix_seconds);
         }
     }
+    kernel_spin_unlock_irqrestore(&clock_lock, flags);
     usb_poll();
     sched_on_tick();
 }
@@ -262,26 +273,51 @@ uint64_t time_ticks(void)
     return ticks;
 }
 
-int time_clock_get(int32_t clock, struct linux_timespec *value)
+/** @brief Read a consistent clock snapshot with the timekeeper lock held. */
+static int time_clock_get_locked(int32_t clock, struct linux_timespec *value)
 {
-    uint64_t now = ticks;
     switch (clock) {
     case LINUX_CLOCK_REALTIME:
     case LINUX_CLOCK_REALTIME_COARSE:
-        value->tv_sec = wall_clock_valid ? (int64_t)wall_unix_seconds : (int64_t)(now / NTCLKS_TICK_HZ);
-        value->tv_nsec = (int64_t)((wall_clock_valid ? wall_subticks : now % NTCLKS_TICK_HZ) *
-                                  (1000000000ULL / NTCLKS_TICK_HZ) + (wall_clock_valid ? wall_fraction_ns : 0));
+    case 11: /* CLOCK_TAI */
+        value->tv_sec = wall_clock_valid ? (int64_t)wall_unix_seconds : (int64_t)monotonic_seconds;
+        value->tv_nsec = wall_clock_valid ? wall_fraction_ns : monotonic_ns;
+        if (clock == 11) value->tv_sec += time_discipline_tai();
+        return 0;
+    case LINUX_CLOCK_MONOTONIC_RAW:
+        value->tv_sec = ticks / NTCLKS_TICK_HZ;
+        value->tv_nsec = ticks % NTCLKS_TICK_HZ * (1000000000ULL / NTCLKS_TICK_HZ);
         return 0;
     case LINUX_CLOCK_MONOTONIC:
-    case LINUX_CLOCK_MONOTONIC_RAW:
     case LINUX_CLOCK_MONOTONIC_COARSE:
     case LINUX_CLOCK_BOOTTIME:
-        value->tv_sec = (int64_t)(now / NTCLKS_TICK_HZ);
-        value->tv_nsec = (int64_t)((now % NTCLKS_TICK_HZ) * (1000000000ULL / NTCLKS_TICK_HZ));
+        value->tv_sec = monotonic_seconds;
+        value->tv_nsec = monotonic_ns;
         return 0;
-    default:
-        return -LINUX_EINVAL;
+    default: return -LINUX_EINVAL;
     }
+}
+
+/** @brief Read wall or monotonic time atomically across CPUs and timer interrupts. */
+int time_clock_get(int32_t clock, struct linux_timespec *value)
+{
+    uint64_t flags;
+    kernel_spin_lock_irqsave(&clock_lock, &flags);
+    int result = time_clock_get_locked(clock, value);
+    kernel_spin_unlock_irqrestore(&clock_lock, flags);
+    return result;
+}
+
+/** @brief Apply real oscillator/phase discipline and return its current state. */
+int time_adjust(struct linux_timex *value, bool privileged)
+{
+    uint64_t flags;
+    kernel_spin_lock_irqsave(&clock_lock, &flags);
+    struct linux_timespec now;
+    time_clock_get_locked(LINUX_CLOCK_REALTIME, &now);
+    int result = time_discipline_adjust(value, &now, privileged);
+    kernel_spin_unlock_irqrestore(&clock_lock, flags);
+    return result;
 }
 
 /**
@@ -343,11 +379,14 @@ int time_wall_clock(struct leonos_time_info *info)
     if (!info || !wall_clock_valid) {
         return -1;
     }
+    uint64_t flags;
+    kernel_spin_lock_irqsave(&clock_lock, &flags);
     info->unix_seconds = wall_unix_seconds;
     info->uptime_ms = time_uptime_ms();
     info->valid = 1;
     info->reserved = 0;
     unix_to_datetime(wall_unix_seconds, info);
+    kernel_spin_unlock_irqrestore(&clock_lock, flags);
     return 0;
 }
 
@@ -359,6 +398,7 @@ int time_set_wall_clock(uint64_t unix_seconds)
     return time_set_wall_clock_ns(unix_seconds, 0);
 }
 
+/** @brief Atomically step realtime and reset phase discipline without moving monotonic time. */
 int time_set_wall_clock_ns(uint64_t unix_seconds, uint32_t nanoseconds)
 {
     struct leonos_time_info info;
@@ -370,10 +410,13 @@ int time_set_wall_clock_ns(uint64_t unix_seconds, uint32_t nanoseconds)
                             info.minute, info.second)) {
         return -1;
     }
+    uint64_t flags;
+    kernel_spin_lock_irqsave(&clock_lock, &flags);
     wall_unix_seconds = unix_seconds;
-    wall_subticks = nanoseconds / (1000000000ULL / NTCLKS_TICK_HZ);
-    wall_fraction_ns = nanoseconds % (1000000000ULL / NTCLKS_TICK_HZ);
+    wall_fraction_ns = nanoseconds;
     wall_clock_valid = 1;
+    time_discipline_clear();
+    kernel_spin_unlock_irqrestore(&clock_lock, flags);
     console_printf("[ntclks] wall clock set %u-%u-%u %u:%u:%u\n",
                    info.year, info.month, info.day, info.hour,
                    info.minute, info.second);

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise init's real signal handling; reboot and sync never reach the host."""
+"""Exercise GUI/installer power-to-PID-1 dispatch; never signal the host init."""
 from pathlib import Path
 import subprocess
 import tempfile

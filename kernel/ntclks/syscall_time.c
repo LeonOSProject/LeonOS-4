@@ -3,6 +3,8 @@
 #include <ntclks/usercopy.h>
 #include <ntclks/futex.h>
 #include <linux/time.h>
+#include <linux/timex.h>
+#include <linux/capability.h>
 #include <linux/errno.h>
 #include <linux/signal.h>
 
@@ -209,4 +211,20 @@ int64_t syscall_rt_sigtimedwait(uint64_t mask, uint64_t info, uint64_t timeout,
     }
     sched_signal_wait_current(task->sigwait_deadline);
     return KERNEL_SYSCALL_BLOCKED;
+}
+
+/** @brief Implement native adjtimex/clock_adjtime for the system realtime clock. */
+int64_t syscall_adjtimex(int32_t clock, uint64_t address)
+{
+    if (clock != LINUX_CLOCK_REALTIME) return -LINUX_EOPNOTSUPP;
+    struct linux_timex value;
+    if (!user_range_ok(address, sizeof(value))) return -LINUX_EFAULT;
+    __builtin_memcpy(&value, (void *)(uintptr_t)address, sizeof(value));
+    struct task *task = sched_current_task();
+    int result = time_adjust(&value, task && (task->cap_effective & (1ULL << CAP_SYS_TIME)));
+    if (result < 0) return result;
+    /* Like Linux, mutation precedes the output copy; a late EFAULT does not undo it. */
+    if (!user_range_writable(address, sizeof(value))) return -LINUX_EFAULT;
+    __builtin_memcpy((void *)(uintptr_t)address, &value, sizeof(value));
+    return result;
 }

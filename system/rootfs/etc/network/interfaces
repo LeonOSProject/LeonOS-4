@@ -1,0 +1,4 @@
+# The OpenRC leonos-dhcp service is the sole DHCP process owner.
+auto lo
+iface lo inet loopback
+iface eth0 inet manual
