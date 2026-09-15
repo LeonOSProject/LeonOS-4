@@ -33,19 +33,19 @@ jobs:
       #   ssh://git@host:PORT/~user/repo
       #   ssh://git@[v6addr]:PORT/~user/repo
       #
-      # One SSH private key is authorized on every target.
+      # The same SSH private key is authorized on every target.
       SOURCEHUT_REPOSITORIES: >-
         git@git.sr.ht:~leonmmcoset/LeonOS-4,
         ssh://git@git.hgspace.work:2222/~leonmmcoset/LeonOS-4.git
 
     steps:
-      # ------------------------------------------------------------------
-      # Checkout
-      # ------------------------------------------------------------------
+      # ================================================================
+      # Checkout repository
+      # ================================================================
       #
-      # A delete event does not provide a usable branch ref for checkout.
-      # The explicit all-branches fetch below is authoritative, so use the
-      # repository's current default branch here.
+      # A delete event does not provide a usable branch ref.
+      # The explicit all-branches fetch below is authoritative,
+      # so use the repository's current default branch for checkout.
       #
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -55,14 +55,12 @@ jobs:
           fetch-tags: false
           persist-credentials: true
 
-      # ------------------------------------------------------------------
+      # ================================================================
       # Configure SSH and SourceHut remotes
-      # ------------------------------------------------------------------
-      #
+      # ================================================================
       - name: Configure SourceHut SSH
         env:
           SOURCEHUT_SSH_PRIVATE_KEY: ${{ secrets.SOURCEHUT_SSH_PRIVATE_KEY }}
-          SOURCEHUT_EXTRA_KNOWN_HOSTS: ${{ secrets.SOURCEHUT_EXTRA_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
 
@@ -71,9 +69,66 @@ jobs:
             exit 1
           fi
 
-          # --------------------------------------------------------------
-          # Parse the comma-separated repository list.
-          # --------------------------------------------------------------
+          # ------------------------------------------------------------
+          # Prepare ~/.ssh
+          # ------------------------------------------------------------
+          install -d -m 700 "$HOME/.ssh"
+
+          printf '%s\n' "$SOURCEHUT_SSH_PRIVATE_KEY" \
+            > "$HOME/.ssh/sourcehut_sync_key"
+
+          chmod 600 "$HOME/.ssh/sourcehut_sync_key"
+
+          known_hosts="$HOME/.ssh/known_hosts"
+
+          # Do not use the runner's existing known_hosts.
+          # This workflow uses an explicit trust store.
+          : > "$known_hosts"
+
+          # ------------------------------------------------------------
+          # Pinned git.sr.ht host keys.
+          # ------------------------------------------------------------
+          cat >> "$known_hosts" <<'EOF'
+          git.sr.ht ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMZvRd4EtM7R+IHVMWmDkVU3VLQTSwQDSAvW0t2Tkj60
+          git.sr.ht ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDZ+l/lvYmaeOAPeijHL8d4794Am0MOvmXPyvHTtrqvgmvCJB8pen/qkQX2S1fgl9VkMGSNxbp7NF7HmKgs5ajTGV9mB5A5zq+161lcp5+f1qmn3Dp1MWKp/AzejWXKW+dwPBd3kkudDBA1fa3uK6g1gK5nLw3qcuv/V4emX9zv3P2ZNlq9XRvBxGY2KzaCyCXVkL48RVTTJJnYbVdRuq8/jQkDRA8lHvGvKI+jqnljmZi2aIrK9OGT2gkCtfyTw2GvNDV6aZ0bEza7nDLU/I+xmByAOO79R1Uk4EYCvSc1WXDZqhiuO2sZRmVxa0pQSBDn1DB3rpvqPYW+UvKB3SOz
+          git.sr.ht ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCj6y+cJlqK3BHZRLZuM+KP2zGPrh4H66DacfliU1E2DHAd1GGwF4g1jwu3L8gOZUTIvUptqWTkmglpYhFp4Iy4=
+          EOF
+
+          # ------------------------------------------------------------
+          # Pinned self-hosted SourceHut host key.
+          #
+          # Obtained from:
+          #
+          #   ssh-keyscan -p 2222 -t ed25519 git.hgspace.work
+          #
+          # Host key:
+          #
+          #   SHA256 fingerprint:
+          #   (verify against the server operator if possible)
+          # ------------------------------------------------------------
+          cat >> "$known_hosts" <<'EOF'
+          [git.hgspace.work]:2222 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF9LJrIFHQVA3MelHwmsk9pksVw8E/XNmONvBI3HGU0R
+          EOF
+
+          chmod 600 "$known_hosts"
+
+          # ------------------------------------------------------------
+          # Force SSH to:
+          #
+          #   - use only our dedicated private key
+          #   - reject unknown host keys
+          #   - use only our pinned known_hosts file
+          # ------------------------------------------------------------
+          git config --local core.sshCommand \
+            "ssh \
+              -i $HOME/.ssh/sourcehut_sync_key \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile=$known_hosts"
+
+          # ------------------------------------------------------------
+          # Parse comma-separated SourceHut repositories.
+          # ------------------------------------------------------------
           repos=()
 
           while IFS= read -r repo; do
@@ -96,24 +151,12 @@ jobs:
             exit 1
           fi
 
-          # --------------------------------------------------------------
-          # Parse a Git SSH URL into:
+          # ------------------------------------------------------------
+          # Parse repository SSH URL.
           #
-          #   host
-          #   port
-          #
-          # Supported:
-          #
-          #   git@host:path
-          #   ssh://git@host/path
-          #   ssh://git@host:2222/path
-          #   ssh://git@[2001:db8::1]:2222/path
-          #
-          # Output:
-          #
-          #   line 1 = host
-          #   line 2 = port
-          # --------------------------------------------------------------
+          # This validates the supported formats before registering
+          # remotes.
+          # ------------------------------------------------------------
           repo_host_port() {
             local url="$1"
             local rest
@@ -129,7 +172,8 @@ jobs:
 
                 case "$hostpart" in
                   \[*\]:*)
-                    # IPv6:
+                    # IPv6 with explicit port:
+                    #
                     # [2001:db8::1]:2222
                     host="${hostpart#\[}"
                     host="${host%%\]:*}"
@@ -137,8 +181,9 @@ jobs:
                     ;;
 
                   *:*)
-                    # Normal host:
-                    # example.com:2222
+                    # Normal host with explicit port:
+                    #
+                    # example.org:2222
                     host="${hostpart%%:*}"
                     port="${hostpart##*:}"
                     ;;
@@ -151,11 +196,11 @@ jobs:
                 ;;
 
               *@*:*)
-                # SCP-like form:
+                # SCP-style:
                 #
                 # git@host:path
                 #
-                # SCP-style Git URLs do not support an explicit port.
+                # SCP-style Git URLs use the default SSH port.
                 rest="${url#*@}"
                 host="${rest%%:*}"
                 port="22"
@@ -191,59 +236,14 @@ jobs:
             printf '%s\n%s\n' "$host" "$port"
           }
 
-          # --------------------------------------------------------------
-          # Prepare ~/.ssh
-          # --------------------------------------------------------------
-          install -d -m 700 "$HOME/.ssh"
-
-          printf '%s\n' "$SOURCEHUT_SSH_PRIVATE_KEY" \
-            > "$HOME/.ssh/sourcehut_sync_key"
-
-          chmod 600 "$HOME/.ssh/sourcehut_sync_key"
-
-          known_hosts="$HOME/.ssh/known_hosts"
-
-          # Do not inherit runner/user host keys.
-          # This workflow intentionally maintains its own trust store.
-          : > "$known_hosts"
-
-          # --------------------------------------------------------------
-          # Pinned git.sr.ht host keys.
-          #
-          # These are trusted explicitly instead of using ssh-keyscan.
-          # --------------------------------------------------------------
-          cat >> "$known_hosts" <<'EOF'
-          git.sr.ht ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMZvRd4EtM7R+IHVMWmDkVU3VLQTSwQDSAvW0t2Tkj60
-          git.sr.ht ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDZ+l/lvYmaeOAPeijHL8d4794Am0MOvmXPyvHTtrqvgmvCJB8pen/qkQX2S1fgl9VkMGSNxbp7NF7HmKgs5ajTGV9mB5A5zq+161lcp5+f1qmn3Dp1MWKp/AzejWXKW+dwPBd3kkudDBA1fa3uK6g1gK5nLw3qcuv/V4emX9zv3P2ZNlq9XRvBxGY2KzaCyCXVkL48RVTTJJnYbVdRuq8/jQkDRA8lHvGvKI+jqnljmZi2aIrK9OGT2gkCtfyTw2GvNDV6aZ0bEza7nDLU/I+xmByAOO79R1Uk4EYCvSc1WXDZqhiuO2sZRmVxa0pQSBDn1DB3rpvqPYW+UvKB3SOz
-          git.sr.ht ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCj6y+cJlqK3BHZRLZuM+KP2zGPrh4H66DacfliU1E2DHAd1GGwF4g1jwu3L8gOZUTIvUptqWTkmglpYhFp4Iy4=
-          EOF
-
-          # --------------------------------------------------------------
-          # Optional pinned host keys for self-hosted SourceHut instances.
-          #
-          # Example:
-          #
-          #   [git.hgspace.work]:2222 ssh-ed25519 AAAA...
-          #
-          # IMPORTANT:
-          #
-          # We intentionally do NOT fall back to ssh-keyscan.
-          # An unknown host key causes the workflow to fail instead.
-          # --------------------------------------------------------------
-          if [ -n "${SOURCEHUT_EXTRA_KNOWN_HOSTS:-}" ]; then
-            printf '%s\n' "$SOURCEHUT_EXTRA_KNOWN_HOSTS" >> "$known_hosts"
-          fi
-
-          chmod 600 "$known_hosts"
-
-          # --------------------------------------------------------------
-          # Register one Git remote per SourceHut repository.
-          # --------------------------------------------------------------
-          declare -A seen_hosts=()
-
+          # ------------------------------------------------------------
+          # Register one Git remote for every SourceHut repository.
+          # ------------------------------------------------------------
           for i in "${!repos[@]}"; do
             repo="${repos[$i]}"
+            remote="sourcehut-$i"
 
+            # Validate URL before registering it.
             mapfile -t hp < <(
               repo_host_port "$repo"
             ) || {
@@ -252,87 +252,53 @@ jobs:
             }
 
             if [ "${#hp[@]}" -lt 2 ]; then
-              echo "ERROR: failed to parse SourceHut repository #$((i + 1)): $repo" >&2
+              echo "ERROR: failed to parse repository #$((i + 1)): $repo" >&2
               exit 1
             fi
 
             host="${hp[0]}"
             port="${hp[1]}"
 
-            # known_hosts uses:
-            #
-            #   host
-            #
-            # for port 22, and:
-            #
-            #   [host]:port
-            #
-            # for custom ports.
+            # known_hosts lookup format.
             if [ "$port" = "22" ]; then
               key="$host"
             else
               key="[$host]:$port"
             fi
 
-            seen_hosts["$key|$host|$port"]=1
-
-            remote="sourcehut-$i"
-
-            echo "Adding remote $remote -> $repo"
-
-            git remote remove "$remote" 2>/dev/null || true
-            git remote add "$remote" "$repo"
-          done
-
-          # --------------------------------------------------------------
-          # Verify that every target host has a pinned host key.
-          #
-          # There is intentionally NO ssh-keyscan fallback.
-          # --------------------------------------------------------------
-          for entry in "${!seen_hosts[@]}"; do
-            key="${entry%%|*}"
-
-            rest="${entry#*|}"
-            host="${rest%%|*}"
-            port="${rest##*|}"
-
+            # The host must already have a pinned key.
             if ! ssh-keygen -F "$key" -f "$known_hosts" >/dev/null 2>&1; then
               echo "ERROR: no pinned SSH host key for $key" >&2
-              echo "Add the host key to SOURCEHUT_EXTRA_KNOWN_HOSTS." >&2
+              echo "Refusing to connect to an untrusted host." >&2
               exit 1
             fi
 
             echo "Verified pinned SSH host key for $key"
+
+            git remote remove "$remote" 2>/dev/null || true
+            git remote add "$remote" "$repo"
+
+            echo "Registered $remote -> $repo"
           done
 
-          # --------------------------------------------------------------
-          # Force Git to use only the dedicated SourceHut key and trust
-          # only the workflow-specific known_hosts file.
-          # --------------------------------------------------------------
-          git config --local core.sshCommand \
-            "ssh \
-              -i $HOME/.ssh/sourcehut_sync_key \
-              -o IdentitiesOnly=yes \
-              -o StrictHostKeyChecking=yes \
-              -o UserKnownHostsFile=$known_hosts"
-
+          # Expose repository count to subsequent steps.
           echo "SOURCEHUT_SYNC_COUNT=${#repos[@]}" >> "$GITHUB_ENV"
 
-      # ------------------------------------------------------------------
-      # Fetch every GitHub branch into a private synchronization namespace.
+      # ================================================================
+      # Fetch every GitHub branch
+      # ================================================================
       #
-      # Example:
+      # The fetched branches are stored in:
       #
-      #   GitHub:
-      #     refs/heads/main
-      #     refs/heads/rewrite/kernel
+      #   refs/sync/github/*
       #
-      #   Local:
-      #     refs/sync/github/main
-      #     refs/sync/github/rewrite/kernel
+      # rather than refs/remotes/origin/*.
       #
-      # Tags are intentionally not fetched or synchronized.
-      # ------------------------------------------------------------------
+      # This makes the synchronization source explicit and independent
+      # from the checkout action's remote-tracking configuration.
+      #
+      # Tags are intentionally NOT synchronized.
+      # ================================================================
       - name: Fetch every GitHub branch
         run: |
           set -euo pipefail
@@ -352,26 +318,28 @@ jobs:
           fi
 
           echo "GitHub branches to synchronize:"
+
           git for-each-ref \
-            --format='  %(refname:strip=2)' \
+            --format='  %(refname)' \
             refs/sync/github/
 
-      # ------------------------------------------------------------------
-      # Force-sync and prune every configured SourceHut repository.
+      # ================================================================
+      # Force-sync and prune SourceHut branches
+      # ================================================================
       #
-      # SourceHut becomes an exact branch mirror of GitHub:
+      # This makes SourceHut an exact branch mirror of GitHub.
       #
-      #   GitHub branch exists
-      #       -> SourceHut branch exists at same commit
+      # GitHub branch exists:
+      #   -> SourceHut branch exists at the same commit
       #
-      #   GitHub branch moved
-      #       -> SourceHut branch is force-updated
+      # GitHub branch moved:
+      #   -> SourceHut branch is force-updated
       #
-      #   GitHub branch deleted
-      #       -> SourceHut branch is deleted
+      # GitHub branch deleted:
+      #   -> SourceHut branch is deleted by --prune
       #
       # Tags are intentionally untouched.
-      # ------------------------------------------------------------------
+      # ================================================================
       - name: Force-sync and prune SourceHut branches
         run: |
           set -euo pipefail
@@ -390,8 +358,8 @@ jobs:
             echo
             echo "============================================================"
             echo "Force-syncing branches to:"
-            echo "  $remote"
-            echo "  $url"
+            echo "  Remote: $remote"
+            echo "  URL:    $url"
             echo "============================================================"
 
             git push \
@@ -404,4 +372,6 @@ jobs:
           done
 
           echo
+          echo "============================================================"
           echo "SourceHut branch synchronization completed successfully."
+          echo "============================================================"
