@@ -453,13 +453,14 @@ The installer ISO GRUB menu provides the default graphical installer, an
 `Install LeonOS 4 (TTY)` entry, and an `Install LeonOS 4 (Advanced mode, TTY
 shell)` entry. The regular TTY entry starts `installer.elf` directly on the
 console PTY. Advanced mode starts a BusyBox shell in the installer root instead,
-with the LeonOS `fdisk`, `mkfs.fat`/`mkfs.fat32`, `mkfs.ext2`, `mkfs.exfat`,
-`fsck.*`, `blkid`, `lsblk`, `mount`, `umount`, `sync`, and
-`leonos-grub-installer` tools available for manual preparation. The
-installer-only `/usr/lib/leonos/apps/gptinit/gptinit.elf` utility initializes an empty
-GPT; `fdisk` can edit GPT partition type and name; `fsck.*` performs read-only
-superblock validation. It does not start the installer application or perform
-automatic partitioning.
+with upstream util-linux `fdisk`/`sfdisk`/`blkid`/`lsblk`/`mount`/`umount`,
+upstream filesystem `mkfs.*`/`fsck.*` programs, BusyBox file tools, and
+`leonos-grub-installer` available for manual preparation. `fdisk` creates an
+empty GPT directly with `g`; FAT32 formatting uses the upstream
+`mkfs.fat -F 32` syntax. Read-only checks require each checker's `-n` option.
+The complete current procedure is installed as `/root/ADVANCED_INSTALL.txt` in
+the installer runtime and maintained in `docs/ADVANCED_INSTALL.md`. Advanced
+mode does not start the installer application or perform automatic partitioning.
 
 The installer runtime includes `desktop.elf`, `installer.elf`, and
 `/bin/busybox`. The installed-system root payload under

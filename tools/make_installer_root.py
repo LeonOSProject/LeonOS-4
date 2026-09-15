@@ -12,6 +12,7 @@ from pathlib import Path
 from make_ext2_root import write_ext2_root
 
 ROOT = Path(__file__).resolve().parents[1]
+ADVANCED_INSTALL_GUIDE = ROOT / "docs/ADVANCED_INSTALL.txt"
 sys.path.insert(0, str(ROOT / "tools"))
 from leonos_layout import (  # noqa: E402
     BIN,
@@ -138,6 +139,7 @@ def stage_runtime_payload(esp_tree: Path, stage: Path, policy_runtime: Path,
         copy_file(generated_icons_dir / f"{app}.bmp",
                   stage / LEONOS_APPS / app / f"{app}.bmp")
     copy_file(policy_runtime, stage / LEONOS_LIB / "libleonos.so.2")
+    copy_file(ADVANCED_INSTALL_GUIDE, stage / "root/ADVANCED_INSTALL.txt")
     for app in ("imd", "windowd", "desktop", "installer", "gptinit"):
         link, target = command_symlink(app, f"{LEONOS_APPS}/{app}/{app}.elf")
         path = stage / link

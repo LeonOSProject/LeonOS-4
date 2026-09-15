@@ -1,287 +1,297 @@
 # LeonOS 4 高级安装教程
 
-高级模式提供一个直接进入 BusyBox 的 TTY shell，允许手动完成分区、格式化、挂载、复制系统文件和安装启动文件。它不会启动图形安装器，也不会自动分区。
+Installer ISO 的高级模式直接进入 root TTY shell，允许使用标准 Linux 命令手动
+完成 GPT 分区、格式化、检查、挂载、系统复制和 UEFI 启动文件安装。它不会启动
+图形或 TTY 安装器，也不会自动选择磁盘。
 
-当前正式安装流程在图形或 TTY 安装器中创建普通账户和固定的 `root` 账户，
-并写入安装完成标记。OOBE 已删除；本文的手动复制步骤不会创建账户，也不能
-替代完整安装。需要可登录的普通用户系统时，请使用安装向导，参见
-[安装器账户与组件](INSTALLER_ACCOUNTS.md)。新安装默认使用 ext2，文末的 ext2
-命令适用于当前格式；前文 exFAT 步骤仅供已有文件系统维护参考。
+当前介质提供上游 util-linux 2.41.6、e2fsprogs 1.47.3、dosfstools 4.2、
+exfatprogs 1.4.3 和 BusyBox 1.36.1。本文使用这些工具的上游命令行，不再使用
+旧版 LeonOS 私有 `fdisk`/`mkfs` 参数。存储操作通过 `/dev/*`、Linux block
+ioctl、标准文件 I/O 和 `mount(2)`/`umount2(2)` 完成。
 
-## 磁盘布局
+> [!WARNING]
+> 手动复制 payload 不会调用安装器的账户事务，也不会创建安装完成标记。
+> 它适合底层安装、修复和开发；若需要由 LeonOS 正式支持的 root/普通账户、
+> wheel/sudo 策略和可直接登录的系统，请使用普通安装器。账户规则参见
+> [安装器账户与组件](INSTALLER_ACCOUNTS.md)。
 
-新安装推荐使用以下布局：
+安装介质中另有一份可在高级 shell 直接阅读的英文纯文本版本：
 
-| 分区 | 文件系统 | GPT 类型 | GPT 名称 | 用途 |
+```sh
+less /root/ADVANCED_INSTALL.txt
+```
+
+## 推荐磁盘布局
+
+| 分区 | 文件系统 | GPT 类型 | 建议名称 | 用途 |
 | --- | --- | --- | --- | --- |
-| 1 | FAT32 | EFI System Partition | `LeonOS 4 ESP` | UEFI、GRUB 和内核文件 |
-| 2 | exFAT | Microsoft Basic Data | `LEONOS4_ROOT` | LeonOS 4 根文件系统 |
+| 1 | FAT32 | EFI System | `LeonOS 4 ESP` | UEFI、GRUB、loader、内核和中间层 |
+| 2 | ext2 | Linux filesystem | `LEONOS4_ROOT` | LeonOS 4 根文件系统 |
 
-ESP 至少需要 128 MiB。根分区必须能容纳 `/install/root` 的全部内容，并留出用户数据空间。
+ESP 建议至少 128 MiB。根分区应使用剩余空间，并确保能容纳 `/install/root`
+及后续用户数据。分区名称只是便于识别，不参与启动；GPT 类型和文件系统才是
+必要条件。
 
 ## 重要警告
 
-- 删除分区和执行 `mkfs.*` 会破坏目标分区中的数据。
-- 反复确认 `lsblk` 显示的磁盘编号，不要把 ISO 所在设备当作目标磁盘。
-- LeonOS 使用 `/dev/disk0`、`/dev/disk0p1` 这样的设备路径，不使用 `/dev/sda`。
-- `fdisk` 用于编辑 GPT；完全空白磁盘应先使用本 ISO 专用的 `gptinit` 初始化 GPT。`gptinit` 只存在于安装 ISO，不会安装到目标系统。
-- 安装 ISO 的根文件系统运行在内存中的临时 ramdisk，重启后修改会丢失；写入目标磁盘的内容会保留。
+- `g`、`d`、`w`、`mkfs.*` 会破坏目标磁盘上的数据。
+- 根据容量和控制器信息确认目标磁盘；不要把安装 ISO 或其他数据盘当成目标盘。
+- LeonOS 磁盘命名为 `/dev/disk0`、`/dev/disk0p1`，不使用 `/dev/sda`。
+- 以下示例假定目标是 `/dev/disk0`，实际编号不同时必须替换所有相关命令。
+- Installer ISO 根目录是可写的临时 ext2 ramdisk，但重启后其中的修改会丢失；
+  已写入目标磁盘的内容会保留。
 
-## 1. 启动高级模式
+## 1. 进入高级模式并检查 payload
 
-从安装 ISO 的 GRUB 菜单选择：
+从 Installer ISO 的 GRUB 菜单选择：
 
 ```text
 Install LeonOS 4 (Advanced mode, TTY shell)
 ```
 
-进入 shell 后，确认安装 payload 已加载：
+进入 shell 后检查安装源：
 
 ```sh
 ls /install/root
 ls /install/esp
 ```
 
-高级 shell 通常以管理员身份运行。存储管理操作需要管理员权限。
+高级 shell 以 root 身份运行，默认 `PATH` 已包含 `/usr/sbin`、`/usr/bin`、
+`/sbin` 和 `/bin`。
 
-## 2. 查看磁盘
+## 2. 识别目标磁盘
 
 ```sh
 lsblk
 blkid
+fdisk -l
+```
+
+也可以只查看候选盘：
+
+```sh
 fdisk -l /dev/disk0
 ```
 
-根据 `lsblk` 的容量、控制器和分区信息确定目标磁盘。下面示例使用 `/dev/disk0`，如果实际编号不同，请整体替换。
+空白磁盘没有有效分区表属于正常情况。新版 util-linux `fdisk` 可以直接创建
+GPT，不需要先运行 `gptinit`。
 
-## 3. 初始化、创建或整理分区
+## 3. 使用 fdisk 创建 GPT 和分区
 
-如果 `fdisk -l` 显示目标磁盘没有有效 GPT，先执行：
-
-```sh
-gptinit /dev/disk0
-```
-
-在提示中输入：
-
-```text
-YES
-```
-
-`gptinit` 会清除磁盘开头的旧分区元数据、保护性 MBR 和末尾的旧备份 GPT，并写入一个空的主/备 GPT。它不会创建分区，也不会格式化文件系统。若确认磁盘中已有有效 GPT 仍要覆盖，使用：
-
-```sh
-gptinit --force /dev/disk0
-```
-
-`--force` 不再询问确认，使用前必须再次核对磁盘编号。
-
-初始化完成或目标磁盘已经有有效 GPT 后，使用 LeonOS 的 `fdisk`：
+启动分区工具：
 
 ```sh
 fdisk /dev/disk0
 ```
 
-交互操作如下：
+依次输入以下内容。空行表示接受默认值：
 
 ```text
-p                       查看当前分区
-d                       删除分区，按提示输入分区号（需要时重复）
-n                       创建分区
-128                     ESP 大小，单位 MiB
-LeonOS 4 ESP            ESP 名称
+g
+n
+1
 
-n                       创建根分区
-<根分区大小>             例如 800，单位 MiB
-LEONOS4_ROOT            根分区名称
++128M
+n
+2
 
-w                       保存 GPT 并退出
-```
 
-创建分区时不需要指定文件系统；后面的 `mkfs.*` 会格式化分区。分区编号应为 1 和 2。如果磁盘容量较大，根分区可以使用剩余空间。
-
-## 4. 格式化分区
-
-标准 exFAT 根分区方案：
-
-```sh
-mkfs.fat32 /dev/disk0p1
-mkfs.exfat /dev/disk0p2
-```
-
-`mkfs.fat32` 会把 GPT 类型设置为 Basic Data，因此格式化后必须重新设置 ESP 类型。
-
-## 5. 设置 GPT 类型和名称
-
-```sh
-fdisk /dev/disk0
-```
-
-输入：
-
-```text
 t
 1
-esp
+1
+p
+```
 
-t
-2
-basic
+此时 `p` 应显示：
 
-r
+- 分区 1：约 128 MiB，类型为 `EFI System`；
+- 分区 2：占用其余可用空间，类型为 `Linux filesystem`。
+
+分区名是可选项。需要命名时，在写盘前进入 expert 菜单：
+
+```text
+x
+n
 1
 LeonOS 4 ESP
-
-r
+n
 2
 LEONOS4_ROOT
-
-w
+r
 ```
 
-建议将根分区名称设置为 `LEONOS4_ROOT`（区分大小写）。启动检测要求
-ESP 使用 ESP GPT 类型；根分区使用 Basic Data GPT 类型并包含有效的
-exFAT 文件系统。即使名称被其他分区工具改写，内核也会通过 exFAT
-签名识别该根分区。
+再次输入 `p` 检查结果，确认无误后输入 `w` 写入 GPT 并退出。若任何内容有误，
+输入 `q` 可不保存退出。
 
-## 6. 检查文件系统
+写入后确认内核已刷新分区节点：
 
 ```sh
-blkid
-lsblk
-
-fsck.fat32 /dev/disk0p1
-fsck.exfat /dev/disk0p2
+sync
+lsblk /dev/disk0
+fdisk -l /dev/disk0
 ```
 
-当前 `fsck.*` 工具执行只读超级块检查，不负责修复损坏的数据。支持的别名包括 `fsck.fat`、`fsck.vfat` 和通用的 `fsck`。
-
-## 7. 挂载目标分区
-
-手动挂载使用绝对路径。高级模式下不要占用 `/boot`、`/target` 或 `/dev`，这些路径由系统或安装器保留：
+## 4. 格式化 ESP 和 ext2 根分区
 
 ```sh
-mkdir -p /mnt
-mkdir /mnt/esp
-mkdir /mnt/root
+mkfs.fat -F 32 -n LEONOS4ESP /dev/disk0p1
+mkfs.ext2 -F -L LEONOS4ROOT /dev/disk0p2
+```
 
-mount -t fat32 /dev/disk0p1 /mnt/esp
-mount -t exfat /dev/disk0p2 /mnt/root
+`mkfs.fat32` 和 `mkfs.vfat` 只是指向上游 `mkfs.fat` 的兼容链接，不会自动添加
+参数。即使使用这些名称，也必须显式指定 `-F 32`：
+
+```sh
+mkfs.fat32 -F 32 /dev/disk0p1
+```
+
+不要把整盘 `/dev/disk0` 传给格式化工具，也不要格式化已挂载的分区。
+
+## 5. 检查文件系统和标识
+
+新建文件系统后可以做一次只读检查：
+
+```sh
+fsck.fat -n /dev/disk0p1
+fsck.ext2 -f -n /dev/disk0p2
+blkid /dev/disk0p1 /dev/disk0p2
+```
+
+`fsck.fat32`/`fsck.vfat` 是 `fsck.fat` 的别名。通用 `fsck`、`blkid` 和
+`lsblk` 来自 util-linux；各文件系统检查器来自对应的上游文件系统项目。
+
+## 6. 挂载目标文件系统
+
+```sh
+mkdir -p /mnt/root /mnt/esp
+mount -t ext2 /dev/disk0p2 /mnt/root
+mount -t vfat /dev/disk0p1 /mnt/esp
 mount
 ```
 
-省略 `-t` 也可以让内核检测文件系统：
+也可以省略 `-t` 让系统检测文件系统。高级模式下不要把手动分区挂载到 `/dev`、
+`/target` 或 `/target/boot`，这些路径属于系统和普通安装器。
+
+## 7. 复制系统并保留元数据
+
+必须复制 `/install/root` 的内容，而不是再创建一层 `root` 目录。使用 `cp -a`
+保留符号链接、权限和时间戳：
 
 ```sh
-mount /dev/disk0p1 /mnt/esp
-mount /dev/disk0p2 /mnt/root
+cp -a /install/root/. /mnt/root/
 ```
 
-## 8. 复制 LeonOS 根文件
-
-必须复制目录内容而不是把 `root` 目录再套一层；使用 `/.` 也能包含隐藏文件：
+检查核心文件：
 
 ```sh
-cp -r /install/root/. /mnt/root/
+ls -l /mnt/root/usr/lib/leonos/apps/desktop/desktop.elf
+ls -l /mnt/root/lib/ld-musl-x86_64.so.1
 ```
 
-确认核心桌面程序已经复制到目标根分区：
+不要用不保留元数据的普通递归复制替代 `cp -a`，否则 set-ID 程序、目录权限或
+符号链接可能损坏。
+
+## 8. 写入 `/etc/fstab`
+
+当前正式安装器使用 GPT PARTUUID，而不是可能重复的文件系统 label。先读取两项
+PARTUUID：
 
 ```sh
-ls /mnt/root/usr/lib/leonos/apps/desktop/desktop.elf
+ROOT_PARTUUID="$(blkid -s PARTUUID -o value /dev/disk0p2)"
+ESP_PARTUUID="$(blkid -s PARTUUID -o value /dev/disk0p1)"
+printf 'root=%s\nesp=%s\n' "$ROOT_PARTUUID" "$ESP_PARTUUID"
 ```
 
-确保状态目录存在。若目录已经存在，提示已存在可以忽略：
+两项都必须为非空 UUID。确认后写入目标系统：
 
 ```sh
-mkdir /mnt/root/var/lib/leonos
+cat > /mnt/root/etc/fstab <<EOF
+# <source> <mountpoint> <type> <options> <dump> <pass>
+/dev/disk/by-partuuid/$ROOT_PARTUUID / ext2 defaults 0 1
+/dev/disk/by-partuuid/$ESP_PARTUUID /boot vfat defaults 0 2
+EOF
 ```
 
-## 9. 安装 GRUB 和启动文件
-
-确认 ESP 已挂载到 `/mnt/esp` 后执行：
+检查最终内容：
 
 ```sh
+cat /mnt/root/etc/fstab
+```
+
+## 9. 安装 LeonOS UEFI/GRUB payload
+
+确认 ESP 的实际挂载点是 `/mnt/esp`：
+
+```sh
+mount
 leonos-grub-installer /mnt/esp
 ```
 
-该命令从 `/install/esp` 复制以下内容：
+该工具复制已经构建好的 LeonOS 启动 payload，并不是 GNU `grub-install`。它会
+验证并复制：
 
-- `EFI/BOOT/BOOTX64.EFI`
-- `loader.elf`
-- `system/kernel.sys`
-- `system/middlelayer.sys`
-- `grub/` 目录及其配置、字体和主题
+- `EFI/BOOT/BOOTX64.EFI`；
+- `loader.elf`；
+- `leonos/kernel.sys` 和 `leonos/middlelayer.sys`；
+- 完整的 `grub/` 配置、字体和主题。
 
-工具安装的是 UEFI fallback 路径。如果固件没有自动建立启动项，请在固件启动菜单中手动选择目标磁盘的 `EFI/BOOT/BOOTX64.EFI`。
+工具不会格式化或挂载 ESP，也不会写入固件 NVRAM。它安装标准 UEFI fallback
+路径；固件没有自动识别时，在固件菜单选择目标盘的
+`EFI/BOOT/BOOTX64.EFI`。
 
 ## 10. 同步、卸载和重启
-
-卸载前不要让 shell 的当前目录位于挂载点中，也不要有程序正在打开目标文件：
 
 ```sh
 sync
 cd /
-umount /mnt/root
 umount /mnt/esp
+umount /mnt/root
 reboot
 ```
 
-重启前移除安装 ISO，或在固件启动菜单中选择目标磁盘。
+根分区应最后卸载。若 `umount` 返回 busy，确保 shell 不在挂载点内，并关闭仍在
+访问目标文件的程序。重启前移除 Installer ISO，或在固件菜单中选择目标磁盘。
 
-## ext2 根分区兼容方案
+## 可选：使用 exFAT 根分区
 
-LeonOS 仍支持经典 ext2 根分区。ESP 的步骤不变，只替换根分区的格式化、检查、类型和挂载命令：
-
-```sh
-mkfs.ext2 /dev/disk0p2
-
-fdisk /dev/disk0
-```
-
-在 `fdisk` 中设置：
-
-```text
-t
-2
-linux
-
-r
-2
-LEONOS4_ROOT
-
-w
-```
-
-检查和挂载：
+ext2 是当前新安装默认值。确需 exFAT 时，分区 2 的 GPT 类型应改为
+`Microsoft basic data`，并替换以下命令：
 
 ```sh
-fsck.ext2 /dev/disk0p2
-mount -t ext2 /dev/disk0p2 /mnt/root
+mkfs.exfat -L LEONOS4ROOT /dev/disk0p2
+fsck.exfat -n /dev/disk0p2
+mount -t exfat /dev/disk0p2 /mnt/root
 ```
 
-之后仍然执行根文件复制、`leonos-grub-installer`、`sync`、卸载和重启步骤。新安装默认使用 ext2；exFAT 仍可按需显式选择。
+`/etc/fstab` 中根分区一行的类型也要从 `ext2` 改为 `exfat`。其余复制、ESP、
+启动文件和卸载步骤不变。
 
-## 可用工具
+## 高级模式可用的存储工具
 
-高级 shell 内置或可直接调用：
-
-```text
-fdisk
-gptinit  (仅安装 ISO)
-mkfs.fat  mkfs.fat32  mkfs.ext2  mkfs.exfat
-fsck  fsck.fat  fsck.fat32  fsck.vfat  fsck.ext2  fsck.exfat
-blkid  lsblk  mount  umount  sync
-leonos-grub-installer
-```
-
-这些工具使用 LeonOS 的存储接口和 `/dev/disk*` 设备节点，不依赖 Linux block-device ioctl。
+| 命令 | 来源 | 用途 |
+| --- | --- | --- |
+| `fdisk`, `sfdisk` | util-linux | GPT 查看、创建和修改 |
+| `lsblk`, `blkid` | util-linux | 块设备、文件系统和 UUID 查询 |
+| `mount`, `umount` | util-linux | 标准挂载和卸载命令 |
+| `mkfs.ext2`, `fsck.ext2` | e2fsprogs | ext2 创建和检查 |
+| `mkfs.fat`, `fsck.fat` | dosfstools | FAT32 创建和检查 |
+| `mkfs.exfat`, `fsck.exfat` | exfatprogs | exFAT 创建和检查 |
+| `sync`, `cp`, `mkdir`, `cat`, `less` | BusyBox | 文件复制、同步和教程阅读 |
+| `leonos-grub-installer` | LeonOS | 复制预构建 UEFI/GRUB payload |
 
 ## 常见失败原因
 
-- `fdisk` 无法读取 GPT：对空白磁盘先执行 `gptinit /dev/diskN`；如果初始化本身失败，检查磁盘容量、连接状态和管理员权限。
-- `mkfs.*` 失败：确认目标是分区路径（例如 `/dev/disk0p2`），而不是整盘，并确认分区没有挂载。
-- `mount` 失败：确认挂载点已创建、使用绝对路径且文件系统类型匹配。
-- `umount` 失败：先执行 `cd /`，关闭正在访问该挂载点的程序。
-- 系统找不到根分区：检查 ESP GPT 类型、ESP 是否 FAT32、根分区是否为
-  Basic Data GPT 类型以及 exFAT 超级引导区是否有效；`LEONOS4_ROOT` 是推荐名称。
+- `fdisk` 看不到磁盘：先用 `lsblk` 确认设备路径；高级模式示例中的目标盘不一定
+  总是 `/dev/disk0`。
+- `fdisk` 报没有有效分区表：进入目标盘后用 `g` 创建 GPT；不再需要先运行
+  `gptinit`。
+- `mkfs.fat` 得到的不是 FAT32：必须提供 `-F 32`。
+- `mkfs.*` 报设备忙：确认分区未挂载，并且传入的是 `/dev/diskNpM` 分区节点。
+- `mount` 失败：确认挂载点存在、文件系统类型正确，并检查 `blkid` 输出。
+- `blkid -s PARTUUID` 输出为空：不要写入 fstab；返回 `fdisk -l` 检查 GPT，并
+  确认分区节点已刷新。
+- `leonos-grub-installer` 报缺少文件：确认 `/install/esp` 完整、ESP 已挂载且
+  目标不是普通未挂载目录。
+- `umount` 报 busy：先执行 `cd /`，关闭占用该挂载点的进程，再重试。
+- 启动后没有可登录账户：这是手动 payload 复制的已知边界；使用普通安装器创建
+  受支持的 root 和普通账户配置。

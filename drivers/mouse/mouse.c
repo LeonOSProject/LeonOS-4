@@ -26,7 +26,7 @@ static const struct framebuffer *module_framebuffer_get(void)
 static void module_console_notice(void)
 {
     if (kernel_api && kernel_api->console_write) {
-        kernel_api->console_write("[driver] mouse activity\n");
+        // kernel_api->console_write("[driver] mouse activity\n");
     }
 }
 

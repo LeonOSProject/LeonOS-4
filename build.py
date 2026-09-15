@@ -3394,6 +3394,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         installer_runtime_so,
         *(installer_policy_elfs.values()),
         ROOT / "tools/make_installer_root.py",
+        ROOT / "docs/ADVANCED_INSTALL.txt",
         ROOT / "tools/image_test_accounts.py",
         ROOT / "tools/make_ext2_root.py", layout.ROOTFS_CONTRACT, ROOT / "tools/leonos_layout.py",
     ]), depends_on=(

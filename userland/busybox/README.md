@@ -20,24 +20,21 @@ command lines, shell built-ins, and the bundled applets (`ls`, `pwd`, `cat`,
 `true`, `false`, `nohup`, `whoami`, and `vi`). The GUI terminal launches this
 shell by default.
 
-Storage administration applets are also included: `fdisk` can list and
-interactively create/delete GPT entries and edit their type/name (`t` and `r`),
-`mkfs.fat`/`mkfs.fat32`/`mkfs.ext2`/`mkfs.exfat` format an existing LeonOS
-partition, and `mount`/`umount` manage runtime data mounts. `blkid` and `lsblk`
-show the same disk metadata, while `fsck`, `fsck.fat`, `fsck.fat32`,
-`fsck.vfat`, `fsck.ext2`, and `fsck.exfat` perform read-only superblock checks.
-`leonos-grub-installer ESP` copies the staged EFI/GRUB payload to a mounted
-ESP, and `sync` is available as a synchronous-write compatibility command.
-They use `/dev/disk0` and `/dev/disk0pN` paths and the kernel storage ABI rather
-than Linux block-device ioctls. Formatting, partition changes, and mount
-operations require an administrator account; the running boot disk is
-protected.
+Storage administration commands are separate upstream programs, not BusyBox
+applets. util-linux supplies `fdisk`, `sfdisk`, `blkid`, `lsblk`, `mount`,
+`umount`, and `fsck`; e2fsprogs, dosfstools, and exfatprogs supply the matching
+`mkfs.*` and `fsck.*` commands. `fdisk` initializes GPT directly with `g` and
+uses its normal upstream interaction. FAT32 formatting requires
+`mkfs.fat -F 32`; the `mkfs.fat32` name is only a symlink. Pass `-n` to a
+filesystem checker when a read-only check is intended.
 
-The installer ISO additionally provides `/usr/lib/leonos/apps/gptinit/gptinit.elf` for
-blank disks. `gptinit /dev/diskN` initializes a protective MBR and empty
-primary/backup GPT pair after an explicit `YES` confirmation;
-`gptinit --force /dev/diskN` skips confirmation and may replace a valid GPT.
-The utility is not staged into installed LeonOS systems.
+These programs access `/dev/disk0` and `/dev/disk0pN` through standard file
+I/O, Linux block-device ioctls, and `mount(2)`/`umount2(2)`. Formatting,
+partition changes, and mount operations require an administrator account.
+`leonos-grub-installer ESP` remains a separate LeonOS script that copies the
+prebuilt EFI/GRUB payload to an already-mounted ESP. The installer ISO also
+retains the older installer-only `gptinit` utility, but it is no longer needed
+for blank disks because upstream `fdisk` can create GPT itself.
 
 Examples:
 
@@ -47,7 +44,8 @@ fdisk /dev/disk0
 blkid
 lsblk
 fsck.ext2 /dev/disk0p3
-mkfs.ext2 /dev/disk0p3
+mkfs.ext2 -F /dev/disk0p3
+mkfs.fat -F 32 /dev/disk0p1
 mount -t ext2 /dev/disk0p3 /mnt/data
 umount /mnt/data
 ```

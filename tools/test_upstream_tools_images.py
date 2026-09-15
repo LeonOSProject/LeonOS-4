@@ -19,6 +19,11 @@ def debugfs(image, command):
 
 
 class ImageToolsTests(unittest.TestCase):
+    def test_installer_runtime_contains_advanced_install_guide(self):
+        guide = debugfs(ROOT / "build/install/root.fat",
+                        "cat /root/ADVANCED_INSTALL.txt")
+        self.assertEqual(guide, (ROOT / "docs/ADVANCED_INSTALL.txt").read_bytes())
+
     def test_iso_payloads_match_tested_roots_and_kernel(self):
         def digest(path):
             with path.open("rb") as source:

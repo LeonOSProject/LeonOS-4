@@ -91,6 +91,8 @@ class BuildGraphTests(unittest.TestCase):
     def test_storage_packages_have_image_owners(self):
         self.assertTrue("storage-upstream" in self.graph.targets, "missing storage build target")
         self.assertTrue("esp:storage" in self.graph.targets, "missing storage staging target")
+        self.assertIn(ROOT / "docs/ADVANCED_INSTALL.txt",
+                      self.graph.targets["installer-root"].inputs)
         for name in ("mkfs.ext2", "fsck.ext2", "mkfs.fat", "fsck.fat", "mkfs.exfat", "fsck.exfat"):
             output = self.paths.out / "storage-upstream/root/usr/sbin" / name
             self.assertIn(output, self.graph.targets["storage-upstream"].outputs)
@@ -201,6 +203,10 @@ class BuildGraphTests(unittest.TestCase):
             (userland / f"{app}.elf").write_bytes(b"fixture")
         stage_runtime_payload(stage, destination, userland / "runtime.elf", userland,
                               userland / "gptinit.elf", userland, ())
+        self.assertEqual((destination / "root/ADVANCED_INSTALL.txt").read_bytes(),
+                         (ROOT / "docs/ADVANCED_INSTALL.txt").read_bytes())
+        self.assertFalse((live / "root/ADVANCED_INSTALL.txt").exists())
+        self.assertFalse((destination / "install/root/root/ADVANCED_INSTALL.txt").exists())
         for root in (live, destination, destination / "install/root"):
             for name in ("usr/sbin/fdisk", "usr/lib/libfdisk.so.1", "usr/lib/libsmartcols.so.1",
                          "usr/lib/libuuid.so.1"):
