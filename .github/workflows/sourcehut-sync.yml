@@ -26,9 +26,13 @@ jobs:
       # Hard-coded SourceHut targets. One SSH key (SOURCEHUT_SSH_PRIVATE_KEY)
       # is authorized on every host below. Add or remove entries here as
       # needed; the sync step loops over them automatically.
+      #
+      # Supported URL forms:
+      #   git@host:~user/repo                 (default SSH port 22)
+      #   ssh://git@host:PORT/~user/repo      (custom SSH port)
       SOURCEHUT_REPOSITORIES: >-
-        git@git.sr.ht:~leonmmcoset/LeonOS-4
-#        git@git.hgspace.work:2222/~leonmmcoset/LeonOS-4.git
+        git@git.sr.ht:~leonmmcoset/LeonOS-4,
+        ssh://git@git.hgspace.work:2222/~leonmmcoset/LeonOS-4.git
 
     steps:
       - name: Checkout repository history
@@ -57,7 +61,6 @@ jobs:
           # --- Parse the comma-separated repository list ---
           repos=()
           while IFS= read -r repo; do
-            # Trim leading/trailing whitespace.
             repo="${repo#"${repo%%[![:space:]]*}"}"
             repo="${repo%"${repo##*[![:space:]]}"}"
             [ -n "$repo" ] && repos+=("$repo")
@@ -68,31 +71,57 @@ jobs:
             exit 1
           fi
 
-          # Extract the host from a git SSH URL. Supports both scp-like
-          # (git@host:path) and ssh:// (ssh://git@host/path) forms, on the
-          # default SSH port (custom ports are not supported here).
-          repo_host() {
-            local url="$1" rest hostpart
+          # Parse a git SSH URL into "host" and "port".
+          #
+          #   ssh://git@host:PORT/path   -> host, PORT       (PORT defaults 22)
+          #   git@host:path              -> host, 22         (scp-like)
+          #
+          # Output: one line for host, one line for port.
+          repo_host_port() {
+            local url="$1" rest hostpart host port
             case "$url" in
               ssh://*@*/*)
                 rest="${url#ssh://}"
                 rest="${rest#*@}"
                 hostpart="${rest%%/*}"
-                case "$hostpart" in
-                  *:*) echo "Custom SSH ports are not supported: $url" >&2; return 1 ;;
-                esac
-                printf '%s\n' "$hostpart"
                 ;;
               *@*:*)
                 rest="${url#*@}"
                 hostpart="${rest%%:*}"
-                [ -n "$hostpart" ] || return 1
-                printf '%s\n' "$hostpart"
+                port="22"
                 ;;
               *)
                 return 1
                 ;;
             esac
+
+            case "${port:-}" in
+              "")
+                # ssh:// form: hostpart may be "host", "host:port" or "[v6]:port"
+                case "$hostpart" in
+                  \[*\]:*)
+                    host="${hostpart%%]*}]"
+                    port="${hostpart##*:}"
+                    ;;
+                  *:*)
+                    host="${hostpart%%:*}"
+                    port="${hostpart##*:}"
+                    ;;
+                  *)
+                    host="$hostpart"
+                    port="22"
+                    ;;
+                esac
+                ;;
+            esac
+
+            [ -n "$host" ] || return 1
+            [ -n "$port" ] || port="22"
+            case "$port" in
+              *[!0-9]*|"") echo "Invalid SSH port in URL: $url" >&2; return 1 ;;
+            esac
+
+            printf '%s\n%s\n' "$host" "$port"
           }
 
           install -d -m 700 "$HOME/.ssh"
@@ -102,8 +131,9 @@ jobs:
           known_hosts="$HOME/.ssh/known_hosts"
           : > "$known_hosts"
 
-          # Pinned git.sr.ht host keys. Keeping StrictHostKeyChecking enabled
-          # prevents a network interception from receiving the sync key.
+          # Pinned git.sr.ht host keys (port 22 only). Keeping
+          # StrictHostKeyChecking enabled prevents a network interception
+          # from receiving the sync key.
           printf '%s\n' \
             'git.sr.ht ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMZvRd4EtM7R+IHVMWmDkVU3VLQTSwQDSAvW0t2Tkj60' \
             'git.sr.ht ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDZ+l/lvYmaeOAPeijHL8d4794Am0MOvmXPyvHTtrqvgmvCJB8pen/qkQX2S1fgl9VkMGSNxbp7NF7HmKgs5ajTGV9mB5A5zq+161lcp5+f1qmn3Dp1MWKp/AzejWXKW+dwPBd3kkudDBA1fa3uK6g1gK5nLw3qcuv/V4emX9zv3P2ZNlq9XRvBxGY2KzaCyCXVkL48RVTTJJnYbVdRuq8/jQkDRA8lHvGvKI+jqnljmZi2aIrK9OGT2gkCtfyTw2GvNDV6aZ0bEza7nDLU/I+xmByAOO79R1Uk4EYCvSc1WXDZqhiuO2sZRmVxa0pQSBDn1DB3rpvqPYW+UvKB3SOz' \
@@ -111,8 +141,9 @@ jobs:
             >> "$known_hosts"
 
           # Optional host keys for self-hosted SourceHut instances, in
-          # known_hosts format, one entry per line. Provide these to keep
-          # StrictHostKeyChecking effective instead of trusting ssh-keyscan.
+          # known_hosts format, one entry per line. For non-default ports,
+          # use the "[host]:port keytype base64..." form, e.g.:
+          #   [git.hgspace.work]:2222 ssh-ed25519 AAAA...
           if [ -n "${SOURCEHUT_EXTRA_KNOWN_HOSTS:-}" ]; then
             printf '%s\n' "$SOURCEHUT_EXTRA_KNOWN_HOSTS" >> "$known_hosts"
           fi
@@ -121,24 +152,43 @@ jobs:
           declare -A seen_hosts=()
           for i in "${!repos[@]}"; do
             repo="${repos[$i]}"
-            if ! host="$(repo_host "$repo")" || [ -z "$host" ]; then
+            mapfile -t hp < <(repo_host_port "$repo") || {
+              echo "SOURCEHUT_REPOSITORIES entry #$((i + 1)) is not a valid git SSH URL: $repo" >&2
+              exit 1
+            }
+            if [ "${#hp[@]}" -lt 2 ] || [ -z "${hp[0]}" ]; then
               echo "SOURCEHUT_REPOSITORIES entry #$((i + 1)) is not a valid git SSH URL: $repo" >&2
               exit 1
             fi
-            seen_hosts["$host"]=1
+            host="${hp[0]}"
+            port="${hp[1]}"
+
+            # known_hosts uses "[host]:port" for non-default ports.
+            if [ "$port" = "22" ]; then
+              key="$host"
+            else
+              key="[$host]:$port"
+            fi
+            seen_hosts["$key|$host|$port"]=1
+
             git remote add "sourcehut-$i" "$repo"
           done
 
           # Ensure every host has at least one trusted key. git.sr.ht and any
           # host covered by SOURCEHUT_EXTRA_KNOWN_HOSTS are already present;
           # everything else falls back to ssh-keyscan (trust on first use).
-          for host in "${!seen_hosts[@]}"; do
-            if ssh-keygen -F "$host" -f "$known_hosts" >/dev/null 2>&1; then
+          for entry in "${!seen_hosts[@]}"; do
+            key="${entry%%|*}"
+            rest="${entry#*|}"
+            host="${rest%%|*}"
+            port="${rest##*|}"
+
+            if ssh-keygen -F "$key" -f "$known_hosts" >/dev/null 2>&1; then
               continue
             fi
-            echo "WARNING: no pinned host key for $host, falling back to ssh-keyscan" >&2
-            if ! ssh-keyscan -T 10 -t rsa,ecdsa,ed25519 "$host" >> "$known_hosts" 2>/dev/null; then
-              echo "Failed to fetch host keys for $host" >&2
+            echo "WARNING: no pinned host key for $key, falling back to ssh-keyscan" >&2
+            if ! ssh-keyscan -T 10 -p "$port" -t rsa,ecdsa,ed25519 "$host" >> "$known_hosts" 2>/dev/null; then
+              echo "Failed to fetch host keys for $key" >&2
               exit 1
             fi
           done
@@ -165,7 +215,7 @@ jobs:
 
           for ((i = 0; i < count; i++)); do
             remote="sourcehut-$i"
-            echo "Force-syncing branches to $remote"
+            echo "Force-syncing branches to $remote ($(git remote get-url "$remote"))"
             git push --force --prune "$remote" \
               'refs/sync/github/*:refs/heads/*'
           done
