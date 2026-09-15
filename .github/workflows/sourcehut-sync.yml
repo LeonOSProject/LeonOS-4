@@ -22,6 +22,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
 
+    env:
+      # Hard-coded SourceHut targets. One SSH key (SOURCEHUT_SSH_PRIVATE_KEY)
+      # is authorized on every host below. Add or remove entries here as
+      # needed; the sync step loops over them automatically.
+      SOURCEHUT_REPOSITORIES: >-
+        git@git.sr.ht:~leonmmcoset/LeonOS-4,
+        git@git.hgspace.work:~leonmmcoset/LeonOS-4
+
     steps:
       - name: Checkout repository history
         uses: actions/checkout@v4
@@ -36,16 +44,11 @@ jobs:
 
       - name: Configure SourceHut SSH
         env:
-          SOURCEHUT_REPOSITORIES: ${{ secrets.SOURCEHUT_REPOSITORIES }}
           SOURCEHUT_SSH_PRIVATE_KEY: ${{ secrets.SOURCEHUT_SSH_PRIVATE_KEY }}
           SOURCEHUT_EXTRA_KNOWN_HOSTS: ${{ secrets.SOURCEHUT_EXTRA_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
 
-          test -n "$SOURCEHUT_REPOSITORIES" || {
-            echo "Missing required secret: SOURCEHUT_REPOSITORIES" >&2
-            exit 1
-          }
           test -n "$SOURCEHUT_SSH_PRIVATE_KEY" || {
             echo "Missing required secret: SOURCEHUT_SSH_PRIVATE_KEY" >&2
             exit 1
@@ -76,10 +79,7 @@ jobs:
                 rest="${rest#*@}"
                 hostpart="${rest%%/*}"
                 case "$hostpart" in
-                  *:*)
-                    echo "Custom SSH ports are not supported: $url" >&2
-                    return 1
-                    ;;
+                  *:*) echo "Custom SSH ports are not supported: $url" >&2; return 1 ;;
                 esac
                 printf '%s\n' "$hostpart"
                 ;;
@@ -142,7 +142,6 @@ jobs:
               exit 1
             fi
           done
-
           chmod 600 "$known_hosts"
 
           git config --local core.sshCommand \
