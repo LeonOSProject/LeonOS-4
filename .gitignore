@@ -6,6 +6,7 @@ buildsystem/logs/
 buildsystem/tmp/
 buildsystem/config/
 buildsystem/deps/
+buildsystem/cache/
 .config
 __pycache__/
 *.egg-info/

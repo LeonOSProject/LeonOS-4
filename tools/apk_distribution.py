@@ -22,7 +22,7 @@ from leonos_layout import layout_directories, apply_root_symlinks
 ARCHIVE_SHA256 = "c8e2c88c13ba12a12269b79a3543e1190ff8c0ab0beb32b58cadfd5881c619e3"
 BINARY_SHA256 = "5118a57ae7c07e13268a754f78aa9c7d39a0bed708bb11c101d78e2a884cee5d"
 LICENSE_SHA256 = "b3c87315aae4c9f276c37168f2655dd8bd990544d7a0bbfb929664155c7ab257"
-URL = "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/apk-tools-static-3.0.8-r0.apk"
+URL = "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main/x86_64/apk-tools-static-3.0.8-r0.apk"
 LICENSE_URLS = (
     "https://raw.githubusercontent.com/alpinelinux/apk-tools/v3.0.8/LICENSE",
     "https://gitlab.alpinelinux.org/alpine/apk-tools/-/raw/v3.0.8/LICENSE",
@@ -66,8 +66,37 @@ def digest(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def tree_digest(root):
+    """Return a content digest for a staging tree, including links and modes."""
+    root = Path(root)
+    result = hashlib.sha256()
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root).as_posix().encode("utf-8")
+        result.update(relative + b"\0")
+        if path.is_symlink():
+            result.update(b"L" + os.readlink(path).encode("utf-8") + b"\0")
+            continue
+        if path.is_dir():
+            result.update(b"D\0")
+            continue
+        stat = path.stat()
+        result.update(b"F" + str(stat.st_mode & 0o7777).encode() + b"\0")
+        with path.open("rb") as stream:
+            result.update(hashlib.file_digest(stream, "sha256").digest())
+    return result.hexdigest()
+
+
 def download_verified(urls, destination, expected_sha256):
     destination = Path(destination)
+    cache_dir = ROOT / "buildsystem/cache/apk/downloads"
+    use_cache = destination.absolute().is_relative_to(ROOT)
+    if use_cache:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+    cached = cache_dir / expected_sha256
+    if use_cache and cached.is_file() and digest(cached) == expected_sha256:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(cached, destination)
+        return
     temporary = destination.with_name(destination.name + ".download")
     try:
         for url in urls:
@@ -78,6 +107,12 @@ def download_verified(urls, destination, expected_sha256):
                 continue
             if digest(temporary) == expected_sha256:
                 temporary.replace(destination)
+                # The digest is the cache key, so the same verified object can
+                # be reused by every image target and future builds.
+                if use_cache:
+                    temporary_cache = cache_dir / (expected_sha256 + ".tmp")
+                    shutil.copyfile(destination, temporary_cache)
+                    temporary_cache.replace(cached)
                 return
         raise RuntimeError(f"unable to download verified file: {destination.name}")
     finally:
@@ -218,6 +253,27 @@ def build_distribution(source, output, work, apk, key):
     if work.is_relative_to(source) or work.is_relative_to(output):
         raise ValueError("package work must be separate from source/output")
     work.mkdir(parents=True, exist_ok=True)
+    use_distribution_cache = source.is_relative_to(ROOT)
+    cache_dir = None
+    if use_distribution_cache:
+        cache_key = hashlib.sha256()
+        cache_key.update(tree_digest(source).encode())
+        cache_key.update(json.dumps(upstream_manifest, sort_keys=True).encode())
+        cache_key.update((ROOT / "configs/apk-ownership.json").read_bytes())
+        cache_key.update((ROOT / "configs/components.toml").read_bytes())
+        cache_key.update(digest(key).encode())
+        for archive in upstream:
+            cache_key.update(archive.name.encode() + b"\0" + digest(archive).encode())
+        cache_dir = ROOT / "buildsystem/cache/apk/distributions" / cache_key.hexdigest()
+    cached_manifest = cache_dir / "manifest.json" if cache_dir else None
+    cached_root = cache_dir / "root" if cache_dir else None
+    if cached_manifest and cached_root and cached_manifest.is_file() and cached_root.is_dir():
+        if output.exists():
+            shutil.rmtree(output)
+        shutil.copytree(cached_root, output, symlinks=True)
+        shutil.copyfile(cached_manifest, work / "manifest.json")
+        print(f"Reused cached APK root: {output}")
+        return output
     policy, rules = load_policy(ROOT / "configs/apk-ownership.json", ROOT / "configs/components.toml")
     with tempfile.TemporaryDirectory(prefix="payload-", dir=work) as directory:
         scratch = Path(directory)
@@ -404,7 +460,16 @@ def build_distribution(source, output, work, apk, key):
                 triggers = ["/usr/bin"]
             packages.append(make_package(apk, key, payload, repository / f"{name}-{version}.apk",
                                          name, version, dependencies[name], provides[name], scripts, triggers))
-        run([apk, "mkndx", "--keys-dir", tree / "etc/apk/keys", "--sign-key", key,
+        keys_dir = tree / "etc/apk/keys"
+        keys_dir.mkdir(parents=True, exist_ok=True)
+        # Fixture roots and small package roots may omit Alpine's trust store;
+        # the production root already contains these files.  Add the pinned
+        # official keys without replacing any root-specific key.
+        shutil.copytree(ROOT / "system/rootfs/etc/apk/keys", keys_dir,
+                        dirs_exist_ok=True)
+        if not any(keys_dir.glob("*.rsa.pub")):
+            keys_dir = ROOT / "system/rootfs/etc/apk/keys"
+        run([apk, "mkndx", "--keys-dir", keys_dir, "--sign-key", key,
              "--output", repository / "packages.adb", *packages])
         managed = scratch / "managed"
         layout_directories(managed)
@@ -429,6 +494,12 @@ def build_distribution(source, output, work, apk, key):
         if output.exists():
             shutil.rmtree(output)
         shutil.copytree(managed, output, symlinks=True)
+        if cache_dir and cache_dir.exists():
+            shutil.rmtree(cache_dir)
+        if cache_dir:
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(output, cache_dir / "root", symlinks=True)
+            shutil.copyfile(work / "manifest.json", cache_dir / "manifest.json")
         print(f"Signed APK root: {len(groups)} packages, {len(entries)} owned files -> {output}")
     return output
 
@@ -436,6 +507,33 @@ def build_distribution(source, output, work, apk, key):
 def repackage_tree(stage, work):
     """Re-register image policy overrides from their actual final payload."""
     stage, work = Path(stage).absolute(), Path(work).absolute()
+    cache_root = stage.parent / ".repackage-cache"
+    cache_root.mkdir(parents=True, exist_ok=True)
+
+    def fingerprint(root):
+        digestor = hashlib.sha256()
+        for path in sorted(root.rglob("*")):
+            relative = path.relative_to(root).as_posix().encode()
+            digestor.update(relative + b"\0")
+            if path.is_symlink():
+                digestor.update(b"L" + os.readlink(path).encode() + b"\0")
+                continue
+            if path.is_dir():
+                digestor.update(b"D\0")
+                continue
+            stat = path.stat()
+            digestor.update(b"F" + str(stat.st_mode & 0o7777).encode() + b"\0")
+            with path.open("rb") as stream:
+                digestor.update(hashlib.file_digest(stream, "sha256").digest())
+        return digestor.hexdigest()
+
+    key = fingerprint(stage)
+    cached = cache_root / key
+    marker = cached / ".complete"
+    if marker.is_file():
+        shutil.rmtree(stage)
+        shutil.copytree(cached, stage, symlinks=True)
+        return
     with tempfile.TemporaryDirectory(prefix=".apk-root-", dir=stage.parent) as directory:
         replacement = Path(directory) / "root"
         build_distribution(stage, replacement, work, bootstrap(), signing_key())
@@ -444,6 +542,10 @@ def repackage_tree(stage, work):
             (stage / "install").rename(replacement / "install")
         shutil.rmtree(stage)
         replacement.rename(stage)
+        if cached.exists():
+            shutil.rmtree(cached)
+        shutil.copytree(stage, cached, symlinks=True)
+        (cached / ".complete").write_text("ok\n", encoding="ascii")
 
 
 def main():

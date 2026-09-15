@@ -24,9 +24,9 @@ fi
 # Retain only repository tags used by world, plus the signed update source.
 # Unused network repositories must not make a fresh system's offline update fail.
 temporary=/tmp/leonos-apk-update.$$
-(umask 077; mkdir "$temporary")
-trap 'rm -rf "$temporary"' EXIT HUP INT TERM
-mkdir "$temporary/seen"
+(umask 077; /bin/busybox mkdir "$temporary")
+trap '/bin/busybox rm -rf "$temporary"' EXIT HUP INT TERM
+( /bin/busybox mkdir "$temporary/seen" )
 required_tags=' '
 while IFS= read -r dependency || [ -n "$dependency" ]; do
     case "$dependency" in
@@ -72,11 +72,11 @@ done
 apk --root "$target" --repositories-file "$configuration" --no-network upgrade 'leonos-*'
 # Publish the offline repository only after the package transaction succeeded.
 destination=$target/usr/share/leonos/apk/repository
-mkdir -p "$destination"
+/bin/busybox mkdir -p "$destination"
 for package in "$repository"/*.apk; do
-    cp "$package" "$destination/$(basename "$package").new"
-    mv "$destination/$(basename "$package").new" "$destination/$(basename "$package")"
+    /bin/busybox cp "$package" "$destination/$(/bin/busybox basename "$package").new"
+    /bin/busybox mv "$destination/$(/bin/busybox basename "$package").new" "$destination/$(/bin/busybox basename "$package")"
 done
-cp "$repository/packages.adb" "$destination/packages.adb.new"
-mv "$destination/packages.adb.new" "$destination/packages.adb"
-sync
+/bin/busybox cp "$repository/packages.adb" "$destination/packages.adb.new"
+/bin/busybox mv "$destination/packages.adb.new" "$destination/packages.adb"
+/bin/busybox sync

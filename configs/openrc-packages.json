@@ -1,5 +1,5 @@
 {
-  "repository": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64",
+  "repository": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main/x86_64",
   "packages": [
     {"name": "openrc", "version": "0.63.2-r0", "sha256": "cda5779b160ddbdf1d1b9cc9514b7b72f0a18453792ff7c0a6eb6e28d5bc2225", "recipe_commit": "30c61338b7a04d3c94509eabba5210b7bf81151a"},
     {"name": "openrc-user", "version": "0.63.2-r0", "sha256": "c350ab9e3de14d5eb33e609bca2f1c4c4d45c9cf3d1ee7a152800e76c26e3863", "recipe_commit": "30c61338b7a04d3c94509eabba5210b7bf81151a"},

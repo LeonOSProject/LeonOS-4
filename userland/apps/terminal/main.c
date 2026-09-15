@@ -1571,9 +1571,10 @@ int main(int argc, char **argv, char **envp)
     char *shell_argv[4];
     char shell_prompt[] = "PS1=\\w \\$ ";
     char shell_term[] = "TERM=xterm";
+    char shell_terminfo[] = "TERMINFO_DIRS=/usr/share/terminfo:/etc/terminfo:/lib/terminfo";
     char terminal_program[] = "TERM_PROGRAM=LeonOS Terminal";
-    char *terminal_envp[] = { shell_term, terminal_program, 0 };
-    char *shell_envp[] = { shell_prompt, shell_term, terminal_program, 0 };
+    char *terminal_envp[] = { shell_term, shell_terminfo, terminal_program, 0 };
+    char *shell_envp[] = { shell_prompt, shell_term, shell_terminfo, terminal_program, 0 };
     char **command_env_owned = 0;
     char *const *command_argv;
     char *const *command_envp;

@@ -1,4 +1,8 @@
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# ncurses searches these standard FHS locations for TERM=xterm entries.
+# Keep /etc/terminfo for Alpine compatibility and /usr/share/terminfo for
+# ncurses' default database without requiring per-user configuration.
+export TERMINFO_DIRS=/usr/share/terminfo:/etc/terminfo:/lib/terminfo
 umask 022
 for profile in /etc/profile.d/*.sh; do
     if [ -r "$profile" ]; then . "$profile"; fi
