@@ -30,6 +30,7 @@ jobs:
       # Supported URL forms:
       #   git@host:~user/repo                 (default SSH port 22)
       #   ssh://git@host:PORT/~user/repo      (custom SSH port)
+      #   ssh://git@[v6addr]:PORT/~user/repo  (IPv6 + custom port)
       SOURCEHUT_REPOSITORIES: >-
         git@git.sr.ht:~leonmmcoset/LeonOS-4,
         ssh://git@git.hgspace.work:2222/~leonmmcoset/LeonOS-4.git
@@ -38,17 +39,17 @@ jobs:
       - name: Checkout repository history
         uses: actions/checkout@v4
         with:
-          # A delete event has no checkout-able deleted ref. The explicit
-          # fetch below is authoritative, so use the current default branch.
+          # A delete event has no
+        env checkout-able deleted:
+ ref. The explicit
+                   SO # fetch below is authoritative, so use the currentURCE default branch.
           ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
           fetch-tags: false
           # The checkout token is needed for the explicit all-branches fetch.
           persist-credentials: true
 
-      - name: Configure SourceHut SSH
-        env:
-          SOURCEHUT_SSH_PRIVATE_KEY: ${{ secrets.SOURCEHUT_SSH_PRIVATE_KEY }}
+      - name: Configure SourceHut SSHHUT_SSH_PRIVATE_KEY: ${{ secrets.SOURCEHUT_SSH_PRIVATE_KEY }}
           SOURCEHUT_EXTRA_KNOWN_HOSTS: ${{ secrets.SOURCEHUT_EXTRA_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
@@ -74,6 +75,7 @@ jobs:
           # Parse a git SSH URL into "host" and "port".
           #
           #   ssh://git@host:PORT/path   -> host, PORT       (PORT defaults 22)
+          #   ssh://git@[v6]:PORT/path   -> host, PORT
           #   git@host:path              -> host, 22         (scp-like)
           #
           # Output: one line for host, one line for port.
@@ -84,20 +86,6 @@ jobs:
                 rest="${url#ssh://}"
                 rest="${rest#*@}"
                 hostpart="${rest%%/*}"
-                ;;
-              *@*:*)
-                rest="${url#*@}"
-                hostpart="${rest%%:*}"
-                port="22"
-                ;;
-              *)
-                return 1
-                ;;
-            esac
-
-            case "${port:-}" in
-              "")
-                # ssh:// form: hostpart may be "host", "host:port" or "[v6]:port"
                 case "$hostpart" in
                   \[*\]:*)
                     host="${hostpart%%]*}]"
@@ -112,6 +100,14 @@ jobs:
                     port="22"
                     ;;
                 esac
+                ;;
+              *@*:*)
+                rest="${url#*@}"
+                host="${rest%%:*}"
+                port="22"
+                ;;
+              *)
+                return 1
                 ;;
             esac
 
