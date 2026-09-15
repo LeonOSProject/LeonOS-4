@@ -160,6 +160,7 @@ static int linux_stat_from_legacy(struct linux_stat_abi *out,
     if (node && (node->flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS))) return storage_inode_stat(node, out);
     uint32_t type = st ? st->type : LEONOS_FS_TYPE_FILE;
     uint32_t mode = type == LEONOS_FS_TYPE_DIR ? 0040755u :
+                    type == LEONOS_FS_TYPE_FIFO ? LINUX_S_IFIFO | 0666u :
                     type == LEONOS_FS_TYPE_SOCKET ? LINUX_S_IFSOCK | 0777u :
                     type == LEONOS_FS_TYPE_SYMLINK ? 0120777u :
                     type == LEONOS_FS_TYPE_DEVICE ?
@@ -199,7 +200,7 @@ static void linux_stat_fd_type(struct linux_stat_abi *out, const struct task_fil
 {
     /* The legacy SDK labels anonymous pipes as devices. Linux get_pipe_inode()
      * creates S_IFIFO | 0600; it must not look like a terminal to libc/sudo. */
-    if (file && (file->flags & TASK_FILE_FLAG_PIPE)) {
+    if (file && (file->flags & TASK_FILE_FLAG_PIPE) && !file->inode) {
         out->st_mode = LINUX_S_IFIFO | 0600u;
         out->st_rdev = 0;
     }
@@ -1116,11 +1117,26 @@ struct task_file *task_file_for_io(struct task *task, int fd)
         ? task->syscall_file : task_file_for_fd(task, fd);
 }
 
+/**
+ * @brief Drop the private endpoint of an interrupted FIFO open.
+ * @param task Task under the kernel execution lock; NULL is accepted.
+ */
+void task_fifo_cancel(struct task *task)
+{
+    if (!task || !task->fifo_open_file) return;
+    struct task_file *file = task->fifo_open_file;
+    task->fifo_open_file = NULL;
+    task_pipe_release(file);
+    (void)storage_inode_put(file->inode);
+    kernel_free(file);
+}
+
 void task_release_syscall_file(struct task *task)
 {
     if (!task) return;
     task_sysv_msg_cancel(task);
     task_sysv_sem_cancel(task);
+    task_fifo_cancel(task);
     struct task_file *file = task->syscall_file;
     task->syscall_file = NULL;
     if (file && file->io_owner == task->pid) file->io_owner = 0;
@@ -4314,6 +4330,9 @@ static int64_t syscall_ppoll(uint64_t fds_ptr, uint64_t count, uint64_t timeout_
 static int64_t syscall_openat2(uint64_t dirfd, uint64_t pathname,
                                uint64_t how_ptr, uint64_t size)
 {
+    struct task *opening_task = sched_current_task();
+    if (opening_task && opening_task->fifo_open_file)
+        return task_fifo_open(opening_task, NULL, 0, NULL);
     struct open_how how;
     const uint64_t supported_flags = LINUX_O_RDONLY | LINUX_O_WRONLY | LINUX_O_RDWR |
         LINUX_O_CREAT | LINUX_O_EXCL | LINUX_O_NOCTTY | LINUX_O_TRUNC |
@@ -4772,6 +4791,9 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         number == LINUX_SYS_SCHED_GETAFFINITY || number == LINUX_SYS_REBOOT) {
         return syscall_process_control(number, a0, a1, a2, a3);
     }
+    if (number == __NR_adjtimex || number == __NR_clock_adjtime)
+        return syscall_adjtimex(number == __NR_adjtimex ? 0 : (int32_t)a0,
+                               number == __NR_adjtimex ? a0 : a1);
     if (number == LINUX_SYS_RT_SIGACTION || number == LINUX_SYS_RT_SIGPROCMASK ||
         number == LINUX_SYS_RT_SIGSUSPEND || number == LINUX_SYS_RT_SIGPENDING ||
         number == LINUX_SYS_SIGALTSTACK) {
@@ -5330,6 +5352,33 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         return sched_vfork_current(task ? &task->frame : NULL);
     }
 
+    if (number == __NR_mknod || number == __NR_mknodat) {
+        struct task *task = sched_current_task();
+        uint32_t mode = (uint32_t)(number == __NR_mknodat ? a2 : a1);
+        uint32_t type = mode & LINUX_S_IFMT;
+        if (!type) type = LINUX_S_IFREG;
+        if (type != LINUX_S_IFREG && type != LINUX_S_IFIFO && type != LINUX_S_IFSOCK)
+            return type == LINUX_S_IFCHR || type == LINUX_S_IFBLK ? -LINUX_EOPNOTSUPP : -LINUX_EINVAL;
+        char path[LEONOS_FS_PATH_LEN];
+        int ret = resolve_user_path_at_flags(task, number == __NR_mknodat ? (int32_t)a0 : LINUX_AT_FDCWD,
+            number == __NR_mknodat ? a1 : a0, false, path, NULL, false, FS_LOOKUP_PARENT);
+        if (!ret) ret = mutation_path_slash(path, true);
+        if (!ret) ret = fs_permissions_parent(task, path, false);
+        if (ret < 0) return ret;
+        struct storage_node node;
+        ret = storage_lookup_path(path, &node);
+        if (!ret) return -LINUX_EEXIST;
+        if (ret != -LINUX_ENOENT) return ret;
+        if (type == LINUX_S_IFREG) {
+            ret = storage_write_file(path, "", 0);
+            if (!ret) ret = storage_lookup_path(path, &node);
+        } else ret = storage_create_special(path, type, &node);
+        if (ret < 0) return ret;
+        ret = fs_permissions_create(task, path, &node, mode);
+        if (ret < 0) (void)storage_unlink(path);
+        return ret;
+    }
+
     if (number == LINUX_SYS_CREAT) {
         /* creat(2) is exactly open(path, O_CREAT|O_WRONLY|O_TRUNC, mode)
          * on Linux; preserve the raw syscall's two-argument ABI. */
@@ -5340,6 +5389,7 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
 
     if (number == LINUX_SYS_OPEN || number == LINUX_SYS_OPENAT) {
         struct task *task = sched_current_task();
+        if (task && task->fifo_open_file) return task_fifo_open(task, NULL, 0, NULL);
         struct storage_node node;
         char path[LEONOS_FS_PATH_LEN];
         uint32_t flags = (uint32_t)(number == LINUX_SYS_OPENAT ? a2 : a1);
@@ -5497,6 +5547,13 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         }
         if ((flags & LEONOS_O_DIRECTORY) && node.type != LEONOS_FS_TYPE_DIR) {
             return -LEONOS_ENOTDIR;
+        }
+        if (!(flags & TASK_FILE_FLAG_PATH) && (node.flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS))) {
+            struct linux_stat_abi inode_stat;
+            ret = storage_inode_stat(&node, &inode_stat);
+            if (ret < 0) return ret;
+            if ((inode_stat.st_mode & LINUX_S_IFMT) == LINUX_S_IFIFO)
+                return task_fifo_open(task, &node, flags, path);
         }
         if (node.type == LEONOS_FS_TYPE_SOCKET) return -LINUX_ENXIO;
         if (node.type == LEONOS_FS_TYPE_FILE) {
@@ -5745,7 +5802,7 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
             if (file) {
                 node = file->node;
                 copy_text(path, sizeof(path), file->path);
-                if (file->flags & TASK_FILE_FLAG_PIPE) { value.f_type = 0x50495045; synthetic = true; }
+                if ((file->flags & TASK_FILE_FLAG_PIPE) && !file->inode) { value.f_type = 0x50495045; synthetic = true; }
                 if (file->flags & (TASK_FILE_FLAG_SOCKET_UNIX | TASK_FILE_FLAG_SOCKET_INET)) {
                     value.f_type = 0x534f434b; synthetic = true;
                 }
@@ -6077,6 +6134,7 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         if (file && file->kind == TASK_FILE_KIND_SIGNALFD)
             return (int64_t)a3 < 0 ? -LINUX_EINVAL : -LINUX_ESPIPE;
         if ((int64_t)a3 < 0) return -LEONOS_EINVAL;
+        if (file && (file->flags & TASK_FILE_FLAG_PIPE)) return -LINUX_ESPIPE;
         if (!file || (file->flags & TASK_FILE_FLAG_PATH)) return -LEONOS_EBADF;
         if (file->flags & TASK_FILE_FLAG_DEV_BLOCK) {
             bool writing = number == LINUX_SYS_PWRITE64;
@@ -6274,6 +6332,7 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
             *(int64_t *)(dst + 8) = (int64_t)next_offset;
             *(uint16_t *)(dst + 16) = (uint16_t)reclen;
             uint8_t dtype = entry.type == LEONOS_FS_TYPE_DIR ? LINUX_DT_DIR :
+                            entry.type == LEONOS_FS_TYPE_FIFO ? 1u :
                             entry.type == LEONOS_FS_TYPE_SOCKET ? LINUX_DT_SOCK :
                             entry.type == LEONOS_FS_TYPE_SYMLINK ? LINUX_DT_LNK :
                             entry.type == LEONOS_FS_TYPE_DEVICE ? LINUX_DT_CHR : LINUX_DT_REG;
@@ -6303,6 +6362,7 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         if (!file) {
             return -LEONOS_EBADF;
         }
+        if (file->flags & TASK_FILE_FLAG_PIPE) return -LINUX_ESPIPE;
         if (file->io_owner && file->io_owner != task->pid) return -LEONOS_EAGAIN;
         int refresh = storage_inode_refresh(&file->node);
         if (refresh < 0) return refresh;
@@ -6413,6 +6473,15 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         uint32_t path_length = 0;
         while (path[path_length]) ++path_length;
         if (path_length > 1 && path[path_length - 1] == '/') path[path_length - 1] = 0;
+        /* Linux filename_create rejects an existing final dentry before
+         * may_create checks write permission on its parent. mkdir -p relies
+         * on EEXIST even when the caller cannot create new siblings. */
+        struct storage_node existing;
+        ret = fs_permissions_search(task, path, false);
+        if (ret < 0) return ret;
+        ret = storage_lookup_path(path, &existing);
+        if (!ret) return -LEONOS_EEXIST;
+        if (ret != -LEONOS_ENOENT) return storage_errno(ret);
         ret = fs_permissions_parent(task, path, false);
         if (ret < 0) {
             return ret;
@@ -6794,6 +6863,10 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
             return task_socket_ioctl(file, a1, a2);
         if (file && (file->flags & TASK_FILE_FLAG_SOCKET_INET))
             return task_net_control(file, (uint32_t)a1, a2);
+        if (file && (file->node.flags & STORAGE_NODE_FLAG_DEV_NODE) &&
+            file->node.first_cluster == STORAGE_DEV_KIND_DRIVERCTL) {
+            return syscall_driver_control((uint32_t)a1, a2);
+        }
         int evdev_ret = task_evdev_ioctl(file, a1, a2);
         if (evdev_ret != -LEONOS_ENOTTY) {
             return evdev_ret;
@@ -7222,6 +7295,8 @@ void syscall_dispatch_frame(struct trap_frame *frame)
             task_sysv_sem_cancel(calling_task);
         if (calling_task->sysv_msg.queue && calling_task->sysv_msg.number != number)
             task_sysv_msg_cancel(calling_task);
+        if (calling_task->fifo_open_file && number != LINUX_SYS_OPEN && number != LINUX_SYS_OPENAT && number != LINUX_SYS_OPENAT2)
+            task_fifo_cancel(calling_task);
         calling_task->restart_syscall = 0;
         /* sigaltstack must inspect the live user SP, not the last timer frame. */
         calling_task->frame.rsp = frame->rsp;

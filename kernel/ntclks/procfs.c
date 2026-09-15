@@ -1,5 +1,6 @@
 /* Read-only procfs implementation for the Unix migration. */
 #include <ntclks/mm.h>
+#include <ntclks/driver_manager.h>
 #include <ntclks/sched.h>
 #include <ntclks/smp.h>
 #include <ntclks/storage.h>
@@ -263,17 +264,25 @@ static char proc_state(const struct task *task)
            : task->state == TASK_BLOCKED ? 'S'
                                          : 'R';
 }
-/** @brief Read mutable argv bytes from the target address space, bounded by exec's argument range. */
-static int proc_cmdline(struct task *task, struct text_stream *s)
+/**
+ * @brief Read argv or environment bytes from the original exec stack range.
+ * @param task Target task pinned by the kernel execution lock.
+ * @param s Output slice; offsets and lengths are bytes, including embedded NULs.
+ * @param environment Select environment instead of argument bounds.
+ * @return Zero or EIO when an unreadable page precedes all output.
+ */
+static int proc_mm_strings(struct task *task, struct text_stream *s, bool environment)
 {
     struct task_address_space_state *mm = sched_task_mm(task);
-    if (task->state == TASK_EXITED || !mm->as.cr3 || mm->arg_end <= mm->arg_start)
+    uint64_t start = environment ? mm->env_start : mm->arg_start;
+    uint64_t end = environment ? mm->env_end : mm->arg_end;
+    if (task->state == TASK_EXITED || !mm->as.cr3 || end <= start)
         return 0;
-    uint64_t size = mm->arg_end - mm->arg_start;
+    uint64_t size = end - start;
     if (s->offset >= size)
         return 0;
-    uint64_t position = mm->arg_start + s->offset;
-    while (position < mm->arg_end && s->written < s->capacity) {
+    uint64_t position = start + s->offset;
+    while (position < end && s->written < s->capacity) {
         if (!address_space_user_page_readable(&mm->as, position))
             return s->written ? 0 : -5;
         uint64_t phys = address_space_user_page_phys(&mm->as, position);
@@ -281,8 +290,8 @@ static int proc_cmdline(struct task *task, struct text_stream *s)
         if (!phys || !page)
             return s->written ? 0 : -5;
         uint32_t count = 4096 - (uint32_t)(position & 4095);
-        if (count > mm->arg_end - position)
-            count = (uint32_t)(mm->arg_end - position);
+        if (count > end - position)
+            count = (uint32_t)(end - position);
         if (count > s->capacity - s->written)
             count = s->capacity - s->written;
         __builtin_memcpy(s->buffer + s->written, page + (position & 4095), count);
@@ -409,7 +418,7 @@ int proc_lookup(const char *path, struct storage_node *out)
         }
         return 0;
     }
-    if (proc_mount_view(path) || proc_text_eq(path,"/proc/cpuinfo")) {
+    if (proc_mount_view(path) || proc_text_eq(path,"/proc/cpuinfo") || proc_text_eq(path,"/proc/leonos-drivers")) {
         if (out) *out = (struct storage_node){
             .type = LEONOS_FS_TYPE_FILE, .flags = STORAGE_NODE_FLAG_PROC,
             .first_cluster = 0x50524f43u, .size = 0,
@@ -464,7 +473,7 @@ int proc_lookup(const char *path, struct storage_node *out)
             return 0;
         }
         if ((kind == 2 || kind == 3) && file &&
-            (proc_text_eq(file, "stat") || proc_text_eq(file, "comm") || proc_text_eq(file, "cmdline") || proc_text_eq(file, "status"))) {
+            (proc_text_eq(file, "stat") || proc_text_eq(file, "comm") || proc_text_eq(file, "cmdline") || proc_text_eq(file, "environ") || proc_text_eq(file, "status"))) {
             if (kind == 2 && !sched_find(pid)) return -2;
             if (out) {
                 *out = (struct storage_node){
@@ -496,13 +505,31 @@ int proc_read(const char *path, uint64_t offset, void *buffer, uint32_t length,
     if (proc_text_eq(path,"/proc/cpuinfo")) return cpu_inventory_read(offset,buffer,length,out_read);
     if (out_read) *out_read = 0;
     if (!buffer && length) return -22;
+    /* Read-only, versioned driver records from the actual driver manager;
+     * no user pointer reaches driver_manager_list. */
+    if (proc_text_eq(path, "/proc/leonos-drivers")) {
+        struct leonos_driver_info drivers[LEONOS_DRIVER_MAX];
+        struct leonos_driver_list query = {.drivers = drivers, .capacity = LEONOS_DRIVER_MAX};
+        int ret = driver_manager_list(&query);
+        if (ret < 0) return ret;
+        uint64_t bytes = (uint64_t)query.count * sizeof(drivers[0]);
+        if (offset >= bytes) return 0;
+        if (length > bytes - offset) length = (uint32_t)(bytes - offset);
+        __builtin_memcpy(buffer, (const char *)drivers + offset, length);
+        if (out_read) *out_read = length;
+        return 0;
+    }
     const char *file=0; uint32_t pid=0; int kind=proc_path_kind(path,&file,&pid);
     if(kind==3) pid=sched_current_pid();
-    if((kind==2 || kind==3) && file && (proc_text_eq(file,"cmdline") || proc_text_eq(file,"stat") || proc_text_eq(file,"comm"))) {
+    if((kind==2 || kind==3) && file && (proc_text_eq(file,"cmdline") || proc_text_eq(file,"environ") || proc_text_eq(file,"stat") || proc_text_eq(file,"comm"))) {
         struct task *task=sched_find(pid); if(!task) return -2;
         struct text_stream stream={.offset=offset,.buffer=buffer,.capacity=length};
         int ret=0;
-        if(proc_text_eq(file,"cmdline")) ret=proc_cmdline(task,&stream);
+        if(proc_text_eq(file,"environ")) {
+            if (!proc_stat_mm_visible(sched_current_task(), task)) return -LEONOS_EACCES;
+            ret=proc_mm_strings(task,&stream,true);
+        }
+        else if(proc_text_eq(file,"cmdline")) ret=proc_mm_strings(task,&stream,false);
         else if(proc_text_eq(file,"stat")) proc_task_stat(task,&stream);
         else { const char *name=task->name?task->name:"?"; uint32_t n=0; while(name[n] && n<15) ++n;
             text_bytes(&stream,name,n); text_string(&stream,"\n"); }
@@ -591,7 +618,7 @@ int proc_readlink(const char *path, char *buffer, uint32_t capacity)
 int proc_readdir(const char *path, uint64_t *offset, struct leonos_dir_entry *entry)
 {
     uint32_t index;
-    static const char *files[] = {"uptime", "meminfo", "version", "filesystems", "stat", "mounts", "self", "sys", "cpuinfo"};
+    static const char *files[] = {"uptime", "meminfo", "version", "filesystems", "stat", "mounts", "self", "sys", "cpuinfo", "leonos-drivers"};
     if (!path || !offset || !entry) return -22;
     if (!__builtin_strncmp(path,"/sys",4) && (!path[4] || path[4]=='/')) return sysfs_readdir(path,offset,entry);
     if (proc_text_eq(path, "/proc/sys") || proc_text_eq(path, "/proc/sys/kernel")) {
@@ -610,7 +637,7 @@ int proc_readdir(const char *path, uint64_t *offset, struct leonos_dir_entry *en
         if (kind == 3) pid = sched_current_pid();
         if ((kind != 2 && kind != 3) || file) return -20;
         if (!sched_find(pid)) return -2;
-        static const char *task_files[] = {"stat", "cmdline", "status", "mounts", "mountinfo", "exe", "cwd", "root", "comm"};
+        static const char *task_files[] = {"stat", "cmdline", "status", "mounts", "mountinfo", "exe", "cwd", "root", "comm", "environ"};
         if (*offset >= sizeof(task_files) / sizeof(task_files[0])) return 0;
         *entry = (struct leonos_dir_entry){.type = *offset >= 5 && *offset <= 7 ? LEONOS_FS_TYPE_SYMLINK : LEONOS_FS_TYPE_FILE};
         proc_copy(entry->name, sizeof(entry->name), task_files[(*offset)++]);

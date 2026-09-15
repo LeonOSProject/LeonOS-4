@@ -1,0 +1,290 @@
+#include <signal.h>
+#include <sys/wait.h>
+/* devmand, LeonOS business protocol: /run/leonos/devman.sock exports the device
+ * catalog and driver control plane previously available through /dev/hwinfo
+ * and /dev/driverctl. */
+#include <errno.h>
+#include <sys/ioctl.h>
+#include <leonos/device.h>
+#include <leonos/devmand.h>
+#include <leonos/driver.h>
+#include <leonos/fs.h>
+#include <leonos/stdio.h>
+#include <leonos/syscall.h>
+#include <leonos/unix_ipc.h>
+#include <poll.h>
+#include <stdint.h>
+#include <string.h>
+#include <unistd.h>
+
+
+
+#define DEVMAND_MAX_CLIENTS 16u
+#define DEVMAND_MAX_DEVICES 32u
+#define DEVMAND_MAX_DRIVERS LEONOS_DRIVER_MAX
+#define DEVMAND_FRAME_CAP 8192u
+
+struct devmand_client {
+    uint32_t used;
+    int fd;
+    uint32_t pid;
+    uint32_t uid;
+    struct ucred credentials;
+};
+
+static struct devmand_client clients[DEVMAND_MAX_CLIENTS];
+static int listen_fd = -1;
+
+static void devmand_copy(char *dst, uint32_t capacity, const char *src)
+{
+    uint32_t i = 0;
+    if (!dst || !capacity) return;
+    while (src && src[i] && i + 1u < capacity) {
+        dst[i] = src[i];
+        ++i;
+    }
+    dst[i] = 0;
+}
+
+static void devmand_fill_device(const char *name, struct leonos_device_info *out)
+{
+    memset(out, 0, sizeof(*out));
+    out->flags = LEONOS_DEVICE_FLAG_PRESENT | LEONOS_DEVICE_FLAG_ACTIVE;
+    devmand_copy(out->name, sizeof(out->name), name);
+    if (!strcmp(name, "fb0")) out->device_class = LEONOS_DEVICE_CLASS_DISPLAY;
+    else if (!strcmp(name, "keyboard") || !strcmp(name, "mouse"))
+        out->device_class = LEONOS_DEVICE_CLASS_INPUT;
+    else if (!strcmp(name, "sda") || !strcmp(name, "vda") ||
+             !strcmp(name, "nvme0n1") || !strcmp(name, "disk0"))
+        out->device_class = LEONOS_DEVICE_CLASS_STORAGE;
+    else if (!strcmp(name, "dsp") || !strcmp(name, "audio"))
+        out->device_class = LEONOS_DEVICE_CLASS_AUDIO;
+    else if (!strcmp(name, "ttyS0") || !strcmp(name, "serial0"))
+        out->device_class = LEONOS_DEVICE_CLASS_SERIAL;
+    else if (!strcmp(name, "ethernet0"))
+        out->device_class = LEONOS_DEVICE_CLASS_NETWORK;
+    else
+        out->device_class = LEONOS_DEVICE_CLASS_SYSTEM;
+    devmand_copy(out->status, sizeof(out->status), "Running");
+}
+
+static uint32_t devmand_collect_devices(struct leonos_device_info *out,
+                                        uint32_t capacity)
+{
+    struct leonos_device_info devices[DEVMAND_MAX_DEVICES] = {0};
+    struct leonos_dir_entry entry;
+    int fd = open("/dev", LEONOS_O_RDONLY, 0);
+    uint32_t count = 0;
+    if (fd < 0) return 0;
+    while (count < DEVMAND_MAX_DEVICES && leonos_readdir(fd, &entry) > 0) {
+        if (entry.type != LEONOS_FS_TYPE_DEVICE) continue;
+        devmand_fill_device(entry.name, &devices[count]);
+        ++count;
+    }
+    close(fd);
+    if (out && capacity) {
+        uint32_t copy = count < capacity ? count : capacity;
+        memcpy(out, devices, copy * sizeof(*out));
+    }
+    return count;
+}
+
+static int devmand_collect_drivers(struct leonos_driver_info *out, uint32_t capacity)
+{
+    int fd = open("/proc/leonos-drivers", LEONOS_O_RDONLY, 0);
+    if (fd < 0) return -1;
+    uint32_t bytes = 0, limit = capacity * sizeof(*out);
+    while (bytes < limit) {
+        ssize_t got = read(fd, (char *)out + bytes, limit - bytes);
+        if (got < 0 && errno == EINTR) continue;
+        if (got < 0) { close(fd); return -1; }
+        if (!got) break;
+        bytes += got;
+    }
+    close(fd);
+    if (bytes % sizeof(*out)) { errno = EPROTO; return -1; }
+    return bytes / sizeof(*out);
+}
+
+static void devmand_handle_client(int slot)
+{
+    struct devmand_client *client = &clients[slot];
+    uint8_t buffer[DEVMAND_FRAME_CAP];
+    uint32_t type = 0;
+    uint32_t length = 0;
+    for (;;) {
+        struct pollfd descriptor = {.fd = client->fd, .events = POLLIN, .revents = 0};
+        if (poll(&descriptor, 1, 0) <= 0) return;
+        if (leonos_ipc_recv_cred_fd(client->fd, &type, buffer, sizeof(buffer), &length, NULL, &client->credentials) < 0) {
+            if (errno == EAGAIN) return;
+            leonos_ipc_close(client->fd);
+            memset(client, 0, sizeof(*client));
+            client->fd = -1;
+            return;
+        }
+        if (client->credentials.pid != (pid_t)client->pid || client->credentials.uid != client->uid) {
+            leonos_ipc_close(client->fd);
+            memset(client, 0, sizeof(*client)); client->fd = -1;
+            return;
+        }
+        if (type == LEONOS_DEVMAND_MSG_HELLO) {
+            struct leonos_devmand_hello hello;
+            struct leonos_devmand_ack ack = {.code = 1};
+            if (length < sizeof(hello)) { leonos_ipc_close(client->fd); memset(client,0,sizeof(*client)); client->fd=-1; return; }
+            memcpy(&hello, buffer, sizeof(hello));
+            if (hello.pid != client->pid || hello.uid != client->uid) {
+                leonos_ipc_close(client->fd);
+                memset(client, 0, sizeof(*client));
+                client->fd = -1;
+                return;
+            }
+            (void)leonos_ipc_send(client->fd, LEONOS_DEVMAND_MSG_ACK,
+                                  &ack, sizeof(ack));
+            continue;
+        }
+        if (type == LEONOS_DEVMAND_MSG_DEVICE_LIST) {
+            struct leonos_devmand_list_request request;
+            struct leonos_devmand_ack ack;
+            struct leonos_device_info devices[DEVMAND_MAX_DEVICES] = {0};
+            uint8_t payload[DEVMAND_FRAME_CAP];
+            uint32_t offset = sizeof(ack);
+            if (length < sizeof(request)) continue;
+            memcpy(&request, buffer, sizeof(request));
+            memset(&ack, 0, sizeof(ack));
+            ack.count = devmand_collect_devices(devices, DEVMAND_MAX_DEVICES);
+            ack.count = ack.count < request.capacity ? ack.count : request.capacity;
+            if (ack.count > 0) {
+                uint32_t copy = ack.count;
+                if (offset + copy * sizeof(*devices) <= sizeof(payload)) {
+                    memcpy(payload + offset, devices, copy * sizeof(*devices));
+                }
+            }
+            memcpy(payload, &ack, sizeof(ack));
+            (void)leonos_ipc_send(client->fd, LEONOS_DEVMAND_MSG_DEVICE_LIST,
+                                  payload, offset + ack.count * sizeof(*devices));
+            continue;
+        }
+        if (type == LEONOS_DEVMAND_MSG_DRIVER_LIST) {
+            struct leonos_devmand_list_request request;
+            struct leonos_devmand_ack ack;
+            struct leonos_driver_info drivers[DEVMAND_MAX_DRIVERS] = {0};
+            uint8_t payload[DEVMAND_FRAME_CAP];
+            uint32_t offset = sizeof(ack);
+            if (length < sizeof(request)) continue;
+            memcpy(&request, buffer, sizeof(request));
+            memset(&ack, 0, sizeof(ack));
+            int count = devmand_collect_drivers(drivers, DEVMAND_MAX_DRIVERS);
+            if (count < 0) {
+                ack.code = -errno;
+                (void)leonos_ipc_send(client->fd, LEONOS_DEVMAND_MSG_ACK, &ack, sizeof(ack));
+                continue;
+            }
+            ack.count = count;
+            ack.count = ack.count < request.capacity ? ack.count : request.capacity;
+            if (ack.count > 0) {
+                uint32_t copy = ack.count;
+                if (offset + copy * sizeof(*drivers) <= sizeof(payload)) {
+                    memcpy(payload + offset, drivers, copy * sizeof(*drivers));
+                }
+            }
+            memcpy(payload, &ack, sizeof(ack));
+            (void)leonos_ipc_send(client->fd, LEONOS_DEVMAND_MSG_DRIVER_LIST,
+                                  payload, offset + ack.count * sizeof(*drivers));
+            continue;
+        }
+        if (type == LEONOS_DEVMAND_MSG_DRIVER_CONTROL) {
+            struct leonos_devmand_ack ack = {.code = -EACCES};
+            /* SO_PEERCRED uid==0 is the only driver-control principal. */
+            if (client->uid == 0) {
+                struct leonos_driver_control request;
+                if (length != sizeof(request)) ack.code = -EINVAL;
+                else {
+                    memcpy(&request, buffer, sizeof(request));
+                    if (request.flags || request.reserved || !memchr(request.file, 0, sizeof(request.file)))
+                        ack.code = -EINVAL;
+                    else {
+                        int fd = open("/dev/driverctl", LEONOS_O_RDONLY | LEONOS_O_CLOEXEC, 0);
+                        if (fd < 0) ack.code = -errno;
+                        else {
+                            int ret = ioctl(fd, LEONOS_DRIVER_CONTROL_IOCTL, &request);
+                            ack.code = ret < 0 ? -errno : request.status;
+                            close(fd);
+                        }
+                    }
+                }
+            }
+            (void)leonos_ipc_send(client->fd, LEONOS_DEVMAND_MSG_ACK,
+                                  &ack, sizeof(ack));
+            continue;
+        }
+    }
+}
+
+static void devmand_poll(void)
+{
+    if (listen_fd < 0) {
+        listen_fd = leonos_ipc_bind_listen_mode(LEONOS_IPC_SOCK_DEVICE, 8, 0666);
+        if (listen_fd < 0) {
+            printf("[devmand] bind failed errno=%d\n", errno);
+            return;
+        }
+        int passcred = 1;
+        if (setsockopt(listen_fd, SOL_SOCKET, SO_PASSCRED, &passcred, sizeof(passcred)) < 0) {
+            close(listen_fd); listen_fd = -1; return;
+        }
+        (void)leonos_ipc_set_nonblock(listen_fd, 1);
+        printf("[devmand] listening on %s\n", LEONOS_IPC_SOCK_DEVICE);
+    }
+    {
+        struct pollfd descriptor = {.fd = listen_fd, .events = POLLIN, .revents = 0};
+        if (poll(&descriptor, 1, 0) > 0 && (descriptor.revents & POLLIN)) {
+            int fd;
+            while ((fd = leonos_ipc_accept(listen_fd, 0)) >= 0) {
+                struct ucred credentials;
+                int slot = -1, passcred = 1;
+                for (uint32_t i = 0; i < DEVMAND_MAX_CLIENTS; ++i) {
+                    if (!clients[i].used) { slot = (int)i; break; }
+                }
+                if (slot < 0 || leonos_ipc_peer_credentials(fd, &credentials) < 0 ||
+                    setsockopt(fd, SOL_SOCKET, SO_PASSCRED, &passcred, sizeof(passcred)) < 0) {
+                    close(fd);
+                    continue;
+                }
+                (void)leonos_ipc_set_nonblock(fd, 1);
+                clients[slot].used = 1;
+                clients[slot].fd = fd;
+                clients[slot].pid = (uint32_t)credentials.pid;
+                clients[slot].uid = credentials.uid;
+                clients[slot].credentials = credentials;
+            }
+        }
+    }
+    for (uint32_t i = 0; i < DEVMAND_MAX_CLIENTS; ++i) {
+        if (clients[i].used) devmand_handle_client(i);
+    }
+}
+
+static volatile sig_atomic_t stopping;
+static void request_stop(int number) { (void)number; stopping = 1; }
+
+int main(void)
+{
+    struct sigaction action = {.sa_handler = request_stop};
+    sigemptyset(&action.sa_mask);
+    if (sigaction(SIGTERM, &action, NULL) < 0 || sigaction(SIGINT, &action, NULL) < 0) return 1;
+    signal(SIGPIPE, SIG_IGN);
+    devmand_poll();
+    if (listen_fd < 0) return 1;
+    while (!stopping) {
+        devmand_poll();
+        while (waitpid(-1, NULL, WNOHANG) > 0) {}
+        struct pollfd descriptors[17] = {{.fd = listen_fd, .events = POLLIN}};
+        for (unsigned i = 0; i < 16; ++i)
+            descriptors[i + 1] = (struct pollfd){.fd = clients[i].used ? clients[i].fd : -1, .events = POLLIN};
+        if (poll(descriptors, 17, 1000) < 0 && errno != EINTR) break;
+    }
+    for (unsigned i = 0; i < 16; ++i) if (clients[i].used) close(clients[i].fd);
+    close(listen_fd);
+    unlink(LEONOS_IPC_SOCK_DEVICE);
+    return stopping ? 0 : 1;
+}

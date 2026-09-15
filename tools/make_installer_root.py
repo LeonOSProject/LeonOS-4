@@ -119,6 +119,7 @@ def stage_runtime_payload(esp_tree: Path, stage: Path, policy_runtime: Path,
         copy_tree(esp_tree / "opt", stage / "opt")
     copy_tree(esp_tree / ETC, stage / ETC)
     layout_directories(stage)
+    (stage / "etc/leonos/installer-runtime").write_text("installer\n")
     # Installer-only programs and policy overrides.
     for app in ("imd", "windowd", "desktop", "installer"):
         copy_file(userland_dir / f"{app}.elf",

@@ -1,0 +1,20 @@
+#!/bin/sh
+# Notification only: protocol, polling and clock discipline remain in ntpd.
+set -eu
+case "${1:-}" in
+    unsync) rm -f /run/leonos/ntp-state; exit 0 ;;
+    step|stratum|periodic) ;;
+    *) exit 1 ;;
+esac
+case "${stratum:-}" in ''|*[!0-9]*) exit 1 ;; esac
+if test "$stratum" -lt 1 || test "$stratum" -ge 16; then
+    rm -f /run/leonos/ntp-state
+    exit 0
+fi
+read -r uptime rest < /proc/uptime
+umask 022
+tmp=$(mktemp /run/leonos/.ntp-state.XXXXXX)
+trap 'rm -f "$tmp"' EXIT HUP INT TERM
+printf 'acquired=%s\nstratum=%s\n' "${uptime%%.*}" "$stratum" > "$tmp"
+chmod 0644 "$tmp"
+mv -f "$tmp" /run/leonos/ntp-state

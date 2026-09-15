@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+# ntpd requires CAP_SYS_TIME. Run as root until NTCLKS supports the upstream
+# start-stop-daemon capability drop path; no private NTP client is retained.
+description="BusyBox NTP client"
+supervisor=supervise-daemon
+input_file=/dev/null
+command=/usr/sbin/ntpd
+command_args="${command_args:--n -p pool.ntp.org} -S /usr/lib/leonos/ntp-status"
+respawn_delay=10
+respawn_max=3
+respawn_period=120
+output_log=/var/log/ntpd.log
+error_log=/var/log/ntpd.log
+depend() { need leonos-runtime; after leonos-dhcp; provide ntp-client; }
+
+start_pre() { rm -f /run/leonos/ntp-state; }
+stop_post() { rm -f /run/leonos/ntp-state; }

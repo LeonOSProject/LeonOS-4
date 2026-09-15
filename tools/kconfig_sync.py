@@ -113,7 +113,12 @@ def validate_configured_keys(
     configured: dict[str, str], defaults: dict[str, str], components: tuple[Component, ...]
 ) -> None:
     known = set(defaults) | component_config_symbols(components)
-    unknown = sorted(key for key in configured if key not in known)
+    # Exact obsolete component switches are ignored during incremental builds;
+    # their implementation and staging outputs are retired, not renamed.
+    retired = {f"CONFIG_LEON_COMPONENT_APP_{name}_{field}"
+               for name in ("INIT", "SERVICED")
+               for field in ("API", "BUILD", "ENTRY", "IMAGE", "SDK")}
+    unknown = sorted(key for key in configured if key not in known and key not in retired)
     if unknown:
         raise ValueError("unknown configuration symbol(s): " + ", ".join(unknown))
 

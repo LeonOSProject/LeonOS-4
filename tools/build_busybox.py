@@ -855,6 +855,7 @@ def main() -> None:
          "-ffunction-sections", "-fdata-sections",
         "-nostdinc", "-isystem", str(headers),
         "-I" + str(sdk_dir / "musl/include"),
+        "-idirafter", str(ROOT / "build/linux-6.12-headers/include"),
         *([] if args.official_source else [
             "-I" + str(sdk_dir / "leonos-libc"),
             "-I" + str(sdk_dir / "include"), "-I" + str(sdk_dir / "include/uapi"),

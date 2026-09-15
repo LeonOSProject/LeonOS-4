@@ -5,7 +5,7 @@
   "groups": {
     "leonos-apps": {
       "destination": "leonos",
-      "components": ["init", "imd", "windowd", "desktop", "installer", "login", "serviced", "shell", "fileman", "taskmgr", "settings", "terminal", "run", "osver", "netctl", "servicemgr", "diskmgr", "devmgr", "drvmgr", "sysconfdialog", "apiapp", "sudod", "hello", "uidemo", "cjktest", "notepad", "calc", "paint", "minesweeper", "snake", "matrix", "memtest", "smptest", "abittest", "ipctest", "bugtest", "ping", "httpget", "downloadmgr", "browser", "imageview", "wavplay", "mp3play", "oshlp", "helloworld", "guitest", "pleditor", "stardusthello", "stardustlayout", "stardustshowcase", "doomlauncher", "doom", "oschinpt", "cmd", "stardustui", "portablegl", "glxgears", "leonmmcoset", "xiaobai"],
+      "components": ["imd", "windowd", "desktop", "installer", "login", "sessiond", "device-agent", "rcctl", "shell", "fileman", "taskmgr", "settings", "terminal", "run", "osver", "netctl", "servicemgr", "diskmgr", "devmgr", "drvmgr", "sysconfdialog", "apiapp", "sudod", "hello", "uidemo", "cjktest", "notepad", "calc", "paint", "minesweeper", "snake", "matrix", "memtest", "smptest", "abittest", "ipctest", "bugtest", "ping", "httpget", "downloadmgr", "browser", "imageview", "wavplay", "mp3play", "oshlp", "helloworld", "guitest", "pleditor", "stardusthello", "stardustlayout", "stardustshowcase", "doomlauncher", "doom", "oschinpt", "cmd", "stardustui", "portablegl", "glxgears", "leonmmcoset", "xiaobai"],
       "paths": ["usr/lib/leonos", "usr/share/leonos", "usr/share/fonts/leonos", "etc/leonos", "usr/lib/libportablegl.so.1"],
       "reason": "Native desktop, service, graphics and application interfaces. Embedded dependencies remain part of their actual consumers."
     },

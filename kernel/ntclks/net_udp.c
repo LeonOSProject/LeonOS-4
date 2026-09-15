@@ -29,6 +29,7 @@ struct udp_socket {
     uint32_t local, remote;
     uint16_t port, remote_port;
     bool bound, connected, broadcast, reuse;
+    int ifindex;
     uint64_t receive_timeout;
     uint32_t queued;
     struct udp_packet *head, *tail;
@@ -66,12 +67,12 @@ static int bind_port(struct udp_socket *s, uint32_t ip, uint16_t port)
 }
 
 void net_udp_input(uint32_t source, uint32_t destination, uint16_t source_port,
-                    uint16_t destination_port, const void *data, uint32_t length)
+                    uint16_t destination_port, const void *data, uint32_t length, int ifindex)
 {
     if (length > UDP_MAX_PAYLOAD) return;
     for (unsigned i = 0; i < UDP_MAX_SOCKETS; ++i) {
         struct udp_socket *s = sockets[i];
-        if (!s || !s->bound || s->port != destination_port ||
+        if (!s || !s->bound || (s->ifindex && s->ifindex != ifindex) || s->port != destination_port ||
             (s->local && s->local != destination) ||
             (s->connected && (s->remote != source || s->remote_port != source_port)) ||
             s->queued >= UDP_QUEUE_LENGTH) continue;
@@ -130,9 +131,11 @@ int task_udp_send(struct task_file *file, const void *data, uint32_t length,
     struct leonos_net_config config;
     net_get_config(&config);
     if ((ip >> 24) == 127 || (ip && ip == config.local_ip)) {
-        net_udp_input(s->local ? s->local : ip, ip, s->port, port, data, length);
+        if (s->ifindex && s->ifindex != 1) return -LINUX_ENETUNREACH;
+        net_udp_input(s->local ? s->local : ip, ip, s->port, port, data, length, 1);
         return (int)length;
     }
+    if (s->ifindex == 1) return -LINUX_ENETUNREACH;
     int ret = net_ipv4_send_udp(s->local, ip, s->port, port, data, length);
     return ret < 0 ? ret : (int)length;
 }
@@ -264,6 +267,27 @@ int64_t syscall_udp(uint64_t number, uint64_t a0, uint64_t a1, uint64_t a2,
             length = *(uint32_t *)(uintptr_t)a4;
         }
         if ((int32_t)length < 0) return -LINUX_EINVAL;
+        if (a2 == SO_BINDTODEVICE) {
+            if (set) {
+                struct task *task = sched_current_task();
+                if (!(task->cap_effective & (1ULL << CAP_NET_RAW))) return -LINUX_EPERM;
+                char name[16] = {0};
+                uint32_t size = length < sizeof(name) - 1 ? length : sizeof(name) - 1;
+                if (size && !user_range_ok(a3, size)) return -LINUX_EFAULT;
+                if (size) __builtin_memcpy(name, (void *)(uintptr_t)a3, size);
+                int index = !name[0] ? 0 : !__builtin_strcmp(name, "eth0") ? 2 : !__builtin_strcmp(name, "lo") ? 1 : -1;
+                if (index < 0) return -LINUX_ENODEV;
+                s->ifindex = index;
+                return 0;
+            }
+            const char *name = s->ifindex == 2 ? "eth0" : s->ifindex == 1 ? "lo" : "";
+            uint32_t size = s->ifindex == 2 ? 5 : s->ifindex == 1 ? 3 : 0;
+            if (size && length < 16) return -LINUX_EINVAL;
+            if (size && !user_range_writable(a3, size)) return -LINUX_EFAULT;
+            if (size) __builtin_memcpy((void *)(uintptr_t)a3, name, size);
+            *(uint32_t *)(uintptr_t)a4 = size;
+            return 0;
+        }
         int value = 0;
         if (a2 == SO_RCVTIMEO) {
             int64_t tv[2];

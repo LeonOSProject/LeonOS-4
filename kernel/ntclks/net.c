@@ -6,8 +6,12 @@
 #include <ntclks/e1000.h>
 #include <ntclks/heap.h>
 #include <ntclks/net.h>
+#include <ntclks/net_packet.h>
 #include <ntclks/net_udp.h>
 #include <linux/errno.h>
+#include <linux/if.h>
+#include <linux/capability.h>
+#include <ntclks/usercopy.h>
 #include <ntclks/sched.h>
 #include <linux/poll.h>
 #include <ntclks/storage.h>
@@ -64,8 +68,6 @@
 #endif
 #define NET_SOCKET_CLOSE_HOLD_MS 10000u
 #define NET_SOCKET_DEFAULT_TIMEOUT_MS 5000u
-#define NET_SERVICES_CONFIG_PATH LEONOS_PATH_SERVICES_CFG
-#define NET_SERVICES_CONFIG_MAX 512u
 #define NET_NETWORK_CONFIG_PATH LEONOS_PATH_NETWORK_CONF
 #define NET_NETWORK_CONFIG_BACKUP_PATH LEONOS_PATH_NETWORK_BAK
 #define NET_NETWORK_CONFIG_MAX 256u
@@ -163,6 +165,9 @@ static const uint8_t net_broadcast_mac[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 static uint32_t net_sequence = 1;
 static uint16_t net_ipv4_id = 1;
 static struct leonos_net_config net_config;
+static bool net_interface_up = true;
+static uint32_t net_interface_broadcast;
+static uint16_t net_packet_ip_id;
 static uint32_t net_dns_mode = LEONOS_NET_DNS_MODE_DHCP;
 static uint32_t net_dns_custom_ip;
 static uint32_t net_dhcp_dns_ip;
@@ -284,30 +289,6 @@ static int net_text_eq_len(const char *a, const char *b, uint32_t len)
     return b[len] == 0;
 }
 
-/**
- * Net service line value.
- * @param line Value supplied by the caller.
- * @param len Maximum number of elements available in the related buffer.
- * @param key Value supplied by the caller.
- * @param value Value supplied by the caller.
- * @return The value or status produced by the operation.
- */
-static int net_service_line_value(const char *line, uint32_t len,
-                                  const char *key, uint8_t *value)
-{
-    uint32_t key_len = 0;
-    while (key && key[key_len] && key_len < NET_SERVICES_CONFIG_MAX) {
-        ++key_len;
-    }
-    if (!line || !key || !value || key_len == 0 || len <= key_len ||
-        line[key_len] != '=' || !net_text_eq_len(line, key, key_len)) {
-        return 0;
-    }
-    *value = line[key_len + 1u] == '1' ||
-             line[key_len + 1u] == 'y' ||
-             line[key_len + 1u] == 'Y';
-    return 1;
-}
 
 /**
  * Net line value.
@@ -470,45 +451,6 @@ static uint32_t net_effective_dns_ip(uint32_t dhcp_dns_ip)
     return LEONOS_NET_CLOUDFLARE_DNS_IP;
 }
 
-/**
- * Net service enabled.
- * @param key Value supplied by the caller.
- * @param default_value Value supplied by the caller.
- * @return The value or status produced by the operation.
- */
-static uint8_t net_service_enabled(const char *key, uint8_t default_value)
-{
-    struct storage_node node;
-    char cfg[NET_SERVICES_CONFIG_MAX];
-    uint32_t got = 0;
-    uint32_t len;
-    uint32_t pos = 0;
-    if (!storage_ready() ||
-        storage_lookup_path(NET_SERVICES_CONFIG_PATH, &node) < 0 ||
-        node.type != LEONOS_FS_TYPE_FILE) {
-        return default_value;
-    }
-    len = node.size >= sizeof(cfg) ? sizeof(cfg) - 1u : (uint32_t)node.size;
-    if (storage_read_node(&node, 0, cfg, len, &got) < 0) {
-        return default_value;
-    }
-    cfg[got < sizeof(cfg) ? got : sizeof(cfg) - 1u] = 0;
-    while (pos < got) {
-        uint32_t start = pos;
-        uint32_t line_len;
-        while (pos < got && cfg[pos] != '\n' && cfg[pos] != '\r') {
-            ++pos;
-        }
-        line_len = pos - start;
-        while (pos < got && (cfg[pos] == '\n' || cfg[pos] == '\r')) {
-            ++pos;
-        }
-        if (net_service_line_value(cfg + start, line_len, key, &default_value)) {
-            return default_value;
-        }
-    }
-    return default_value;
-}
 
 /**
  * Net get u16.
@@ -785,7 +727,7 @@ static void net_update_config_flags(void)
     struct e1000_info info;
     e1000_get_info(&info);
     if (info.present) flags |= LEONOS_NET_CONFIG_FLAG_PRESENT;
-    if (info.active) flags |= LEONOS_NET_CONFIG_FLAG_ACTIVE;
+    if (info.active && net_interface_up) flags |= LEONOS_NET_CONFIG_FLAG_ACTIVE;
     if (net_config.source == LEONOS_NET_CONFIG_SOURCE_DHCP) {
         flags |= LEONOS_NET_CONFIG_FLAG_DHCP;
     }
@@ -894,7 +836,7 @@ static int net_send_arp_request(uint32_t target_ip)
     net_memzero(frame, sizeof(frame));
     net_write_arp_ipv4(frame, ARP_OPER_REQUEST, net_broadcast_mac,
                        zero_mac, target_ip);
-    return e1000_send(frame, 42);
+    return net_interface_up ? e1000_send(frame, 42) : -LINUX_ENETDOWN;
 }
 
 /**
@@ -908,7 +850,7 @@ static int net_send_arp_reply(const uint8_t *target_mac, uint32_t target_ip)
     uint8_t frame[64];
     net_memzero(frame, sizeof(frame));
     net_write_arp_ipv4(frame, ARP_OPER_REPLY, target_mac, target_mac, target_ip);
-    return e1000_send(frame, 42);
+    return net_interface_up ? e1000_send(frame, 42) : -LINUX_ENETDOWN;
 }
 
 /**
@@ -991,7 +933,7 @@ static int net_send_udp_to_mac(const uint8_t *dst_mac, uint32_t src_ip,
     net_put_u16(udp + 4, udp_len);
     net_put_u16(udp + 6, 0);
     net_memcpy(udp + 8, payload, payload_len);
-    return e1000_send(frame, 42u + payload_len);
+    return net_interface_up ? e1000_send(frame, 42u + payload_len) : -LINUX_ENETDOWN;
 }
 
 /* Remaining space already advertised to the peer, across sequence wrap. */
@@ -1073,7 +1015,7 @@ static int net_send_tcp_to_mac(const uint8_t *dst_mac, uint32_t src_ip,
         net_memcpy(tcp + tcp_header_len, payload, payload_len);
     }
     net_put_u16(tcp + 16, net_tcp_checksum(src_ip, dst_ip, tcp, tcp_len));
-    int result = e1000_send(frame, 14u + total_len);
+    int result = net_interface_up ? e1000_send(frame, 14u + total_len) : -LINUX_ENETDOWN;
     if (result >= 0 && receiver && (flags & TCP_FLAG_ACK)) {
         receiver->rx_window_ack = ack;
         receiver->rx_window = window;
@@ -1154,7 +1096,7 @@ static int net_send_icmp_echo_request(const uint8_t *dst_mac, uint32_t target_ip
         icmp[8 + i] = (uint8_t)('A' + (i % 26));
     }
     net_put_u16(icmp + 2, net_checksum(icmp, icmp_len));
-    return e1000_send(frame, 14u + total_len);
+    return net_interface_up ? e1000_send(frame, 14u + total_len) : -LINUX_ENETDOWN;
 }
 
 /**
@@ -1189,7 +1131,7 @@ static void net_handle_udp(const uint8_t *ip, uint32_t total_len,
         sum += IPV4_PROTO_UDP + udp_len;
         if (net_checksum_finish(net_checksum_partial(sum, udp, udp_len))) return;
     }
-    net_udp_input(src_ip, net_get_u32(ip + 16), src_port, dst_port, udp + 8, udp_len - 8);
+    net_udp_input(src_ip, net_get_u32(ip + 16), src_port, dst_port, udp + 8, udp_len - 8, 2);
     if (!udp_wait || udp_wait->done) return;
     if (udp_wait->src_port && src_port != udp_wait->src_port) {
         return;
@@ -1413,7 +1355,8 @@ static void net_poll_once(struct net_arp_wait *arp_wait,
     uint8_t frame[NET_FRAME_MAX];
     uint32_t len = 0;
     int ret = e1000_poll(frame, sizeof(frame), &len);
-    if (ret > 0 && len) {
+    if (ret > 0 && len && net_interface_up) {
+        net_packet_input(frame, len);
         net_process_frame(frame, len, arp_wait, ping_wait, udp_wait, tcp_wait);
     }
 }
@@ -2004,14 +1947,15 @@ static uint32_t net_dhcp_request(uint32_t timeout_ms,
 static uint32_t net_ensure_ipv4_config(uint32_t timeout_ms, int require_dns)
 {
     net_expire_lease();
-    if (!e1000_is_ready()) {
+    if (!e1000_is_ready() || !net_interface_up) {
         return LEONOS_NET_STATUS_NO_DEVICE;
     }
     if (net_config.local_ip &&
         (!require_dns || net_config.dns_ip)) {
         return LEONOS_NET_STATUS_OK;
     }
-    return net_dhcp_request(timeout_ms, 0);
+    (void)timeout_ms;
+    return LEONOS_NET_STATUS_NO_ADDRESS;
 }
 
 /**
@@ -2045,7 +1989,6 @@ static void net_log_config(const char *prefix)
  */
 void net_init(void)
 {
-    uint32_t status = LEONOS_NET_STATUS_DHCP_FAILED;
     net_load_dns_policy();
     e1000_init();
     net_set_static_fallback();
@@ -2053,23 +1996,7 @@ void net_init(void)
         console_printf("[ntclks] net unavailable: no active e1000\n");
         return;
     }
-    net_log_config("[ntclks] network interface ready, awaiting configuration");
-    if (!net_service_enabled("dhcp", 1)) {
-        console_printf("[ntclks] DHCP boot auto-connect disabled by services.cfg\n");
-        return;
-    }
-    for (uint32_t attempt = 1; attempt <= NET_BOOT_DHCP_ATTEMPTS; ++attempt) {
-        console_printf("[ntclks] DHCP boot attempt %u/%u\n",
-                       attempt, NET_BOOT_DHCP_ATTEMPTS);
-        status = net_dhcp_request(NET_BOOT_DHCP_TIMEOUT_MS, 0);
-        if (status == LEONOS_NET_STATUS_OK) {
-            net_log_config("[ntclks] DHCP lease acquired");
-            return;
-        }
-        console_printf("[ntclks] DHCP boot attempt %u failed status=%u\n",
-                       attempt, status);
-    }
-    net_log_config("[ntclks] DHCP unavailable, interface remains unconfigured");
+    net_log_config("[ntclks] interface ready; OpenRC DHCP client owns configuration");
 }
 
 /**
@@ -2084,6 +2011,50 @@ int net_is_ready(void)
 void net_poll_packets(void)
 {
     for (unsigned i = 0; i < 32; ++i) net_poll_once(0, 0, 0, 0);
+}
+
+/**
+ * @brief Send raw IPv4 using the configured route and Ethernet transport.
+ * @param destination Host-order destination IPv4 address.
+ * @param source Host-order bound source, zero selects the interface address.
+ * @param protocol IPv4 protocol used when constructing a header.
+ * @param header_included True when data already contains an IPv4 header.
+ * @param data Borrowed validated message payload under the execution lock.
+ * @param length Payload bytes.
+ * @return Bytes accepted or negative errno; no fragmentation is implemented.
+ */
+int net_ipv4_send_raw(uint32_t destination, uint32_t source, uint8_t protocol,
+                      bool header_included, const void *data, uint32_t length)
+{
+    uint32_t header = header_included ? 0 : 20;
+    if (length > 1500 - header) return -LINUX_EMSGSIZE;
+    if (header_included && (length < 20 || ((const uint8_t *)data)[0] >> 4 != 4)) return -LINUX_EINVAL;
+    uint8_t frame[1514] = {0};
+    uint8_t *ip = frame + 14;
+    if (!source) source = net_config.local_ip;
+    if (header_included) {
+        net_memcpy(ip, data, length);
+        uint32_t ihl = (ip[0] & 15) * 4;
+        if (ihl < 20 || ihl > length) return -LINUX_EINVAL;
+        net_put_u16(ip + 2, (uint16_t)length);
+        if (!net_get_u32(ip + 12)) net_put_u32(ip + 12, source);
+        if (!net_get_u16(ip + 4)) net_put_u16(ip + 4, ++net_packet_ip_id);
+        net_put_u16(ip + 10, 0);
+        net_put_u16(ip + 10, net_checksum(ip, ihl));
+    } else {
+        ip[0] = 0x45; ip[8] = 64; ip[9] = protocol;
+        net_put_u16(ip + 2, (uint16_t)(length + 20));
+        net_put_u16(ip + 4, ++net_packet_ip_id);
+        net_put_u32(ip + 12, source); net_put_u32(ip + 16, destination);
+        net_put_u16(ip + 10, net_checksum(ip, 20));
+        net_memcpy(ip + 20, data, length);
+    }
+    if (destination == UINT32_MAX) net_memcpy(frame, net_broadcast_mac, 6);
+    else if (net_resolve_mac(net_route_arp_ip(destination), 1000, frame) < 0) return -LINUX_EHOSTUNREACH;
+    net_memcpy(frame + 6, e1000_mac(), 6);
+    net_put_u16(frame + 12, 0x0800);
+    int ret = net_interface_up ? e1000_send(frame, length + header + 14) : -LINUX_ENETDOWN;
+    return ret < 0 ? ret : (int)length;
 }
 
 int net_ipv4_send_udp(uint32_t source, uint32_t destination, uint16_t source_port,
@@ -2166,15 +2137,10 @@ int net_set_dns_policy(struct leonos_net_dns_policy *request)
  */
 int net_dhcp_renew(struct leonos_net_dhcp *request)
 {
-    uint32_t timeout_ms;
-    if (!request) {
-        return -1;
-    }
-    request->status = LEONOS_NET_STATUS_DHCP_FAILED;
+    if (!request) return -LINUX_EINVAL;
+    request->status = LEONOS_NET_STATUS_PROTOCOL_UNSUPPORTED;
     request->config = net_config;
-    timeout_ms = request->timeout_ms ? request->timeout_ms : 3000u;
-    request->status = net_dhcp_request(timeout_ms, &request->config);
-    return 0;
+    return -LINUX_EOPNOTSUPP;
 }
 
 /**
@@ -3791,3 +3757,142 @@ void net_device_info(uint32_t *flags, uint64_t *mac_value, uint32_t *local_ip)
         *local_ip = net_config.local_ip;
     }
 }
+
+/** @brief Apply/query eth0 through the Linux native interface ioctl ABI.
+ * Only the real Ethernet interface and the supported default route are exposed.
+ * Unsupported routing/features return an error rather than retaining inert state.
+ */
+int net_interface_ioctl(uint32_t request, uint64_t address)
+{
+    bool change = request == SIOCSIFFLAGS || request == SIOCSIFADDR ||
+        request == SIOCSIFNETMASK || request == SIOCSIFBRDADDR ||
+        request == SIOCSIFMTU || request == SIOCADDRT || request == SIOCDELRT;
+    struct task *task = sched_current_task();
+    if (change && (!task || !(task->cap_effective & (1ULL << CAP_NET_ADMIN))))
+        return -LINUX_EPERM;
+    if (request == SIOCADDRT || request == SIOCDELRT) {
+        if (!user_range_ok(address, sizeof(struct rtentry))) return -LINUX_EFAULT;
+        struct rtentry route;
+        net_memcpy(&route, (void *)(uintptr_t)address, sizeof(route));
+        if (route.rt_dst.sa_family != AF_INET) return -LINUX_EAFNOSUPPORT;
+        uint32_t route_mask = net_get_u32((uint8_t *)&route.rt_genmask + 4);
+        if (route.rt_genmask.sa_family != AF_INET && (route.rt_genmask.sa_family || route_mask))
+            return -LINUX_EAFNOSUPPORT;
+        if (route.rt_dev) {
+            char name[IFNAMSIZ] = {0};
+            for (unsigned i = 0; i < sizeof(name); ++i) {
+                if (!user_range_ok(route.rt_dev + i, 1)) return -LINUX_EFAULT;
+                name[i] = *(char *)(uintptr_t)(route.rt_dev + i);
+                if (!name[i]) break;
+            }
+            if (__builtin_memcmp(name, "eth0", 5)) return -LINUX_ENODEV;
+        }
+        if (!e1000_is_ready()) return -LINUX_ENODEV;
+        uint32_t dst = net_get_u32((uint8_t *)&route.rt_dst + 4);
+        uint32_t mask = net_get_u32((uint8_t *)&route.rt_genmask + 4);
+        uint32_t gateway = route.rt_gateway.sa_family == AF_INET ?
+            net_get_u32((uint8_t *)&route.rt_gateway + 4) : 0;
+        if (dst || mask || (route.rt_flags & ~3u) || route.rt_metric > 1)
+            return -LINUX_EOPNOTSUPP;
+        if (request == SIOCDELRT) {
+            if (!net_config.gateway_ip || (gateway && gateway != net_config.gateway_ip))
+                return -LINUX_ESRCH;
+            net_config.gateway_ip = 0;
+        } else {
+            if ((route.rt_flags & 2) && !gateway) return -LINUX_EINVAL;
+            if (!(route.rt_flags & 2)) return -LINUX_EOPNOTSUPP;
+            if (!net_interface_up || !net_config.local_ip ||
+                (gateway & net_config.subnet_mask) != (net_config.local_ip & net_config.subnet_mask))
+                return -LINUX_ENETUNREACH;
+            if (net_config.gateway_ip) return -LINUX_EEXIST;
+            net_config.gateway_ip = gateway;
+        }
+        net_arp_cache_clear();
+        return 0;
+    }
+    if (request == SIOCGIFCONF) {
+        struct ifconf conf;
+        if (!user_range_ok(address, sizeof(conf)) || !user_range_writable(address, sizeof(conf)))
+            return -LINUX_EFAULT;
+        net_memcpy(&conf, (void *)(uintptr_t)address, sizeof(conf));
+        if (conf.ifc_len < 0) return -LINUX_EINVAL;
+        int available = e1000_is_ready() && net_config.local_ip ? sizeof(struct ifreq) : 0;
+        if (!conf.ifc_buf) conf.ifc_len = available;
+        else {
+            conf.ifc_len = conf.ifc_len >= available ? available : 0;
+            if (conf.ifc_len) {
+                if (!user_range_writable(conf.ifc_buf, sizeof(struct ifreq))) return -LINUX_EFAULT;
+                struct ifreq result = { .ifr_name = "eth0", .data.addr.sa_family = AF_INET };
+                net_put_u32((uint8_t *)&result.data.addr + 4, net_config.local_ip);
+                net_memcpy((void *)(uintptr_t)conf.ifc_buf, &result, sizeof(result));
+            }
+        }
+        net_memcpy((void *)(uintptr_t)address, &conf, sizeof(conf));
+        return 0;
+    }
+    switch (request) {
+    case SIOCGIFNAME: case SIOCGIFINDEX: case SIOCGIFHWADDR: case SIOCGIFFLAGS:
+    case SIOCSIFFLAGS: case SIOCGIFADDR: case SIOCSIFADDR: case SIOCGIFNETMASK:
+    case SIOCSIFNETMASK: case SIOCGIFBRDADDR: case SIOCSIFBRDADDR: case SIOCGIFMTU:
+    case SIOCSIFMTU: break;
+    default: return -LINUX_ENOTTY;
+    }
+    struct ifreq req;
+    if (!user_range_ok(address, sizeof(req)) || (!change && !user_range_writable(address, sizeof(req))))
+        return -LINUX_EFAULT;
+    net_memcpy(&req, (void *)(uintptr_t)address, sizeof(req));
+    if (!e1000_is_ready()) return -LINUX_ENODEV;
+    if (request == SIOCGIFNAME) {
+        if (req.data.value != 2) return -LINUX_ENODEV;
+        net_memzero(req.ifr_name, sizeof(req.ifr_name));
+        net_memcpy(req.ifr_name, "eth0", 5);
+    } else {
+        req.ifr_name[IFNAMSIZ - 1] = 0;
+        if (__builtin_memcmp(req.ifr_name, "eth0", 5)) return -LINUX_ENODEV;
+        switch (request) {
+        case SIOCGIFINDEX: req.data.value = 2; break;
+        case SIOCGIFHWADDR:
+            net_memzero(&req.data, sizeof(req.data));
+            req.data.addr.sa_family = 1; /* ARPHRD_ETHER */
+            net_memcpy(req.data.addr.sa_data, e1000_mac(), 6); break;
+        case SIOCGIFFLAGS:
+            req.data.flags = IFF_BROADCAST | IFF_MULTICAST |
+                (net_interface_up ? IFF_UP | IFF_RUNNING : 0); break;
+        case SIOCSIFFLAGS:
+            if (req.data.flags & ~(IFF_UP | IFF_RUNNING | IFF_BROADCAST | IFF_MULTICAST))
+                return -LINUX_EOPNOTSUPP;
+            net_interface_up = !!(req.data.flags & IFF_UP); break;
+        case SIOCGIFMTU: req.data.value = 1500; break;
+        case SIOCSIFMTU:
+            if (req.data.value != 1500) return -LINUX_EOPNOTSUPP;
+            break;
+        default: {
+            uint32_t *value = (request == SIOCGIFADDR || request == SIOCSIFADDR) ? &net_config.local_ip :
+                (request == SIOCGIFNETMASK || request == SIOCSIFNETMASK) ? &net_config.subnet_mask : &net_interface_broadcast;
+            if (change) {
+                if (req.data.addr.sa_family != AF_INET) return -LINUX_EAFNOSUPPORT;
+                uint32_t ip = net_get_u32((uint8_t *)&req.data.addr + 4);
+                if (request == SIOCSIFNETMASK && ((~ip) & ((~ip) + 1))) return -LINUX_EINVAL;
+                if (request == SIOCSIFADDR && ip >= 0xe0000000u) return -LINUX_EINVAL;
+                *value = ip;
+                if (request == SIOCSIFADDR || request == SIOCSIFNETMASK)
+                    net_interface_broadcast = net_config.local_ip | ~net_config.subnet_mask;
+                if (!net_config.local_ip) net_config.gateway_ip = 0;
+                net_config.source = net_config.local_ip ? LEONOS_NET_CONFIG_SOURCE_STATIC : LEONOS_NET_CONFIG_SOURCE_NONE;
+                net_config.lease_seconds = net_config.dhcp_server_ip = 0;
+                net_arp_cache_clear();
+            } else {
+                if (!net_config.local_ip) return -LINUX_EADDRNOTAVAIL;
+                net_memzero(&req.data, sizeof(req.data));
+                req.data.addr.sa_family = AF_INET;
+                net_put_u32((uint8_t *)&req.data.addr + 4, *value);
+            }
+        } break;
+        }
+    }
+    if (!change) net_memcpy((void *)(uintptr_t)address, &req, sizeof(req));
+    return 0;
+}
+
+/** @brief Report the real administrative and hardware state of eth0. */
+bool net_interface_ready(void) { return net_interface_up && e1000_is_ready(); }

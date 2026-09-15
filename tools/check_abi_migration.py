@@ -25,10 +25,9 @@ EXCLUDED_PREFIXES = ("third_party/", "build/", ".git/")
 SERVICE_APP_PREFIXES = (
     "userland/apps/windowd/",
     "userland/apps/imd/",
-    "userland/apps/serviced/",
     "userland/apps/authd/",
     "userland/apps/sessiond/",
-    "userland/apps/devmand/",
+    "userland/apps/device-agent/",
 )
 PRIVATE_RE = re.compile(
     r"\b(?:LEONOS_[A-Z0-9_]*(?:IOCTL|PTY|INPUTM|DISK|INSTALL|AUDIO|NET|DEVICE|DRIVER|GUI)"

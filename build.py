@@ -445,10 +445,12 @@ def parse_kconfig(path: Path) -> dict[str, str]:
     components = load_components(ROOT / "configs/components.toml")
     validate_component_targets(components, ROOT)
     known = set(values) | component_config_symbols(components)
-    unknown = sorted(key for key in configured if key not in known)
+    retired = {f"CONFIG_LEON_COMPONENT_APP_{name}_{field}"
+               for name in ("INIT", "SERVICED") for field in ("API", "BUILD", "ENTRY", "IMAGE", "SDK")}
+    unknown = sorted(key for key in configured if key not in known and key not in retired)
     if unknown:
         raise BuildFailure("unknown configuration symbol(s): " + ", ".join(unknown))
-    values.update(configured)
+    values.update({key: value for key, value in configured.items() if key not in retired})
     if values.get("CONFIG_BUILD_USE_ADVANCED_OVERRIDES") != "y":
         preset = next(
             (key for key in CONFIG_CHOICE_GROUPS[-1] if values.get(key) == "y"),
@@ -1770,7 +1772,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
             musl_stamp,
             musl_archive,
         ]),
-        depends_on=("busybox-source-revision", "musl"),
+        depends_on=("busybox-source-revision", "musl", "auth-upstream"),
         kind="compile",
         command=(
             PYTHON,
@@ -2549,13 +2551,18 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     component_prune_stamp = paths.out / "generated/component-staging-prune.json"
 
     def prune_component_staging(context: ActionContext) -> None:
+        for app in ("init", "serviced"):
+            for suffix in ("elf", "stamp"):
+                (paths.out / "userland" / f"{app}.{suffix}").unlink(missing_ok=True)
         for name in layout.RETIRED_TOOL_PATHS:
             remove_staging_path(paths.staging / name)
         # Remove build-owned outputs from obsolete image layouts.
         for obsolete in ("system/lib/ld-leonos.elf", "system/lib/libleonos.so.1",
                          "system/kernel.sys", "system/middlelayer.sys",
                          "usr/lib/leonos/libleonos.so.1", "etc/machine-id",
-                         "usr/lib/leonos/apps/oobe", "usr/bin/oobe"):
+                         "usr/lib/leonos/apps/oobe", "usr/bin/oobe",
+                         "usr/lib/leonos/apps/serviced", "usr/bin/serviced",
+                         "usr/lib/leonos/apps/init", "usr/bin/init", "etc/leonos/services.cfg"):
             stale = paths.staging / obsolete
             if stale.exists() or stale.is_symlink():
                 context.detail(f"remove obsolete staging path: {relative(stale)}")
@@ -2657,20 +2664,27 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     esp_outputs: list[Path] = [grub_efi]
     rootfs_seed = ROOT / "system/rootfs"
     rootfs_stamp = paths.out / "generated/rootfs-layout.json"
-    rootfs_seed_files = tuple(sorted(p for p in rootfs_seed.rglob("*") if p.is_file()))
+    rootfs_seed_files = tuple(sorted(p for p in rootfs_seed.rglob("*") if p.is_file() or p.is_symlink()))
     rootfs_outputs = (rootfs_stamp, *(paths.staging / p.relative_to(rootfs_seed)
                                      for p in rootfs_seed_files))
 
     def stage_rootfs(context: ActionContext) -> None:
         layout.layout_directories(paths.staging)
+        for source_dir in rootfs_seed.rglob("*"):
+            if source_dir.is_dir() and not source_dir.is_symlink():
+                (paths.staging / source_dir.relative_to(rootfs_seed)).mkdir(parents=True, exist_ok=True)
         for source in rootfs_seed_files:
             destination = paths.staging / source.relative_to(rootfs_seed)
+            if source.is_symlink():
+                destination.unlink(missing_ok=True)
+                destination.symlink_to(os.readlink(source))
+                continue
             if destination.is_symlink():
                 raise GraphError(f"rootfs seed destination is a symlink: {destination}")
             destination.unlink(missing_ok=True)
             context.copy(source, destination)
             destination.chmod(0o600 if source.name in {"shadow", "gshadow"} else
-                              0o440 if source.name == "sudoers" else 0o644)
+                              0o440 if source.name == "sudoers" else (source.stat().st_mode & 0o777))
         for directory in ("desktop", "documents", "downloads"):
             skeleton = paths.staging / "etc/skel" / directory
             skeleton.mkdir(parents=True, exist_ok=True)
@@ -2786,6 +2800,13 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                 else:
                     remove_staging_path(destination)
                     copy_tree_preserving_links(prefix / directory, destination)
+                    # ncurses and BusyBox use both the FHS path and Alpine's
+                    # /etc/terminfo lookup path.  Keep the database available
+                    # in the final rootfs without relying on TERMINFO.
+                    if directory == "share/terminfo":
+                        etc_terminfo = paths.staging / "etc/terminfo"
+                        remove_staging_path(etc_terminfo)
+                        copy_tree_preserving_links(prefix / directory, etc_terminfo)
         if component_enabled("vim", "image"):
             destination = paths.staging / layout.USR_BIN / "vim"
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -3313,6 +3334,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     graph.add(Target(name="apk-root", outputs=(apk_manifest, apk_root / "lib/apk/db/installed"),
                      inputs=(*esp_outputs, ROOT / "tools/apk_distribution.py",
                              ROOT / "tools/apk_ownership.py", ROOT / "configs/apk-ownership.json",
+                             ROOT / "tools/openrc_packages.py", ROOT / "configs/openrc-packages.json",
                              ROOT / "userland/storage/leonos-apk-update",
                              ROOT / "userland/storage/busybox-binutils-links"),
                      depends_on=("esp",), kind="generate", always=True,

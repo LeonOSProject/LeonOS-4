@@ -1,0 +1,33 @@
+#!/bin/sh
+# Sole resolver writer. Inputs are numeric data, never sourced shell text.
+set -eu
+valid_ipv4() (
+    # A subshell keeps field splitting local to validation. Reject empty
+    # octets before splitting, including a trailing dot discarded by the shell.
+    case "$1" in *[!0-9.]*|''|.*|*.|*..*) return 1 ;; esac
+    IFS=.
+    set -- $1
+    test "$#" -eq 4 || return 1
+    for octet do
+        test "${#octet}" -le 3 && test "$octet" -le 255 || return 1
+    done
+)
+mode=1
+custom=0.0.0.0
+if test -r /etc/udhcpc/leonos-dns; then read -r mode custom < /etc/udhcpc/leonos-dns; fi
+case "$mode" in
+    1) servers=$(cat /run/leonos/dhcp-dns 2>/dev/null || :) ;;
+    0) servers=1.1.1.1 ;;
+    2) servers=$custom ;;
+    *) exit 1 ;;
+esac
+umask 022
+tmp=$(mktemp /etc/.resolv.conf.XXXXXX)
+trap 'rm -f "$tmp"' EXIT HUP INT TERM
+printf '# Managed by LeonOS udhcpc resolver hook\noptions timeout:2 attempts:2\n' > "$tmp"
+for server in $servers; do
+    valid_ipv4 "$server" || exit 1
+    printf 'nameserver %s\n' "$server" >> "$tmp"
+done
+chmod 0644 "$tmp"
+mv -f "$tmp" /etc/resolv.conf

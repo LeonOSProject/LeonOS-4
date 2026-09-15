@@ -1,0 +1,11 @@
+#!/sbin/openrc-run
+description="LeonOS desktop"
+supervisor=supervise-daemon
+input_file=/dev/null
+command=/usr/lib/leonos/apps/desktop/desktop.elf
+respawn_delay=5
+respawn_max=3
+respawn_period=60
+output_log=/var/log/desktop.log
+error_log=/var/log/desktop.log
+depend() { need leonos-windowd leonos-session; }

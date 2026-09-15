@@ -25,8 +25,9 @@ int e1000_send(const void *data, uint32_t length)
 int e1000_poll(void *frame, uint32_t capacity, uint32_t *length)
 { (void)frame; (void)capacity; *length = 0; return 0; }
 void net_udp_input(uint32_t source, uint32_t destination, uint16_t source_port,
-                   uint16_t destination_port, const void *data, uint32_t length)
-{ (void)source; (void)destination; (void)source_port; (void)destination_port; (void)data; (void)length; }
+                   uint16_t destination_port, const void *data, uint32_t length, int ifindex)
+{ (void)ifindex; (void)source; (void)destination; (void)source_port; (void)destination_port; (void)data; (void)length; }
+void net_packet_input(const void *frame, uint32_t length) { (void)frame; (void)length; }
 void console_printf(const char *format, ...) { (void)format; }
 
 static void test_small_reads(struct net_socket *s)

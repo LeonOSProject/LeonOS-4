@@ -37,6 +37,10 @@ void console_write_tty_len(const char *s, size_t len);
  * @brief Enter the TTY runtime: hide kernel diagnostics and reset the visible console.
  */
 void console_enter_tty_runtime(void);
+/** @brief Hide boot diagnostics once the graphical desktop owns the framebuffer. */
+void console_enter_graphical_runtime(void);
+/** @brief Keep kernel diagnostics on serial while leaving the framebuffer for service logs. */
+void console_show_service_logs_only(void);
 /**
  * @brief Format and write a message to the console, printf-style.
  */

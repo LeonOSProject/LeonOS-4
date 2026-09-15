@@ -1,5 +1,5 @@
 /* Versioned network-service SDK compatibility layer. The device channel is
- * gone; every request is forwarded to netmand over /run/leonos/net.sock. */
+ * gone; queries use the credential-checked kernel network-control interface. */
 #include <leonos/net.h>
 #include <leonos/net_service.h>
 #include <errno.h>

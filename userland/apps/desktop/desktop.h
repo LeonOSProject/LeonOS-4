@@ -73,12 +73,10 @@
 /* Login window registration is asynchronous too.  Keep its launch reservation
  * until the task becomes visible to the desktop or has had time to start. */
 #define LOGIN_STARTUP_GRACE_MS 5000UL
-#define SERVICE_DAEMON_PATH LEONOS_LAYOUT_LEONOS_APPS "/serviced/serviced.elf"
 #define NETWORK_CONTROLLER_APP_PATH LEONOS_LAYOUT_LEONOS_APPS "/netctl/netctl.elf"
-#define SERVICE_DAEMON_RETRY_MS 2000UL
 #define DISPLAY_CONFIG_PATH LEONOS_PATH_DISPLAY_CONF
 #define APPEARANCE_CONFIG_NAME "appearance.conf"
-#define SERVICES_CONFIG_PATH LEONOS_PATH_SERVICES_CFG
+#define SERVICES_CONFIG_PATH LEONOS_PATH_TASKBAR_CFG
 #define SERVICES_CONFIG_MAX 512U
 #define DISPLAY_CONFIRM_MS 10000UL
 #define START_MENU_W 464
@@ -329,8 +327,6 @@ extern uint8_t desktop_wallpaper_mode;
 extern char desktop_wallpaper_path[LEONOS_FS_PATH_LEN];
 extern uint8_t desktop_service_network_icon;
 extern uint8_t desktop_service_rtc_clock;
-extern uint8_t desktop_service_daemon_started;
-extern unsigned long desktop_service_daemon_last_spawn_ms;
 extern uint8_t full_redraw_pending;
 extern uint8_t desktop_damage_pending;
 extern uint8_t desktop_damage_cursor_only;
@@ -394,7 +390,6 @@ uint32_t taskbar_y(void);
 uint32_t desktop_tray_width(void);
 uint32_t running_window_count(void);
 int desktop_load_service_config(void);
-void desktop_service_daemon_update(void);
 void start_menu_set_open(uint8_t open);
 void start_menu_toggle(void);
 uint32_t start_menu_progress(void);

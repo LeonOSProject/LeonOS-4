@@ -1,0 +1,12 @@
+#!/sbin/openrc-run
+
+description="NTCLKS device namespace"
+
+depend() {
+	provide dev
+	before hwdrivers acpid machine-id watchdog
+}
+
+start() {
+	return 0
+}

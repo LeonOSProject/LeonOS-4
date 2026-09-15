@@ -4,19 +4,6 @@ version = 1
 # switches. Core services remain explicit in Kconfig and cannot be disabled.
 
 [[components]]
-id = "init"
-symbol = "APP_INIT"
-label = "Userland init"
-category = "Core services"
-kind = "system-app"
-default = true
-required = true
-stage = true
-entry = false
-sdk = false
-api = false
-
-[[components]]
 id = "imd"
 symbol = "APP_IMD"
 label = "Input method daemon"
@@ -72,19 +59,6 @@ api = false
 id = "login"
 symbol = "APP_LOGIN"
 label = "Login"
-category = "System applications"
-kind = "system-app"
-default = true
-required = true
-stage = true
-entry = false
-sdk = false
-api = false
-
-[[components]]
-id = "serviced"
-symbol = "APP_SERVICED"
-label = "Service manager daemon"
 category = "System applications"
 kind = "system-app"
 default = true
@@ -949,6 +923,45 @@ category = "Developer applications"
 kind = "program-app"
 default = true
 required = false
+stage = true
+entry = false
+sdk = false
+api = false
+
+[[components]]
+id = "sessiond"
+symbol = "APP_SESSIOND"
+label = "Desktop session startup protocol"
+category = "Core services"
+kind = "system-app"
+default = true
+required = true
+stage = true
+entry = false
+sdk = false
+api = false
+
+[[components]]
+id = "device-agent"
+symbol = "APP_DEVICE_AGENT"
+label = "LeonOS device protocol"
+category = "Core services"
+kind = "system-app"
+default = true
+required = true
+stage = true
+entry = false
+sdk = false
+api = false
+
+[[components]]
+id = "rcctl"
+symbol = "APP_RCCTL"
+label = "Authorized OpenRC command adapter"
+category = "Core services"
+kind = "system-app"
+default = true
+required = true
 stage = true
 entry = false
 sdk = false

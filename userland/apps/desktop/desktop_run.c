@@ -99,7 +99,6 @@ void desktop_run(void)
     init_desktop();
     desktop_inputm_load_config();
     puts("[desktop.elf] Ring-3 desktop uses shadow framebuffer blit");
-    desktop_service_daemon_update();
     maybe_launch_login();
 
     int profile = access("/etc/leonos/desktop-profile", F_OK) == 0;
@@ -286,7 +285,6 @@ void desktop_run(void)
         }
         if (now - last_services_refresh >= 2000UL) {
             last_services_refresh = now;
-            desktop_service_daemon_update();
             if (desktop_load_service_config()) {
                 if (desktop_taskbar_visible) {
                     repaint_and_flush(rect_make(0, (int)taskbar_y(), (int)fb_w(), TASKBAR_H));

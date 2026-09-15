@@ -212,7 +212,7 @@ def main():
                 (ROOT / "build/system/lib/libleonos.so.2", "/usr/lib/leonos/libleonos.so.2"),
                 (ROOT / "build/userland/netctl.elf", "/usr/lib/leonos/apps/netctl/netctl.elf"),
                 (ROOT / "build/userland/sudod.elf", "/usr/lib/leonos/apps/sudod/sudod.elf"),
-                (ROOT / "build/userland/serviced.elf", "/usr/lib/leonos/apps/serviced/serviced.elf")):
+                (ROOT / "build/userland/rcctl.elf", "/usr/lib/leonos/apps/rcctl/rcctl.elf")):
             inject(image, source, destination, "0100755")
         inject(image, ca_bundle, "/etc/ssl/certs/ca-certificates.crt")
         config = work / "ntp.conf"

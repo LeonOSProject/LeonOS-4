@@ -1,12 +1,14 @@
 #include <leonos/net_control.h>
 #include <ntclks/net.h>
 #include <ntclks/net_udp.h>
+#include <ntclks/net_packet.h>
 #include <ntclks/sched.h>
 #include <ntclks/syscall.h>
 #include <ntclks/usercopy.h>
 #include <linux/capability.h>
 #include <linux/errno.h>
 #include <linux/tty.h>
+#include <linux/if.h>
 
 int task_net_control(struct task_file *file, uint32_t request, uint64_t address)
 {
@@ -20,12 +22,14 @@ int task_net_control(struct task_file *file, uint32_t request, uint64_t address)
     if (request == FIONREAD) {
         if (!user_range_writable(address, sizeof(int))) return -LINUX_EFAULT;
         net_poll_packets();
-        int bytes = file->kind == TASK_FILE_KIND_UDP ? task_udp_available(file) :
+        int bytes = file->kind == TASK_FILE_KIND_PACKET ? task_packet_available(file) : file->kind == TASK_FILE_KIND_UDP ? task_udp_available(file) :
             net_socket_available((int32_t)file->aux);
         if (bytes < 0) return bytes;
         *(int *)(uintptr_t)address = bytes;
         return 0;
     }
+    if (request >= 0x8900 && request <= 0x89ff)
+        return net_interface_ioctl(request, address);
     if (request != LEONOS_NET_CONTROL_IOCTL) return -LINUX_ENOTTY;
     struct leonos_net_control control;
     if (!user_range_ok(address, sizeof(control)) || !user_range_writable(address, sizeof(control)))
@@ -46,7 +50,8 @@ int task_net_control(struct task_file *file, uint32_t request, uint64_t address)
         control.result = net_set_dns_policy(&control.data.dns_policy);
         break;
     case LEONOS_NET_CONTROL_DHCP:
-        control.result = net_dhcp_renew(&control.data.dhcp);
+        /* DHCP is an upstream userspace client; there is no kernel fallback. */
+        control.result = -LINUX_EOPNOTSUPP;
         break;
     case LEONOS_NET_CONTROL_PING:
         control.result = net_ping(&control.data.ping);

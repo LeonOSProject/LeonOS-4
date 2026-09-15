@@ -175,11 +175,7 @@ static int tty_login_main(void)
         perror("Initialize login terminal");
         return 1;
     }
-    struct stat installed;
-    if (lstat("/etc/leonos/installed", &installed) < 0 && errno == ENOENT)
-        execl("/bin/busybox", "sh", (char *)0);
-    else
-        execl("/bin/login", "login", (char *)0);
+    execl("/bin/login", "login", (char *)0);
     perror("Start login");
     return 1;
 }

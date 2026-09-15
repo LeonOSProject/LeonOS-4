@@ -1,0 +1,9 @@
+#!/sbin/openrc-run
+# The kernel mounts the root, proc/sys/dev and clears /run before PID 1.
+description="LeonOS runtime directories"
+depend() { before "*"; }
+start() {
+    checkpath --directory --mode 0755 /run/leonos /run/lock /var/log || return 1
+    checkpath --directory --mode 1777 /tmp /var/tmp || return 1
+    test -r /proc/self/status && test -d /sys && test -c /dev/console
+}

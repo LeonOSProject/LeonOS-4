@@ -5,6 +5,8 @@
 #include <leonos/audio.h>
 
 #define LEONOS_DRIVER_ABI_VERSION 1U
+/* Native ioctl on /dev/driverctl, fixed-size leonos_driver_control argument. */
+#define LEONOS_DRIVER_CONTROL_IOCTL 0xc0504c64U
 #define LEONOS_DRIVER_MODULE_MAGIC 0x4c445256U
 #define LEONOS_DRIVER_MAX 16U
 #define LEONOS_DRIVER_FILE_LEN 64U

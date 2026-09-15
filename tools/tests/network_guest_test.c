@@ -94,7 +94,7 @@ int main(int argc, char **argv)
           !memcmp(first, "ab", 2) && !memcmp(second, "cd", 2) && from.sin_family == AF_INET,
           "UDP recvmsg source, scatter and MSG_TRUNC");
     close(datagrams[0]); close(datagrams[1]);
-    /* Wait for serviced to publish the actual DHCP resolver. */
+    /* Wait for the udhcpc hook to publish the actual DHCP resolver. */
     for (unsigned i = 0; i < 100; ++i) {
         FILE *file = fopen("/etc/resolv.conf", "r");
         char text[256] = {0};
