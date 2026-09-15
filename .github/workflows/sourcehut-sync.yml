@@ -27,8 +27,8 @@ jobs:
       # is authorized on every host below. Add or remove entries here as
       # needed; the sync step loops over them automatically.
       SOURCEHUT_REPOSITORIES: >-
-        git@git.sr.ht:~leonmmcoset/LeonOS-4,
-        git@git.hgspace.work:2222/~leonmmcoset/LeonOS-4.git
+        git@git.sr.ht:~leonmmcoset/LeonOS-4
+#        git@git.hgspace.work:2222/~leonmmcoset/LeonOS-4.git
 
     steps:
       - name: Checkout repository history
