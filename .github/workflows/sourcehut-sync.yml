@@ -37,7 +37,7 @@ jobs:
       - name: Configure SourceHut SSH
         env:
           SOURCEHUT_REPOSITORIES: ${{ secrets.SOURCEHUT_REPOSITORIES }}
-          SOURCEHUT_SSH_PRIVATE_KEYS: ${{ secrets.SOURCEHUT_SSH_PRIVATE_KEYS }}
+          SOURCEHUT_SSH_PRIVATE_KEYS: ${{ secrets.SOURCEHUT_SSH_PRIVATE_KEY }}
         run: |
           set -euo pipefail
 
