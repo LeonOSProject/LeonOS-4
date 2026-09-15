@@ -3337,7 +3337,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                              ROOT / "tools/openrc_packages.py", ROOT / "configs/openrc-packages.json",
                              ROOT / "userland/storage/leonos-apk-update",
                              ROOT / "userland/storage/busybox-binutils-links"),
-                     depends_on=("esp",), kind="generate", always=True,
+                     depends_on=("esp",), kind="generate",
                      command=(PYTHON, "tools/apk_distribution.py", "--source", relative(paths.staging),
                               "--output", relative(apk_root), "--work", relative(paths.out / "apk/normal"))))
 

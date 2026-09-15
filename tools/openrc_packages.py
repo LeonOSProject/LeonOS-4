@@ -9,7 +9,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def packages(apk):
     from apk_distribution import download_verified, digest, run
     manifest = json.loads((ROOT / 'configs/openrc-packages.json').read_text())
-    cache = ROOT / 'buildsystem/deps/openrc-apks'
+    # Keep downloaded Alpine packages outside build outputs so all image
+    # targets and subsequent invocations share the same verified cache.
+    cache = ROOT / 'buildsystem/cache/apk/packages'
     cache.mkdir(parents=True, exist_ok=True)
     archives, paths = [], set()
     for entry in manifest['packages']:
