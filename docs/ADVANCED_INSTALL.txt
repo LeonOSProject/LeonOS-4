@@ -3,7 +3,11 @@ LeonOS 4 Installer ISO - Advanced Installation Quick Guide
 
 Read this guide with: less /root/ADVANCED_INSTALL.txt
 
-Advanced mode provides standard Linux command-line tools: fdisk, mount,
+Select "Install LeonOS 4 (TTY mode)" from the Installer ISO boot menu. The
+entry starts a root Ash shell. Run "installer" to launch the interactive TTY
+installer, or continue with this guide for a manual installation.
+
+The TTY environment provides standard Linux command-line tools: fdisk, mount,
 lsblk, and blkid from util-linux; mkfs.ext2 and fsck.ext2 from e2fsprogs;
 mkfs.fat and fsck.fat from dosfstools; mkfs.exfat and fsck.exfat from
 exfatprogs; and the standard BusyBox file utilities.

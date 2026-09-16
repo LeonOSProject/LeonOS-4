@@ -1,8 +1,8 @@
 # LeonOS 4 高级安装教程
 
-Installer ISO 的高级模式直接进入 root TTY shell，允许使用标准 Linux 命令手动
-完成 GPT 分区、格式化、检查、挂载、系统复制和 UEFI 启动文件安装。它不会启动
-图形或 TTY 安装器，也不会自动选择磁盘。
+Installer ISO 的 TTY 模式直接进入 root Ash shell，允许使用标准 Linux 命令手动
+完成 GPT 分区、格式化、检查、挂载、系统复制和 UEFI 启动文件安装。它不会自动
+启动安装器或选择磁盘；如需使用 TTY 安装器，可在 shell 中运行 `installer`。
 
 当前介质提供上游 util-linux 2.41.6、e2fsprogs 1.47.3、dosfstools 4.2、
 exfatprogs 1.4.3 和 BusyBox 1.36.1。本文使用这些工具的上游命令行，不再使用
@@ -15,7 +15,7 @@ ioctl、标准文件 I/O 和 `mount(2)`/`umount2(2)` 完成。
 > wheel/sudo 策略和可直接登录的系统，请使用普通安装器。账户规则参见
 > [安装器账户与组件](INSTALLER_ACCOUNTS.md)。
 
-安装介质中另有一份可在高级 shell 直接阅读的英文纯文本版本：
+安装介质中另有一份可在 TTY shell 直接阅读的英文纯文本版本：
 
 ```sh
 less /root/ADVANCED_INSTALL.txt
@@ -41,22 +41,28 @@ ESP 建议至少 128 MiB。根分区应使用剩余空间，并确保能容纳 `
 - Installer ISO 根目录是可写的临时 ext2 ramdisk，但重启后其中的修改会丢失；
   已写入目标磁盘的内容会保留。
 
-## 1. 进入高级模式并检查 payload
+## 1. 进入 TTY 模式并检查 payload
 
 从 Installer ISO 的 GRUB 菜单选择：
 
 ```text
-Install LeonOS 4 (Advanced mode, TTY shell)
+Install LeonOS 4 (TTY mode)
 ```
 
-进入 shell 后检查安装源：
+进入 shell 后，可以运行自动 TTY 安装器：
+
+```sh
+installer
+```
+
+如需手动安装，则直接检查安装源：
 
 ```sh
 ls /install/root
 ls /install/esp
 ```
 
-高级 shell 以 root 身份运行，默认 `PATH` 已包含 `/usr/sbin`、`/usr/bin`、
+TTY shell 以 root 身份运行，默认 `PATH` 已包含 `/usr/sbin`、`/usr/bin`、
 `/sbin` 和 `/bin`。
 
 ## 2. 识别目标磁盘

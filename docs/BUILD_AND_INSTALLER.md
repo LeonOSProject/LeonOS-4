@@ -449,18 +449,18 @@ secondary channel.
 Set `LEONOS_QEMU_NVME=1` to attach the same VMDK through a QEMU NVMe controller;
 this is intentionally opt-in so normal QEMU runs retain the AHCI regression path.
 
-The installer ISO GRUB menu provides the default graphical installer, an
-`Install LeonOS 4 (TTY)` entry, and an `Install LeonOS 4 (Advanced mode, TTY
-shell)` entry. The regular TTY entry starts `installer.elf` directly on the
-console PTY. Advanced mode starts a BusyBox shell in the installer root instead,
-with upstream util-linux `fdisk`/`sfdisk`/`blkid`/`lsblk`/`mount`/`umount`,
-upstream filesystem `mkfs.*`/`fsck.*` programs, BusyBox file tools, and
-`leonos-grub-installer` available for manual preparation. `fdisk` creates an
-empty GPT directly with `g`; FAT32 formatting uses the upstream
-`mkfs.fat -F 32` syntax. Read-only checks require each checker's `-n` option.
-The complete current procedure is installed as `/root/ADVANCED_INSTALL.txt` in
-the installer runtime and maintained in `docs/ADVANCED_INSTALL.md`. Advanced
-mode does not start the installer application or perform automatic partitioning.
+The installer ISO GRUB menu provides the default graphical installer and one
+`Install LeonOS 4 (TTY mode)` entry. TTY mode starts an interactive BusyBox Ash
+shell in the installer root. Run `installer` in that shell to start the TTY
+version of `installer.elf`; otherwise the same environment can be used for a
+manual installation with upstream util-linux
+`fdisk`/`sfdisk`/`blkid`/`lsblk`/`mount`/`umount`, upstream filesystem
+`mkfs.*`/`fsck.*` programs, BusyBox file tools, and `leonos-grub-installer`.
+`fdisk` creates an empty GPT directly with `g`; FAT32 formatting uses the
+upstream `mkfs.fat -F 32` syntax. Read-only checks require each checker's `-n`
+option. The complete current procedure is installed as
+`/root/ADVANCED_INSTALL.txt` in the installer runtime and maintained in
+`docs/ADVANCED_INSTALL.md`. The shell does not perform automatic partitioning.
 
 The installer runtime includes `desktop.elf`, `installer.elf`, and
 `/bin/busybox`. The installed-system root payload under

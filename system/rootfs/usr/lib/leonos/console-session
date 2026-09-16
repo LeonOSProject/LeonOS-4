@@ -1,9 +1,18 @@
 #!/bin/sh
 case "$LEONOS_BOOT_MODE" in
-    tty) exec /sbin/getty -L -n -l /usr/lib/leonos/apps/login/login.elf 115200 - xterm-256color ;;
+    tty)
+        exec /usr/lib/leonos/apps/login/login.elf ;;
     installer-tty)
         test -f /etc/leonos/installer-runtime || exit 1
-        exec /usr/lib/leonos/apps/installer/installer.elf ;;
-    *) # GUI owns keyboard input; keep BusyBox's respawn child quiescent.
+        export HOME=/root
+        export PS1='\w \$ '
+        export COLORTERM=truecolor
+        cd "$HOME" || exit 1
+        exec /usr/lib/leonos/apps/login/login.elf --installer-shell ;;
+    default|installer|'')
+        # GUI owns keyboard input; keep BusyBox's respawn child quiescent.
         exec /bin/sleep 2147483647 ;;
+    *)
+        echo "Invalid boot mode: $LEONOS_BOOT_MODE" >&2
+        exit 1 ;;
 esac

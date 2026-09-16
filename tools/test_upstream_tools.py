@@ -205,6 +205,10 @@ class BuildGraphTests(unittest.TestCase):
                               userland / "gptinit.elf", userland, ())
         self.assertEqual((destination / "root/ADVANCED_INSTALL.txt").read_bytes(),
                          (ROOT / "docs/ADVANCED_INSTALL.txt").read_bytes())
+        installer_command = destination / "usr/bin/installer"
+        self.assertTrue(installer_command.is_symlink())
+        self.assertEqual(installer_command.readlink().as_posix(),
+                         "../lib/leonos/apps/installer/installer.elf")
         self.assertFalse((live / "root/ADVANCED_INSTALL.txt").exists())
         self.assertFalse((destination / "install/root/root/ADVANCED_INSTALL.txt").exists())
         for root in (live, destination, destination / "install/root"):

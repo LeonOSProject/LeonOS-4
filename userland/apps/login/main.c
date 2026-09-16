@@ -166,25 +166,56 @@ static int try_login(void)
     return 0;
 }
 
+static int take_console_terminal(void)
+{
+    if ((getsid(0) != getpid() && setsid() < 0) ||
+        ioctl(STDIN_FILENO, TIOCSCTTY, 1) < 0 ||
+        tcsetpgrp(STDIN_FILENO, getpgrp()) < 0) {
+        perror("Initialize login terminal");
+        return -1;
+    }
+    return 0;
+}
+
 static int tty_login_main(void)
 {
     if (leonos_session_initialize() < 0) { perror("Initialize accounts"); return 1; }
-    if ((getsid(0) != getpid() && setsid() < 0) ||
-        ioctl(STDIN_FILENO, TIOCSCTTY, 0) < 0 ||
-        tcsetpgrp(STDIN_FILENO, getpgrp()) < 0) {
-        perror("Initialize login terminal");
-        return 1;
-    }
+    if (take_console_terminal() < 0) return 1;
     execl("/bin/login", "login", (char *)0);
     perror("Start login");
     return 1;
 }
 
-int main(void)
+static int installer_shell_main(void)
+{
+    if (geteuid() != 0 || access("/etc/leonos/installer-runtime", F_OK) < 0) {
+        errno = EPERM;
+        perror("Start installer shell");
+        return 1;
+    }
+    if (take_console_terminal() < 0) return 1;
+    execl("/bin/sh", "sh", "-l", (char *)0);
+    perror("Start installer shell");
+    return 1;
+}
+
+int main(int argc, char **argv)
 {
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
+    int installer_shell = argc == 2 && strcmp(argv[1], "--installer-shell") == 0;
+    if (argc != 1 && !installer_shell) {
+        fputs("usage: login.elf [--installer-shell]\n", stderr);
+        return 2;
+    }
+    if (installer_shell) {
+        if (!isatty(STDIN_FILENO)) {
+            fputs("Installer shell requires a TTY\n", stderr);
+            return 1;
+        }
+        return installer_shell_main();
+    }
     if (isatty(STDIN_FILENO)) {
         return tty_login_main();
     }
