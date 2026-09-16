@@ -35,8 +35,8 @@ jobs:
       #
       # The same SSH private key is authorized on every target.
       SOURCEHUT_REPOSITORIES: >-
-        git@git.sr.ht:~leonmmcoset/LeonOS-4,
-        ssh://git@git.hgspace.work:2222/~leonmmcoset/LeonOS-4
+        git@git.sr.ht:~leonmmcoset/LeonOS-4
+#       ssh://git@git.hgspace.work:2222/~leonmmcoset/LeonOS-4
 
     steps:
       # ================================================================
