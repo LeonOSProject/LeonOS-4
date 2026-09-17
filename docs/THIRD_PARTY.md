@@ -179,6 +179,14 @@ LeonOS installs the ABI-v1 shared library as `/usr/lib/sqlite.so.3` and
 packages `sqlite3.h` in the SDK. The port uses a LeonOS VFS and currently
 disables WAL, loadable extensions, and cross-process file locking.
 
+## findutils
+
+- Official Alpine v3.24 `findutils` APK, version `4.10.0-r1`.
+- SHA256: `86cf2b3f8aa3b1092cb3225fcc8179fc1229d178aa126266cfeadfda09487dc2`.
+- License: GPL-3.0-or-later.
+- Provides `/usr/bin/find` and `/usr/bin/xargs`; these commands are disabled
+  in the BusyBox profile to prevent path ownership conflicts.
+
 ## BusyBox
 
 - Path: `third_party/busybox`

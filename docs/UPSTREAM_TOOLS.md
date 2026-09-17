@@ -106,6 +106,7 @@ under `/usr/share/licenses`; build commands and hashes are recorded under
 | mkfs.ext2, fsck.ext2, mkfs.fat, fsck.fat, mkfs.exfat, fsck.exfat | `/usr/sbin` | official filesystem packages via `esp:storage` |
 | leonos-grub-installer | `/usr/sbin` | project shell script via `esp:storage` |
 | sync, shell and selected standard applets | `/bin/busybox` | official BusyBox |
+| find, xargs | `/usr/bin` | official Alpine `findutils` APK |
 
 `tools/storage_tools.py` declares package outputs and old `/sbin` aliases.
 `esp:layout-links` runs after producers and replaces stale BusyBox storage links.

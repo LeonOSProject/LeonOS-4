@@ -31,6 +31,8 @@ Runtime, libraries, and applications
 * SQLite 3.46.1: public-domain dedication and blessing. See
   third_party/sqlite/LICENSE.md.
 * BusyBox 1.36.1: GPL-2.0-only. See third_party/busybox/LICENSE.
+* GNU findutils 4.10.0: GPL-3.0-or-later. The unmodified official Alpine APK
+  and its pinned checksum are recorded in configs/openrc-packages.json.
 * sudo 1.9.17p2: ISC and upstream file-specific terms; see LICENSE.md.
 * Linux-PAM 1.7.2: upstream BSD/GPL alternatives and file-specific terms;
   see Copyright and the recorded platform patch in patches/linux-pam/.

@@ -40,6 +40,13 @@
       "alpine_candidates": ["busybox"],
       "reason": "Transfer /bin/sh and applet symlinks together after shell, init and installer regressions. Separately installed utilities retain their own paths."
     },
+    "findutils": {
+      "destination": "alpine-after-validation",
+      "components": [],
+      "paths": ["usr/bin/find", "usr/bin/xargs"],
+      "alpine_candidates": ["findutils"],
+      "reason": "Use the official Alpine findutils implementation for find and xargs; do not duplicate these commands in BusyBox."
+    },
     "authentication": {
       "destination": "alpine-after-validation",
       "components": ["sudo", "su"],

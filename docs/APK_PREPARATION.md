@@ -9,8 +9,8 @@ The database is never synthesized from the ownership inventory.
 
 Existing payloads are packaged into local `leonos-*` packages. This is actual
 APK ownership of the current binaries, not a claim that Alpine built them.
-The current default root has 21 packages, including the patched musl runtime and development files,
-authentication stack, BusyBox, desktop, storage tools and custom Fastfetch.
+The current default root has 22 packages, including the patched musl runtime and development files,
+authentication stack, BusyBox, official Alpine findutils, desktop, storage tools and custom Fastfetch.
 Optional build selections can change this count.
 
 `configs/apk-ownership.json` still records the eventual upstream handover
