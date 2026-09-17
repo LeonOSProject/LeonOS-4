@@ -490,6 +490,19 @@ sdk = false
 api = false
 
 [[components]]
+id = "rprfetch"
+symbol = "APP_RPRFETCH"
+label = "RPR HTTPS fetch helper"
+category = "System services"
+kind = "system-app"
+default = true
+required = true
+stage = true
+entry = false
+sdk = false
+api = false
+
+[[components]]
 id = "downloadmgr"
 symbol = "APP_DOWNLOADMGR"
 label = "Download manager"

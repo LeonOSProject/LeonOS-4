@@ -705,6 +705,12 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         remove_staging_path_within(path, paths.staging)
     config_path = config_path or paths.kconfig
     values = parse_kconfig(config_path)
+    rpr_base_url = config_string(values, "CONFIG_RPR_BASE_URL").rstrip("/")
+    if (not rpr_base_url.startswith("https://") or
+            re.search(r"[\s\\\"']", rpr_base_url)):
+        raise BuildFailure(
+            "CONFIG_RPR_BASE_URL must be an HTTPS URL without whitespace, quotes, or backslashes"
+        )
     components = load_components(ROOT / "configs/components.toml")
     component_selection = resolve_components(components, values)
     components_by_id = {component.id: component for component in components}
@@ -2707,6 +2713,41 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                      action=stage_rootfs, action_key="rootfs-pam-shadow-v3"))
     esp_names.append("esp:rootfs")
     esp_outputs.extend(rootfs_outputs)
+
+    rpr_config = paths.staging / "etc/leonos/rpr.conf"
+    rpr_scripts = tuple(
+        paths.staging / "usr/sbin" / name
+        for name in (
+            "leonos-rpr-apkcheck",
+            "leonos-rpr-ping",
+            "leonos-kernel-update",
+            "leonos-check-update",
+        )
+    )
+
+    def stage_rpr_client(context: ActionContext) -> None:
+        ensure_parent(
+            context,
+            rpr_config,
+            f"RPR_BASE_URL={rpr_base_url}\nRPR_PUBLIC_KEY=leonos-rpr.rsa.pub\n",
+        )
+        rpr_config.chmod(0o644)
+        for destination in rpr_scripts:
+            source = ROOT / "userland/storage" / destination.name
+            context.copy(source, destination)
+            destination.chmod(0o755)
+
+    graph.add(Target(
+        name="esp:rpr-client",
+        outputs=(rpr_config, *rpr_scripts),
+        inputs=(config_path, *(ROOT / "userland/storage" / path.name for path in rpr_scripts)),
+        depends_on=("esp:rootfs",),
+        kind="generate",
+        action=stage_rpr_client,
+        action_key="rpr-client-v1",
+    ))
+    esp_names.append("esp:rpr-client")
+    esp_outputs.extend((rpr_config, *rpr_scripts))
     auth_payload_stamp = paths.out / "generated/auth-payload.json"
     auth_payload_fdisk = paths.staging / "usr/sbin/fdisk"
     auth_payload_tools = tuple(paths.staging / name for name in
@@ -3331,15 +3372,37 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
 
     apk_root = paths.out / "apk/root"
     apk_manifest = paths.out / "apk/normal/manifest.json"
-    graph.add(Target(name="apk-root", outputs=(apk_manifest, apk_root / "lib/apk/db/installed"),
+    apk_repository = apk_root / "usr/share/leonos/apk/repository"
+    apk_repository_index = apk_repository / "packages.adb"
+    graph.add(Target(name="apk-root", outputs=(apk_manifest, apk_root / "lib/apk/db/installed",
+                                                apk_repository_index),
                      inputs=(*esp_outputs, ROOT / "tools/apk_distribution.py",
                              ROOT / "tools/apk_ownership.py", ROOT / "configs/apk-ownership.json",
                              ROOT / "tools/openrc_packages.py", ROOT / "configs/openrc-packages.json",
                              ROOT / "userland/storage/leonos-apk-update",
                              ROOT / "userland/storage/busybox-binutils-links"),
-                     depends_on=("esp",), kind="generate",
+                     depends_on=("esp",), kind="generate", always=True,
                      command=(PYTHON, "tools/apk_distribution.py", "--source", relative(paths.staging),
                               "--output", relative(apk_root), "--work", relative(paths.out / "apk/normal"))))
+
+    rpr_pages = paths.out / "rpr-pages"
+    graph.add(Target(
+        name="rpr-pages",
+        outputs=(rpr_pages / ".complete", rpr_pages / "manifest.json"),
+        inputs=(apk_manifest, apk_repository_index, kernel_sys, middle_sys, build_info,
+                ROOT / "tools/build_rpr_pages.py", ROOT / "tools/apk_distribution.py"),
+        depends_on=("apk-root", "kernel", "middlelayer", "build-info"),
+        kind="generate",
+        always=True,
+        command=(
+            PYTHON, "tools/build_rpr_pages.py",
+            "--repository", relative(apk_repository),
+            "--kernel", relative(kernel_sys),
+            "--middlelayer", relative(middle_sys),
+            "--build-info", relative(build_info),
+            "--output", relative(rpr_pages),
+        ),
+    ))
 
     # ---- 磁盘镜像、ISO、安装器和运行目标 ----
     # image-* 只消费 staging；分区大小、文件系统或 GRUB 参数的变更应同步更新
@@ -4087,7 +4150,7 @@ def require_tools(names: Iterable[str]) -> None:
 
 
 def require_grub_efi_modules(paths: BuildPaths, task: str) -> None:
-    if task not in {"esp", "all", "image-vmdk", "image-iso", "installer", "release", "run", "run-debug", "run-iso"}:
+    if task not in {"esp", "all", "rpr-pages", "image-vmdk", "image-iso", "installer", "release", "run", "run-debug", "run-iso"}:
         return
     candidates = (
         paths.deps / "grub-efi-amd64-bin/usr/lib/grub/x86_64-efi/modinfo.sh",
@@ -4119,6 +4182,8 @@ def task_tools(task: str) -> tuple[str, ...]:
         return userland
     if task in {"esp", "all"}:
         return esp
+    if task == "rpr-pages":
+        return (*esp, "openssl")
     if task == "image-vmdk":
         return vmdk
     if task == "image-iso":
@@ -4186,7 +4251,7 @@ Options:
   --profile       Build from configs/profiles/<name>.conf without modifying the active config.
 
 Tasks:
-  all, config-sync, build-info, loader, kernel, drivers, middlelayer, userland, sdk, esp, image-vmdk, image-iso, installer, release, run, run-debug, run-iso, menuconfig, defconfig, clean
+  all, config-sync, build-info, loader, kernel, drivers, middlelayer, userland, sdk, esp, rpr-pages, image-vmdk, image-iso, installer, release, run, run-debug, run-iso, menuconfig, defconfig, clean
 """
 
 

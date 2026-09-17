@@ -1,0 +1,27 @@
+#!/bin/sh
+set -eu
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+
+[ "$(id -u)" -eq 0 ] || {
+    printf '%s\n' 'leonos-check-update: root privileges are required' >&2
+    exit 1
+}
+[ "$#" -eq 0 ] || { printf '%s\n' 'Usage: leonos-check-update' >&2; exit 2; }
+
+printf '%s\n' 'Checking LeonOS kernel and middle-layer release...'
+leonos-kernel-update --check
+
+printf '%s\n' 'Refreshing APK indexes...'
+apk update
+printf '%s\n' 'Checking installed LeonOS APKs...'
+versions=$(mktemp /tmp/leonos-apk-versions.XXXXXX)
+trap 'rm -f -- "$versions"' EXIT HUP INT TERM
+apk version -l '<' >"$versions"
+outdated=$(awk '$1 ~ /^leonos-/ { print }' "$versions")
+if [ -n "$outdated" ]; then
+    printf '%s\n' "$outdated"
+    printf '%s\n' 'LeonOS APK updates are available. Run: apk upgrade'
+else
+    printf '%s\n' 'Installed LeonOS APKs are current.'
+fi

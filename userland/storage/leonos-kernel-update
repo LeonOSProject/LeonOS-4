@@ -1,0 +1,142 @@
+#!/bin/sh
+set -u
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+
+usage() { printf '%s\n' 'Usage: leonos-kernel-update [--check]' >&2; }
+check_only=0
+case "${1-}" in
+    '') ;;
+    --check) check_only=1 ;;
+    *) usage; exit 2 ;;
+esac
+[ "$#" -le 1 ] || { usage; exit 2; }
+if [ "$check_only" -eq 0 ] && [ "$(id -u)" -ne 0 ]; then
+    printf '%s\n' 'leonos-kernel-update: root privileges are required' >&2
+    exit 1
+fi
+
+config=/etc/leonos/rpr.conf
+[ -r "$config" ] || { printf 'Missing RPR configuration: %s\n' "$config" >&2; exit 1; }
+rpr_url=$(sed -n 's/^RPR_BASE_URL=//p' "$config")
+case "$rpr_url" in https://*) ;; *) printf '%s\n' 'Invalid RPR URL: HTTPS is required' >&2; exit 1;; esac
+
+manifest=$(mktemp /tmp/leonos-kernel-release.XXXXXX) || exit 1
+kernel_tmp=
+middle_tmp=
+kernel_backup=
+middle_backup=
+lock_dir=
+commit_started=0
+commit_done=0
+cleanup() {
+    status=$?
+    trap - EXIT HUP INT TERM
+    if [ "$commit_started" -eq 1 ] && [ "$commit_done" -eq 0 ]; then
+        if [ -n "$kernel_backup" ] && [ -f "$kernel_backup" ]; then
+            rm -f -- /boot/leonos/kernel.sys
+            mv -- "$kernel_backup" /boot/leonos/kernel.sys || true
+        fi
+        if [ -n "$middle_backup" ] && [ -f "$middle_backup" ]; then
+            rm -f -- /boot/leonos/middlelayer.sys
+            mv -- "$middle_backup" /boot/leonos/middlelayer.sys || true
+        fi
+        sync || true
+    fi
+    rm -f -- "$manifest"
+    [ -z "$kernel_tmp" ] || rm -f -- "$kernel_tmp" "$kernel_tmp.part"
+    [ -z "$middle_tmp" ] || rm -f -- "$middle_tmp" "$middle_tmp.part"
+    if [ "$commit_done" -eq 1 ]; then
+        [ -z "$kernel_backup" ] || rm -f -- "$kernel_backup"
+        [ -z "$middle_backup" ] || rm -f -- "$middle_backup"
+    fi
+    [ -z "$lock_dir" ] || rmdir -- "$lock_dir" 2>/dev/null || true
+    exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 130' HUP INT TERM
+rprfetch "$rpr_url/kernel/release.txt" "$manifest" || exit 1
+
+field() {
+    key=$1
+    value=$(sed -n "s/^${key}=//p" "$manifest")
+    [ "$(printf '%s\n' "$value" | wc -l)" -eq 1 ] || return 1
+    printf '%s' "$value"
+}
+format=$(field format_version) || { printf '%s\n' 'Invalid kernel release manifest' >&2; exit 1; }
+remote=$(field version) || { printf '%s\n' 'Kernel release has no version' >&2; exit 1; }
+kernel_file=$(field kernel_file) || exit 1
+kernel_hash=$(field kernel_sha256) || exit 1
+middle_file=$(field middlelayer_file) || exit 1
+middle_hash=$(field middlelayer_sha256) || exit 1
+[ "$format" = 1 ] || { printf 'Unsupported kernel release manifest: %s\n' "$format" >&2; exit 1; }
+case "$remote" in *[!0-9.-]*|''|.*|*.) printf 'Invalid remote kernel version: %s\n' "$remote" >&2; exit 1;; esac
+case "$kernel_file:$middle_file" in kernel.sys:middlelayer.sys) ;; *) printf '%s\n' 'Invalid kernel release filenames' >&2; exit 1;; esac
+case "$kernel_hash" in *[!0-9a-f]*|'') printf '%s\n' 'Invalid kernel.sys checksum' >&2; exit 1;; esac
+case "$middle_hash" in *[!0-9a-f]*|'') printf '%s\n' 'Invalid middlelayer.sys checksum' >&2; exit 1;; esac
+[ "${#kernel_hash}" -eq 64 ] && [ "${#middle_hash}" -eq 64 ] || {
+    printf '%s\n' 'Invalid kernel release checksum length' >&2
+    exit 1
+}
+
+local_version=$(uname -r) || exit 1
+version_is_newer() {
+    awk -v local_version="$1" -v remote_version="$2" 'BEGIN {
+        nl=split(local_version, l, /[.-]/); nr=split(remote_version, r, /[.-]/)
+        if (nl != 4 || nr != 4) exit 2
+        for (i=1; i<=4; i++) {
+            if (l[i] !~ /^[0-9]+$/ || r[i] !~ /^[0-9]+$/) exit 2
+            if ((r[i]+0) > (l[i]+0)) exit 0
+            if ((r[i]+0) < (l[i]+0)) exit 1
+        }
+        exit 1
+    }'
+}
+version_is_newer "$local_version" "$remote"
+comparison=$?
+[ "$comparison" -ne 2 ] || { printf 'Invalid local kernel version: %s\n' "$local_version" >&2; exit 1; }
+if [ "$comparison" -ne 0 ]; then
+    printf 'Kernel is current: local=%s remote=%s\n' "$local_version" "$remote"
+    exit 0
+fi
+printf 'Kernel update available: local=%s remote=%s\n' "$local_version" "$remote"
+[ "$check_only" -eq 0 ] || exit 0
+
+boot=/boot/leonos
+[ -d "$boot" ] && [ -f "$boot/kernel.sys" ] && [ -f "$boot/middlelayer.sys" ] || {
+    printf 'Boot payload is unavailable under %s\n' "$boot" >&2
+    exit 1
+}
+lock_dir=/run/leonos-kernel-update.lock
+mkdir -- "$lock_dir" 2>/dev/null || {
+    printf '%s\n' 'Another kernel update is already running' >&2
+    lock_dir=
+    exit 1
+}
+kernel_tmp=$(mktemp "$boot/.kernel.sys.rpr.XXXXXX") || exit 1
+middle_tmp=$(mktemp "$boot/.middlelayer.sys.rpr.XXXXXX") || exit 1
+rprfetch "$rpr_url/kernel/$kernel_file" "$kernel_tmp" || exit 1
+rprfetch "$rpr_url/kernel/$middle_file" "$middle_tmp" || exit 1
+actual_kernel=$(sha256sum "$kernel_tmp" | awk '{print $1}')
+actual_middle=$(sha256sum "$middle_tmp" | awk '{print $1}')
+[ "$actual_kernel" = "$kernel_hash" ] || { printf '%s\n' 'kernel.sys checksum mismatch' >&2; exit 1; }
+[ "$actual_middle" = "$middle_hash" ] || { printf '%s\n' 'middlelayer.sys checksum mismatch' >&2; exit 1; }
+chmod 0644 "$kernel_tmp" "$middle_tmp" || exit 1
+
+kernel_backup="$boot/.kernel.sys.rpr-backup.$$"
+middle_backup="$boot/.middlelayer.sys.rpr-backup.$$"
+[ ! -e "$kernel_backup" ] && [ ! -e "$middle_backup" ] || {
+    printf '%s\n' 'Kernel update backup path already exists' >&2
+    exit 1
+}
+commit_started=1
+mv -- "$boot/kernel.sys" "$kernel_backup" || exit 1
+mv -- "$kernel_tmp" "$boot/kernel.sys" || exit 1
+kernel_tmp=
+mv -- "$boot/middlelayer.sys" "$middle_backup" || exit 1
+mv -- "$middle_tmp" "$boot/middlelayer.sys" || exit 1
+middle_tmp=
+sync || exit 1
+commit_done=1
+printf 'Installed kernel and middle layer %s; reboot to activate.\n' "$remote"
+exit 0
