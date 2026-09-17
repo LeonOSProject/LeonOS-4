@@ -14,6 +14,9 @@ REVISIONS = {
     "ncurses": "0096bd402c4a9c8f39bd7ed266e1b8920327e4d8",
     "vim": "af9a7a04f18693eee4400dd134135527f4e8cd5f",
 }
+FALLBACK_TERMINALS = (
+    "xterm", "xterm-256color", "linux", "vt100", "ansi", "screen", "screen-256color",
+)
 
 
 def build(package: str, work: Path, prefix: Path, musl: Path,
@@ -42,11 +45,18 @@ def build(package: str, work: Path, prefix: Path, musl: Path,
            "CPPFLAGS": "", "LDFLAGS": "-static", "LIBS": ""}
     common = ["--host=x86_64-linux-musl", "--prefix=/usr"]
     if package == "ncurses":
+        tic = shutil.which("tic")
+        infocmp = shutil.which("infocmp")
+        if not tic or not infocmp:
+            raise SystemExit("ncurses build requires host tic and infocmp (install ncurses-bin)")
         configure = [str(source / "configure"), *common,
                      "--with-normal", "--without-shared", "--without-debug",
                      "--enable-widec", "--with-termlib", "--enable-overwrite",
                      "--without-ada", "--without-cxx-binding", "--without-tests",
-                     "--with-terminfo-dirs=/usr/share/terminfo:/lib/terminfo",
+                     "--with-default-terminfo-dir=/usr/share/terminfo",
+                     "--with-terminfo-dirs=/usr/share/terminfo:/etc/terminfo:/lib/terminfo",
+                     "--with-fallbacks=" + ",".join(FALLBACK_TERMINALS),
+                     f"--with-tic-path={tic}", f"--with-infocmp-path={infocmp}",
                      "--enable-mixed-case"]
         cwd = work
     else:
@@ -68,6 +78,13 @@ def build(package: str, work: Path, prefix: Path, musl: Path,
                     ["make", "install", f"DESTDIR={prefix.parent}"]):
         subprocess.run(command, cwd=cwd, env=env, check=True)
     if package == "ncurses":
+        fallback_source = work / "ncurses/fallback.c"
+        fallback_text = fallback_source.read_text()
+        missing = [name for name in FALLBACK_TERMINALS
+                   if f"/* {name} */" not in fallback_text]
+        if missing:
+            raise SystemExit(f"ncurses did not generate fallback entries: {', '.join(missing)}")
+
         # FAT32/exFAT installer media are case-insensitive.  Keep one
         # deterministic entry for aliases that differ only by case; Linux
         # applications use the canonical lowercase terminfo names.

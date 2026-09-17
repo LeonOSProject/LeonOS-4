@@ -17,16 +17,31 @@ def main() -> None:
     parser.add_argument("--vim", required=True, type=Path)
     args = parser.parse_args()
     musl, ncurses, vim = args.musl.resolve(), args.ncurses.resolve(), args.vim.resolve()
-    env = {**os.environ, "TERM": "xterm-256color",
-           "TERMINFO": str(ncurses / "share/terminfo"),
-           "VIMRUNTIME": str(vim / "share/vim/vim91")}
-    for binary in (vim / "bin/vim", ncurses / "bin/infocmp", ncurses / "bin/tput"):
+    database = ncurses / "share/terminfo"
+    env = {**os.environ, "TERM": "xterm-256color", "TERMINFO": str(database),
+           "TERMINFO_DIRS": str(database), "VIMRUNTIME": str(vim / "share/vim/vim91")}
+    clear = ncurses / "bin/clear"
+    infocmp = ncurses / "bin/infocmp"
+    for binary in (vim / "bin/vim", clear, infocmp, ncurses / "bin/tput"):
         headers = subprocess.check_output(["readelf", "-l", "-d", str(binary)], text=True)
         assert "INTERP" not in headers and "(NEEDED)" not in headers, binary
     version = subprocess.check_output([str(vim / "bin/vim"), "--version"], text=True)
     assert "+timers" in version and "+multi_byte" in version, version
-    terminfo = subprocess.check_output([str(ncurses / "bin/infocmp"), "xterm-256color"], env=env)
+    terminfo = subprocess.check_output([str(infocmp), "xterm-256color"], env=env)
     assert b"colors#0x100" in terminfo or b"colors#256" in terminfo
+    cleared = subprocess.check_output([str(clear)], env=env)
+    assert cleared.startswith(b"\x1b[")
+
+    # LeonOS must retain its native terminal types even if the external
+    # database is missing or damaged; this is the failure mode from issue #27.
+    fallback_env = {**env, "TERMINFO": "/nonexistent/terminfo",
+                    "TERMINFO_DIRS": "/nonexistent/terminfo"}
+    fallback_env["TERM"] = "xterm"
+    fallback_clear = subprocess.check_output([str(clear)], env=fallback_env)
+    assert fallback_clear.startswith(b"\x1b[")
+    fallback_columns = subprocess.check_output(
+        [str(ncurses / "bin/tput"), "cols"], env=fallback_env)
+    assert int(fallback_columns) > 0
     with tempfile.TemporaryDirectory(prefix="leonos-terminal-test-") as directory:
         work = Path(directory)
         probe = work / "ncurses-test"

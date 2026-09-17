@@ -89,6 +89,7 @@ jobs:
             libtool \
             libtool-bin \
             gawk \
+            ncurses-bin \
             exfatprogs
 
       - name: Install Rust

@@ -3022,14 +3022,15 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                                  f"{layout.USR_SHARE}/vim/vim91/defaults.vim"))
     if component_enabled("ncurses", "image"):
         terminal_outputs.extend(paths.staging / name for name in
-                                (layout.TERMINFO, f"{layout.USR_BIN}/infocmp",
+                                (layout.TERMINFO, "etc/terminfo",
+                                 f"{layout.USR_BIN}/clear", f"{layout.USR_BIN}/infocmp",
                                  f"{layout.USR_BIN}/tput",
                                  f"{layout.LICENSES}/ncurses/COPYING"))
     graph.add(Target(name="esp:terminal-packages", outputs=tuple(terminal_outputs),
                      inputs=(config_path, ROOT / "configs/components.toml", *terminal_inputs),
                      depends_on=("staging-prune",), kind="generate",
                      action=stage_terminal_packages,
-                     action_key="terminal-packages-v4-alpine"))
+                     action_key="terminal-packages-v5-terminfo-fallback"))
     esp_names.append("esp:terminal-packages")
     esp_outputs.extend(terminal_outputs)
     if component_enabled("busybox", "image"):

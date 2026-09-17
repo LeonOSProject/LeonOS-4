@@ -151,11 +151,15 @@ middlelayer under `leonos/`. Help documents live in
 Vim and ncurses are enabled by default. `python3 build.py run vim` builds the
 unmodified static Linux musl Vim and its ncurses dependency from pinned
 submodules. Both `image-vmdk` and `installer` package Vim's runtime and the
-ncurses terminfo database. `musl-desktop-vim` remains a compatible target name
-for the standalone GRUB live desktop ISO, now using this same normal payload.
-There is no dependency on `build/musl/vim-src` or other experimental downloads.
-`python3 build.py run test-terminal-packages` checks actual Linux executables
-on the host; it does not certify the kernel's whole Linux ABI.
+ncurses terminfo database. The ncurses tools also embed fallback descriptions
+for LeonOS terminal types (`xterm`, `xterm-256color`, `linux`, `vt100`, `ansi`,
+`screen`, and `screen-256color`), so `clear`, `tput`, and Vim remain usable if
+the external database cannot be read. `musl-desktop-vim` remains a compatible
+target name for the standalone GRUB live desktop ISO, now using this same normal
+payload. There is no dependency on `build/musl/vim-src` or other experimental
+downloads. `python3 build.py run test-terminal-packages` checks the actual Linux
+executables with both the packaged database and a deliberately unavailable
+terminfo path; it does not certify the kernel's whole Linux ABI.
 The normal application set includes `login.elf` and `oshlp.elf`. Standalone
 `image-vmdk` and ordinary `image-iso` automatically provision these public test
 accounts and require PAM login:
