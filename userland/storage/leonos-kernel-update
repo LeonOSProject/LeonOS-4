@@ -60,17 +60,35 @@ rprfetch "$rpr_url/kernel/release.txt" "$manifest" || exit 1
 field() {
     key=$1
     value=$(sed -n "s/^${key}=//p" "$manifest")
-    [ "$(printf '%s\n' "$value" | wc -l)" -eq 1 ] || return 1
+    [ -n "$value" ] || return 1
+    case "$value" in
+        *'
+'*) return 1 ;;
+    esac
     printf '%s' "$value"
 }
 format=$(field format_version) || { printf '%s\n' 'Invalid kernel release manifest' >&2; exit 1; }
-remote=$(field version) || { printf '%s\n' 'Kernel release has no version' >&2; exit 1; }
+remote_image=$(field image_version) || remote_image=
+remote_release=$(field version) || { printf '%s\n' 'Kernel release has no build version' >&2; exit 1; }
 kernel_file=$(field kernel_file) || exit 1
 kernel_hash=$(field kernel_sha256) || exit 1
 middle_file=$(field middlelayer_file) || exit 1
 middle_hash=$(field middlelayer_sha256) || exit 1
 [ "$format" = 1 ] || { printf 'Unsupported kernel release manifest: %s\n' "$format" >&2; exit 1; }
-case "$remote" in *[!0-9.-]*|''|.*|*.) printf 'Invalid remote kernel version: %s\n' "$remote" >&2; exit 1;; esac
+case "$remote_release" in *[!0-9.-]*|''|.*|*.) printf 'Invalid remote build version: %s\n' "$remote_release" >&2; exit 1;; esac
+remote_build=${remote_release##*-}
+[ "$remote_build" != "$remote_release" ] || {
+    printf '%s\n' 'Remote build version has no build number' >&2
+    exit 1
+}
+case "$remote_build" in *[!0-9]*|'') printf '%s\n' 'Invalid remote build number' >&2; exit 1;; esac
+release_image=${remote_release%-*}
+[ -n "$remote_image" ] || remote_image=$release_image
+case "$remote_image" in *[!0-9.]*|''|.*|*.) printf 'Invalid remote image version: %s\n' "$remote_image" >&2; exit 1;; esac
+[ "$release_image" = "$remote_image" ] || {
+    printf '%s\n' 'Remote image and build versions disagree' >&2
+    exit 1
+}
 case "$kernel_file:$middle_file" in kernel.sys:middlelayer.sys) ;; *) printf '%s\n' 'Invalid kernel release filenames' >&2; exit 1;; esac
 case "$kernel_hash" in *[!0-9a-f]*|'') printf '%s\n' 'Invalid kernel.sys checksum' >&2; exit 1;; esac
 case "$middle_hash" in *[!0-9a-f]*|'') printf '%s\n' 'Invalid middlelayer.sys checksum' >&2; exit 1;; esac
@@ -79,12 +97,13 @@ case "$middle_hash" in *[!0-9a-f]*|'') printf '%s\n' 'Invalid middlelayer.sys ch
     exit 1
 }
 
-local_version=$(uname -r) || exit 1
+local_release=$(uname -r) || exit 1
+local_image=${local_release%%-*}
 version_is_newer() {
     awk -v local_version="$1" -v remote_version="$2" 'BEGIN {
-        nl=split(local_version, l, /[.-]/); nr=split(remote_version, r, /[.-]/)
-        if (nl != 4 || nr != 4) exit 2
-        for (i=1; i<=4; i++) {
+        nl=split(local_version, l, /\./); nr=split(remote_version, r, /\./)
+        if (nl != 3 || nr != 3) exit 2
+        for (i=1; i<=3; i++) {
             if (l[i] !~ /^[0-9]+$/ || r[i] !~ /^[0-9]+$/) exit 2
             if ((r[i]+0) > (l[i]+0)) exit 0
             if ((r[i]+0) < (l[i]+0)) exit 1
@@ -92,14 +111,16 @@ version_is_newer() {
         exit 1
     }'
 }
-version_is_newer "$local_version" "$remote"
+version_is_newer "$local_image" "$remote_image"
 comparison=$?
-[ "$comparison" -ne 2 ] || { printf 'Invalid local kernel version: %s\n' "$local_version" >&2; exit 1; }
+[ "$comparison" -ne 2 ] || { printf 'Invalid local image version: %s\n' "$local_image" >&2; exit 1; }
 if [ "$comparison" -ne 0 ]; then
-    printf 'Kernel is current: local=%s remote=%s\n' "$local_version" "$remote"
+    printf 'Kernel image is current: local=%s remote=%s (builds %s / %s ignored)\n' \
+        "$local_image" "$remote_image" "$local_release" "$remote_release"
     exit 0
 fi
-printf 'Kernel update available: local=%s remote=%s\n' "$local_version" "$remote"
+printf 'Kernel image update available: local=%s remote=%s (remote build %s)\n' \
+    "$local_image" "$remote_image" "$remote_release"
 [ "$check_only" -eq 0 ] || exit 0
 
 boot=/boot/leonos
@@ -138,5 +159,6 @@ mv -- "$middle_tmp" "$boot/middlelayer.sys" || exit 1
 middle_tmp=
 sync || exit 1
 commit_done=1
-printf 'Installed kernel and middle layer %s; reboot to activate.\n' "$remote"
+printf 'Installed kernel and middle layer %s (build %s); reboot to activate.\n' \
+    "$remote_image" "$remote_release"
 exit 0

@@ -64,6 +64,7 @@ def build_pages(repository: Path, kernel: Path, middlelayer: Path,
                 build_info: Path, output: Path) -> None:
     key = signing_key()
     version, build_number = parse_version(build_info)
+    image_version = version.rsplit("-", 1)[0]
     if not repository.is_dir():
         raise RuntimeError(f"APK repository does not exist: {repository}")
     if not kernel.is_file() or not middlelayer.is_file():
@@ -117,6 +118,7 @@ def build_pages(repository: Path, kernel: Path, middlelayer: Path,
         middlelayer_hash = digest(published_middlelayer)
         release_lines = (
             "format_version=1\n"
+            f"image_version={image_version}\n"
             f"version={version}\n"
             f"build_number={build_number}\n"
             "kernel_file=kernel.sys\n"
@@ -132,6 +134,7 @@ def build_pages(repository: Path, kernel: Path, middlelayer: Path,
         write_json(kernel_directory / "release.json", {
             "architecture": "x86_64",
             "build_number": build_number,
+            "image_version": image_version,
             "files": {
                 "kernel.sys": {"sha256": kernel_hash},
                 "middlelayer.sys": {"sha256": middlelayer_hash},
