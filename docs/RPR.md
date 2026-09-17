@@ -68,9 +68,11 @@ The published tree is:
     └── SHA256SUMS
 ```
 
-`release.txt` is the strict line-oriented client protocol. Its `version` is
-`major.minor.patch-build`; the final number is the LeonOS build number exposed
-by `uname -r`. The JSON file is informational and intended for external tools.
+`release.txt` is the strict line-oriented client protocol. Its
+`image_version` is `major.minor.patch`, while `version` remains
+`major.minor.patch-build` for release traceability. The final field is the
+LeonOS build number exposed by `uname -r`; it does not participate in update
+eligibility. The JSON file is informational and intended for external tools.
 
 ## Client commands
 
@@ -82,8 +84,10 @@ URLs.
   `/etc/apk/keys`, adds `ndx BASE_URL/apk/packages.adb` to
   `/etc/apk/repositories`, and runs `apk update`. It never disables APK
   signature verification.
-- `leonos-kernel-update --check` compares all four numeric version fields with
-  `uname -r` and does not modify the system.
+- `leonos-kernel-update --check` strips the build suffix from `uname -r` and
+  compares only the three-part `major.minor.patch` image version. A newer build
+  of the same image version does not trigger an update. Check mode does not
+  modify the system.
 - `leonos-kernel-update` requires root. It downloads both boot files, verifies
   each SHA-256, then replaces `/boot/leonos/kernel.sys` and
   `/boot/leonos/middlelayer.sys` with rollback on a failed replacement. Reboot
