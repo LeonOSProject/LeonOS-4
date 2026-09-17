@@ -55,7 +55,8 @@ def main() -> int:
     validate_component_targets(components, ROOT)
     generated = generate(components)
     assert "config LEON_COMPONENT_APP_HELLO_BUILD" in generated
-    assert "config LEON_COMPONENT_APP_HELLOWORLD_API" in generated
+    for component in ("HELLOWORLD", "DOOM", "OSCHINPT"):
+        assert f"config LEON_COMPONENT_APP_{component}_API" not in generated
     assert "select LEON_COMPONENT_LIB_STARDUSTUI_BUILD" in generated
     assert "select LEON_COMPONENT_LIB_NCURSES_BUILD" in generated
     vim_only = {component.build_symbol: "n" for component in components}
@@ -76,14 +77,18 @@ def main() -> int:
     assert selection["stardusthello"]["build"]
     assert selection["stardustui"]["build"], "dependency must be auto-enabled"
 
-    doom_api_values = {
+    retired_api_values = {
         component.build_symbol: "n" for component in components
     }
-    doom_api_values["CONFIG_LEON_COMPONENT_APP_DOOM_BUILD"] = "y"
-    doom_api_values["CONFIG_LEON_COMPONENT_APP_DOOM_API"] = "y"
-    doom_api_selection = resolve_components(components, doom_api_values)
-    assert doom_api_selection["doomlauncher"]["build"]
-    assert doom_api_selection["doomlauncher"]["api"]
+    retired_api_values["CONFIG_LEON_COMPONENT_APP_DOOM_BUILD"] = "y"
+    retired_api_values["CONFIG_LEON_COMPONENT_APP_DOOM_API"] = "y"
+    retired_api_selection = resolve_components(components, retired_api_values)
+    assert not retired_api_selection["doomlauncher"]["build"], (
+        "retired API dependencies must not enable the DOOM launcher"
+    )
+    assert not retired_api_selection["doom"]["api"], (
+        "stale API overrides must not enable retired application API packages"
+    )
 
     unsupported_api_values = {
         component.build_symbol: "n" for component in components
