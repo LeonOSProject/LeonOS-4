@@ -734,6 +734,20 @@ static int task_map_file_vma_page(struct task *task, const struct task_vma *vma,
  * `size > rlimit(RLIMIT_STACK)`; RLIM_INFINITY disables only that test.  The
  * address-space limit stays a cumulative virtual-memory check.
  */
+static bool task_stack_fault_candidate(const struct task *task, uint64_t page,
+                                       uint64_t error)
+{
+    /* A missing user stack PTE can appear as a present protection fault when
+     * the inherited supervisor-only 2 MiB identity mapping covers the next
+     * page-directory slot.  Accept user data reads/writes in the stack window;
+     * existing user PTEs were already handled above the stack path. */
+    return task && task->stack_top && task->stack_low &&
+           (error & 0x4ULL) && !(error & 0x18ULL) &&
+           page < task->stack_top &&
+           page >= task->stack_top - (uint64_t)NTCLKS_USER_STACK_MAX_PAGES * PAGE_SIZE &&
+           page >= NTCLKS_USER_BASE + PAGE_SIZE;
+}
+
 static bool task_stack_growth_allowed(const struct task *task, uint64_t page)
 {
     if (!task || !task->stack_top || page >= task->stack_top) {
@@ -783,8 +797,9 @@ int syscall_handle_task_page_fault(struct task *task, uint64_t fault_addr, uint6
     /**
  * @brief A write through either Ring-3 code or a kernel syscall helper can touch the calling process's present, read-only COW PTE. Resolve only that precise protection fault; reserved-bit and instruction-fetch faults remain fatal and ordinary kernel faults never reach this path.
  */
-    if ((error & 0x3ULL) == 0x3ULL && !(error & 0x18ULL)) {
-        return address_space_handle_cow_fault(sched_task_as(task), page);
+    if ((error & 0x3ULL) == 0x3ULL && !(error & 0x18ULL) &&
+        address_space_handle_cow_fault(sched_task_as(task), page)) {
+        return 1;
     }
     /* A user address can still report the PRESENT bit when the bootstrap
      * address space contributes a supervisor-only 2 MiB identity PDE.  That
@@ -823,11 +838,9 @@ int syscall_handle_task_page_fault(struct task *task, uint64_t fault_addr, uint6
  * inside the legal stack range is mapped, and stack_low only moves when the
  * fault is below the current lowest mapped page.
  */
-    if (!(error & 0x1ULL) && (error & 0x4ULL) && task->stack_top &&
-        (!sched_task_mm(task)->initial_stack_top || task->stack_top == sched_task_mm(task)->initial_stack_top) &&
-        task->stack_low && page < task->stack_top &&
-        page >= task->stack_top - (uint64_t)NTCLKS_USER_STACK_MAX_PAGES * PAGE_SIZE &&
-        page >= NTCLKS_USER_BASE + PAGE_SIZE) {
+    if (task_stack_fault_candidate(task, page, error) &&
+        (!sched_task_mm(task)->initial_stack_top ||
+         task->stack_top == sched_task_mm(task)->initial_stack_top)) {
         uint64_t guard = task->stack_top -
                          (uint64_t)NTCLKS_USER_STACK_MAX_PAGES * PAGE_SIZE - PAGE_SIZE;
         struct task_address_space_state *mm = sched_task_mm(task);
