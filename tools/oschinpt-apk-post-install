@@ -1,0 +1,63 @@
+#!/bin/sh
+set -eu
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+
+provider_id=oschinpt
+provider_path=/usr/lib/leonos/apps/oschinpt/oschinpt.elf
+settings_path=/usr/lib/leonos/apps/oschinpt/settings.ini
+max_providers=8
+
+install_provider() {
+    file=$1
+    owner=$2
+    group=$3
+    [ -f "$file" ] || {
+        umask 077
+        printf '%s\n' \
+            'default=en' \
+            'inputm_hotkey=win-space' \
+            'provider_count=1' \
+            'provider0_id=oschinpt' \
+            "provider0_path=$provider_path" \
+            'provider0_enabled=1' \
+            'provider0_startup=1' \
+            'provider0_order=1' \
+            "provider0_settings=$settings_path" > "$file"
+        chown "$owner:$group" "$file"
+        chmod 600 "$file"
+        return
+    }
+    index=$(awk -F= '$1 ~ /^provider[0-9]+_id$/ && $2 == "oschinpt" {
+        value=$1; sub(/^provider/, "", value); sub(/_id$/, "", value)
+    } END { print value }' "$file")
+    [ -z "$index" ] || return 0
+    count=$(awk -F= '$1 == "provider_count" { value=$2 } END { print value + 0 }' "$file")
+    [ "$count" -lt "$max_providers" ] || return 0
+    index=$count
+    {
+        printf 'provider_count=%s\n' "$((count + 1))"
+        printf 'provider%s_id=%s\n' "$index" "$provider_id"
+        printf 'provider%s_path=%s\n' "$index" "$provider_path"
+        printf 'provider%s_enabled=1\n' "$index"
+        printf 'provider%s_startup=1\n' "$index"
+        printf 'provider%s_order=%s\n' "$index" "$((index + 1))"
+        printf 'provider%s_settings=%s\n' "$index" "$settings_path"
+    } >> "$file"
+    chown "$owner:$group" "$file"
+    chmod 600 "$file"
+}
+
+mkdir -p /etc/skel
+install_provider /etc/skel/.inputm.conf 0 0
+if [ -f /etc/passwd ]; then
+    while IFS=: read -r name _ uid gid _ home _; do
+        case "$uid" in
+            ''|*[!0-9]*) continue ;;
+        esac
+        [ "$uid" -ge 1000 ] || continue
+        [ -d "$home" ] || continue
+        install_provider "$home/.inputm.conf" "$uid" "$gid"
+    done < /etc/passwd
+fi
+exit 0

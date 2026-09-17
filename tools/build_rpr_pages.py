@@ -60,19 +60,26 @@ def write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def build_pages(repository: Path, kernel: Path, middlelayer: Path,
+def build_pages(repositories: list[Path], kernel: Path, middlelayer: Path,
                 build_info: Path, output: Path) -> None:
     key = signing_key()
     version, build_number = parse_version(build_info)
     image_version = version.rsplit("-", 1)[0]
-    if not repository.is_dir():
-        raise RuntimeError(f"APK repository does not exist: {repository}")
+    for repository in repositories:
+        if not repository.is_dir():
+            raise RuntimeError(f"APK repository does not exist: {repository}")
     if not kernel.is_file() or not middlelayer.is_file():
         raise RuntimeError("kernel and middle-layer artifacts must both exist")
 
-    packages = sorted(repository.glob("leonos-*.apk"))
+    packages_by_name: dict[str, Path] = {}
+    for repository in repositories:
+        for package in sorted(repository.glob("leonos-*.apk")):
+            if package.name in packages_by_name:
+                raise RuntimeError(f"duplicate APK filename: {package.name}")
+            packages_by_name[package.name] = package
+    packages = [packages_by_name[name] for name in sorted(packages_by_name)]
     if not packages:
-        raise RuntimeError("APK repository contains no LeonOS packages")
+        raise RuntimeError("APK repositories contain no LeonOS packages")
 
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".rpr-pages-", dir=output.parent) as directory:
@@ -170,15 +177,15 @@ def build_pages(repository: Path, kernel: Path, middlelayer: Path,
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repository", required=True, type=Path)
+    parser.add_argument("--repository", required=True, action="append", type=Path)
     parser.add_argument("--kernel", required=True, type=Path)
     parser.add_argument("--middlelayer", required=True, type=Path)
     parser.add_argument("--build-info", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     arguments = parser.parse_args()
-    build_pages(arguments.repository.absolute(), arguments.kernel.absolute(),
-                arguments.middlelayer.absolute(), arguments.build_info.absolute(),
-                arguments.output.absolute())
+    build_pages([path.absolute() for path in arguments.repository],
+                arguments.kernel.absolute(), arguments.middlelayer.absolute(),
+                arguments.build_info.absolute(), arguments.output.absolute())
     return 0
 
 

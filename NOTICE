@@ -81,10 +81,11 @@ Data, dictionaries, and visual resources
 -----------------------------------------
 
 * Freedoom IWAD: BSD-3-Clause. See
-  third_party/doomgeneric/FREEDOOM-COPYING.txt and the installed
-  system/docs/FREEDOOM-COPYING.txt.
+  third_party/doomgeneric/FREEDOOM-COPYING.txt. The same notice is bundled in
+  the optional leonos-doom APK.
 * rime-pinyin-simp dictionary: Apache-2.0. See
-  third_party/rime-pinyin-simp/LICENSE and ATTRIBUTION.txt.
+  third_party/rime-pinyin-simp/LICENSE and ATTRIBUTION.txt. Both files are
+  bundled in the optional leonos-oschinpt APK.
 * Noto Sans Mono: SIL Open Font License 1.1. Used to generate
   system/fonts/metro-latin.lbf.
 * Droid Sans Fallback: Apache-2.0. Used by the CJK font generation chain.

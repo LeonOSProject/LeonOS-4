@@ -3,8 +3,8 @@
 LeonOS RPR is a static, HTTPS-only repository published by GitHub Pages. It has
 two independent channels:
 
-- `/apk` contains signed LeonOS APK packages, the signed APK v3 index, and the
-  corresponding public key.
+- `/apk` contains signed LeonOS APK packages, including the optional official
+  applications, the signed APK v3 index, and the corresponding public key.
 - `/kernel` contains the latest matching `kernel.sys` and `middlelayer.sys`
   pair plus version and SHA-256 metadata.
 
@@ -41,12 +41,20 @@ It:
 
 1. checks out the complete source tree and installs the normal LeonOS toolchain;
 2. decodes the signing key only under `$RUNNER_TEMP` with mode `0600`;
-3. builds the kernel, middle layer, rootfs, and signed LeonOS APKs through
-   `python3 build.py run rpr-pages`;
-4. rebuilds and signs `/apk/packages.adb` from only `leonos-*.apk` packages;
+3. builds the kernel, middle layer, base APK repository, and optional official
+   application APKs through `python3 build.py run rpr-pages`;
+4. merges both APK inputs and signs `/apk/packages.adb` from only
+   `leonos-*.apk` packages;
 5. assembles `/kernel` from artifacts produced in the same build;
 6. rejects a Pages tree containing any PEM private-key marker, removes the
    temporary key, and deploys with GitHub's OIDC Pages action.
+
+The default images contain neither these optional applications nor their APK
+files. They are available only from RPR as `leonos-helloworld`, `leonos-doom`,
+and `leonos-oschinpt`. `leonos-doom` includes the launcher, engine, Freedoom
+IWAD, and license notice. The legacy `.api` installer remains available for
+third-party packages, but LeonOS no longer publishes these three applications
+as `.api` files.
 
 The published tree is:
 
@@ -102,6 +110,7 @@ Initial setup on an installed system is:
 leonos-rpr-ping
 sudo leonos-rpr-apkcheck
 sudo leonos-check-update
+sudo apk add leonos-helloworld leonos-doom leonos-oschinpt
 ```
 
 Run `sudo leonos-kernel-update` and/or `sudo apk upgrade` only after reviewing

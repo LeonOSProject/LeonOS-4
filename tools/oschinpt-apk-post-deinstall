@@ -1,0 +1,72 @@
+#!/bin/sh
+set -eu
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+
+remove_provider() {
+    file=$1
+    [ -f "$file" ] || return 0
+    grep -q '^provider[0-9][0-9]*_id=oschinpt$' "$file" || return 0
+    temporary=$file.leonos-oschinpt.$$
+    awk -F= '
+        {
+            key = $1
+            if (key ~ /^provider[0-9]+_id$/) {
+                index = key
+                sub(/^provider/, "", index)
+                sub(/_.*/, "", index)
+                id[index] = $2
+            }
+            lines[++line_count] = $0
+        }
+        END {
+            next_index = 0
+            for (old = 0; old < 8; ++old) {
+                if (id[old] != "" && id[old] != "oschinpt") {
+                    mapped[old] = next_index++
+                }
+            }
+            for (line_number = 1; line_number <= line_count; ++line_number) {
+                line = lines[line_number]
+                key = line
+                sub(/=.*/, "", key)
+                if (key == "provider_count") continue
+                if (key == "default" && line == "default=oschinpt") {
+                    print "default=en"
+                    continue
+                }
+                if (key ~ /^provider[0-9]+_/) {
+                    old = key
+                    sub(/^provider/, "", old)
+                    sub(/_.*/, "", old)
+                    if (!(old in mapped)) continue
+                    suffix = key
+                    sub(/^provider[0-9]+_/, "", suffix)
+                    value = line
+                    sub(/^[^=]*=/, "", value)
+                    if (suffix == "order") value = mapped[old] + 1
+                    print "provider" mapped[old] "_" suffix "=" value
+                } else {
+                    print line
+                }
+            }
+            print "provider_count=" next_index
+        }
+    ' "$file" > "$temporary"
+    owner=$(stat -c %u "$file")
+    group=$(stat -c %g "$file")
+    chmod 600 "$temporary"
+    chown "$owner:$group" "$temporary"
+    mv "$temporary" "$file"
+}
+
+remove_provider /etc/skel/.inputm.conf
+if [ -f /etc/passwd ]; then
+    while IFS=: read -r name _ uid gid _ home _; do
+        case "$uid" in ''|*[!0-9]*) continue ;; esac
+        [ "$uid" -ge 1000 ] || continue
+        [ -d "$home" ] || continue
+        remove_provider "$home/.inputm.conf"
+    done < /etc/passwd
+fi
+exit 0

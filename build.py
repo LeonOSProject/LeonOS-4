@@ -210,7 +210,6 @@ SYSTEM_FILES = [
     ("system/certs/cacert.pem", "etc/ssl/certs/ca-certificates.crt"),
     ("docs/APK_PREPARATION.md", "usr/share/doc/leonos/APK_PREPARATION.md"),
     ("configs/apk-ownership.json", "usr/share/leonos/apk-ownership.json"),
-    ("third_party/doomgeneric/FREEDOOM-COPYING.txt", "usr/share/doc/leonos/FREEDOOM-COPYING.txt"),
     ("third_party/portablegl/LICENSE", "usr/share/doc/leonos/PORTABLEGL-LICENSE"),
 ]
 
@@ -713,7 +712,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         )
     components = load_components(ROOT / "configs/components.toml")
     component_selection = resolve_components(components, values)
-    components_by_id = {component.id: component for component in components}
     build_user_apps = [
         component.id
         for component in components
@@ -741,15 +739,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     # profile disabled the library's standalone IMAGE toggle.
     portablegl_image = (component_enabled("portablegl", "image") or
                         component_enabled("glxgears", "image"))
-
-    def component_api_destination(component_id: str) -> Path:
-        stage_path = components_by_id[component_id].api_stage_path
-        if not stage_path:
-            raise GraphError(f"component {component_id} has no API staging path")
-        return paths.staging / stage_path
-
-    def component_api_enabled(component_id: str) -> bool:
-        return component_enabled(component_id, "api")
 
     installer_policy_apps = tuple(
         app for app in ("desktop", "settings") if component_enabled(app, "image")
@@ -2269,9 +2258,8 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     # staging 是源码产物进入镜像前的边界。新增资源先复制/生成到 staging，
     # 由 image-vmdk/image-iso 统一打包，禁止在动作中直接修改最终镜像。
     app_icons = tuple(paths.out / f"generated/app-icons/{app}.bmp" for app in build_user_apps)
-    # Every runnable image component gets one runtime manifest.  Third-party
-    # API packages write the same format at install time, so the registry does
-    # not need a second compiled-in application table.
+    # Every runnable image component gets one runtime manifest. Optional RPR
+    # APKs carry the same format in their application payload.
     registry_apps = list(staged_user_apps)
     registry_tool_outputs = {
         "vim": vim_elf,
@@ -2568,12 +2556,16 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                          "usr/lib/leonos/libleonos.so.1", "etc/machine-id",
                          "usr/lib/leonos/apps/oobe", "usr/bin/oobe",
                          "usr/lib/leonos/apps/serviced", "usr/bin/serviced",
-                         "usr/lib/leonos/apps/init", "usr/bin/init", "etc/leonos/services.cfg"):
+                         "usr/lib/leonos/apps/init", "usr/bin/init", "etc/leonos/services.cfg",
+                         "api/helloworld.api", "api/doom.api", "tools/oschinpt.api"):
             stale = paths.staging / obsolete
             if stale.exists() or stale.is_symlink():
                 context.detail(f"remove obsolete staging path: {relative(stale)}")
                 remove_staging_path(stale)
-        # Remove pre-FHS staging names left by incremental builds.  These are
+        for obsolete in (paths.out / "api/helloworld.api", paths.out / "api/doom.api",
+                         paths.out / "api/oschinpt.api", paths.out / "api/pinyin_simp.idx"):
+            obsolete.unlink(missing_ok=True)
+        # Remove pre-FHS staging names left by incremental builds. These are
         # only build-owned outputs; the source repository directories of the
         # same name are untouched.
         for legacy_dir in ("boot", "system", "programs", "drivers", "docs",
@@ -2638,13 +2630,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                 if stale.exists() or stale.is_symlink():
                     context.detail(f"remove disabled desktop entry asset: {relative(stale)}")
                     remove_staging_path(stale)
-        for component in components:
-            if not component.api_stage_path:
-                continue
-            destination = paths.staging / component.api_stage_path
-            if not component_api_enabled(component.id) and destination.exists():
-                context.detail(f"remove disabled API package: {relative(destination)}")
-                destination.unlink()
         if not any(component_enabled(app, "image") for app in stardustui_apps):
             for source in stardustui_theme_files:
                 destination = paths.staging / "etc/stardustui/theme" / source.name
@@ -2664,7 +2649,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         depends_on=("config-sync",),
         kind="generate",
         action=prune_component_staging,
-        action_key="staging-prune-musl-v10-retired-tools",
+        action_key="staging-prune-musl-v11-retired-api-packages",
     ))
     esp_names = ["staging-prune", "grub-efi"]
     esp_outputs: list[Path] = [grub_efi]
@@ -3141,112 +3126,25 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     target = add_copy(graph, "esp:test:test.mp3", ROOT / "test/test.mp3", test_mp3)
     esp_names.append(target.name)
     esp_outputs.append(test_mp3)
-    if component_api_enabled("helloworld"):
-        helloworld_api = paths.out / "api/helloworld.api"
-        api_destination = component_api_destination("helloworld")
-        graph.add(Target(
-            name="esp:api:helloworld",
-            outputs=(helloworld_api,),
-            inputs=(app_elfs["helloworld"], ROOT / "tools/build_api.py"),
-            kind="generate",
-            command=(PYTHON, "tools/build_api.py",
-                     "--name", "Hello World", "--id", "helloworld",
-                     "--version", "1.0.0", "--category", "Developer applications",
-                     "--main-exe", "helloworld.elf",
-                     "--default-path", layout.app_package_dir_abs("helloworld"),
-                     "--requires-admin", "--desktop-shortcut",
-                     "--file", relative(app_elfs["helloworld"]), "helloworld.elf",
-                     "--output", relative(helloworld_api)),
-        ))
-        target = add_copy(graph, "esp:api:helloworld-copy", helloworld_api, api_destination)
-        esp_names.append(target.name)
-        esp_outputs.append(api_destination)
-    if component_api_enabled("doom"):
-        doom_wad = ROOT / "third_party/doomgeneric/freedoom1.wad"
-        doom_icon = paths.out / "generated/app-icons/doom.bmp"
-        doom_api = paths.out / "api/doom.api"
-        doom_api_destination = component_api_destination("doom")
-        graph.add(Target(
-            name="esp:api:doom",
-            outputs=(doom_api,),
-            inputs=(app_elfs["doomlauncher"], app_elfs["doom"], doom_wad,
-                    doom_icon, ROOT / "tools/build_api.py"),
-            kind="generate",
-            command=(
-                PYTHON, "tools/build_api.py",
-                "--name", "DOOM",
-                "--id", "doom",
-                "--version", "1.0.0-freedoom",
-                "--category", "Games",
-                "--main-exe", "doomlauncher.elf",
-                "--default-path", layout.app_package_dir_abs("doom"),
-                "--commands", "doom,doomlauncher",
-                "--requires-admin",
-                "--desktop-shortcut",
-                "--icon", "doom.bmp",
-                "--file", relative(app_elfs["doomlauncher"]), "doomlauncher.elf",
-                "--file", relative(app_elfs["doom"]), "doom.elf",
-                "--file", relative(doom_wad), "freedoom1.wad",
-                "--file", relative(doom_icon), "doom.bmp",
-                "--output", relative(doom_api),
-            ),
-        ))
-        target = add_copy(graph, "esp:api:doom-copy", doom_api, doom_api_destination)
-        esp_names.append(target.name)
-        esp_outputs.append(doom_api_destination)
-    if component_api_enabled("oschinpt"):
-        oschinpt_api = paths.out / "api/oschinpt.api"
-        oschinpt_api_destination = component_api_destination("oschinpt")
-        oschinpt_dict = ROOT / "third_party/rime-pinyin-simp/pinyin_simp.dict.yaml"
-        oschinpt_index = paths.out / "api/pinyin_simp.idx"
-        oschinpt_license = ROOT / "third_party/rime-pinyin-simp/LICENSE"
-        oschinpt_attribution = ROOT / "third_party/rime-pinyin-simp/ATTRIBUTION.txt"
-        oschinpt_settings = ROOT / "userland/apps/oschinpt/settings.ini"
-        graph.add(Target(
-            name="esp:api:oschinpt-index",
-            outputs=(oschinpt_index,),
-            inputs=(oschinpt_dict, ROOT / "tools/make_oschinpt_index.py"),
-            kind="generate",
-            command=(
-                PYTHON, "tools/make_oschinpt_index.py",
-                "--input", relative(oschinpt_dict),
-                "--output", relative(oschinpt_index),
-            ),
-        ))
-        graph.add(Target(
-            name="esp:api:oschinpt",
-            outputs=(oschinpt_api,),
-            inputs=(app_elfs["oschinpt"], oschinpt_dict, oschinpt_index,
-                    oschinpt_license, oschinpt_attribution, oschinpt_settings,
-                    ROOT / "tools/build_api.py"),
-            kind="generate",
-            command=(
-                PYTHON, "tools/build_api.py",
-                "--name", "LeonOS 4 Chinese Input",
-                "--id", "oschinpt",
-                "--version", "1.0.0",
-                "--category", "Input methods",
-                "--main-exe", "oschinpt.elf",
-                "--default-path", layout.app_package_dir_abs("oschinpt"),
-                "--requires-admin",
-                "--input-method-id", "oschinpt",
-                "--input-method-abbreviation", "OSC",
-                "--input-method-startup", "login",
-                "--input-method-settings", "settings.ini",
-                "--launch-after-install",
-                "--file", relative(app_elfs["oschinpt"]), "oschinpt.elf",
-                "--file", relative(oschinpt_dict), "pinyin_simp.dict.yaml",
-                "--file", relative(oschinpt_index), "oscp.idx",
-                "--file", relative(oschinpt_license), "LICENSE",
-                "--file", relative(oschinpt_attribution), "ATTRIBUTION.txt",
-                "--file", relative(oschinpt_settings), "settings.ini",
-                "--output", relative(oschinpt_api),
-            ),
-        ))
-        target = add_copy(graph, "esp:api:oschinpt-copy", oschinpt_api,
-                          oschinpt_api_destination)
-        esp_names.append(target.name)
-        esp_outputs.append(oschinpt_api_destination)
+    doom_wad = ROOT / "third_party/doomgeneric/freedoom1.wad"
+    helloworld_icon = paths.out / "generated/app-icons/helloworld.bmp"
+    doom_icon = paths.out / "generated/app-icons/doom.bmp"
+    oschinpt_dict = ROOT / "third_party/rime-pinyin-simp/pinyin_simp.dict.yaml"
+    oschinpt_index = paths.out / "rpr-apps/pinyin_simp.idx"
+    oschinpt_license = ROOT / "third_party/rime-pinyin-simp/LICENSE"
+    oschinpt_attribution = ROOT / "third_party/rime-pinyin-simp/ATTRIBUTION.txt"
+    oschinpt_settings = ROOT / "userland/apps/oschinpt/settings.ini"
+    graph.add(Target(
+        name="rpr-apps:oschinpt-index",
+        outputs=(oschinpt_index,),
+        inputs=(oschinpt_dict, ROOT / "tools/make_oschinpt_index.py"),
+        kind="generate",
+        command=(
+            PYTHON, "tools/make_oschinpt_index.py",
+            "--input", relative(oschinpt_dict),
+            "--output", relative(oschinpt_index),
+        ),
+    ))
     config_destination = paths.staging / layout.ETC_LEONOS / "leonos.conf"
     target = add_copy(graph, "esp:config", config_path, config_destination)
     esp_names.append(target.name)
@@ -3386,18 +3284,62 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                      command=(PYTHON, "tools/apk_distribution.py", "--source", relative(paths.staging),
                               "--output", relative(apk_root), "--work", relative(paths.out / "apk/normal"))))
 
+    rpr_apps_repository = paths.out / "rpr-apps/repository"
+    rpr_app_elfs = {
+        app: paths.out / f"userland/{app}.elf"
+        for app in ("helloworld", "doom", "doomlauncher", "oschinpt")
+    }
+    rpr_app_packages = tuple(
+        rpr_apps_repository / name
+        for name in ("leonos-helloworld.apk", "leonos-doom.apk", "leonos-oschinpt.apk")
+    )
+    graph.add(Target(
+        name="rpr-apps",
+        outputs=(*rpr_app_packages, rpr_apps_repository / "packages.list"),
+        inputs=(
+            build_info, *rpr_app_elfs.values(), doom_wad, helloworld_icon, doom_icon,
+            oschinpt_dict, oschinpt_index, oschinpt_license, oschinpt_attribution,
+            oschinpt_settings, ROOT / "third_party/doomgeneric/LICENSE",
+            ROOT / "third_party/doomgeneric/FREEDOOM-COPYING.txt",
+            ROOT / "tools/build_rpr_apps.py", ROOT / "tools/apk_distribution.py",
+            ROOT / "tools/oschinpt-apk-post-install",
+            ROOT / "tools/oschinpt-apk-post-deinstall",
+        ),
+        depends_on=tuple(
+            name for name in (
+                "app:helloworld", "app:doom", "app:doomlauncher", "app:oschinpt",
+                "app-icons", "rpr-apps:oschinpt-index", "build-info",
+            ) if name in graph.targets
+        ),
+        kind="generate",
+        always=True,
+        command=(
+            PYTHON, "tools/build_rpr_apps.py",
+            "--output", relative(rpr_apps_repository),
+            "--build-info", relative(build_info),
+            "--icon-dir", relative(paths.out / "generated/app-icons"),
+            "--oschinpt-index", relative(oschinpt_index),
+            "--helloworld", relative(rpr_app_elfs["helloworld"]),
+            "--doom", relative(rpr_app_elfs["doom"]),
+            "--doomlauncher", relative(rpr_app_elfs["doomlauncher"]),
+            "--oschinpt", relative(rpr_app_elfs["oschinpt"]),
+        ),
+    ))
+
     rpr_pages = paths.out / "rpr-pages"
     graph.add(Target(
         name="rpr-pages",
         outputs=(rpr_pages / ".complete", rpr_pages / "manifest.json"),
-        inputs=(apk_manifest, apk_repository_index, kernel_sys, middle_sys, build_info,
+        inputs=(apk_manifest, apk_repository_index, *rpr_app_packages,
+                kernel_sys, middle_sys, build_info,
                 ROOT / "tools/build_rpr_pages.py", ROOT / "tools/apk_distribution.py"),
-        depends_on=("apk-root", "kernel", "middlelayer", "build-info"),
+        depends_on=("apk-root", "rpr-apps", "kernel", "middlelayer", "build-info"),
         kind="generate",
         always=True,
         command=(
             PYTHON, "tools/build_rpr_pages.py",
             "--repository", relative(apk_repository),
+            "--repository", relative(rpr_apps_repository),
             "--kernel", relative(kernel_sys),
             "--middlelayer", relative(middle_sys),
             "--build-info", relative(build_info),

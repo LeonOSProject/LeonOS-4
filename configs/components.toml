@@ -608,16 +608,15 @@ extensions = [".hlp"]
 [[components]]
 id = "helloworld"
 symbol = "APP_HELLOWORLD"
-label = "API hello world"
+label = "Hello World"
 category = "Developer applications"
 kind = "program-app"
 default = true
 required = false
-stage = true
-entry = true
+stage = false
+entry = false
 sdk = false
-api = true
-api_stage_path = "api/helloworld.api"
+api = false
 
 [[components]]
 id = "guitest"
@@ -777,7 +776,7 @@ required = false
 stage = false
 entry = false
 sdk = false
-api = true
+api = false
 depends = ["doom"]
 
 [[components]]
@@ -791,9 +790,7 @@ required = false
 stage = false
 entry = false
 sdk = false
-api = true
-api_stage_path = "api/doom.api"
-api_requires = ["doomlauncher"]
+api = false
 
 [[components]]
 id = "oschinpt"
@@ -806,8 +803,7 @@ required = false
 stage = false
 entry = false
 sdk = false
-api = true
-api_stage_path = "tools/oschinpt.api"
+api = false
 
 [[components]]
 id = "busybox"
