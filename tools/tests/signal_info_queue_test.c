@@ -10,6 +10,8 @@ static struct task people[3], *current;
 static uint64_t ticks = 100, inaccessible;
 static unsigned allocations, exits;
 static bool fail_alloc;
+void power_reboot(void) { abort(); }
+void power_shutdown(void) { abort(); }
 void *kernel_malloc(size_t size)
 { if (fail_alloc) return NULL; void *p = malloc(size); if (p) ++allocations; return p; }
 void kernel_free(void *p) { assert(allocations); --allocations; free(p); }

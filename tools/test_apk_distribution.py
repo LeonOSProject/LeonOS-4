@@ -158,6 +158,14 @@ class DistributionTests(unittest.TestCase):
             result = run("del", "leonos-sl")
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertFalse((output / "usr/bin/sl").exists())
+            broken_payload = work / "broken-payload/etc/leonos"
+            broken_payload.mkdir(parents=True)
+            (broken_payload / "test.conf").write_text("conflicting external package\n")
+            broken = distribution.make_package(apk, key, work / "broken-payload",
+                work / "external-broken.apk", "external-broken", "1.0-r0", [])
+            result = run("add", str(broken))
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("trying to overwrite", result.stderr)
             (output / "etc/leonos/test.conf").write_text("administrator\n")
             (source / "etc/leonos/test.conf").write_text("new default\n")
             distribution.build_distribution(source, work / "next", work / "next-packages", apk, key)
@@ -170,9 +178,49 @@ class DistributionTests(unittest.TestCase):
                                      "/usr/share/leonos/apk/repository"],
                                     capture_output=True, text=True, timeout=90)
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertIn("external-broken", result.stdout + result.stderr)
+            self.assertIn("pre-existing", result.stdout + result.stderr)
             self.assertFalse((output / "usr/bin/sl").exists(), "update must not reinstall removed packages")
             self.assertEqual((output / "etc/leonos/test.conf").read_text(), "administrator\n")
             self.assertEqual((output / "etc/leonos/test.conf.apk-new").read_text(), "new default\n")
+            update_command = ["unshare", "-Ur", "chroot", str(output), "/bin/sh",
+                              "/usr/lib/leonos/leonos-apk-update", "/",
+                              "/usr/share/leonos/apk/repository"]
+            # A solver failure may have the same exit code as the old broken
+            # package count. It must not be mistaken for a completed commit.
+            world = output / "etc/apk/world"
+            saved_world = world.read_text()
+            world.write_text(saved_world + "nonexistent-update-dependency\n")
+            result = subprocess.run(update_command, capture_output=True, text=True, timeout=90)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertNotIn("pre-existing", result.stderr)
+            world.write_text(saved_world)
+            probe_v1 = distribution.make_package(apk, key, work / "empty", work / "probe-v1.apk",
+                "leonos-update-probe", "1.0-r0", [])
+            self.assertEqual(run("add", str(probe_v1)).returncode, 1)
+            self.assertEqual(run("info", "--exists", "leonos-update-probe").returncode, 0)
+            world.write_text("\n".join("leonos-update-probe" if line.startswith("leonos-update-probe")
+                                      else line for line in world.read_text().splitlines()) + "\n")
+            fail_script = work / "fail-upgrade.sh"
+            fail_script.write_text("#!/bin/sh\necho deliberate-upgrade-failure >&2\nexit 9\n")
+            target_repo = output / "usr/share/leonos/apk/repository"
+            distribution.make_package(apk, key, work / "empty", target_repo / "leonos-update-probe-1.1-r0.apk",
+                "leonos-update-probe", "1.1-r0", [], scripts=[("post-upgrade", fail_script)])
+            subprocess.run([str(apk), "mkndx", "--keys-dir", str(output / "etc/apk/keys"),
+                            "--sign-key", str(key), "--output", str(target_repo / "packages.adb"),
+                            *map(str, sorted(target_repo.glob("*.apk")))], check=True)
+            archive = target_repo / "leonos-update-probe-1.1-r0.apk"
+            missing = work / "temporarily-missing.apk"
+            archive.rename(missing)
+            result = subprocess.run(update_command, capture_output=True, text=True, timeout=90)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("package mentioned in index not found", result.stdout + result.stderr)
+            self.assertNotIn("pre-existing", result.stderr)
+            missing.rename(archive)
+            result = subprocess.run(update_command, capture_output=True, text=True, timeout=90)
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("deliberate-upgrade-failure", result.stdout + result.stderr)
+            self.assertNotIn("pre-existing", result.stderr)
             unsigned = distribution.make_package(apk, None, work / "empty", work / "unsigned.apk",
                                                    "unsigned-test", "1.0-r0", [])
             result = run("add", str(unsigned))

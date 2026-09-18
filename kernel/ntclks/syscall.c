@@ -3523,15 +3523,15 @@ static int copy_user_vector(uint64_t user_ptr, uint32_t max_count,
     }
     for (;;) {
         uint64_t entry_ptr;
-        if (count >= max_count) {
-            return -LEONOS_E2BIG;
-        }
         if (!user_range_ok((uint64_t)(uintptr_t)&user_vec[count], sizeof(uint64_t))) {
             return -LEONOS_EFAULT;
         }
         entry_ptr = user_vec[count];
         if (!entry_ptr) {
             break;
+        }
+        if (count >= max_count) {
+            return -LEONOS_E2BIG;
         }
         uint32_t len = 0;
         uint32_t start = *data_len;
@@ -4471,6 +4471,7 @@ int64_t syscall_dispatch(const struct syscall_frame *frame)
     case LINUX_SYS_FCHOWN:
     case LINUX_SYS_GETCWD:
     case LINUX_SYS_CHDIR:
+    case LINUX_SYS_CHROOT:
     case LINUX_SYS_RENAME:
     case LINUX_SYS_RENAMEAT:
     case LINUX_SYS_RENAMEAT2:
@@ -4852,15 +4853,33 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         return syscall_select_common(a0, a1, a2, a3, a4, false);
     }
     if (number == LINUX_SYS_PSELECT6) {
+        struct task *task = sched_current_task();
         uint64_t mask_ptr = 0;
         uint64_t mask_len = 0;
         if (a5) {
             if (!user_range_ok(a5, sizeof(mask_ptr) + sizeof(mask_len))) return -LEONOS_EFAULT;
             __builtin_memcpy(&mask_ptr, (const void *)(uintptr_t)a5, sizeof(mask_ptr));
             __builtin_memcpy(&mask_len, (const void *)(uintptr_t)(a5 + sizeof(mask_ptr)), sizeof(mask_len));
-            if (mask_ptr || mask_len != sizeof(uint64_t)) return -LEONOS_EOPNOTSUPP;
+            if (mask_ptr) {
+                if (mask_len != sizeof(uint64_t)) return -LEONOS_EINVAL;
+                if (!user_range_ok(mask_ptr, sizeof(uint64_t))) return -LEONOS_EFAULT;
+            }
         }
-        return syscall_select_common(a0, a1, a2, a3, a4, true);
+        if (!task) return -LEONOS_EINVAL;
+        /* Keep the temporary mask installed across the scheduler's EAGAIN
+         * replay. Signal delivery uses this saved mask in the rt_sigframe. */
+        if (mask_ptr && !task->sigsuspend_active) {
+            task->sigsuspend_saved_mask = task->blocked_signals;
+            task->sigsuspend_active = 1;
+            task->blocked_signals = *(const uint64_t *)(uintptr_t)mask_ptr &
+                                    ~((1ULL << 8) | (1ULL << 18));
+        }
+        int64_t result = syscall_select_common(a0, a1, a2, a3, a4, true);
+        if (result != -LEONOS_EAGAIN && task->sigsuspend_active) {
+            task->blocked_signals = task->sigsuspend_saved_mask;
+            task->sigsuspend_active = 0;
+        }
+        return result;
     }
     if (number == LINUX_SYS_PPOLL) {
         return syscall_ppoll(a0, a1, a2, a3, a4);
@@ -6418,6 +6437,19 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
     if (number == LINUX_SYS_GETCWD) {
         struct task *task = sched_current_task();
         const char *cwd = (task && sched_task_cwd(task)[0]) ? sched_task_cwd(task) : "/";
+        const char *root = sched_task_root(task);
+        size_t root_len = __builtin_strlen(root);
+        char unreachable[LEONOS_FS_PATH_LEN + sizeof("(unreachable)")];
+        if (root_len > 1) {
+            if (!__builtin_strncmp(cwd, root, root_len) &&
+                (!cwd[root_len] || cwd[root_len] == '/')) {
+                cwd = cwd[root_len] ? cwd + root_len : "/";
+            } else {
+                __builtin_memcpy(unreachable, "(unreachable)", 13);
+                copy_text(unreachable + 13, sizeof(unreachable) - 13, cwd);
+                cwd = unreachable;
+            }
+        }
         size_t len = 0;
         while (cwd[len]) {
             ++len;
@@ -6434,15 +6466,11 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         return (int64_t)(len + 1);
     }
 
-    if (number == LINUX_SYS_CHDIR) {
+    if (number == LINUX_SYS_CHDIR || number == LINUX_SYS_CHROOT) {
         struct task *task = sched_current_task();
         struct storage_node node;
         char path[LEONOS_FS_PATH_LEN];
         int ret = resolve_user_path(task, a0, path, sizeof(path));
-        if (ret < 0) {
-            return ret;
-        }
-        ret = fs_permissions_check(task, path, FS_ACCESS_EXEC, false);
         if (ret < 0) {
             return ret;
         }
@@ -6452,6 +6480,13 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         }
         if (node.type != LEONOS_FS_TYPE_DIR) {
             return -LEONOS_ENOTDIR;
+        }
+        ret = fs_permissions_check(task, path, FS_ACCESS_EXEC, false);
+        if (ret < 0) return ret;
+        if (number == LINUX_SYS_CHROOT) {
+            if (!task || !(task->cap_effective & (1ULL << CAP_SYS_CHROOT))) return -LEONOS_EPERM;
+            copy_text(sched_task_root_dir(task), LEONOS_FS_PATH_LEN, path);
+            return 0;
         }
         if (task) {
             copy_text(sched_task_cwd(task), LEONOS_FS_PATH_LEN, path);

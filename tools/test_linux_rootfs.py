@@ -38,7 +38,7 @@ class RootfsInterfaces(unittest.TestCase):
 
     def test_kernel_modules(self):
         with tempfile.TemporaryDirectory(prefix="leonos-rootfs-") as directory:
-            for name in ("rootfs_mounts", "rootfs_uts", "rootfs_paths", "procfs_directories", "linux_permissions"):
+            for name in ("rootfs_mounts", "rootfs_uts", "rootfs_paths", "procfs_directories", "linux_permissions", "chroot_paths"):
                 with self.subTest(module=name):
                     executable = Path(directory) / name
                     subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",

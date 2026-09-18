@@ -105,6 +105,30 @@ int main(void)
     resized.size += 4096;
     page_cache_invalidate_node(&resized);
     assert(!allocations);
+    /* Every cache slot is pinned; another executable page must still load. */
+    uint64_t pinned[4096];
+    for (unsigned i = 0; i < 4096; ++i) {
+        text.file_node.first_cluster = i + 1;
+        assert(task_map_file_vma_page(&task, &text, text.start) == 0);
+        pinned[i] = mapped;
+    }
+    text.file_node.first_cluster = 4097;
+    struct task_vma shared = text;
+    shared.flags |= TASK_VMA_FLAG_SHARED;
+    unsigned pinned_allocations = allocations;
+    assert(task_map_file_vma_page(&task, &shared, shared.start) == -LEONOS_EIO);
+    assert(allocations == pinned_allocations);
+    assert(task_map_file_vma_page(&task, &text, text.start) == 0);
+    assert(!page_cache_owns(mapped));
+    assert(memcmp((void *)(uintptr_t)mapped, file_bytes, 4096) == 0);
+    mm_free_page(mapped);
+    for (unsigned i = 0; i < 4096; ++i) {
+        page_cache_release(pinned[i]);
+        text.file_node.first_cluster = i + 1;
+        page_cache_invalidate_node(&text.file_node);
+    }
+    assert(!allocations);
+    puts("PASS pinned cache exhaustion: executable pages remain loadable without leaks");
     puts("PASS ELF segments sharing a file page: independent zero-fill and intact code cache");
     puts("PASS cold ELF usercopy faults: synchronous I/O, cache hits, errors and short-read cleanup");
 }

@@ -678,8 +678,14 @@ static int task_map_file_vma_page(struct task *task, const struct task_vma *vma,
         context.node = &vma->file_node;
         context.offset = vma->file_offset + (page - vma->start);
         context.limit = vma->file_limit;
-        if (page_cache_load(&vma->file_node, context.offset,
-                            load_file_cache_page, &context, &phys) < 0) {
+        int result = page_cache_load(&vma->file_node, context.offset,
+                                     load_file_cache_page, &context, &phys);
+        /* Cache capacity must not limit the resident executable working set.
+         * Private pages follow the normal paging ownership and fork paths. */
+        if (result == PAGE_CACHE_FULL && !(vma->flags & TASK_VMA_FLAG_SHARED)) {
+            cached = 0;
+            phys = mm_alloc_page();
+        } else if (result < 0) {
             return -LEONOS_EIO;
         }
     } else {

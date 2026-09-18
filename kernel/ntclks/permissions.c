@@ -244,7 +244,10 @@ int fs_permissions_resolve_flags(const struct task *task, const char *base, cons
     uint32_t links = 0, input_len = 0;
     if (!input || !*input) return -LEONOS_ENOENT;
     if (!out || cap < 2) return -LEONOS_ENAMETOOLONG;
-    const char *start = input[0] == '/' ? "/" : base;
+    const char *root = sched_task_root(task);
+    uint32_t root_length = 0;
+    while (root[root_length]) ++root_length;
+    const char *start = input[0] == '/' ? root : base;
     if (!start || *start != '/') return -LEONOS_EINVAL;
     for (; input[input_len]; ++input_len) {
         if (input_len + 1 >= sizeof(pending)) return -LEONOS_ENAMETOOLONG;
@@ -275,6 +278,17 @@ int fs_permissions_resolve_flags(const struct task *task, const char *base, cons
         while (*rest == '/') ++rest;
         bool last = !*rest;
         uint32_t parent_length = length;
+        bool at_root = length == root_length && !__builtin_strcmp(out, root);
+        if (size == 2 && component[0] == '.' && component[1] == '.' && at_root) {
+            /* Even a final parent lookup must not hand root/.. to storage. */
+            if (last && (flags & FS_LOOKUP_PARENT)) {
+                if (length + 2 >= cap) return -LEONOS_ENAMETOOLONG;
+                if (length > 1) out[length++] = '/';
+                out[length++] = '.';
+                out[length] = 0;
+            }
+            continue;
+        }
         if (last && (flags & FS_LOOKUP_PARENT)) {
             if (size >= LEONOS_FS_NAME_LEN || length + (length > 1) + size + (*input != 0) >= cap)
                 return -LEONOS_ENAMETOOLONG;
@@ -318,7 +332,11 @@ int fs_permissions_resolve_flags(const struct task *task, const char *base, cons
                 for (uint32_t i = suffix + 1; i > 0; --i) pending[got + i - 1] = input[i - 1];
             }
             for (uint32_t i = 0; i < got; ++i) pending[i] = target[i];
-            length = target[0] == '/' ? 1 : parent_length;
+            if (target[0] == '/') {
+                if (root_length >= cap) return -LEONOS_ENAMETOOLONG;
+                for (uint32_t i = 0; i < root_length; ++i) out[i] = root[i];
+                length = root_length;
+            } else length = parent_length;
             out[length] = 0;
             input = pending;
         } else if (*input && node.type != LEONOS_FS_TYPE_DIR) {
@@ -341,8 +359,13 @@ int fs_permissions_search(const struct task *task, const char *path, bool real_i
     int ret = copy_path(prefix, path);
     if (ret < 0) return ret;
     struct storage_node node;
-    for (uint32_t i = 1;; ++i) {
-        if (i == 1 || prefix[i] == '/') {
+    const char *root = sched_task_root(task);
+    uint32_t first = 1, root_length = 0;
+    while (root[root_length]) ++root_length;
+    if (root_length > 1 && !__builtin_strncmp(path, root, root_length) &&
+        (!path[root_length] || path[root_length] == '/')) first = root_length;
+    for (uint32_t i = first;; ++i) {
+        if (i == first || prefix[i] == '/') {
             char saved = prefix[i];
             prefix[i] = 0;
             ret = lookup(prefix, &node);

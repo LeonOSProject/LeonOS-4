@@ -1022,6 +1022,16 @@ static int installer_mount_targets(const char *disk_path, int fresh)
         printf("[installer.elf] mountpoint is not a directory path=%s\n", INSTALL_ROOT_MOUNT);
         return -ENOTDIR;
     }
+    /* Update inspection leaves these mounted. Release children first, before
+     * fresh installation rewrites the GPT or formats either filesystem. */
+    const char *targets[] = {INSTALL_ESP_MOUNT, INSTALL_ROOT_MOUNT};
+    for (uint32_t i = 0; i < sizeof(targets) / sizeof(targets[0]); ++i) {
+        if (umount2(targets[i], 0) < 0 && errno != ENOENT && errno != EINVAL) {
+            ret = -errno;
+            printf("[installer.elf] unmount target failed path=%s ret=%d\n", targets[i], ret);
+            return ret;
+        }
+    }
     ret = installer_target_partitions(disk_path, fresh, esp_path, sizeof(esp_path),
                                           root_path, sizeof(root_path),
                                           &root_filesystem);
@@ -1039,11 +1049,6 @@ static int installer_mount_targets(const char *disk_path, int fresh)
     } else if (root_filesystem == LEONOS_BLOCK_FILESYSTEM_EXT2) {
         root_fs_name = "ext2";
     }
-    /* A previous attempt can leave /target or /target/boot mounted when the
-     * user returns to the disk-selection page and retries.  Unmount both
-     * before issuing the new mount(2) calls; ENOENT/EINVAL are expected. */
-    (void)umount2(INSTALL_ESP_MOUNT, 0);
-    (void)umount2(INSTALL_ROOT_MOUNT, 0);
     if (mount(root_path, INSTALL_ROOT_MOUNT, root_fs_name, 0, NULL) < 0) {
         printf("[installer.elf] mount root failed path=%s errno=%d\n", root_path, errno);
         return -errno;
@@ -3220,6 +3225,7 @@ static void prepare_update_target(int window_id, struct leonos_ui_surface *ui)
     set_status(T("Update installed LeonOS packages", "更新已安装的 LeonOS 软件包"),
                T("Alpine packages and local configuration are preserved.", "保留 Alpine 软件包及本地配置。"));
     page = PAGE_CONFIRM;
+    reset_confirm();
     dirty = 1;
     present_installer(window_id, ui);
 }

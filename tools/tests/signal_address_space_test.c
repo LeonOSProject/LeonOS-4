@@ -21,6 +21,8 @@ static int deferred_error;
 static uint64_t lazy_page;
 static unsigned demand_faults;
 static unsigned drained_io;
+void power_reboot(void) { abort(); }
+void power_shutdown(void) { abort(); }
 void storage_drain_task_io(uint32_t pid) { assert(pid==target.pid); ++drained_io; }
 void kernel_execution_lock_irqsave(uint64_t *flags) { *flags = 0; }
 void kernel_execution_unlock_irqrestore(uint64_t flags) { (void)flags; }
@@ -132,6 +134,18 @@ int main(void)
     memcpy(&remaining, target_pages + 64, sizeof(remaining));
     assert(remaining.tv_sec == 0 && remaining.tv_nsec == 200000000);
     assert(!target.nanosleep_deadline && !target.nanosleep_remaining);
+    target.blocked_signals = 0;
+    target.sigsuspend_saved_mask = 1ULL << 1;
+    target.sigsuspend_active = 1;
+    target.restart_syscall = __NR_pselect6 + 1;
+    target.poll_deadline_ticks = 200;
+    frame = (struct trap_frame){.rsp = saved_rsp, .rip = 0x430000, .cs = 0x23};
+    assert(kernel_signal_queue_task(&target, 2) == 0);
+    assert(kernel_signal_deliver_pending(&target, &frame) == 1);
+    memcpy(&saved, target_pages + frame.rsp - STACK_ADDRESS, sizeof(saved));
+    assert(saved.uc.context.rip == 0x430002 && (int64_t)saved.uc.context.rax == -LINUX_EINTR);
+    assert(saved.uc.mask == (1ULL << 1));
+    assert(!target.sigsuspend_active && !target.restart_syscall && !target.poll_deadline_ticks);
     for (unsigned restart=0;restart<2;++restart) {
         target.blocked_signals=0;
         target.restart_syscall=__NR_pread64+1;

@@ -2,7 +2,8 @@
 # The installer runs this from its own root, against the mounted target.
 set -eu
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
-export PATH
+LC_ALL=C
+export PATH LC_ALL
 if [ "$#" -ne 2 ]; then
     echo "usage: leonos-apk-update TARGET_ROOT SIGNED_REPOSITORY" >&2
     exit 2
@@ -69,7 +70,49 @@ for directory in "$target/etc/apk/repositories.d" "$target/lib/apk/repositories.
 done
 # Target trust anchors and cached signed indexes remain authoritative. Missing
 # metadata for an in-use tag is an error, never a reason to rewrite world.
-apk --root "$target" --repositories-file "$configuration" --no-network upgrade 'leonos-*'
+# apk 3 counts unchanged broken packages in the transaction's exit status.
+# Parse installed-db records (P/V/C/f), retaining identity and the exact flags;
+# uppercase S is a digest-format flag, not a broken script (lowercase s).
+broken_packages() {
+    /bin/busybox awk -v exclude_system="$1" '
+        function emit() {
+            if (flags ~ /[fs]/ && (!exclude_system || name !~ /^leonos-/))
+                print name "\t" version "\t" checksum "\t" flags
+            name = version = checksum = flags = ""
+        }
+        /^P:/ { name = substr($0, 3) }
+        /^V:/ { version = substr($0, 3) }
+        /^C:/ { checksum = substr($0, 3) }
+        /^f:/ { flags = substr($0, 3) }
+        /^$/ { emit() }
+        END { emit() }
+    ' "$target/lib/apk/db/installed" > "$temporary/records"
+    /bin/busybox sort "$temporary/records"
+}
+broken_packages 1 > "$temporary/broken-before"
+/bin/busybox cp "$target/etc/apk/world" "$temporary/world-before"
+status=0
+apk --root "$target" --repositories-file "$configuration" --no-network upgrade 'leonos-*' \
+    > "$temporary/transaction.log" 2>&1 || status=$?
+/bin/busybox cat "$temporary/transaction.log"
+if [ "$status" -ne 0 ]; then
+    broken_packages 0 > "$temporary/broken-after"
+    count=$(/bin/busybox awk 'END { print NR }' "$temporary/broken-before")
+    # Require a completed commit, no new diagnostics, unchanged external
+    # broken records/world, and exactly their known error contribution.
+    # Solver, trust, extraction, script and database-write failures remain fatal.
+    if [ "$count" -gt 0 ] && [ "$count" -lt 125 ] && [ "$status" -eq "$count" ] &&
+       /bin/busybox cmp -s "$temporary/broken-before" "$temporary/broken-after" &&
+       /bin/busybox cmp -s "$temporary/world-before" "$target/etc/apk/world" &&
+       ! /bin/busybox grep -q '^ERROR:' "$temporary/transaction.log" &&
+       /bin/busybox tail -n 1 "$temporary/transaction.log" |
+           /bin/busybox grep -Eq "^$status errors?; .+ in [0-9]+ packages$"; then
+        echo "WARNING: LeonOS packages updated; pre-existing external package errors remain:" >&2
+        /bin/busybox cut -f 1 "$temporary/broken-before" >&2
+    else
+        exit "$status"
+    fi
+fi
 # Publish the offline repository only after the package transaction succeeded.
 destination=$target/usr/share/leonos/apk/repository
 /bin/busybox mkdir -p "$destination"

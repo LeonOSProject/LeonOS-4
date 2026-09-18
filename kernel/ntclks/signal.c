@@ -262,7 +262,7 @@ static int signal_setup_frame(struct task *task, int sig,
             nr == __NR_recvmsg || nr == __NR_sendmsg || nr == __NR_accept ||
             nr == __NR_recvmmsg || nr == __NR_sendmmsg ||
             nr == __NR_accept4 || nr == __NR_connect || nr == __NR_futex || nr == __NR_futex_wait ||
-            nr == __NR_futex_waitv || nr == __NR_poll || nr == __NR_select ||
+            nr == __NR_futex_waitv || nr == __NR_poll || nr == __NR_select || nr == __NR_pselect6 ||
             nr == __NR_wait4 || nr == __NR_waitid || nr == __NR_rt_sigtimedwait || nr == __NR_fcntl || nr == __NR_flock ||
             nr == __NR_ioctl ||
             nr == __NR_msgsnd || nr == __NR_msgrcv ||
@@ -270,7 +270,7 @@ static int signal_setup_frame(struct task *task, int sig,
         bool restart = (action->flags & LINUX_SA_RESTART) &&
             nr != __NR_msgsnd && nr != __NR_msgrcv &&
             nr != __NR_semop && nr != __NR_semtimedop &&
-            nr != __NR_poll && nr != __NR_select && nr != __NR_rt_sigtimedwait && !sleeping &&
+            nr != __NR_poll && nr != __NR_select && nr != __NR_pselect6 && nr != __NR_rt_sigtimedwait && !sleeping &&
             !(nr == __NR_futex && frame->r10) && !task->socket_io_timed;
         uint64_t received = task->socket_receive_done;
         bool batch = task->mmsg.active;

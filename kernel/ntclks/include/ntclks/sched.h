@@ -27,9 +27,10 @@
 #define SCHED_NR_OPEN 1048576u
 #define SCHED_TASK_PTY_FD_MAX 8u
 #define SCHED_TASK_STDIO_MAX 3u
-#define SCHED_EXEC_ARG_MAX 64u
-#define SCHED_EXEC_ENV_MAX 64u
-#define SCHED_EXEC_DATA_MAX 8192u
+/* Bounded build-tool vectors; strings plus pointers fit the initial 64 KiB stack. */
+#define SCHED_EXEC_ARG_MAX 1024u
+#define SCHED_EXEC_ENV_MAX 128u
+#define SCHED_EXEC_DATA_MAX 32768u
 #define SCHED_TASK_VMA_MAX 128u
 #define SCHED_TASK_TIMER_MAX 32u
 
@@ -237,6 +238,7 @@ struct task_fd_table_state {
 struct task_fs_state {
     uint32_t umask;
     char cwd[LEONOS_FS_PATH_LEN];
+    char root_dir[LEONOS_FS_PATH_LEN];
     uint32_t references;
 };
 
@@ -304,6 +306,7 @@ struct task_credentials_state {
     char username[LEONOS_AUTH_USERNAME_LEN];
     char home[LEONOS_AUTH_HOME_LEN];
     char cwd[LEONOS_FS_PATH_LEN];
+    char root_dir[LEONOS_FS_PATH_LEN];
 };
 
 struct task_terminal_state {
@@ -556,6 +559,7 @@ struct task {
             char username[LEONOS_AUTH_USERNAME_LEN];
             char home[LEONOS_AUTH_HOME_LEN];
             char cwd[LEONOS_FS_PATH_LEN];
+            char root_dir[LEONOS_FS_PATH_LEN];
         };
     };
     union {
@@ -652,6 +656,17 @@ static inline char *sched_task_cwd(const struct task *task)
 static inline uint32_t *sched_task_umask(const struct task *task)
 {
     return task->shared_fs ? &task->shared_fs->umask : (uint32_t *)&task->umask;
+}
+
+static inline char *sched_task_root_dir(const struct task *task)
+{
+    return task->shared_fs ? task->shared_fs->root_dir : (char *)task->root_dir;
+}
+
+static inline const char *sched_task_root(const struct task *task)
+{
+    const char *root = task ? sched_task_root_dir(task) : NULL;
+    return root && root[0] ? root : "/";
 }
 
 static inline struct kernel_signal_action *sched_task_actions(const struct task *task)

@@ -5,11 +5,42 @@
 #include "../../kernel/ntclks/syscall.c"
 
 static bool fail_allocation;
+bool user_range_ok(uint64_t address, uint64_t size) { return address != 0 || size == 0; }
+size_t user_strlen(const char *s, size_t max) { size_t n = 0; while (n < max && s[n]) ++n; return n; }
 void *kernel_malloc(size_t size) { return fail_allocation ? NULL : malloc(size); }
 void kernel_free(void *memory) { free(memory); }
 
 int main(void)
 {
+    struct exec_params_kernel vectors = {0};
+    char *arguments[1026];
+    for (unsigned i = 0; i < 1025; ++i) arguments[i] = "-DCONFIG_TEST=1";
+    arguments[128] = NULL;
+    assert(copy_exec_params_from_user((uintptr_t)arguments, 0, &vectors) == 0);
+    assert(vectors.argc == 128);
+    for (unsigned i = 0; i < 1025; ++i) arguments[i] = "x";
+    arguments[1024] = NULL;
+    assert(copy_exec_params_from_user((uintptr_t)arguments, 0, &vectors) == 0);
+    assert(vectors.argc == 1024 && !vectors.argv[1024]);
+    arguments[1024] = "x";
+    arguments[1025] = NULL;
+    assert(copy_exec_params_from_user((uintptr_t)arguments, 0, &vectors) == -LEONOS_E2BIG);
+    char *environment[130];
+    for (unsigned i = 0; i < 129; ++i) environment[i] = "KEY=value";
+    environment[128] = NULL;
+    arguments[118] = NULL;
+    assert(copy_exec_params_from_user((uintptr_t)arguments, (uintptr_t)environment, &vectors) == 0);
+    assert(vectors.argc == 118 && vectors.envc == 128 && !vectors.envp[128]);
+    environment[128] = "KEY=value";
+    environment[129] = NULL;
+    assert(copy_exec_params_from_user(0, (uintptr_t)environment, &vectors) == -LEONOS_E2BIG);
+    char long_argument[12000];
+    memset(long_argument, 'a', sizeof(long_argument) - 1);
+    long_argument[sizeof(long_argument) - 1] = 0;
+    char *long_vector[] = {long_argument, NULL};
+    assert(copy_exec_params_from_user((uintptr_t)long_vector, 0, &vectors) == 0);
+    assert(vectors.data_len == sizeof(long_argument));
+    puts("PASS exec build vectors: 118/1024 args, 128 env, long string and count overflow");
     char header[256], *name, *argument;
     memset(header, 0, sizeof(header));
     strcpy(header, "#! \t/bin/sh \targ one \t\n");

@@ -41,6 +41,7 @@ int syscall_fs_owns(uint64_t number)
     case LINUX_SYS_FTRUNCATE:
     case LINUX_SYS_GETCWD:
     case LINUX_SYS_CHDIR:
+    case LINUX_SYS_CHROOT:
     case LINUX_SYS_RENAME:
     case LINUX_SYS_RENAMEAT:
     case LINUX_SYS_RENAMEAT2:
