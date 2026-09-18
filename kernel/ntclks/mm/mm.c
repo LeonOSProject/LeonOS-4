@@ -11,6 +11,12 @@
 static uint64_t total_kib;
 
 #define PAGE_SIZE 4096ULL
+/* A user CR3 replaces the low identity mapping for every 2 MiB chunk of
+ * NTCLKS_USER_TOP it covers, and kernel code dereferences frame addresses as
+ * plain pointers without switching CR3, so the allocator may only hand out
+ * frames at or above the top of the user window.  Widening the user window
+ * therefore costs that much physical RAM: NTCLKS_USER_TOP is 768 MiB, so a
+ * guest must have well above 768 MiB before the kernel can manage pages. */
 #define PAGE_ALLOC_MIN NTCLKS_USER_TOP
 #define PAGE_ALLOC_LIMIT 0x400000000ULL
 #define FALLBACK_ALLOC_START 0x0a000000ULL

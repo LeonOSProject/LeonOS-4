@@ -8,10 +8,18 @@
 #include <ntclks/types.h>
 
 #define NTCLKS_USER_BASE 0x0000000000200000ULL
-/* Keep the user interval below the kernel's low identity-map boundary.  The
- * 512 MiB window leaves separate heap, mmap, file-map, and stack regions while
- * keeping kernel physical pages outside the low user CR3 replacement range. */
-#define NTCLKS_USER_TOP  0x0000000020000000ULL
+/* Keep the user interval below the kernel's low identity-map boundary: a user
+ * CR3 replaces every 2 MiB page-directory entry the interval covers, so
+ * mm.c must refuse to hand out frames below NTCLKS_USER_TOP.  The 768 MiB
+ * window leaves separate heap, mmap, file-map, and stack regions while keeping
+ * kernel physical pages outside the replacement range.  It is sized for the
+ * largest single read-only file mapping a musl program can request: linking
+ * one contiguous reservation per shared object, Alpine's libLLVM.so.22.1
+ * needs a 183 MiB span and Clang's whole dependency closure needs 278 MiB.
+ * Growing past 1 GiB would additionally require privatizing the second page
+ * directory, because NTCLKS_USER_PD_START + NTCLKS_USER_PD_COUNT is capped by
+ * the 512 entries of one 2 MiB page directory. */
+#define NTCLKS_USER_TOP  0x0000000030000000ULL
 #define NTCLKS_USER_MMAP_BASE 0x0000000008000000ULL
 #define NTCLKS_USER_HEAP_BASE 0x0000000001000000ULL
 #define NTCLKS_USER_HEAP_LIMIT NTCLKS_USER_MMAP_BASE
@@ -34,6 +42,14 @@
 #define NTCLKS_USER_PD_BYTES 0x200000ULL
 #define NTCLKS_USER_PD_START (NTCLKS_USER_BASE / NTCLKS_USER_PD_BYTES)
 #define NTCLKS_USER_PD_COUNT ((NTCLKS_USER_TOP - NTCLKS_USER_BASE) / NTCLKS_USER_PD_BYTES)
+/* address_space_prepare_user_range installs one user page table in the single
+ * low page directory it privatizes; exceeding its 512 slots would silently
+ * alias into the kernel identity map instead of extending the user window. */
+_Static_assert(NTCLKS_USER_PD_START + NTCLKS_USER_PD_COUNT <= 512u,
+               "NTCLKS_USER_TOP exceeds the low page directory reach");
+_Static_assert(NTCLKS_KERNEL_HOLE_END < NTCLKS_USER_TOP &&
+               NTCLKS_USER_HEAP_LIMIT <= NTCLKS_KERNEL_HOLE_START,
+               "user heap, kernel hole and mmap arena must stay ordered");
 
 #define NTCLKS_PAGE_PRESENT 0x001ULL
 #define NTCLKS_PAGE_WRITABLE 0x002ULL

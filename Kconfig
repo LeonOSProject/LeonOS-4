@@ -46,9 +46,11 @@ config INSTALLER_ROOT_SIZE_MIB
     default 400
     help
       The installer root is passed by GRUB as one complete Multiboot module.
-      Its size therefore consumes guest RAM before the kernel starts. A 400
-      MiB root requires a guest with at least 1 GiB RAM; use a smaller root or
-      increase the VM memory rather than expecting a 512 MiB guest to load it.
+      Its size therefore consumes guest RAM before the kernel starts, and the
+      kernel can only manage physical pages above the 768 MiB user window. A
+      400 MiB root therefore requires a guest with at least 2 GiB RAM; use a
+      smaller root or increase the VM memory rather than expecting a 1 GiB
+      guest to load it.
 
 menu "Image defaults"
 

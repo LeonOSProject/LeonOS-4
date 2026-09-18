@@ -213,8 +213,9 @@ environment: file and directory changes are
 kept in the mapped RAM image for the session and discarded on reboot; they never
 modify the ISO. The guest nevertheless
 needs enough physical memory for GRUB to load the complete module before the
-kernel begins. In particular, a 400 MiB installer root requires at least 1 GiB
-of VM RAM; a 512 MiB VM can omit the module before the loader receives control.
+kernel begins, and the kernel only manages pages above the 768 MiB user window.
+In particular, a 400 MiB installer root requires at least 2 GiB
+of VM RAM; a 1 GiB VM can omit the module before the loader receives control.
 If GRUB places that module over the kernel or middlelayer's fixed ELF load
 range, the Loader relocates it into EFI LoaderData before loading either image;
 the relocated range is reserved and mounted directly by the kernel.
