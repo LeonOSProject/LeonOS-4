@@ -1,4 +1,8 @@
 build/
+# The `build/` rule above matches any directory of that name at any depth, which
+# would silently exclude the migration documents the build plan requires.
+!docs/build/
+!tests/build/
 buildsystem/firmware/
 buildsystem/state/*
 !buildsystem/state/build_number.txt
