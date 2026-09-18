@@ -155,6 +155,7 @@ BUILD_NUMBER_EXEMPT_TARGETS = frozenset({
     "test-qmp-glxgears",
     "test-component-config",
     "test-kconfig-frontends",
+    "test-openrc-shutdown",
     "test-linux-abi-contract",
     "test-linux-memory",
     "test-linux-process-vm",
@@ -3828,6 +3829,14 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         kind="command",
         command=(PYTHON, "tools/test_kconfig_frontends.py"),
     ))
+    graph.add(Target(
+        name="test-openrc-shutdown",
+        inputs=(ROOT / "tools/test_openrc_shutdown.py",
+                ROOT / "kernel/ntclks/sched/sched.c",
+                *collect("system/rootfs/etc/init.d/*")),
+        kind="command",
+        command=(PYTHON, "tools/test_openrc_shutdown.py"),
+    ))
 
     def qmp_test(context: ActionContext, editor: str = "nano",
                  fastfetch_smoke: bool = False,
@@ -4114,6 +4123,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     if config_bool(values, "CONFIG_TEST_COMPONENT_CONFIG"):
         selected_tests.append("test-component-config")
     selected_tests.append("test-kconfig-frontends")
+    selected_tests.append("test-openrc-shutdown")
     graph.add(Target(name="test-all", depends_on=tuple(selected_tests), group=True, kind="aggregate"))
     return graph
 
@@ -4223,7 +4233,7 @@ Commands:
   build.py settings
   build.py map
   build.py gen <file>
-  build.py test <license-server|los2w|component-config|kconfig-frontends|svga|installer-input|oobe|qmp-terminal|qmp-pleditor|qmp-fastfetch|qmp-sl|qmp-less|qmp-dynlinkerror|qmp-cmd|qmp-stardust|qmp-glxgears|all>
+  build.py test <license-server|los2w|component-config|kconfig-frontends|openrc-shutdown|svga|installer-input|oobe|qmp-terminal|qmp-pleditor|qmp-fastfetch|qmp-sl|qmp-less|qmp-dynlinkerror|qmp-cmd|qmp-stardust|qmp-glxgears|all>
   build.py client <run|gen|test|profile> ...
   build.py status <task-id>
   build.py log <task-id>
@@ -4712,7 +4722,7 @@ def parser() -> argparse.ArgumentParser:
     test.add_argument("item", choices=("license-server", "los2w", "component-config", "svga", "installer-input", "installer-setup", "oobe", "sudo-policy",
                                        "qmp-terminal", "qmp-pleditor", "qmp-fastfetch", "qmp-sl", "qmp-less",
                                        "qmp-dynlinkerror", "qmp-cmd", "qmp-abittest", "qmp-stardust", "qmp-glxgears",
-                                       "kconfig-frontends", "linux-abi-contract", "linux-memory", "linux-pty", "linux-permissions",
+                                       "kconfig-frontends", "openrc-shutdown", "linux-abi-contract", "linux-memory", "linux-pty", "linux-permissions",
                                        "linux-ioctl-cloexec", "builtin-tool-removal",
                                        "storage-metadata", "storage-rename", "storage-mkdir-mount", "musl-abi", "uapi", "all"))
     add_config_options(test)

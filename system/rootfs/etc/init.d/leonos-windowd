@@ -1,6 +1,7 @@
 #!/sbin/openrc-run
 description="LeonOS windowd"
 supervisor=supervise-daemon
+retry=TERM/1/KILL/1
 input_file=/dev/null
 command=/usr/lib/leonos/apps/windowd/windowd.elf
 respawn_delay=5

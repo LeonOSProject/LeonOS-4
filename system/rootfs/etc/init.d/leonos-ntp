@@ -3,6 +3,7 @@
 # start-stop-daemon capability drop path; no private NTP client is retained.
 description="BusyBox NTP client"
 supervisor=supervise-daemon
+retry=TERM/1/KILL/1
 input_file=/dev/null
 command=/usr/sbin/ntpd
 command_args="${command_args:--n -p pool.ntp.org} -S /usr/lib/leonos/ntp-status"

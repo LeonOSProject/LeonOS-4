@@ -2604,15 +2604,19 @@ int sched_signal_user_process_info(uint32_t pid, int signal_number,
     if (!leader || leader->kind != TASK_KIND_USER ||
         signal_number < 0 || (unsigned)signal_number >= KERNEL_SIGNAL_ACTION_MAX) return -1;
     uint32_t tgid = sched_task_tgid(leader);
-    if (!signal_number) return 0;
-    uint64_t bit = 1ULL << (signal_number - 1);
+    uint64_t bit = signal_number ? 1ULL << (signal_number - 1) : 0;
     for (uint32_t i = 0; i < task_count; ++i) {
         struct task *task = tasks[i];
         if (sched_task_tgid(task) != tgid || task->state == TASK_EXITED) continue;
         if (!live) live = task;
-        if (!eligible && ((~task->blocked_signals | task->sigwait_mask) & bit)) eligible = task;
+        if (signal_number && !eligible &&
+            ((~task->blocked_signals | task->sigwait_mask) & bit)) eligible = task;
     }
-    if (!live) return 0; /* A zombie still owns its PID until wait reaps it. */
+    /* kill(pid, 0) is an existence probe. A zombie still owns its PID for
+     * wait/reap, but Linux reports ESRCH once no live thread remains. OpenRC
+     * uses this probe while waiting for supervise-daemon to exit. */
+    if (!live) return -LINUX_ESRCH;
+    if (!signal_number) return 0;
     if (signal_number == 18) sched_signal_job_control(tgid, signal_number);
     if (signal_number >= 19 && signal_number <= 22) sched_signal_discard(live, 18);
     struct kernel_signal_action *action = &sched_task_actions(live)[signal_number];
