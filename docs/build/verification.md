@@ -130,36 +130,86 @@ tests/host/common/... fatal error: ../../tools/host/common/buffer.h：没有那�
 注意：`leonos-emit` **尚未有 Make 目标**，以上是我用 `gcc` 直接编译二进制后手工执行的。它被计入
 "已编译并验证行为"，不计入"已接入构建系统"。
 
-## 4. 契约测试（P1-c）
+## 4. 新 Make 系统的 P1 结果
 
-`tests/build/test-bootstrap.sh` 已写入，内容是计划第 4 节命令契约与第 6.3 节输出目录安全契约：
-`make`（默认 goal）在无编译器 PATH 下也必须出 help、help/clean 不得生成输出树或改动受跟踪生成物、
-HOSTCC 与目标 CC 独立、未知 ARCH/PROFILE、`O=` 空值、`O=/`、`O=.`、含空格、含换行的 O、
-未知 `CONFIG_*` 命令行覆写、无所有权标记的 clean、`doctor` 在目标链接器/编译器缺失时非零退出。
+### 4.1 契约测试
 
-**该测试当前是红的**：仓库根目录没有 `Makefile`（本轮探索性的入口与 `mk/host.mk` 在确认无法在同一
-预算内做到可验证完成后被删除，没有留下半成品）。它**尚未接入** `make test-build`，所以不会把失败
-伪装成通过。
+| 套件 | 命令 | 结果 |
+| --- | --- | --- |
+| C 单元测试 | `make test-tools` | `ok - host/common: 74 checks passed` 两次（普通构建与 ASan+UBSan 构建各一次），rc=0 |
+| 入口契约 | `sh tests/build/test-bootstrap.sh` | **20 checks, 0 failures** |
+| 增量契约 | `sh tests/build/test-incremental.sh` | **20 checks, 0 failures** |
+
+### 4.2 目标面
+
+`make help`（PATH 中无编译器时仍可用）、`make doctor`、`make tools`、`make defconfig`、
+`make kernel`、`make test-tools`、`make clean` 已实现并实测；`fetch`、`userland`、`runtime`、
+`sdk`、`rootfs`、`apk-repo`、`image-vmdk`、`iso`、`installer`、`run*`、`test-smoke`、`test-legacy`
+由 `scripts/not-migrated.sh` 显式 **exit 2**，不伪装成功。
+
+### 4.3 验收行实测证据
+
+| 编号 | 观察 |
+| --- | --- |
+| A02 | 第二次 `make kernel` 输出的 `CC/AS/LD/IMAGE/GEN/HOSTCC/CONFIG` 动作数为 **0**；`$(O)/obj/kernel` 下全部 85 个对象与 `kernel.sys`、`kernel.debug`、`kernel.unstripped`、`autoconf.h`、`boot_logo.h` 的 mtime（含纳秒）逐项不变 |
+| A03 | `touch kernel/ntclks/futex.c` → 恰好 1 次 `CC`（且就是该文件）、1 次 `LD`、2 次 `IMAGE` |
+| A04 | `touch kernel/ntclks/include/ntclks/types.h` → 重编译数 **恰好等于** depfile 记录了该头的对象数 **82**，既无漏编也无过编；随后 1 次 `LD` |
+| A04b | `touch kernel/ntclks/arch/x86_64/linker.ld` → 0 次 `CC`、1 次 `LD` |
+| A05 | `KERNEL_CFLAGS=-DLEONOS_SIG_PROBE` → 83 个 C 对象全部重建、2 个汇编对象一个都不重建；产品 mtime 改变 |
+| A06 | 移走 `kernel/ntclks/signalfd.c` → 重新链接，且 `make -n` 的输出不再包含该对象；恢复后再链接一次 |
+| A07 | 删除 `kernel.sys` 或删除 `boot_logo.h` → 各自被重新生成（多输出阶段无 stamp 误判） |
+| A12 | `O=` 空、`O=/`、`O=.`（含解析为源码根的相对形式）、含空格、含换行、含非法字符全部被拒；`clean` 对无所有权标记的 O 拒绝执行；未知 `CONFIG_*` 命令行覆写报错 |
+| A14 | `tools/host` 与 `tests/host` 在 GCC 16 与 Clang 22 的 `-std=c11 -Wall -Wextra -Wpedantic -Werror -Wformat=2 -Wshadow -Wstrict-prototypes -Wmissing-prototypes` 下零告警；ASan+UBSan（`detect_leaks=1`、`halt_on_error=1`）无报告 |
+| A17 | 新构建不改动任何受跟踪文件：`buildsystem/state/build_number.txt` 与 `include/generated/build_info.h` 哈希保持 `ebdbfc0b` / `b135f754`；跨文件系统 `O=/tmp/...` 构建后源树 `git status` 干净，且 `kconfig-frontends.sh` 会回收它留下的 `.tmpconfig.*` 与空 `include/config` |
+
+### 4.4 产物等价性（内核）
+
+新系统从空 `O` 产出的 `kernel.sys` 为 **1196352 字节**，与旧基线 `build/system/kernel.sys` 同尺寸。
+两者不可能逐字节相同：旧基线嵌入 `LEONOS_KERNEL_VERSION "4.7.1-3838"` 与调用时刻的
+`LEONOS_BUILD_TIME`，新系统按 §7 不递增计数、不读挂钟。逐字节比较需在两侧固定
+`SOURCE_DATE_EPOCH` 与 `BUILD_ID` 后进行，属 A13，**本轮未做**。
+
+`leonos-boot-logo` 与退役的 `tools/generate_boot_logo.py` 输出**逐字节一致**（仅第一行署名不同），
+`diff` 只报告第 1 行；`leonos-version` 重放出同名同形状的宏集合。
 
 ## 5. 验收矩阵状态
 
-| 编号 | 本轮状态 |
+| 编号 | 状态 |
 | --- | --- |
-| A01–A17 | **全部未运行**。没有任何一项新构建验收通过；不存在可构建的新 Make 入口 |
+| A02 A03 A04 A05 A06 A07 A12 A14 A17 | **内核范围内通过**（证据见 4.3；A12/A14/A17 只覆盖已实现部分） |
+| A01 | 部分：干净 O 可构建，但 `fetch` 未实现，故"只装声明依赖 + 干净 clone 全目标"未达成 |
+| A08 | **未运行**：`-j1` 与 `-j8` 三轮对比未做 |
+| A09 | 部分：两个不同 O 可并行且互不串用（跨文件系统实验）；同 O 双进程互斥**未实现也未测** |
+| A10 | **未运行**：中断、写失败、子进程失败的产物保真未做（`.DELETE_ON_ERROR` 与 `write_file_if_changed` 已就位，但未证） |
+| A11 | **未运行**：依赖 `fetch` |
+| A13 | **未运行**：需固定 epoch 的双干净 O 哈希比较 |
+| A15 | **未运行**：SDK/APK/三类镜像与升级尚未迁移 |
+| A16 | **未运行**：execve 跟踪未做。已确认可实现性：新入口的生产规则中无 `python3`，但 `fetch`/`sdk`/镜像链未迁移，无法证明全链 |
+| A18 起 | 不适用 |
 
-与矩阵相关、本轮**已取得的先验证据**：A02 与 A17 的旧系统基线为"不成立"（第 2.1 节）；
-A13 的阻塞点已定位到 `tools/apk_distribution.py:421` 的 `time.time_ns()` 包版本与
-`tools/make_image.py:114,128` 的 `uuid.uuid4()`；A06 的阻塞点定位到 `build.py:1426,1436` 的
-`ar rcs` 追加式归档；A16 的违例集中在 72 处 Python 调用点，其中 `leonos-musl-cc` 与 PAM 的
-meson/ninja 是最硬的两处。
+### 5.1 P1-d 的来宾运行验证：受阻，未通过
 
-## 6. 本轮发现的需要修的计划/环境冲突
+`make kernel` 的产物已在 QEMU 中尝试启动，但**判定不成立**，因此本项记为受阻而非通过：
+
+1. 首轮用 `-bios` 指向不存在的路径，QEMU 直接退出；对照组同样失败，属夹具缺陷。
+2. 次轮不带固件（SeaBIOS）：`control`（旧 `build/system/kernel.sys`）与 `candidate`
+   （新 `out/.../kernel.sys`）的串口日志**完全同形**，都停在
+   `Booting 'LeonOS 4 Live Desktop (musl + Vim + GCC)'` 后重新回到 GRUB 横幅。
+3. 三轮用 `/usr/share/edk2/x64/OVMF.4m.fd`：对照组的串口变成 EDK2 自身的异常寄存器转储
+   （`Find image based on IP(...)`、`CR0/CR3/IDTR` 等），说明该固件镜像与 q35 + 这张
+   `--bios` 生成的 ISO 组合不可用。
+
+新旧内核在所有配置下行为一致，因此**没有回归证据**，但也**没有成功启动证据**。
+按 AGENT.md 第 7 节"编译通过不等于镜像已含文件；镜像已生成不等于虚拟机能启动"，
+以及计划第 11 节"测试必须识别来宾成功标记并核验退出状态，启动 QEMU 进程本身不算通过"，
+本项必须等 `mk/run.mk` + QMP/截图判定（P3）落地后重做。用于对照的两张 ISO 与临时产物已删除。
+## 6. 发现并已修的计划/环境问题
 
 `.gitignore` 第 1 行的 `build/` 会匹配**任意层级**名为 `build` 的目录，导致计划第 5、12、15 节要求的
 `docs/build/migration-inventory.md`、`docs/build/legacy-removal.md`、`docs/build/verification.md`
-和 `tests/build/` 契约测试目录**全部无法提交**。已用 `!docs/build/`、`!tests/build/` 加注释修复，
-并对两条路径分别验证 `git check-ignore` 不再命中。任何后续新增的 `*/build/` 目录都会踩同一个坑，
-P4 整理 `.gitignore` 时应把首行改成锚定根目录的 `/build/`。
+和 `tests/build/` 契约测试目录**全部无法提交**；本轮新建的 `tools/build/` 是第三次踩坑。
+已把首行改为锚定的 `/build/` 并移除两条临时反选，验证 `docs/build`、`tests/build`、`tools/build`
+不再被忽略，而 `build/linux-6.12/tools/build` 仍随 `/build/` 一起被忽略（`git status` 无新增噪声）。
 
 ## 7. 已知限制
 
