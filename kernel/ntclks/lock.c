@@ -11,9 +11,10 @@
  * inspected lock-free by the owning CPU. A ticket lock makes the global
  * kernel-service transaction FIFO: a new scheduler pass cannot repeatedly
  * steal it from a pending exec or page-in on another CPU. */
-static volatile uint32_t execution_next_ticket;
-static volatile uint32_t execution_serving_ticket;
-static volatile uint32_t execution_owner = UINT32_MAX;
+static uint32_t execution_next_ticket;
+static uint32_t execution_serving_ticket;
+static uint32_t execution_owner = UINT32_MAX;
+static uint32_t execution_readers;
 static uint32_t execution_depth[SMP_MAX_CPUS];
 
 static uint32_t execution_cpu_index(void)
@@ -54,22 +55,6 @@ void kernel_spin_unlock(struct kernel_spinlock *lock)
     }
 }
 
-uint64_t kernel_irq_save(void)
-{
-    uint64_t flags;
-    __asm__ volatile("pushfq; popq %0; cli" : "=r"(flags) : : "memory");
-    return flags;
-}
-
-void kernel_irq_restore(uint64_t flags)
-{
-    if (flags & (1ULL << 9)) {
-        __asm__ volatile("sti" : : : "memory");
-    } else {
-        __asm__ volatile("cli" : : : "memory");
-    }
-}
-
 void kernel_spin_lock_irqsave(struct kernel_spinlock *lock, uint64_t *flags)
 {
     uint64_t saved = kernel_irq_save();
@@ -99,37 +84,68 @@ void kernel_execution_lock_irqsave(uint64_t *flags)
         *flags = saved;
     }
     uint32_t cpu = execution_cpu_index();
-    if (execution_owner == cpu && execution_depth[cpu] != 0) {
+    if (__atomic_load_n(&execution_owner, __ATOMIC_RELAXED) == cpu && execution_depth[cpu] != 0) {
         ++execution_depth[cpu];
         return;
     }
-    uint32_t ticket = 1;
-    __asm__ volatile("lock; xaddl %0, %1"
-                     : "+r"(ticket), "+m"(execution_next_ticket)
-                     : : "memory");
-    while (execution_serving_ticket != ticket) {
+    uint32_t ticket = __atomic_fetch_add(&execution_next_ticket, 1, __ATOMIC_SEQ_CST);
+    while (__atomic_load_n(&execution_serving_ticket, __ATOMIC_SEQ_CST) != ticket ||
+           __atomic_load_n(&execution_readers, __ATOMIC_SEQ_CST) != 0) {
         /* IRQs are masked here. A membarrier owner must still be able to
          * rendezvous with CPUs waiting for this lock. */
         smp_membarrier_poll();
         __asm__ volatile("pause" : : : "memory");
     }
-    execution_owner = cpu;
+    __atomic_store_n(&execution_owner, cpu, __ATOMIC_RELAXED);
     execution_depth[cpu] = 1;
 }
 
 void kernel_execution_unlock_irqrestore(uint64_t flags)
 {
     uint32_t cpu = execution_cpu_index();
-    if (execution_owner == cpu && execution_depth[cpu] > 1) {
+    if (__atomic_load_n(&execution_owner, __ATOMIC_RELAXED) == cpu && execution_depth[cpu] > 1) {
         --execution_depth[cpu];
         kernel_irq_restore(flags);
         return;
     }
-    if (execution_owner == cpu && execution_depth[cpu] == 1) {
+    if (__atomic_load_n(&execution_owner, __ATOMIC_RELAXED) == cpu && execution_depth[cpu] == 1) {
         execution_depth[cpu] = 0;
-        execution_owner = UINT32_MAX;
-        __asm__ volatile("lock; incl %0" : "+m"(execution_serving_ticket)
-                         : : "memory");
+        __atomic_store_n(&execution_owner, UINT32_MAX, __ATOMIC_RELAXED);
+        __atomic_fetch_add(&execution_serving_ticket, 1, __ATOMIC_SEQ_CST);
     }
+    kernel_irq_restore(flags);
+}
+
+/* Readers only mutate their independently owned address space. Writers still
+ * exclude every reader, protecting VMA lifetime, fork, remote memory access,
+ * and the legacy VFS/device scratch state. Never upgrade a read transaction:
+ * release it and retry under the exclusive lock instead.
+ *
+ * Register then recheck admission. Sequential consistency ensures either the
+ * writer observes this reader, or the reader observes the queued writer and
+ * backs out before accessing protected data. Queuing a writer closes admission
+ * immediately, so a stream of faults cannot starve an exclusive transaction. */
+bool kernel_execution_try_read_lock_irqsave(uint64_t *flags)
+{
+    uint64_t saved = kernel_irq_save();
+    if (flags) *flags = saved;
+    if (__atomic_load_n(&execution_next_ticket, __ATOMIC_SEQ_CST) !=
+        __atomic_load_n(&execution_serving_ticket, __ATOMIC_SEQ_CST)) {
+        kernel_irq_restore(saved);
+        return false;
+    }
+    __atomic_fetch_add(&execution_readers, 1, __ATOMIC_SEQ_CST);
+    if (__atomic_load_n(&execution_next_ticket, __ATOMIC_SEQ_CST) !=
+        __atomic_load_n(&execution_serving_ticket, __ATOMIC_SEQ_CST)) {
+        __atomic_fetch_sub(&execution_readers, 1, __ATOMIC_SEQ_CST);
+        kernel_irq_restore(saved);
+        return false;
+    }
+    return true;
+}
+
+void kernel_execution_read_unlock_irqrestore(uint64_t flags)
+{
+    __atomic_fetch_sub(&execution_readers, 1, __ATOMIC_SEQ_CST);
     kernel_irq_restore(flags);
 }

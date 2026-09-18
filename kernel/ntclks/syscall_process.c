@@ -683,7 +683,7 @@ int64_t syscall_process_control(uint64_t number, uint64_t a0,
             current->euid != target->uid && current->euid != target->euid) {
             return -LEONOS_EPERM;
         }
-        target->priority = attr.sched_nice;
+        (void)sched_task_priority(target->pid, attr.sched_nice, 1);
         return 0;
     }
     if (number == LINUX_SYS_PERSONALITY) {

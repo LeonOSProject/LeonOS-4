@@ -72,13 +72,20 @@ def main():
     worker.start()
     try:
         probe = work / "probe.c"
-        command = ("/tmp/pselect-probe && cd /tmp/Uinxed-Kernel && make -j2 UxImage "
-                   "&& sha256sum UxImage && curl --fail --noproxy '*' "
-                   f"-T UxImage http://10.0.2.2:{port}/UxImage")
+        command = "cd /tmp/Uinxed-Kernel && make -j2 UxImage"
+        upload = ("cd /tmp/Uinxed-Kernel && sha256sum UxImage && curl --fail --noproxy '*' "
+                  f"-T UxImage http://10.0.2.2:{port}/UxImage")
         probe.write_text(
-            '#include <stdio.h>\n#include <stdlib.h>\nint main(void) {\n'
+            '#include <stdio.h>\n#include <stdlib.h>\n#include <time.h>\nint main(void) {\n'
             'setenv("PATH", "/usr/bin:/bin:/usr/sbin:/sbin", 1);\n'
+            'if (system("/tmp/pselect-probe")) return 1;\n'
+            'struct timespec start, end;\n'
+            'if (clock_gettime(CLOCK_MONOTONIC, &start)) return 1;\n'
             f'int result = system({json.dumps(command)});\n'
+            'if (clock_gettime(CLOCK_MONOTONIC, &end)) return 1;\n'
+            'printf("[uinxed-bench] build_seconds=%.3f\\n", '
+            '(end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9);\n'
+            f'if (!result) result = system({json.dumps(upload)});\n'
             'printf("[apk-probe] DONE failures=%d status=%d\\n", result != 0, result);\n'
             'return result != 0;\n}\n', encoding="ascii")
         compiler = ROOT / "build/musl/sdk/bin/leonos-musl-cc"
@@ -112,10 +119,14 @@ def main():
         header = subprocess.check_output(["readelf", "-h", str(artifact)], text=True)
         if "ELF64" not in header or "X86-64" not in header:
             raise RuntimeError("UxImage is not an x86-64 ELF")
+        timing = re.search(r"\[uinxed-bench\] build_seconds=([\d.]+)", serial)
+        if not timing:
+            raise RuntimeError("Guest did not report build time")
         (work / "result.json").write_text(json.dumps({
             "source_commit": commit, "sha256": digest, "size": artifact.stat().st_size,
             "command": "make -j2 UxImage", "platform": "LeonOS QEMU/KVM, 2 vCPUs",
-            "kernel_sha256": hashlib.sha256((ROOT / "build/system/kernel.sys").read_bytes()).hexdigest(),
+            "build_seconds": float(timing.group(1)),
+            "kernel_sha256": hashlib.sha256((work / "iso/leonos/kernel.sys").read_bytes()).hexdigest(),
         }, indent=2) + "\n")
         print(f"PASS guest UxImage: {artifact} sha256={digest}")
     finally:

@@ -441,6 +441,18 @@ struct task *page_fault_dispatch(struct trap_frame *frame)
     uint64_t cr2 = x86_64_read_cr2();
     uint64_t execution_flags;
 
+    /* Independent demand-zero faults do not touch VFS/device scratch state.
+     * Only user-mode faults may take the non-nesting read gate; kernel-mode
+     * usercopy faults can already own the recursive exclusive transaction.
+     * Returning NULL resumes the faulting instruction without an artificial
+     * context switch on every anonymous page. Timer preemption still applies. */
+    if (frame && (frame->cs & 3ULL) == 3ULL &&
+        kernel_execution_try_read_lock_irqsave(&execution_flags)) {
+        int handled = syscall_handle_private_anon_fault(sched_current_task(), cr2, frame->error);
+        kernel_execution_read_unlock_irqrestore(execution_flags);
+        if (handled) return NULL;
+    }
+
     /* A lazy page-in touches the same VFS and device state as a filesystem
      * syscall.  Share the transaction boundary with syscalls so page faults
      * cannot reprogram AHCI or mutate filesystem caches midway through an

@@ -350,6 +350,8 @@ int64_t syscall_clone3(const struct trap_frame *frame, uint64_t arguments, uint6
  * @brief Resolve a user page fault at fault_addr with the given error code; 0 if handled.
  */
 int syscall_handle_user_page_fault(uint64_t fault_addr, uint64_t error);
+/* Requires an execution read transaction; never performs file I/O. */
+int syscall_handle_private_anon_fault(struct task *task, uint64_t fault_addr, uint64_t error);
 int syscall_handle_task_page_fault(struct task *task, uint64_t fault_addr, uint64_t error);
 int syscall_page_fault_signal_code(struct task *task, uint64_t address);
 void syscall_mm_truncate_file(struct task *task, const struct storage_node *node, uint64_t size);
