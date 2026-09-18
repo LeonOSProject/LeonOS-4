@@ -45,6 +45,13 @@ class ProcfsTaskmgrTests(unittest.TestCase):
         self.assertLess(source.index("refresh_all();", init), loop)
         self.assertLess(source.index("present_taskmgr(", init), loop)
 
+    def test_taskmgr_service_manager_entry_uses_openrc_manager(self):
+        source = (ROOT / "userland/apps/taskmgr/main.c").read_text()
+        self.assertIn('T("Service Manager", "服务管理")', source)
+        self.assertIn('leonos_launch_builtin_path("servicemgr")', source)
+        self.assertIn('leonos_launch_argv(argv)', source)
+        self.assertNotIn('T("Startup Apps", "启动应用")', source)
+
     def test_musl_forkpty_propagates_child_setup_failure(self):
         # forkpty now belongs to the unmodified musl provider; the removed
         # private libc implementation is no longer the runtime under test.

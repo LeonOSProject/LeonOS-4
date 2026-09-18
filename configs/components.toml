@@ -106,6 +106,7 @@ stage = true
 entry = true
 sdk = false
 api = false
+depends = ["servicemgr"]
 
 [[components]]
 id = "settings"

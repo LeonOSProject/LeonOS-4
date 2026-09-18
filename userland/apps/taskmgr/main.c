@@ -3,6 +3,7 @@
 #include <leonos/auth.h>
 #include <leonos/psf_font.h>
 #include <leonos/startup.h>
+#include <leonos/launch.h>
 #include <leonos/stdio.h>
 #include <leonos/system.h>
 #include <leonos/syscall.h>
@@ -104,7 +105,7 @@ static void taskmgr_tab_items(struct leonos_ui_tab_item items[3])
 {
     items[0] = (struct leonos_ui_tab_item){T("Processes", "进程"), TASKMGR_TAB_PROCESSES, 0};
     items[1] = (struct leonos_ui_tab_item){T("Performance", "性能"), TASKMGR_TAB_PERFORMANCE, 0};
-    items[2] = (struct leonos_ui_tab_item){T("Startup Apps", "启动应用"), TASKMGR_TAB_STARTUP, 0};
+    items[2] = (struct leonos_ui_tab_item){T("Service Manager", "服务管理"), TASKMGR_TAB_STARTUP, 0};
 }
 static uint32_t view_w = TASKMGR_W;
 static uint32_t view_h = TASKMGR_H;
@@ -446,6 +447,18 @@ static void set_status(const char *text)
         ++i;
     }
     status_text[i] = 0;
+}
+
+static void open_service_manager(void)
+{
+    const char *path = leonos_launch_builtin_path("servicemgr");
+    char *argv[] = {(char *)path, 0};
+    int pid = leonos_launch_argv(argv);
+    if (pid < 0) {
+        set_status(T("Could not open Service Manager", "无法打开服务管理器"));
+        return;
+    }
+    set_status(T("Service Manager opened", "服务管理器已打开"));
 }
 
 static void refresh_performance(void)
@@ -1263,7 +1276,7 @@ static void draw_taskmgr(struct leonos_ui_surface *ui)
         struct leonos_ui_context_menu_item items[] = {
             {T("Processes", "进程"), TASKMGR_ACTION_PROCESSES, 0},
             {T("Performance", "性能"), TASKMGR_ACTION_PERFORMANCE, 0},
-            {T("Startup Apps", "启动应用"), TASKMGR_ACTION_STARTUP, 0},
+            {T("Service Manager", "服务管理"), TASKMGR_ACTION_STARTUP, 0},
             {T("About", "关于"), TASKMGR_ACTION_ABOUT, 0},
         };
         struct leonos_ui_rect r;
@@ -1345,7 +1358,7 @@ static int handle_menu_click(int32_t x, int32_t y)
         struct leonos_ui_context_menu_item items[] = {
             {T("Processes", "进程"), TASKMGR_ACTION_PROCESSES, 0},
             {T("Performance", "性能"), TASKMGR_ACTION_PERFORMANCE, 0},
-            {T("Startup Apps", "启动应用"), TASKMGR_ACTION_STARTUP, 0},
+            {T("Service Manager", "服务管理"), TASKMGR_ACTION_STARTUP, 0},
             {T("About", "关于"), TASKMGR_ACTION_ABOUT, 0},
         };
         struct leonos_ui_rect r;
@@ -1366,9 +1379,7 @@ static int handle_menu_click(int32_t x, int32_t y)
                 taskmgr_tabs.selected_id = active_tab;
                 refresh_all();
             } else if (action == TASKMGR_ACTION_STARTUP) {
-                active_tab = TASKMGR_TAB_STARTUP;
-                taskmgr_tabs.selected_id = active_tab;
-                refresh_all();
+                open_service_manager();
             } else if (action == TASKMGR_ACTION_ABOUT) {
                 leonos_ui_show_message_box(T("Task Manager", "任务管理器"), T("Shows runnable, sleeping, and exited tasks.", "显示可运行、睡眠和已退出任务。"), "OK");
             }
@@ -1500,7 +1511,13 @@ int main(void)
                     if (leonos_ui_tab_control_handle_mouse(&taskmgr_tabs, event.x, event.y,
                                                            104, 34, tab_w, tabs, 3)) {
                         active_tab = (uint8_t)taskmgr_tabs.selected_id;
-                        refresh_all();
+                        if (active_tab == TASKMGR_TAB_STARTUP) {
+                            active_tab = TASKMGR_TAB_PROCESSES;
+                            taskmgr_tabs.selected_id = active_tab;
+                            open_service_manager();
+                        } else {
+                            refresh_all();
+                        }
                         present_taskmgr((uint32_t)window_id, &ui);
                         continue;
                     }
