@@ -29,6 +29,26 @@ def require_source(source: Path) -> None:
         )
 
 
+def patch_gperf_compatibility(work_dir: Path) -> None:
+    """Adapt the pinned gperf input to current gperf's size_t signature.
+
+    kconfig-frontends declares the generated lookup function with an
+    ``unsigned int`` length, while modern gperf emits its definition with
+    ``size_t``.  The declaration and definition must match under current
+    host compilers.  Patch only the disposable build copy so the upstream
+    submodule remains byte-for-byte unchanged.
+    """
+    path = work_dir / "libs/parser/hconf.gperf"
+    text = path.read_text(encoding="utf-8")
+    old = "static const struct kconf_id *kconf_id_lookup(register const char *str, register unsigned int len);"
+    new = "static const struct kconf_id *kconf_id_lookup(register const char *str, register size_t len);"
+    if old not in text:
+        if new in text:
+            return
+        raise SystemExit(f"unexpected kconfig-frontends gperf input: {path}")
+    path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, required=True)
@@ -47,6 +67,7 @@ def main() -> int:
         shutil.rmtree(prefix)
     work_dir.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(source, work_dir, ignore=shutil.ignore_patterns(".git"))
+    patch_gperf_compatibility(work_dir)
     prefix.mkdir(parents=True, exist_ok=True)
 
     environment = os.environ.copy()

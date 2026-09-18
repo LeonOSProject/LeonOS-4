@@ -6,6 +6,7 @@ menu "Desktop applications"
 config LEON_COMPONENT_APP_TASKMGR_BUILD
     bool "Build Task manager"
     default y
+    select LEON_COMPONENT_APP_SERVICEMGR_BUILD
 
 config LEON_COMPONENT_APP_TASKMGR_IMAGE
     bool "Include Task manager in system images"

@@ -33,6 +33,8 @@ class KconfigFrontendsTests(unittest.TestCase):
         self.assertIn('"--disable-utils"', source)
         self.assertIn('work_dir.parent.mkdir(parents=True, exist_ok=True)', source)
         self.assertIn('shutil.copytree(source, work_dir, ignore=shutil.ignore_patterns(".git"))', source)
+        self.assertIn("patch_gperf_compatibility(work_dir)", source)
+        self.assertIn("register size_t len", source)
         self.assertIn('prefix / "bin/kconfig-mconf"', source)
 
 
