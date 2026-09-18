@@ -155,7 +155,8 @@ tests/host/common/... fatal error: ../../tools/host/common/buffer.h：没有那�
 | A03 | `touch kernel/ntclks/futex.c` → 恰好 1 次 `CC`（且就是该文件）、1 次 `LD`、2 次 `IMAGE` |
 | A04 | `touch kernel/ntclks/include/ntclks/types.h` → 重编译数 **恰好等于** depfile 记录了该头的对象数 **82**，既无漏编也无过编；随后 1 次 `LD` |
 | A04b | `touch kernel/ntclks/arch/x86_64/linker.ld` → 0 次 `CC`、1 次 `LD` |
-| A05 | `KERNEL_CFLAGS=-DLEONOS_SIG_PROBE` → 83 个 C 对象全部重建、2 个汇编对象一个都不重建；产品 mtime 改变 |
+| A05 | `KERNEL_CFLAGS=-DLEONOS_SIG_PROBE` → `$(O)/obj/kernel` 下 **83 个 `.c.o` 的 mtime 全部改变、2 个 `.S.o` 一个都没改变**（逐个对象比较两次快照，不看 Make 的日志流）；`kernel.sys` 等产品 mtime 改变 |
+| A09 | 见第 7 节：同 O 双进程已被显式拒绝，不同 O 并行互不串用 |
 | A06 | 移走 `kernel/ntclks/signalfd.c` → 重新链接，且 `make -n` 的输出不再包含该对象；恢复后再链接一次 |
 | A07 | 删除 `kernel.sys` 或删除 `boot_logo.h` → 各自被重新生成（多输出阶段无 stamp 误判） |
 | A12 | `O=` 空、`O=/`、`O=.`（含解析为源码根的相对形式）、含空格、含换行、含非法字符全部被拒；`clean` 对无所有权标记的 O 拒绝执行；未知 `CONFIG_*` 命令行覆写报错 |
@@ -179,10 +180,10 @@ tests/host/common/... fatal error: ../../tools/host/common/buffer.h：没有那�
 | A02 A03 A04 A05 A06 A07 A12 A14 A17 | **内核范围内通过**（证据见 4.3；A12/A14/A17 只覆盖已实现部分） |
 | A01 | 部分：干净 O 可构建内核与 musl sysroot，`make fetch` 已实现并验证（见 6.2），但 `userland/runtime/sdk/镜像` 目标未迁移，故"全目标"未达成 |
 | A08 | **未运行**：`-j1` 与 `-j8` 三轮对比未做 |
-| A09 | 部分：两个不同 O 可并行且互不串用（跨文件系统实验）。同 O 双进程互斥**仍未实现**；本轮修掉了它的一个真实危害（签名 candidate 争用，见 6.4），但"拒绝或串行"的契约仍待实现 |
+| A09 | **通过**：同 O 双进程按"明确拒绝"契约实现并有变异检验；两个不同 O 并行互不串用；嵌套 make 继承同一 O 的锁不死锁（机制与证据见第 7 节，17 项） |
 | A10 | **未运行**：中断、写失败、子进程失败的产物保真未做（`.DELETE_ON_ERROR` 与 `write_file_if_changed` 已就位，但未证） |
 | A11 | 部分通过：`make fetch` 下载 19 项并逐一校验 SHA-256（实测 `alpine-findutils` 摘要与锁文件一致）；`--verify-only` 在缺项时列出 id 并非零退出、不联网。**未覆盖**：断网下完成全套生产目标（属 P4） |
-| A13 | **未运行**：需固定 epoch 的双干净 O 哈希比较 |
+| A13 | **通过**：固定 `SOURCE_DATE_EPOCH=1700000000` + `BUILD_ID` 下，两个不同深度的干净 O 全量重建，`autoconf.h`、`boot_logo.h`、`build_info.h`、`obj/kernel/sources.list`、`kernel.unstripped`、`kernel.sys`、`kernel.debug` 七个产物 SHA-256 **两两相同**；原地重建后镜像不变（`tests/build/test-reproducible.sh`，11 项） |
 | A15 | **未运行**：SDK/APK/三类镜像与升级尚未迁移 |
 | A16 | **未运行**：execve 跟踪未做。已确认可实现性：新入口的生产规则中无 `python3`，但 `fetch`/`sdk`/镜像链未迁移，无法证明全链 |
 | A18 起 | 不适用 |
@@ -256,13 +257,67 @@ stamp 记录的提交/补丁摘要与锁文件一致、锁文件内容变化会�
    双保险：`mk/tests.mk` 现在既看退出码也扫描输出中的 `FAIL - ` 行。修好后 bootstrap
    的真实计数是 22/22，且 `make doctor` 被改为显式打印 `HOSTCC`、`TARGET_CC`、`TARGET_LD`
    三行，使"宿主与目标编译器相互独立"成为可断言的事实而不是空话。
-2. **同 O 并发的签名争用**：`$(O_META)/<class>.candidate` 原先是固定文件名，两个共享同一
+2. **A04 断言自身的子串匹配缺陷**：`test-incremental.sh` 原来用
+   `grep -lF "$header"` 统计"哪些 depfile 引用了这个头"，而 depfile 里的路径是子串关系
+   （`ntclks/signal.h` 被 `posix/signal.h` 之类前后缀包含时同样命中），于是期望值比真实
+   消费者多一个，表现为"改了 types.h 只重编 81 个"。现改为按**整词**统计；A05 也从
+   "对象数 vs 磁盘计数"改成"干净构建编译过的源文件**集合** vs 本次重编集合"，
+   失败时直接点出是哪个对象没重编。修好后的三轮串行/并行复跑结果见本节末尾。
+3. **同 O 并发的签名争用**：`$(O_META)/<class>.candidate` 原先是固定文件名，两个共享同一
    输出目录的 make 进程在解析期会互相覆盖对方的 candidate，于是某个进程可能提升一份
-   **自己从未计算过**的签名——表现正是"改 `KERNEL_CFLAGS` 后 83 个 C 对象只重编 82 个"。
-   已改为 `$(O_META)/<class>.$(MAKEPID).candidate`。修好后 `make test -j8` 与串行两轮全部通过。
-   这只消除了静默错误；**同 O 双 make 仍应被显式拒绝或串行化**（A09 未完成，见第 5 节）。
+   **自己从未计算过**的签名。上一轮把它改成 `$(O_META)/<class>.$(MAKEPID).candidate` 并记录为
+   "已修"，**这个结论是错的**：GNU Make 在 POSIX 平台上不把 `MAKEPID` 定义出来，实测
+   `make -f x.mk` 里 `MAKEPID=[]`，于是文件名退化成 `<class>..candidate`，仍然是共享的。
+   本轮改用 `LEONOS_PARSE_ID := $(or $(MAKEPID),$(shell echo $$$$))`（后者取一个子 shell 的 pid，
+   `:=` 保证每个 make 进程只展开一次），并确认 `$(O)/meta` 下的 candidate 名字真的带上了 pid。
+4. **A05 读的是从未写入的文件**：把 A05 的度量从"数 Make 日志行"改成"比较两次快照的
+   对象 mtime"时，快照被存进了 shell 变量 `before_flags/after_flags`，而下面的
+   `changed_objects` 却按文件名读 `$work/flags-before`/`$work/flags-after`。awk 打不开第一个
+   文件就什么都比不上，于是稳定报告 `moved=0 of 83`。改成落盘快照后 83/83 才是**真的量出来**
+   的。同一次改动还暴露出 `comm` 在混合 locale 下对 C 排序输入告警，已在套件顶部
+   `export LC_ALL=C`。
+5. **同 O 双 make 并未被拒绝**（上一条遗留的问题）：见第 7 节。
 
-## 7. 发现并已修的计划/环境问题
+## 7. P2-b：同一输出目录的并发互斥（A09）
+
+### 7.1 要求与为什么不是 flock
+
+计划第 6.3 节要求：同一 O 的两个顶层构建必须**明确拒绝其中一个**或经测试安全串行；不同 O
+可以并行；递归 make 不得重复获取外层锁而死锁。
+
+先试的是 `flock`：Make 无法为整个构建持有一个描述符（每条 recipe 各自 fork shell），也没有本
+构建可依赖的退出钩子——**实测 GNU Make 4.4.1 既不执行 `.EXIT` 也不执行 `.STATUS`**（正常退出、
+SIGINT、SIGTERM 三种情况下都没有运行它们的 recipe）。所以锁改成"owner 记录 + 进程存活性"：
+记录文件名是 `<pid>.<进程启动时钟滴答>`，只要那个进程还在且启动时间一致才算持有；构建被
+SIGKILL 也不会永久卡住输出目录。
+
+### 7.2 机制（`scripts/build-lock.sh`，由顶层 `Makefile` 在解析期调用）
+
+- owner 身份 = 进程祖先链上**最近的一个 `make`**（不是跑脚本的那个短命 shell）。
+- 判定"谁先"用的是全序 `(启动时间, pid)`：每个 make 先写下自己的记录再扫描目录，
+  只在自己不是最早时拒绝。两个进程从同一集合算出同一结论，因此**无论发布如何交错都恰好
+  有一个赢家**——"我先到"式的判断在双方都还没写完时会让两个都赢。
+- 释放 = 下一次 acquire 时清理死掉的记录（没有退出钩子可依赖）。
+- 继承：acquire 成功后导出 `LEONOS_BUILD_OWNER=<pid>.<ticks>:<绝对 O>`。**同一个 O** 的嵌套
+  make 继承它（`defconfig` 的递归 `$(MAKE)` 因此不会拒绝自己的外层构建），**不同 O** 的嵌套
+  make 各自加锁，所以测试套件在外层 `make test` 之下仍然得到真实的互斥。
+- 豁免：`make -n`、`make -q`，以及不写任何东西的 `help`/`doctor`（裸 `make` 也不能要求
+  别处没有构建在跑）。
+- 依赖 `/proc`；读不到时脚本以 2 退出而不是"假装加锁成功"。
+
+### 7.3 实测（`tests/build/test-concurrency.sh`，17 项）
+
+同一 O：先起的 make 完成构建（85 个对象与 `sources.list` 逐项对得上、`kernel.sys` 非空），
+后起的 make **非零退出并打印持有者 pid、启动滴答与记录位置**；`-n`/`help`/`doctor` 在锁被
+持有时仍然可用；构建结束后下一条 `make` 不再看到陈旧记录。两个不同 O 并行：各自产出镜像，
+各自生成的 `sources.mk` 只指向自己的目录（不串用）。嵌套 make 不自拒。
+
+**变异检验**：把 `Makefile` 里的加锁分支改成永不成立（等价于"没实现互斥"）后复跑，同一 O 的
+两个 make 都跑起来，套件报 3 项失败，其中第一项是真实伤害——后起的进程在
+`host/kconfig-frontends` 的构建目录上把先起的进程撞失败（`kconfig-frontends: front end build
+failed`）。这正是该锁要防的事，也证明这些断言测的是生产规则而不是测试自己的空文件。
+
+## 8. 发现并已修的计划/环境问题
 
 `.gitignore` 第 1 行的 `build/` 会匹配**任意层级**名为 `build` 的目录，导致计划第 5、12、15 节要求的
 `docs/build/migration-inventory.md`、`docs/build/legacy-removal.md`、`docs/build/verification.md`
@@ -270,7 +325,7 @@ stamp 记录的提交/补丁摘要与锁文件一致、锁文件内容变化会�
 已把首行改为锚定的 `/build/` 并移除两条临时反选，验证 `docs/build`、`tests/build`、`tools/build`
 不再被忽略，而 `build/linux-6.12/tools/build` 仍随 `/build/` 一起被忽略（`git status` 无新增噪声）。
 
-## 8. 已知限制
+## 9. 已知限制
 
 - `userland/runtime/sdk/rootfs/apk-repo/三类镜像/run` 仍是 `exit 2` 的未迁移目标；
   `all` 只做到 `kernel` 后明确报错，不冒充完整产物。

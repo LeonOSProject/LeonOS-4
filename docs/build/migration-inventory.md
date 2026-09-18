@@ -95,7 +95,9 @@ run-debug, run-iso, menuconfig, defconfig, clean`。其余 100 多个目标由�
    （`build.py:2553-2660`），`esp:layout-links` 有 200 多个链接项。Make 没有原生等价物。
    → 只能靠成员清单 + 从空 staging 起步 + 原子发布重做（P3）。
 6. **旧系统没有构建级互斥。** `flock` 只出现在 `make_image`、APK bootstrap 等处；计划所称"执行锁"是
-   内核特性。同一输出目录并发构建目前无保护。→ P1 需按 §6.3 明确"拒绝或安全串行"并测。
+   内核特性。同一输出目录并发构建无保护。→ 新系统已按 §6.3 的"明确拒绝"分支实现并测
+   （`scripts/build-lock.sh`，证据见 `verification.md` 第 7 节）。实测过 unprotected 的真实伤害：
+   两个共享 O 的 make 会让先起的那个在 `host/kconfig-frontends` 上失败。
 7. **可重现性被随机值封死。** `tools/apk_distribution.py:421` 用
    `version = f"0.{time.time_ns()}-r0"` 生成包版本；`tools/make_image.py:114,128` 用
    `uuid.uuid4()` 生成每个分区 UUID 与 disk GUID。→ A13 在固定 `SOURCE_DATE_EPOCH` 下必然失败，

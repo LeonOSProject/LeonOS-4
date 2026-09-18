@@ -104,6 +104,46 @@ LEONOS_CACHE := $(LEONOS_SRC)/cache/downloads
 # deleted, so `clean` can never operate on a directory it does not own.
 LEONOS_O_MARKER := $(O)/.leonos-out
 
+# --- same-output-directory mutual exclusion ---------------------------------
+# Two top-level makes sharing one O would race on objects, generated headers and
+# signature files, so one of them has to be refused outright (plan section 6.3).
+# Different O directories are independent and may build concurrently.
+#
+# The owner is the make process that acquired the lock, and the token names the
+# output directory it owns: LEONOS_BUILD_OWNER is "<pid>.<start ticks>:<absolute O>".
+# A nested make for that same directory inherits it, which is what keeps the
+# recursive $(MAKE) in `defconfig` from refusing its own outer build. A nested
+# make for a different directory acquires its own lock, so a test suite that
+# spawns builds still gets real exclusion for the trees it creates.
+#
+# Three cases skip acquisition: dry runs and `make -q` (they promise no output,
+# and refusing them would make `make -n` depend on unrelated builds), and goals
+# that write nothing at all -- a bare `make` and `make help` must keep working
+# while a build is running elsewhere, and must not create the output tree.
+leonos_read_only_goals := help doctor
+leonos_lock_not_needed :=
+ifeq ($(MAKECMDGOALS),)
+leonos_lock_not_needed := 1
+else ifeq ($(words $(filter $(leonos_read_only_goals),$(MAKECMDGOALS))),$(words $(MAKECMDGOALS)))
+leonos_lock_not_needed := 1
+endif
+leonos_owner_id := $(word 1,$(subst :, ,$(LEONOS_BUILD_OWNER)))
+leonos_owner_o := $(word 2,$(subst :, ,$(LEONOS_BUILD_OWNER)))
+leonos_lock_inherited := $(if $(leonos_owner_id),$(if $(filter $(leonos_owner_o),$(leonos_O_absolute)),1),)
+leonos_lock_dir := $(O_META)/build-lock
+leonos_lock_skip := $(leonos_lock_inherited)\
+	$(if $(findstring n,$(firstword -$(MAKEFLAGS))),1)\
+	$(if $(findstring q,$(firstword -$(MAKEFLAGS))),1)\
+	$(leonos_lock_not_needed)
+ifeq ($(strip $(leonos_lock_skip)),)
+LEONOS_BUILD_OWNER := $(shell sh $(LEONOS_SRC)/scripts/build-lock.sh acquire \
+	$(leonos_lock_dir) $(leonos_O_absolute))
+ifeq ($(LEONOS_BUILD_OWNER),)
+$(error refusing to build: '$(O)' is already being built by another make)
+endif
+export LEONOS_BUILD_OWNER
+endif
+
 # --- fragment includes ------------------------------------------------------
 include $(LEONOS_SRC)/mk/host.mk
 include $(LEONOS_SRC)/mk/toolchain.mk
@@ -117,8 +157,8 @@ include $(LEONOS_SRC)/mk/tests.mk
 
 .PHONY: help doctor fetch defconfig olddefconfig menuconfig tools \
 	kernel userland runtime sdk rootfs apk-repo image-vmdk iso installer all \
-	run run-iso run-installer test test-tools test-build test-smoke test-legacy \
-	clean distclean
+	run run-iso run-installer test test-tools test-build test-long test-smoke \
+	test-legacy clean distclean
 
 help:
 	@V='$(V)' O='$(O)' ARCH='$(ARCH)' PROFILE='$(PROFILE)' CPUS='$(CPUS)' \
