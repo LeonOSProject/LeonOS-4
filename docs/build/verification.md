@@ -177,11 +177,11 @@ tests/host/common/... fatal error: ../../tools/host/common/buffer.h：没有那�
 | 编号 | 状态 |
 | --- | --- |
 | A02 A03 A04 A05 A06 A07 A12 A14 A17 | **内核范围内通过**（证据见 4.3；A12/A14/A17 只覆盖已实现部分） |
-| A01 | 部分：干净 O 可构建，但 `fetch` 未实现，故"只装声明依赖 + 干净 clone 全目标"未达成 |
+| A01 | 部分：干净 O 可构建内核与 musl sysroot，`make fetch` 已实现并验证（见 6.2），但 `userland/runtime/sdk/镜像` 目标未迁移，故"全目标"未达成 |
 | A08 | **未运行**：`-j1` 与 `-j8` 三轮对比未做 |
-| A09 | 部分：两个不同 O 可并行且互不串用（跨文件系统实验）；同 O 双进程互斥**未实现也未测** |
+| A09 | 部分：两个不同 O 可并行且互不串用（跨文件系统实验）。同 O 双进程互斥**仍未实现**；本轮修掉了它的一个真实危害（签名 candidate 争用，见 6.4），但"拒绝或串行"的契约仍待实现 |
 | A10 | **未运行**：中断、写失败、子进程失败的产物保真未做（`.DELETE_ON_ERROR` 与 `write_file_if_changed` 已就位，但未证） |
-| A11 | **未运行**：依赖 `fetch` |
+| A11 | 部分通过：`make fetch` 下载 19 项并逐一校验 SHA-256（实测 `alpine-findutils` 摘要与锁文件一致）；`--verify-only` 在缺项时列出 id 并非零退出、不联网。**未覆盖**：断网下完成全套生产目标（属 P4） |
 | A13 | **未运行**：需固定 epoch 的双干净 O 哈希比较 |
 | A15 | **未运行**：SDK/APK/三类镜像与升级尚未迁移 |
 | A16 | **未运行**：execve 跟踪未做。已确认可实现性：新入口的生产规则中无 `python3`，但 `fetch`/`sdk`/镜像链未迁移，无法证明全链 |
@@ -203,7 +203,66 @@ tests/host/common/... fatal error: ../../tools/host/common/buffer.h：没有那�
 按 AGENT.md 第 7 节"编译通过不等于镜像已含文件；镜像已生成不等于虚拟机能启动"，
 以及计划第 11 节"测试必须识别来宾成功标记并核验退出状态，启动 QEMU 进程本身不算通过"，
 本项必须等 `mk/run.mk` + QMP/截图判定（P3）落地后重做。用于对照的两张 ISO 与临时产物已删除。
-## 6. 发现并已修的计划/环境问题
+## 6. P2-a：依赖锁文件、`make fetch` 与 musl sysroot
+
+### 6.1 锁文件成为唯一权威
+
+`configs/dependencies.lock.json`（`schema_version=1`，41 条）合并了原先分散在三处的同类职责：
+`configs/auth-upstream.json`（7 条）、`configs/storage-upstream.json`（3 条）、
+`configs/openrc-packages.json`（5 条 APK，其 URL 原先是 `repository + 名字 + 版本` **拼出来的**，
+现在逐条存为字面 URL），另加 23 个 `third_party/` 子模块的固定提交、LTP、Linux 6.12 头、
+fastfetch 与 apk-tools-static。补丁不再"构建时临时算摘要"，而是 `{"path","sha256"}` 钉死：
+`patches/musl/0001-...patch` = `e336ed20…`，与旧系统留下的 `.leonos-musl.json` 记录一致。
+
+解析与校验只有一处：`tools/host/manifest/json.c`（严格 JSON 读取器，66 项 C 契约测试）+
+`leonos-deps` CLI（44 项 shell 契约测试）。计划第 5 节禁止"用正则冒充 JSON 解析器"，
+因此 Make 侧只在解析期对锁文件整体取摘要放进签名，从不切片读字段。
+
+三个旧清单文件**仍然存在且仍被旧 `build.py` 使用**；它们的消费者（`auth-upstream`、
+`storage-upstream`、`apk-root`）迁移到新目标时改读锁文件，随后删除旧文件。本轮不提前删，
+以免旧构建系统在本次交付里失去依据。
+
+### 6.2 `make fetch` 与离线契约
+
+`tools/build/fetch.sh` 逐行消费 `leonos-deps --fetch-list`（`id⇥sha256⇥url⇥缓存名`）：
+下载到 `.<name>.partial.$$/`、校验、再用 `link()` 原子发布；摘要不符**直接失败且不回写锁文件**。
+实测：19 项全部下载并校验通过（`cache/downloads` 176 MB），第二次 `make fetch` 全部命中缓存、
+零联网；`--verify-only` 在空缓存下逐一列出缺失 id 并非零退出。并发不需要锁文件：
+两个进程各自下载自己的 partial，`link()` 只有一个赢，输的一方复用已存在文件并重新校验。
+
+### 6.3 musl sysroot 的产物等价性
+
+`mk/third-party.mk` + `tools/build/musl-sysroot.sh`（POSIX sh + musl 自带 configure/Makefile，
+无 Meson/Ninja/Python）产出 `$(O)/sysroot/musl`。与旧基线 `build/musl/sysroot` 逐文件比较：
+
+| 项 | 结果 |
+| --- | --- |
+| 文件数 | 239 = 239 |
+| 全部文件 SHA-256 | **238 个相同**；唯一差异是 `.leonos-musl.json`（`indent=2` 排版不同，`json.load` 后内容完全相同） |
+| `lib/libc.so` / `lib/libc.a` | SHA-256 逐一相同 |
+| `config.mak` | 归一化前缀路径后逐行相同 |
+| 重复 `make` | no-op（stamp mtime 不变，无 `SYSROOT/RESET/PATCH` 动作） |
+| 耗时 | 首次约 75 s（`-j8`，含 configure/make/install/mimalloc） |
+
+`tests/build/test-third-party.sh` 29 项把上述内容固化为契约：14 个链接产物既声明又存在、
+stamp 记录的提交/补丁摘要与锁文件一致、锁文件内容变化会移动 sysroot 签名（保持 mtime 也移动，
+证明走的是摘要而非时间戳）、校验失败的缓存文件不会被 `--verify-only` 删除。
+
+### 6.4 本轮由测试暴露并修掉的两个自身缺陷
+
+1. **测试计数缺陷（严重）**：`test-bootstrap.sh` 的 `expect_output_contains` 与 `expect_failure`
+   打印 `FAIL` 但**没有累加 `failures`**，因此第 4.1 节记录的 "20/20" 中，关于
+   `ARCH/PROFILE/O` 拒绝与 `HOSTCC` 分组的断言**永远不会使套件失败**。已补计数，并把判定改为
+   双保险：`mk/tests.mk` 现在既看退出码也扫描输出中的 `FAIL - ` 行。修好后 bootstrap
+   的真实计数是 22/22，且 `make doctor` 被改为显式打印 `HOSTCC`、`TARGET_CC`、`TARGET_LD`
+   三行，使"宿主与目标编译器相互独立"成为可断言的事实而不是空话。
+2. **同 O 并发的签名争用**：`$(O_META)/<class>.candidate` 原先是固定文件名，两个共享同一
+   输出目录的 make 进程在解析期会互相覆盖对方的 candidate，于是某个进程可能提升一份
+   **自己从未计算过**的签名——表现正是"改 `KERNEL_CFLAGS` 后 83 个 C 对象只重编 82 个"。
+   已改为 `$(O_META)/<class>.$(MAKEPID).candidate`。修好后 `make test -j8` 与串行两轮全部通过。
+   这只消除了静默错误；**同 O 双 make 仍应被显式拒绝或串行化**（A09 未完成，见第 5 节）。
+
+## 7. 发现并已修的计划/环境问题
 
 `.gitignore` 第 1 行的 `build/` 会匹配**任意层级**名为 `build` 的目录，导致计划第 5、12、15 节要求的
 `docs/build/migration-inventory.md`、`docs/build/legacy-removal.md`、`docs/build/verification.md`
@@ -211,13 +270,13 @@ tests/host/common/... fatal error: ../../tools/host/common/buffer.h：没有那�
 已把首行改为锚定的 `/build/` 并移除两条临时反选，验证 `docs/build`、`tests/build`、`tools/build`
 不再被忽略，而 `build/linux-6.12/tools/build` 仍随 `/build/` 一起被忽略（`git status` 无新增噪声）。
 
-## 7. 已知限制
+## 8. 已知限制
 
-- 基线不完整：`all` 聚合目标的重跑在本文写就时仍未结束，缺有效数据。
-- 没有 QEMU 运行证据：本轮未启动任何镜像。
-- P1 的 Make 入口、`leonos-config`、`leonos-version`、`leonos-boot-logo` 均未交付；`P2–P5` 未开始。
-- `leonos-emit` 与 `tools/host/common/` 只有直接 `gcc` 编译与手工/单元测试证据，
-  **没有 `make tools` / `make test-tools` 目标**，因此不算已接入构建系统。
+- `userland/runtime/sdk/rootfs/apk-repo/三类镜像/run` 仍是 `exit 2` 的未迁移目标；
+  `all` 只做到 `kernel` 后明确报错，不冒充完整产物。
+- 来宾启动证据仍缺（见 5.1）；`test-smoke` 未交付。
+- 布局新增一个计划未列出的目录 `$(O)/third-party/`（上游 configure 的 out-of-tree 构建目录），
+  `make clean` 的显式清单已包含它。这是对计划第 5 节目录表的**扩展**，需审阅确认。
 - `docs/build/research/` 三份底稿是未复核的调研稿，其中两条论断已确认有误（见
   `migration-inventory.md` 第 5 节），不得当验收证据引用。
 - 本轮改动未推送、未合并、未发布镜像。

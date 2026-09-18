@@ -84,6 +84,28 @@ printf '       clean build actions: CC=%s AS=%s LD=%s IMAGE=%s\n' \
     "$(printf '%s\n' "$first" | grep -cE '^  LD ' || true)" \
     "$(printf '%s\n' "$first" | grep -cE '^  IMAGE ' || true)"
 
+# Every object that ends up on disk has to have been produced by a compile
+# action in this very build. A count that agrees by accident, or an object that
+# appeared without an action, is exactly the kind of drift this suite exists to
+# catch, so name the offenders rather than comparing two numbers.
+printf '%s\n' "$first" | sed -n 's/^  CC       //p' | LC_ALL=C sort >"$work/cc-actions"
+find "$O/obj/kernel" -name '*.c.o' | sed "s#^$O/obj/kernel/##" | LC_ALL=C sort >"$work/cc-objects"
+unrecorded=0
+while read -r object; do
+    [ -n "$object" ] || continue
+    source=$(printf '%s' "$object" | sed 's#\.o$##')
+    if ! grep -qxF -- "$repo_root/$source" "$work/cc-actions"; then
+        printf '       no CC action recorded for %s\n' "$object"
+        unrecorded=$((unrecorded + 1))
+    fi
+done <"$work/cc-objects"
+if [ "$unrecorded" = 0 ]; then
+    pass 'every kernel object was produced by a compile action'
+else
+    fail 'every kernel object was produced by a compile action' \
+        "$unrecorded object(s) appeared without one"
+fi
+
 kernel_objects=$(find "$O/obj/kernel" -name '*.c.o' | wc -l)
 assembly_objects=$(find "$O/obj/kernel" -name '*.S.o' | wc -l)
 if [ "$kernel_objects" -gt 50 ] && [ "$assembly_objects" -gt 0 ]; then

@@ -53,7 +53,8 @@ fi
 
 # Explicit list rather than a glob: an unknown entry in the tree is not ours to
 # delete, and this is what makes `clean` auditable.
-products="obj generated host include sysroot stage packages images logs meta"
+# third-party holds upstream build directories this configuration owns (see mk/third-party.mk).
+products="obj generated host include sysroot stage packages images logs meta third-party"
 if [ "$keep" = 0 ]; then
     products="$products config"
 fi

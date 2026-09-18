@@ -22,6 +22,64 @@
 #define TEMP_SUFFIX_SIZE (sizeof(TEMP_SUFFIX) - 1u)
 
 /**
+ * @brief Drain an open descriptor into `out`.
+ * @param descriptor Readable descriptor.
+ * @param out Buffer the caller must destroy; filled with the bytes read.
+ * @param owns_descriptor Non-zero closes `descriptor` before returning, on
+ *                        every path. Zero leaves stdin open for the caller.
+ * @return 0 when the whole stream was read (possibly zero bytes), -1 with
+ *         errno set on any failure.
+ */
+static int read_descriptor(int descriptor, struct byte_buffer *out,
+    int owns_descriptor)
+{
+    int close_result;
+
+    for (;;) {
+        size_t chunk = 8192u;
+        ssize_t got;
+        size_t used = out->len;
+
+        if (buffer_reserve(out, used + chunk) != 0) {
+            goto failure;
+        }
+        got = read(descriptor, out->data + used, chunk);
+        if (got < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            goto failure;
+        }
+        if (got == 0) {
+            break;
+        }
+        out->len = used + (size_t)got;
+    }
+
+    if (owns_descriptor != 0) {
+        close_result = close(descriptor);
+        owns_descriptor = 0;
+        if (close_result != 0) {
+            /* The bytes were already complete, but a close failure can mean the
+             * reader hit a limit; report it rather than claiming success. */
+            return -1;
+        }
+    }
+    return 0;
+
+failure:
+    {
+        int saved = errno;
+
+        if (owns_descriptor != 0) {
+            close(descriptor);
+        }
+        errno = saved;
+    }
+    return -1;
+}
+
+/**
  * @brief Read an existing file completely.
  * @param path File to read; absence is not an error.
  * @param out Buffer the caller must destroy; filled with the file bytes.
@@ -38,36 +96,33 @@ static int read_existing(const char *path, struct byte_buffer *out)
         }
         return -1;
     }
+    return read_descriptor(descriptor, out, 1);
+}
 
-    for (;;) {
-        size_t chunk = 8192u;
-        ssize_t got;
-        size_t used = out->len;
+int read_file_all(const char *path, struct byte_buffer *out)
+{
+    int result;
 
-        if (buffer_reserve(out, used + chunk) != 0) {
-            close(descriptor);
-            return -1;
-        }
-        got = read(descriptor, out->data + used, chunk);
-        if (got < 0) {
-            if (errno == EINTR) {
-                continue;
-            }
-            close(descriptor);
-            return -1;
-        }
-        if (got == 0) {
-            break;
-        }
-        out->len = used + (size_t)got;
-    }
-
-    if (close(descriptor) != 0) {
-        /* The bytes were already complete, but a close failure can mean the
-         * reader hit a limit; report it rather than claiming success. */
+    if (path == NULL || out == NULL) {
+        errno = EINVAL;
         return -1;
     }
-    return 0;
+    buffer_destroy(out);
+    if (strcmp(path, "-") == 0) {
+        result = read_descriptor(STDIN_FILENO, out, 0);
+    } else {
+        result = read_existing(path, out);
+        if (result == 1) {
+            /* read_existing() treats a missing file as a benign answer because
+             * its only other caller compares against nothing. Here there is
+             * nothing to compare: the caller asked for bytes. */
+            result = -1;
+        }
+    }
+    if (result != 0) {
+        buffer_destroy(out);
+    }
+    return result;
 }
 
 /**

@@ -91,6 +91,10 @@ O_PACKAGES  := $(O)/packages
 O_IMAGES    := $(O)/images
 O_LOGS      := $(O)/logs
 O_META      := $(O)/meta
+# Where upstream build directories live. Not in the plan's list of output
+# subdirectories, but an out-of-tree upstream build needs somewhere to write,
+# and `obj/` is this project's own objects.
+O_THIRD_PARTY := $(O)/third-party
 
 # Shared download cache: deliberately outside O because it is profile
 # independent and `distclean` must not throw it away.
@@ -105,6 +109,7 @@ include $(LEONOS_SRC)/mk/host.mk
 include $(LEONOS_SRC)/mk/toolchain.mk
 include $(LEONOS_SRC)/mk/config.mk
 include $(LEONOS_SRC)/mk/kernel.mk
+include $(LEONOS_SRC)/mk/third-party.mk
 include $(LEONOS_SRC)/mk/tests.mk
 
 # --- public goals -----------------------------------------------------------
@@ -117,7 +122,8 @@ include $(LEONOS_SRC)/mk/tests.mk
 
 help:
 	@V='$(V)' O='$(O)' ARCH='$(ARCH)' PROFILE='$(PROFILE)' CPUS='$(CPUS)' \
-	TOOLCHAIN='$(TOOLCHAIN)' SRC='$(LEONOS_SRC)' sh $(LEONOS_SRC)/scripts/help.sh
+	TOOLCHAIN='$(TOOLCHAIN)' SRC='$(LEONOS_SRC)' CACHE='$(LEONOS_CACHE)' \
+	LOCK='$(LEONOS_LOCK)' sh $(LEONOS_SRC)/scripts/help.sh
 
 doctor:
 	@SRC='$(LEONOS_SRC)' O='$(O)' ARCH='$(ARCH)' PROFILE='$(PROFILE)' \
@@ -126,10 +132,8 @@ doctor:
 	TARGET_OBJCOPY='$(TARGET_OBJCOPY)' TARGET_STRIP='$(TARGET_STRIP)' \
 	TARGET_RUSTC='$(TARGET_RUSTC)' TARGET_TRIPLE_KERNEL='$(TRIPLE_KERNEL)' \
 	TARGET_TRIPLE_USER='$(TRIPLE_USER)' \
+	DEPS='$(LEONOS_DEPS_TOOL)' LOCK='$(LEONOS_LOCK)' CACHE='$(LEONOS_CACHE)' \
 	sh $(LEONOS_SRC)/scripts/doctor.sh
-
-fetch:
-	@sh $(LEONOS_SRC)/scripts/not-migrated.sh fetch "P2/P3 (dependency lock file and offline cache)"
 
 defconfig olddefconfig menuconfig: $(LEONOS_O_MARKER)
 	@$(MAKE) --no-print-directory $(LEONOS_CONFIG_FILE) LEONOS_KCONFIG_MODE=$@

@@ -57,6 +57,20 @@ run-debug, run-iso, menuconfig, defconfig, clean`。其余 100 多个目标由�
 | `apk-*`、`openrc`、`rpr-*`、`app-manifests`、`grub-*`、`gbk-table`、`image-*` 资源 | `make apk-repo` / `make rootfs` / 资源 C 生成器 | P3 | 包归属/签名、镜像内容比对 |
 | `staging-prune`（`build.py:2553-2660`） | 无等价物：改为"空 staging 起步 + 成员清单 + 原子发布" | P3 | A06、A12 |
 
+### 2.1 P2-a 之后的实际进度（2026-09-19）
+
+上表中 `musl-*` 行的 **musl + mimalloc sysroot** 与 **`make fetch`/锁文件** 两半已落地：
+`configs/dependencies.lock.json`（41 条，`schema_version=1`）+ `tools/host/manifest/{json.c,leonos-deps.c}`
++ `tools/build/fetch.sh` + `mk/third-party.mk` + `tools/build/musl-sysroot.sh`。
+产物等价性与逐字节比对结果记在 `verification.md` 第 6 节。
+
+同一次改动把 `configs/auth-upstream.json`、`configs/storage-upstream.json`、
+`configs/openrc-packages.json` 的职责并入锁文件；三个旧文件**暂不删除**，因为
+`auth-upstream`、`storage-upstream`、`apk-root` 三个消费者仍在旧 `build.py` 里。
+它们迁移到新目标时改读锁文件，删除时机记入 `legacy-removal.md`（P4）。
+
+`busybox/lua/sqlite/...` 等其余上游组件、以及 `userland/runtime/sdk` 仍待迁移。
+
 ## 3. 已实证的结构性障碍
 
 这些不是"改造一下就行"的差异，而是新系统必须显式解决、否则验收矩阵会直接挂掉的点。每条都给出可复核位置。
@@ -140,7 +154,7 @@ RPATH 因此手写版必须自行处理（否则会把绝对工作区路径写�
 本身是坏的（`-fuse-ld=lld`/`--rtlib` 混入 cross `c=` 导致 22 个加固旗标被静默丢弃），这属于**既有缺陷**，
 是否顺带修需单独决策。
 
-## 6. 本轮未完成的部分
+## 6. 尚未完成的部分（P2-a 之后）
 
 - **P0-b 不完整**：`installer` 与 `all` 两个基线用例因我自己的测量脚本缺陷（`tests/build/measure.sh`
   被一次批量缩进规范化弄丢了可执行位）返回 rc=126，未取到有效基线。正在以新文件名重跑，结论见

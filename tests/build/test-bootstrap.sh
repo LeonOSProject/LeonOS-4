@@ -34,6 +34,7 @@ expect_output_contains() {
     else
         printf 'FAIL - %s\n' "$description"
         printf '       expected output to contain: %s\n' "$pattern"
+        failures=$((failures + 1))
     fi
 }
 
@@ -50,6 +51,7 @@ expect_failure() {
         printf 'FAIL - %s\n' "$description"
         printf '       exit=%s, expected non-zero and text containing: %s\n' "$status" "$pattern"
         printf '%s\n' "$output" | sed 's/^/       | /'
+        failures=$((failures + 1))
     fi
 }
 
@@ -70,7 +72,13 @@ check "help does not rewrite tracked generated files" \
     git diff --quiet -- buildsystem/state/build_number.txt include/generated/build_info.h
 
 # --- HOSTCC and target CC are independent ---------------------------------
-expect_output_contains "doctor reports the host compiler separately" "HOSTCC" \
+expect_output_contains "doctor reports the host compiler separately" "HOSTCC     cc" \
+    make -s doctor
+# One variable per side: if doctor printed a single "compiler" line the assertion
+# above would pass even when the host and target compilers were the same binary.
+expect_output_contains "doctor names the target compiler and linker apart from it" \
+    "TARGET_CC  clang" make -s doctor
+expect_output_contains "doctor reports the target linker" "TARGET_LD  ld.lld" \
     make -s doctor
 check "host tools build with a plain host compiler" \
     env HOSTCC=cc make -s tools

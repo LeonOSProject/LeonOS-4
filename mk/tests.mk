@@ -5,8 +5,10 @@
 
 LEONOS_TEST_TMP := $(if $(TMPDIR),$(TMPDIR),/tmp)/leonos-tests-$(shell id -u)
 
-# C unit tests for the shared host primitives.
-LEONOS_HOST_TEST_BINS := $(O_HOST)/tests/test_common
+# C unit tests for the shared host primitives and the JSON reader.
+LEONOS_HOST_TEST_BINS := $(O_HOST)/tests/test_common $(O_HOST)/tests/test_json
+LEONOS_HOST_TEST_SANITISED := $(O_HOST)/tests-sanitised/test_common \
+	$(O_HOST)/tests-sanitised/test_json
 
 # Shell contract tests. test-bootstrap.sh is the public entry-point surface.
 LEONOS_BUILD_TESTS := $(sort $(wildcard $(LEONOS_SRC)/tests/build/test-*.sh))
@@ -24,16 +26,29 @@ leonos-test-tools-plain: $(LEONOS_HOST_TEST_BINS)
 	    $$test_binary; \
 	done
 
-leonos-test-tools-sanitised: $(O_HOST)/tests-sanitised/test_common
-	@set -eu; \
+leonos-test-tools-sanitised: $(LEONOS_HOST_TEST_SANITISED)
+	@set -eu; for test_binary in $(LEONOS_HOST_TEST_SANITISED); do \
+	    printf '  %-8s %s\n' RUN $$test_binary; \
 	    ASAN_OPTIONS=detect_leaks=1 \
-	    UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 \
-	    $(O_HOST)/tests-sanitised/test_common
+	    UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 $$test_binary; \
+	done
 
-test-build: $(LEONOS_HOST_TOOLS)
+# Contract tests get the built tool and the lock file by name so they never
+# reach for a stale copy left in the output tree.
+test-build: test-tools $(LEONOS_HOST_TOOLS)
 	@set -eu; for contract_test in $(LEONOS_BUILD_TESTS); do \
 	    printf '  %-8s %s\n' RUN $$contract_test; \
-	    sh $$contract_test; \
+	    report=$$(mktemp); \
+	    if LEONOS_DEPS='$(LEONOS_DEPS_TOOL)' \
+	       LEONOS_LOCK='$(LEONOS_SRC)/configs/dependencies.lock.json' \
+	       LEONOS_EMIT='$(LEONOS_EMIT)' \
+	       sh $$contract_test >$$report 2>&1; then status=0; else status=1; fi; \
+	    cat $$report; \
+	    if grep -q 'FAIL - ' $$report; then status=1; fi; \
+	    rm -f $$report; \
+	    if [ $$status -ne 0 ]; then \
+	        printf 'not ok - %s reported a failure\n' $$contract_test; exit 1; \
+	    fi; \
 	done
 
 test: test-tools test-build
@@ -51,18 +66,31 @@ $(O_HOST)/obj/tests-sanitised/host/%.c.o: $(LEONOS_SRC)/tests/host/%.c $(O_META)
 	    -I$(LEONOS_SRC)/tests/host $(LEONOS_HOST_INCLUDES) -g -O1 \
 	    -MMD -MF $@.d -c $< -o $@
 
-$(O_HOST)/obj/tests-sanitised/tools/host/common/%.c.o: $(LEONOS_SRC)/tools/host/common/%.c \
+$(O_HOST)/obj/tests-sanitised/tools/host/%.c.o: $(LEONOS_SRC)/tools/host/%.c \
 	$(O_META)/host-cc-sanitised.sig
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(HOSTCC) $(LEONOS_STRICT_WARNINGS) $(LEONOS_SANITISE) -g -O1 \
 	    $(LEONOS_HOST_INCLUDES) -MMD -MF $@.d -c $< -o $@
 
-$(LEONOS_HOST_TEST_BINS): $(O_HOST)/obj/tests/host/test_common.c.o $(LEONOS_HOST_COMMON_OBJS)
+$(O_HOST)/tests/test_common: $(O_HOST)/obj/tests/host/test_common.c.o $(LEONOS_HOST_COMMON_OBJS)
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
 
+$(O_HOST)/tests/test_json: $(O_HOST)/obj/tests/host/test_json.c.o $(LEONOS_JSON_OBJ) \
+	$(LEONOS_HOST_COMMON_OBJS)
+	$(Q)mkdir -p $(dir $@)
+	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
+
+LEONOS_HOST_SANITISED_OBJS := $(patsubst $(O_HOST)/obj/tools/host/%.c.o, \
+	$(O_HOST)/obj/tests-sanitised/tools/host/%.c.o,$(LEONOS_HOST_COMMON_OBJS))
+
 $(O_HOST)/tests-sanitised/test_common: $(O_HOST)/obj/tests-sanitised/host/test_common.c.o \
-	$(patsubst $(O_HOST)/obj/tools/host/common/%.c.o,$(O_HOST)/obj/tests-sanitised/tools/host/common/%.c.o,$(LEONOS_HOST_COMMON_OBJS))
+	$(LEONOS_HOST_SANITISED_OBJS)
+	$(Q)mkdir -p $(dir $@)
+	$(Q)$(HOSTCC) $(LEONOS_SANITISE) -g -O1 $^ -o $@
+
+$(O_HOST)/tests-sanitised/test_json: $(O_HOST)/obj/tests-sanitised/host/test_json.c.o \
+	$(O_HOST)/obj/tests-sanitised/tools/host/manifest/json.c.o $(LEONOS_HOST_SANITISED_OBJS)
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(HOSTCC) $(LEONOS_SANITISE) -g -O1 $^ -o $@
 
@@ -70,3 +98,4 @@ LEONOS_SIG_host-cc-sanitised := argv=$(HOSTCC) $(LEONOS_STRICT_WARNINGS) $(LEONO
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,host-cc-sanitised)))
 
 -include $(shell find $(O_HOST)/obj/tests $(O_HOST)/obj/tests-sanitised -name '*.o.d' 2>/dev/null)
+.PHONY: test test-tools test-build

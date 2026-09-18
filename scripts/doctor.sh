@@ -28,13 +28,18 @@ for tool in sh grep sed awk find sort cmp mv ln mkdir rm printf date tr head \
             cut expr uname nproc xz tar patch curl; do
     check_tool "$tool"
 done
-printf '  host compiler %s\n' "${HOSTCC:-cc}"
+printf '  HOSTCC     %s\n' "${HOSTCC:-cc}"
 if ! command -v "${HOSTCC:-cc}" >/dev/null 2>&1; then
     missing "HOSTCC=${HOSTCC:-cc}"
 fi
 
 group ''
 group 'target toolchain (validated by actually compiling)'
+# Named explicitly: HOSTCC and TARGET_CC must be visible as two different
+# variables in one output, or "the host compiler works" proves nothing about the
+# cross compiler.
+printf '  TARGET_CC  %s\n' "${TARGET_CC:-unset}"
+printf '  TARGET_LD  %s\n' "${TARGET_LD:-unset}"
 for tool in "$TARGET_CC" "$TARGET_LD" "$TARGET_AR" "$TARGET_OBJCOPY" \
             "$TARGET_STRIP" "$TARGET_RUSTC"; do
     check_tool "$tool"
@@ -105,13 +110,44 @@ if [ -f third_party/zlib/contrib/puff/puff.c ]; then
 else
     missing 'third_party/zlib/contrib/puff/puff.c'
 fi
-for component in musl busybox mbedtls lua sqlite tinycc ncurses; do
-    if [ -d "third_party/$component" ] && [ -n "$(ls -A "third_party/$component" 2>/dev/null)" ]; then
-        printf '  ok       third_party/%s\n' "$component"
+# Which upstream sources the build needs is the lock file's job, so doctor asks
+# it rather than keeping a second, easily stale list here.
+lock=${LOCK:-}
+deps_tool=${DEPS:-}
+cache=${CACHE:-}
+if [ -n "$lock" ] && [ ! -f "$lock" ]; then
+    missing "$lock (the dependency lock file is gone)"
+elif [ -n "$deps_tool" ] && [ -x "$deps_tool" ] && [ -n "$lock" ]; then
+    if "$deps_tool" --lock "$lock" --check --root "$PWD" >/dev/null 2>&1; then
+        printf '  ok       %s (%s dependencies)\n' \
+            "$lock" "$("$deps_tool" --lock "$lock" --list | grep -c '')"
     else
-        missing "third_party/$component (not initialised)"
+        missing "$lock does not validate: $deps_tool --lock $lock --check --root ."
     fi
-done
+    # A `for` loop, not a pipeline: a piped `while` runs in a subshell, and a
+    # MISSING submodule there would print without failing doctor. Ids are
+    # validated by leonos-deps to contain no whitespace.
+    for dependency in $("$deps_tool" --lock "$lock" --list 2>/dev/null); do
+        directory=$("$deps_tool" --lock "$lock" --id "$dependency" --print directory 2>/dev/null) || continue
+        kind=$("$deps_tool" --lock "$lock" --id "$dependency" --print kind 2>/dev/null) || continue
+        [ "$kind" = submodule ] || continue
+        if [ -n "$directory" ] && [ -n "$(ls -A "$directory" 2>/dev/null)" ]; then
+            printf '  ok       %s\n' "$directory"
+        else
+            printf '  MISSING  %s (git submodule update --init)\n' "$directory"
+        fi
+    done
+    if [ -n "$cache" ]; then
+        wanted=$("$deps_tool" --lock "$lock" --fetch-list 2>/dev/null | grep -c '')
+        have=0
+        [ -d "$cache" ] && have=$(cd "$cache" && find . -type f -name '.*.partial.*' -prune -o -type f -print | wc -l)
+        printf '  %-8s %s of %s locked downloads in %s (make fetch)\n' \
+            "$([ "$have" -ge "$wanted" ] && echo ok || echo note)" "$have" "$wanted" "$cache"
+    fi
+elif [ -n "$lock" ]; then
+    printf '  note     lock file not validated: %s is not built yet (make tools)\n' \
+        "$deps_tool"
+fi
 
 printf '\n'
 if [ "$failures" -ne 0 ]; then

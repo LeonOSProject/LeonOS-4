@@ -14,6 +14,7 @@ TRIPLE_USER := x86_64-linux-musl
 TOOLCHAIN_CC := clang
 TOOLCHAIN_CXX := clang++
 TOOLCHAIN_AR := llvm-ar
+TOOLCHAIN_RANLIB := llvm-ranlib
 TOOLCHAIN_LD := ld.lld
 TOOLCHAIN_OBJCOPY := llvm-objcopy
 TOOLCHAIN_STRIP := llvm-strip
@@ -22,4 +23,5 @@ TOOLCHAIN_RUSTC := rustc
 # Checked by `make doctor`: the middlelayer is Rust plus C, and choosing C for
 # the host helper tools did not remove that dependency.
 TOOLCHAIN_REQUIRED := $(TOOLCHAIN_CC) $(TOOLCHAIN_CXX) $(TOOLCHAIN_AR) \
-	$(TOOLCHAIN_LD) $(TOOLCHAIN_OBJCOPY) $(TOOLCHAIN_STRIP) $(TOOLCHAIN_RUSTC)
+	$(TOOLCHAIN_LD) $(TOOLCHAIN_OBJCOPY) $(TOOLCHAIN_STRIP) $(TOOLCHAIN_RANLIB) \
+	$(TOOLCHAIN_RUSTC)

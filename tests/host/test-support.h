@@ -78,7 +78,7 @@ static int test_join(char *out, size_t out_size, const char *dir, const char *na
 }
 
 /* Creates a private temporary directory, or returns NULL. */
-static char *test_temp_dir(char *buffer, size_t size)
+static inline char *test_temp_dir(char *buffer, size_t size)
 {
     const char *pattern = "./leonos-host-test-XXXXXX";
 
@@ -92,7 +92,7 @@ static char *test_temp_dir(char *buffer, size_t size)
 /* Recursively unlinks everything under `path`, then removes `path` itself.
  * Only used on directories this suite created, so a failure is reported rather
  * than silently ignored. */
-static void test_remove_tree(const char *path)
+static inline void test_remove_tree(const char *path)
 {
     DIR *directory = opendir(path);
     struct dirent *entry;
@@ -122,7 +122,7 @@ static void test_remove_tree(const char *path)
     (void)rmdir(path);
 }
 
-static char *test_read_all(const char *path, size_t *out_size)
+static inline char *test_read_all(const char *path, size_t *out_size)
 {
     FILE *stream = fopen(path, "rb");
     char *data;

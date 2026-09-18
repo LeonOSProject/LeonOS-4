@@ -58,9 +58,10 @@ LEONOS_EMIT := $(LEONOS_HOST_BIN)/leonos-emit
 LEONOS_CONFIG_TOOL := $(LEONOS_HOST_BIN)/leonos-config
 LEONOS_VERSION_TOOL := $(LEONOS_HOST_BIN)/leonos-version
 LEONOS_BOOT_LOGO_TOOL := $(LEONOS_HOST_BIN)/leonos-boot-logo
+LEONOS_DEPS_TOOL := $(LEONOS_HOST_BIN)/leonos-deps
 
 LEONOS_HOST_TOOLS := $(LEONOS_EMIT) $(LEONOS_CONFIG_TOOL) \
-	$(LEONOS_VERSION_TOOL) $(LEONOS_BOOT_LOGO_TOOL)
+	$(LEONOS_VERSION_TOOL) $(LEONOS_BOOT_LOGO_TOOL) $(LEONOS_DEPS_TOOL)
 
 LEONOS_HOST_COMMON_OBJS := $(patsubst %.c,$(O_HOST)/obj/%.c.o,$(LEONOS_HOST_COMMON_SRCS))
 LEONOS_HOST_PUFF_OBJ := $(O_HOST)/obj/$(LEONOS_HOST_PUFF_SRC).o
@@ -82,14 +83,22 @@ LEONOS_HOST_PUFF_OBJ := $(O_HOST)/obj/$(LEONOS_HOST_PUFF_SRC).o
 # would need leonos-emit built first, and that build depends on a signature.
 # rename() preserves the candidate's fresh mtime, so the signature moves only
 # when its content actually differed.
+# The candidate carries this make process' id: two makes that share an output
+# tree parse with different flags (an override here, a different goal there), and
+# a single fixed candidate name lets the later parse overwrite the earlier one,
+# so a process would promote a signature it never computed. MAKEPID keeps each
+# candidate private; promoting is still compare-then-move, so the published .sig
+# only ever moves when its content really changed.
+LEONOS_CANDIDATE = $(O_META)/$(1).$(MAKEPID).candidate
+
 define LEONOS_SIGNATURE_RULE
-$(file >$(O_META)/$(1).candidate,$(strip $(LEONOS_SIG_$(1))))
+$(file >$(call LEONOS_CANDIDATE,$(1)),$(strip $(LEONOS_SIG_$(1))))
 
 $(O_META)/$(1).sig: FORCE | $(O_META)
-	$(Q)if cmp -s $(O_META)/$(1).candidate $$@ 2>/dev/null; then \
-	    rm -f $(O_META)/$(1).candidate.new; \
+	$(Q)if cmp -s $(call LEONOS_CANDIDATE,$(1)) $$@ 2>/dev/null; then \
+	    rm -f $(call LEONOS_CANDIDATE,$(1)); \
 	else \
-	    mv $(O_META)/$(1).candidate $$@; \
+	    mv $(call LEONOS_CANDIDATE,$(1)) $$@; \
 	fi
 endef
 
@@ -144,6 +153,13 @@ $(LEONOS_VERSION_TOOL): $(O_HOST)/obj/tools/host/version/leonos-version.c.o $(LE
 
 $(LEONOS_BOOT_LOGO_TOOL): $(O_HOST)/obj/tools/host/assets/leonos-boot-logo.c.o \
 	$(LEONOS_HOST_PUFF_OBJ) $(LEONOS_HOST_COMMON_OBJS) | $(LEONOS_HOST_BIN)
+	$(Q)printf '  %-8s %s\n' HOSTLD $@
+	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
+
+# The lock-file reader links the JSON module as well as the shared primitives.
+LEONOS_JSON_OBJ := $(O_HOST)/obj/tools/host/manifest/json.c.o
+$(LEONOS_DEPS_TOOL): $(O_HOST)/obj/tools/host/manifest/leonos-deps.c.o $(LEONOS_JSON_OBJ) \
+	$(LEONOS_HOST_COMMON_OBJS) | $(LEONOS_HOST_BIN)
 	$(Q)printf '  %-8s %s\n' HOSTLD $@
 	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
 

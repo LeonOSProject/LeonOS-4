@@ -6,6 +6,22 @@
 
 #include <stddef.h>
 
+#include "tools/host/common/buffer.h"
+
+/**
+ * @brief Read a whole file into `out`, replacing whatever it held.
+ *
+ * Sized by the read loop rather than stat(), so a file that grows while it is
+ * being read is still consumed completely, and a short read is an error rather
+ * than a silently truncated buffer.
+ *
+ * @param path File to read; `-` means standard input.
+ * @param out Buffer owned by the caller; its previous contents are released
+ *            before the read starts, and on failure it is left empty.
+ * @return 0 on success, -1 on failure with errno set.
+ */
+int read_file_all(const char *path, struct byte_buffer *out);
+
 /**
  * @brief Write `data` to `path` only when the contents would actually change.
  *
