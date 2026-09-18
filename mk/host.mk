@@ -83,13 +83,16 @@ LEONOS_HOST_PUFF_OBJ := $(O_HOST)/obj/$(LEONOS_HOST_PUFF_SRC).o
 # would need leonos-emit built first, and that build depends on a signature.
 # rename() preserves the candidate's fresh mtime, so the signature moves only
 # when its content actually differed.
-# The candidate carries this make process' id: two makes that share an output
-# tree parse with different flags (an override here, a different goal there), and
-# a single fixed candidate name lets the later parse overwrite the earlier one,
-# so a process would promote a signature it never computed. MAKEPID keeps each
-# candidate private; promoting is still compare-then-move, so the published .sig
-# only ever moves when its content really changed.
-LEONOS_CANDIDATE = $(O_META)/$(1).$(MAKEPID).candidate
+# The candidate carries an id unique to this make process: two makes that share
+# an output tree parse with different flags (an override here, a different goal
+# there), and a single fixed candidate name lets the later parse overwrite the
+# earlier one, so a process would promote a signature it never computed.
+# MAKEPID is only set on platforms that support it -- GNU Make leaves it empty on
+# POSIX -- so the fallback is the pid of one subshell, expanded exactly once by
+# the := below. Promoting is still compare-then-move, so the published .sig only
+# ever moves when its content really changed.
+LEONOS_PARSE_ID := $(or $(MAKEPID),$(shell echo $$$$))
+LEONOS_CANDIDATE = $(O_META)/$(1).$(LEONOS_PARSE_ID).candidate
 
 define LEONOS_SIGNATURE_RULE
 $(file >$(call LEONOS_CANDIDATE,$(1)),$(strip $(LEONOS_SIG_$(1))))

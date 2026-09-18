@@ -6,6 +6,12 @@
 # mtime, and which objects the linker consumed. Nothing here trusts a stamp.
 set -u
 
+# comm checks that its inputs are sorted in *its* locale, and every list here is
+# sorted with LC_ALL=C. Without the export the comparison warns and can mis-order
+# paths that contain bytes the ambient collation ignores.
+LC_ALL=C
+export LC_ALL
+
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 
@@ -19,6 +25,12 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# Make decides "rebuild?" by comparing mtimes, so a prerequisite that changes in
+# the same timestamp tick as the last build's output reads as not newer and is
+# correctly skipped. Every invalidation below waits a tick first, so these
+# assertions measure the dependency graph rather than the filesystem clock.
+advance_clock() { sleep 1; }
+
 pass() { checks=$((checks + 1)); printf 'ok   - %s\n' "$1"; }
 fail() {
     checks=$((checks + 1))
@@ -31,8 +43,20 @@ fail() {
 }
 
 # Actions Make actually ran, identified by the fixed-width label column.
+#
+# A pipeline cannot carry Make's own exit status through grep, and a suite that
+# reads "make failed" as "make did no work" would report a broken build as an
+# incremental-correctness pass. Make's status is therefore captured separately
+# and stops the run, with its output kept for the report.
 build() {
-    make -s O="$O" kernel 2>&1 | grep -E '^  (CC|AS|LD|IMAGE|GEN|HOSTCC|CONFIG) ' || true
+    make -s O="$O" "$@" kernel >"$work/make.out" 2>&1
+    status=$?
+    grep -E '^  (CC|AS|LD|IMAGE|GEN|HOSTCC|CONFIG) ' "$work/make.out" || true
+    if [ "$status" -ne 0 ]; then
+        printf 'FAIL - make exited with %s; the incremental assertions below mean nothing\n' "$status"
+        tail -n 25 "$work/make.out" | sed 's/^/       | /'
+        exit 1
+    fi
 }
 
 count_label() { printf '%s\n' "$1" | grep -cE "^  $2 " || true; }
@@ -47,6 +71,15 @@ snapshot() {
                    "$O/include/generated/boot_logo.h"; do
         [ -e "$product" ] && printf '%s %s\n' "$product" "$(stat -c %y "$product")"
     done | LC_ALL=C sort
+}
+
+# Which object files changed mtime between two snapshots. Counting Make's log
+# lines is a weaker measure than this: the log is a stream that passes through a
+# pipeline, while an object's timestamp is the fact the dependency graph is
+# supposed to control.
+changed_objects() {
+    awk 'NR==FNR { seen[$1] = $2; next }
+                ($1 in seen) && seen[$1] != $2 { print $1 }' "$1" "$2" | LC_ALL=C sort
 }
 
 expect_same() {
@@ -84,26 +117,18 @@ printf '       clean build actions: CC=%s AS=%s LD=%s IMAGE=%s\n' \
     "$(printf '%s\n' "$first" | grep -cE '^  LD ' || true)" \
     "$(printf '%s\n' "$first" | grep -cE '^  IMAGE ' || true)"
 
-# Every object that ends up on disk has to have been produced by a compile
-# action in this very build. A count that agrees by accident, or an object that
-# appeared without an action, is exactly the kind of drift this suite exists to
-# catch, so name the offenders rather than comparing two numbers.
-printf '%s\n' "$first" | sed -n 's/^  CC       //p' | LC_ALL=C sort >"$work/cc-actions"
-find "$O/obj/kernel" -name '*.c.o' | sed "s#^$O/obj/kernel/##" | LC_ALL=C sort >"$work/cc-objects"
-unrecorded=0
-while read -r object; do
-    [ -n "$object" ] || continue
-    source=$(printf '%s' "$object" | sed 's#\.o$##')
-    if ! grep -qxF -- "$repo_root/$source" "$work/cc-actions"; then
-        printf '       no CC action recorded for %s\n' "$object"
-        unrecorded=$((unrecorded + 1))
-    fi
-done <"$work/cc-objects"
-if [ "$unrecorded" = 0 ]; then
-    pass 'every kernel object was produced by a compile action'
+# Nothing may be linked in that the deletion-detecting manifest does not list:
+# a leftover object from an earlier source set is the classic way a removed file
+# keeps haunting an image.
+find "$O/obj/kernel" \( -name '*.c.o' -o -name '*.S.o' \) |
+        sed "s#^$O/obj/kernel/##; s#\.o\$##" | LC_ALL=C sort >"$work/on-disk"
+LC_ALL=C sort "$O/obj/kernel/sources.list" >"$work/listed"
+orphans=$(comm -23 "$work/on-disk" "$work/listed" | tr '\n' ' ')
+if [ -z "$orphans" ]; then
+    pass 'every object on disk is accounted for by the source manifest'
 else
-    fail 'every kernel object was produced by a compile action' \
-        "$unrecorded object(s) appeared without one"
+    fail 'every object on disk is accounted for by the source manifest' \
+        "not in the manifest: $orphans"
 fi
 
 kernel_objects=$(find "$O/obj/kernel" -name '*.c.o' | wc -l)
@@ -130,7 +155,8 @@ printf '\n=== A03: one ordinary source file ===\n'
 target_source=kernel/ntclks/futex.c
 target_object=$O/obj/kernel/$target_source.o
 before=$(snapshot)
-touch "$repo_root/$target_source"
+    advance_clock
+    touch "$repo_root/$target_source"
 third=$(build)
 expect_count "$third" CC 1 'changing one C file recompiles exactly one object'
 expect_count "$third" LD 1 'changing one C file relinks once'
@@ -163,16 +189,36 @@ header=$(for depfile in $depfiles; do
 if [ -z "$header" ] || [ ! -f "$header" ]; then
     fail 'a shared source header was found to test' "candidate: ${header:-none}"
 else
-    expected=$(grep -lF -- "$header" $depfiles 2>/dev/null | wc -l)
+    # Count depfiles that list the header as a whole word. A substring match
+    # would count `ntclks/signal.h` as a consumer of `posix/signal.h` and blame
+    # Make for a discrepancy the test invented.
+    expected=0
+    expected_list=$work/expected-objects
+    : >"$expected_list"
+    for depfile in $depfiles; do
+        if sed -e :a -e '/\\$/N; s/\\\n//; ta' "$depfile" | tr ' \t' '\n\n' |
+                grep -qxF -- "$header"; then
+            expected=$((expected + 1))
+            printf '%s\n' "${depfile%.d}" >>"$expected_list" 
+        fi
+    done
+    snapshot >"$work/header-before"
+    advance_clock
     touch "$header"
     fourth=$(build)
-    actual=$(printf '%s\n' "$fourth" | grep -cE '^  CC ' || true)
+    snapshot >"$work/header-after"
+    changed_objects "$work/header-before" "$work/header-after" >"$work/changed-objects"
+    LC_ALL=C sort -o "$expected_list" "$expected_list"
+    missing=$(comm -23 "$expected_list" "$work/changed-objects" | xargs -n1 basename 2>/dev/null | tr '\n' ' ')
+    extra=$(comm -13 "$expected_list" "$work/changed-objects" | xargs -n1 basename 2>/dev/null | tr '\n' ' ')
+    actual=$(grep -c '' "$work/changed-objects")
     relinked=$(printf '%s\n' "$fourth" | grep -cE '^  LD ' || true)
-    if [ "$actual" = "$expected" ] && [ "$actual" -gt 1 ]; then
+    if [ "$actual" = "$expected" ] && [ "$actual" -gt 1 ] && [ -z "$missing$extra" ]; then
         pass "changing $(basename "$header") rebuilds exactly the $expected recorded consumers"
     else
         fail "changing $(basename "$header") rebuilds exactly the recorded consumers" \
-            "depfiles recorded $expected, Make recompiled $actual"
+            "depfiles recorded $expected, mtime moved on $actual" \
+            "not rebuilt: ${missing:-none}  unexpectedly rebuilt: ${extra:-none}"
     fi
     if [ "$relinked" = 1 ]; then
         pass 'the header change relinks once'
@@ -182,6 +228,7 @@ else
 fi
 
 printf '\n=== A04b: the linker script ===\n'
+advance_clock
 touch "$repo_root/kernel/ntclks/arch/x86_64/linker.ld"
 script_build=$(build)
 script_cc=$(printf '%s\n' "$script_build" | grep -cE '^  CC ' || true)
@@ -194,18 +241,26 @@ else
 fi
 
 printf '\n=== A05: compile flags, tool identity and profile isolation ===\n'
-before=$(snapshot)
-fifth=$(make -s O="$O" KERNEL_CFLAGS=-DLEONOS_SIG_PROBE kernel 2>&1 | grep -E '^  (CC|AS|LD|IMAGE) ' || true)
-after=$(snapshot)
-cc_actions=$(printf '%s\n' "$fifth" | grep -cE '^  CC ' || true)
-as_actions=$(printf '%s\n' "$fifth" | grep -cE '^  AS ' || true)
-if [ "$cc_actions" = "$kernel_objects" ] && [ "$as_actions" = 0 ]; then
-    pass "KERNEL_CFLAGS override rebuilds all $kernel_objects C objects and no asm object"
+# An override has to move every C object and no assembly object. Measured on the
+# objects themselves rather than on Make's log stream.
+advance_clock
+snapshot >"$work/flags-before"
+build KERNEL_CFLAGS=-DLEONOS_SIG_PROBE >/dev/null
+snapshot >"$work/flags-after"
+find "$O/obj/kernel" -name '*.c.o' | LC_ALL=C sort >"$work/all-c"
+find "$O/obj/kernel" -name '*.S.o' | LC_ALL=C sort >"$work/all-asm"
+changed_objects "$work/flags-before" "$work/flags-after" >"$work/flag-changed"
+missed=$(comm -23 "$work/all-c" "$work/flag-changed" | xargs -n1 basename 2>/dev/null | tr '\n' ' ')
+asm_touched=$(comm -12 "$work/all-asm" "$work/flag-changed" | xargs -n1 basename 2>/dev/null | tr '\n' ' ')
+cc_actions=$(grep -c '' "$work/flag-changed")
+if [ -z "$missed" ] && [ -z "$asm_touched" ] && [ "$cc_actions" = "$(grep -c '' "$work/all-c")" ]; then
+    pass "KERNEL_CFLAGS override rebuilds all $cc_actions C objects and no asm object"
 else
     fail 'KERNEL_CFLAGS override rebuilds only the C action class' \
-        "CC=$cc_actions AS=$as_actions expected CC=$kernel_objects AS=0"
+        "moved=$cc_actions of $(grep -c '' "$work/all-c")" \
+        "not rebuilt: ${missed:-none}  asm touched: ${asm_touched:-none}"
 fi
-if [ "$before" != "$after" ]; then
+if ! cmp -s "$work/flags-before" "$work/flags-after"; then
     pass 'the flag change moved product mtimes'
 else
     fail 'the flag change moved product mtimes' 'nothing rebuilt'
