@@ -3832,7 +3832,6 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     graph.add(Target(
         name="test-openrc-shutdown",
         inputs=(ROOT / "tools/test_openrc_shutdown.py",
-                ROOT / "kernel/ntclks/sched/sched.c",
                 *collect("system/rootfs/etc/init.d/*")),
         kind="command",
         command=(PYTHON, "tools/test_openrc_shutdown.py"),

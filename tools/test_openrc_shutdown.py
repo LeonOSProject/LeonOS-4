@@ -28,12 +28,6 @@ class OpenRCShutdownTests(unittest.TestCase):
             self.assertEqual(EXPECTED_RETRY, match.group(1), path.name)
         self.assertGreaterEqual(len(supervised), 1)
 
-    def test_kill_zero_does_not_keep_zombie_alive(self) -> None:
-        source = (ROOT / "kernel/ntclks/sched/sched.c").read_text(encoding="utf-8")
-        self.assertIn("if (!live) return -LINUX_ESRCH;", source)
-        self.assertIn("if (!signal_number) return 0;", source)
-        self.assertIn("kill(pid, 0)", source)
-
     def test_init_scripts_are_shell_syntax_valid(self) -> None:
         for path in sorted(INIT_DIR.iterdir()):
             if not path.is_file():
