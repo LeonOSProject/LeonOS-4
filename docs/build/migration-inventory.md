@@ -163,10 +163,14 @@ P2-a（依赖锁、`make fetch`、musl sysroot）、P2-b/P2-c（同 O 互斥、A
 
 **仍缺的产品能力**（每项都还是 `exit 2` 的显式拒绝，不存在"看起来完成"的假象）：
 
-- **P2-a3 认证链**：Linux-PAM/libxcrypt/libbsd/util-linux/sudo/shadow 的 Makefile 移植。
-  用户裁定不降级、不开 Meson/Ninja 例外、不删认证。`tools/build_auth_upstream.py` 是现状。
-  它是 `runtime` 的硬前置：`userland/auth/*.c` 需要 `security/pam_appl.h` 与 `libcrypt.so.2`，
-  `libleonos.so.2` 的链接命令直接把它们列在 `-lc` 之前（`build.py:1467-1471`）。
+- **P2-a3 认证链（第一段已交付）**：`linux-headers`（`make headers_install`）与 `libxcrypt`
+  （上游 configure）已由 `tools/build/auth-upstream.sh` + `make leonos-auth` 构建并通过
+  23 项契约（`verification.md` 第 11 节，含 `crypt.h` 逐字节等价与跨路径字节稳定）。
+  **仍缺**：Linux-PAM（上游仅 Meson，需手写 Makefile 移植）、libmd/libbsd（libbsd 的
+  `-idirafter` 头覆盖顺序要单独照搬）、util-linux、sudo、shadow。用户裁定不降级、不开
+  Meson/Ninja 例外、不删认证。libpam 仍是 `runtime` 的硬前置：`userland/auth/*.c` 需要
+  `security/pam_appl.h`，而 `libleonos.so.2` 的链接命令把 `libpam.so.0`/`libcrypt.so.2`
+  列在 `-lc` 之前（`build.py:1467-1471`）。
 - **P2-a2 runtime**：`libleonos.so.2`（`build/system/lib/`）+ `libleonos.a` /
   `libleonos-installer.a`（`build/musl/lib/`）。源集合、flags 与链接 argv 已核到行号，见
   `verification.md` 的 P2 计划段；`ar rcs` 追加缺陷（`build.py:1426/1436/2114`）改为

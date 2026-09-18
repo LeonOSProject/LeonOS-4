@@ -91,3 +91,47 @@ $(MUSL_SYSROOT) $(MUSL_WORK) $(O_THIRD_PARTY):
 	$(Q)mkdir -p $@
 
 .DELETE_ON_ERROR: $(MUSL_STAMP)
+
+# --- authentication chain -----------------------------------------------------
+# Only the packages that still ship a POSIX `configure` are built here:
+# Linux-PAM 1.7 is Meson-only upstream, and this project does not use Meson, so
+# libpam stays un-migrated and is *not* faked by a generic configure call. Staged:
+# the Linux UAPI headers and libxcrypt, which is what `crypt()` in the userland
+# extensions links against.
+AUTH_ROOT := $(O_AUTH)/root
+AUTH_STAMP := $(O_AUTH)/.leonos-auth.json
+AUTH_WORK := $(O_THIRD_PARTY)/auth
+AUTH_SCRIPT := $(LEONOS_SRC)/tools/build/auth-upstream.sh
+LEONOS_AUTH_CFLAGS := -O2 -mno-avx -mno-avx2
+
+# Declared, not implied by a stamp: an install that "succeeded" while leaving a
+# header or a SONAME behind has to be a Make error here.
+LEONOS_AUTH_ARTIFACTS := \
+	$(AUTH_ROOT)/usr/include/crypt.h \
+	$(AUTH_ROOT)/usr/include/linux/openat2.h \
+	$(AUTH_ROOT)/lib/libcrypt.so.2 \
+	$(AUTH_ROOT)/share/licenses/libxcrypt/LICENSE \
+	$(AUTH_ROOT)/share/licenses/linux-headers/LICENSE
+
+LEONOS_SIG_auth-upstream := script=$(AUTH_SCRIPT)|lock=$(LEONOS_LOCK_DIGEST)|cc=$(TARGET_CC)|ar=$(TARGET_AR)|ranlib=$(TARGET_RANLIB)|triple=$(TRIPLE_USER)|cflags=$(LEONOS_AUTH_CFLAGS)|resource=$(shell $(TARGET_CC) -print-resource-dir 2>/dev/null)
+$(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,auth-upstream)))
+
+.PHONY: leonos-auth
+leonos-auth: $(AUTH_STAMP) $(LEONOS_AUTH_ARTIFACTS)
+
+$(AUTH_STAMP): $(LEONOS_LOCK) $(AUTH_SCRIPT) $(LEONOS_DEPS_TOOL) \
+	$(O_META)/auth-upstream.sig $(MUSL_STAMP) | $(O_AUTH) $(AUTH_WORK) $(O_LOGS)
+	$(Q)printf '  %-8s %s\n' AUTH auth
+	$(Q)sh $(AUTH_SCRIPT) --src '$(LEONOS_SRC)' --deps '$(LEONOS_DEPS_TOOL)' \
+		--lock '$(LEONOS_LOCK)' --cache '$(LEONOS_CACHE)' --work '$(AUTH_WORK)' \
+		--stage '$(AUTH_ROOT)' --sysroot '$(MUSL_SYSROOT)' \
+		--cc '$(TARGET_CC)' --ar '$(TARGET_AR)' --ranlib '$(TARGET_RANLIB)' \
+		--target '$(TRIPLE_USER)' --cflags '$(LEONOS_AUTH_CFLAGS)' \
+		--log $(O_LOGS)/auth.log
+
+$(LEONOS_AUTH_ARTIFACTS): | $(AUTH_STAMP)
+
+$(O_AUTH) $(AUTH_WORK):
+	$(Q)mkdir -p $@
+
+.DELETE_ON_ERROR: $(AUTH_STAMP)

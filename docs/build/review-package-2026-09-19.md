@@ -1,11 +1,11 @@
 # 审查包：GNU Make + C 构建重建（P0–P2c）
 
 计划：`docs/superpowers/plans/2026-09-19-make-c-build-rewrite.md`
-分支：`xiaobai/dev/buildsystem`　基线提交：`6be4c69`　最终提交：`608323e`
-完整 diff：`git diff 6be4c69..608323e`（**50 文件，+10823 / −1**）
+分支：`xiaobai/dev/buildsystem`　基线提交：`6be4c69`
+完整 diff：`git diff 6be4c69..HEAD`（提交清单以 `git log --oneline 6be4c69..HEAD` 为准）
 审查人：原 Agent（按用户要求，不替换审查者）。**未推送、未合并、未发布镜像。**
 
-## 1. 交付范围：完成到 P2-c，P2 的 rest / P3 / P4 / P5 未开始
+## 1. 交付范围：完成到 P2-d（认证链第一段），P2 的其余部分 / P3 / P4 / P5 未开始
 
 这不是一次"整个计划做完"的交付。已完成的阶段都有可复跑的证明；未完成的阶段**保留为
 `exit 2` 的显式拒绝**，没有任何目标被伪装成绿色。第 5 节列出剩余关键路径与其唯一阻塞点。
@@ -24,6 +24,7 @@
 | `3a1ad8c` | 自身缺陷修复 | A05 读的是从未写入的快照文件；`$(MAKEPID)` 在 POSIX 上为空导致签名 candidate 仍共享文件名 |
 | `af8bec8` | P2-b | 同一 `O` 的双 make 明确拒绝（`scripts/build-lock.sh`），含变异检验 |
 | `608323e` | P2-c | `make test-long`：A08（`-j1`/`-j8` 三轮）、A10 中断半、A16 execve 跟踪；`legacy-removal.md`；性能记录 |
+| 最新提交 | P2-d | `tools/build/auth-upstream.sh` + `make leonos-auth`：Linux UAPI 头与 libxcrypt 由上游 configure 构建（计划第 9 节允许），`crypt.h` 与旧树逐字节等价、`.o` 跨 `O=` 路径字节稳定（`-fmacro-prefix-map`），23 项契约；顺带修掉 `O=` 泄漏进内核构建树、以及 `make clean` 认不出纯构建目标产物树两个缺陷（`verification.md` 第 11 节）|
 
 **任务开始前工作区已有的改动**：仅一个未跟踪文件
 `docs/superpowers/plans/2026-09-19-make-c-build-rewrite.md`（计划本体，留给用户处置，未被本分支提交）。
@@ -57,7 +58,7 @@ make fetch         # 唯一联网入口；暖缓存时不联网
 `test-third-party` 29/0；`make test-long`：`test-execchain` 20/0、`test-jobs` 19/0。
 临时日志（`/tmp/leonos-*.log`）随进程目录消失，不作为证据引用——需要日志时重跑上面两条命令。
 
-## 5. 请重点审的四处判断
+## 5. 请重点审的六处判断
 
 1. **同 O 互斥为什么不用 `flock`。** GNU Make 4.4 不执行 `.EXIT`/`.STATUS`（正常退出与
    SIGINT/SIGTERM 三种情况实测均不运行），所以没有可靠的释放钩子可用；实现改成"owner 记录 +
@@ -70,7 +71,14 @@ make fetch         # 唯一联网入口；暖缓存时不联网
 3. **sysroot 等价性只有 238/239。** 唯一差异是 `config.mak` 里的安装前缀路径；请确认这属于
    路径差异而非内容差异，以及是否接受"整锁摘要进签名"（改任何一条无关依赖会多重建一次 sysroot，
    换来的是不需要在 `leonos-deps` 建好之前解析 JSON）。
-4. **P1-d 仍是受阻而不是通过。** 新旧内核在 SeaBIOS 与 OVMF 下行为一致（都停在 GRUB 横幅），
+4. **libxcrypt 的一处有意偏离。** 上游 configure argv 与旧驱动逐条一致，只多了
+   `-fmacro-prefix-map`：libxcrypt 把 `__FILE__` 编进 `.rodata`，不映射的话产物字节随
+   `O=` 路径变化（旧系统就是这样），映射后两个不同深度的树构建出逐字节相同的库。
+   请确认这是可接受的偏离而不是"改了第三方构建参数"。
+5. **本轮我自己毁过一份基线产物。** 用 `llvm-objcopy -j .text --dump-section` 比较时漏了输出
+   文件参数，就地重写了新旧两份 `libcrypt.so.2.0.0`；已用旧系统自己的 action 重建恢复，
+   并把被它顺带跳号的两个受跟踪文件还原。过程与教训写在 `verification.md` 11.5。
+6. **P1-d 仍是受阻而不是通过。** 新旧内核在 SeaBIOS 与 OVMF 下行为一致（都停在 GRUB 横幅），
    所以**没有回归证据**，但也**没有成功启动证据**。这是旧链的 ISO/引导问题，重建构建系统不会
    顺带修它；把它算作本分支的完成度是不诚实的，因此没有。
 

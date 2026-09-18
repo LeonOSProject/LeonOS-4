@@ -95,6 +95,11 @@ O_META      := $(O)/meta
 # subdirectories, but an out-of-tree upstream build needs somewhere to write,
 # and `obj/` is this project's own objects.
 O_THIRD_PARTY := $(O)/third-party
+# Staged root filesystem fragment for the upstream authentication libraries
+# (Linux-PAM, libxcrypt, ...). Same status as third-party: a layout extension,
+# because these packages install into their own DESTDIR rather than a flat
+# object tree.
+O_AUTH := $(O)/auth
 
 # Shared download cache: deliberately outside O because it is profile
 # independent and `distclean` must not throw it away.

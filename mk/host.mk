@@ -109,7 +109,15 @@ endef
 # deliberate parse-time side effect: `make -n` is not promised to be effect free
 # (plan section 4), and a generated include has nowhere to live on a fresh
 # output directory otherwise.
-$(if $(LEONOS_PASSIVE),,$(shell mkdir -p $(O_META) $(O_HOST)/obj $(LEONOS_HOST_BIN)))
+#
+# The ownership marker is written in the same breath as its own rule below,
+# because a tree produced only by `make kernel` still has to be recognisable to
+# `make clean`; a clean that refuses to touch its own output is a bug in clean.
+$(if $(LEONOS_PASSIVE),,$(shell mkdir -p $(O_META) $(O_HOST)/obj $(LEONOS_HOST_BIN); \
+	if [ ! -e $(LEONOS_O_MARKER) ]; then \
+	    printf 'leonos4-build-out version=1 root=%s\n' '$(LEONOS_SRC)' \
+	        > $(LEONOS_O_MARKER); \
+	fi))
 
 leonos_host_tool_path := $(if $(LEONOS_PASSIVE),deferred,$(shell command -v $(HOSTCC) 2>/dev/null || echo unavailable))
 leonos_host_tool_identity := $(if $(LEONOS_PASSIVE),deferred,$(shell $(HOSTCC) --version 2>&1 | head -n1))

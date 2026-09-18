@@ -44,7 +44,7 @@
 | `build.py:1546` | 生产链接步骤直接 `exec` 该包装器 | P2（SDK） |
 | `devtools/Makefile:6,9` | 已提交的 `CC := python3 "$(SDK_ROOT)/bin/leonos-musl-cc"` | P2（SDK），随包装器一起换 |
 | `tools/rebuild_archive.py` | `ar` 重建到临时文件再改名；同时 `build.py:1426/1436/2114` 还在用裸 `ar rcs` 追加 | P2（runtime）：改成 `rm -f tmp && ar rcsD tmp && mv`，不需要新工具 |
-| `tools/build_auth_upstream.py`（Linux-PAM/libxcrypt/util-linux/sudo/shadow） | 调 Meson/Ninja | P2-a3：用户裁定"手写 Makefile 移植上游 PAM"，不降级、不开例外、不去掉认证 |
+| `tools/build_auth_upstream.py`（Linux-PAM/libxcrypt/util-linux/sudo/shadow） | 调 Meson/Ninja | **部分取代**：`linux-headers` 与 `libxcrypt` 已由 `tools/build/auth-upstream.sh` 接管（上游 configure，计划第 9 节允许），23 项契约见 `verification.md` 第 11 节；其余包（含 Linux-PAM，上游仅 Meson，需手写 Makefile 移植）仍在这个 Python 驱动里。用户裁定不变：不降级、不开 Meson/Ninja 例外、不去掉认证 |
 | `tools/fetch_auth_upstream.py` | 旧的下载/解包 | 已被 `configs/dependencies.lock.json` + `tools/build/fetch.sh` 取代（P2-a 已交付），待删 |
 | `tools/generate_gbk_table.py`、`tools/make_*.py`（图标/字体/清单） | 资源生成 | P3/P4：计划第 7 节要求可重现的 C 生成器 |
 | `tools/apk_distribution.py:421`、`tools/make_image.py:114,128` | 包版本用 `time.time_ns()`、分区 UUID 用 `uuid.uuid4()` | P3：不先改成可派生值，A13 对镜像永远不可能成立 |

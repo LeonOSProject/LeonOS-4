@@ -390,6 +390,11 @@ status=0，原因是 POSIX shell 在关闭 job control 时会给后台命令把 
 
 - `userland/runtime/sdk/rootfs/apk-repo/三类镜像/run` 仍是 `exit 2` 的未迁移目标；
   `all` 只做到 `kernel` 后明确报错，不冒充完整产物。
+- 认证链只走了第一段（第 11 节）：`linux-headers` 与 `libxcrypt` 已由新链构建并验证，
+  **Linux-PAM 仍未移植**，因此 `libleonos.so.2` 与 `runtime` 现在**不可能**被诚实构建。
+  `make leonos-auth` 是内部阶段目标，不是产品目标。
+- auth/sysroot 这类上游包的构建**每次调用都会重跑 configure 之外的部分**（auth 已在输入键
+  未变时整体早退，musl 尚未这样做），把 `$(O)/logs/*.log` 写满；不影响正确性，但影响耗时。
 - 来宾启动证据仍缺（见 5.1）；`test-smoke` 未交付。
 - 布局新增一个计划未列出的目录 `$(O)/third-party/`（上游 configure 的 out-of-tree 构建目录），
   `make clean` 的显式清单已包含它。这是对计划第 5 节目录表的**扩展**，需审阅确认。
@@ -426,3 +431,70 @@ status=0，原因是 POSIX shell 在关闭 job control 时会给后台命令把 
 
 **新链没有产出过任何 SDK、APK 仓库或镜像**，因此本审查包不附带任何镜像哈希，也没有"旧镜像
 冒充新结果"的风险：交付物只有源码、Make 片段、C 工具、脚本与测试。
+
+## 11. P2-d：认证链第一段（Linux UAPI 头 + libxcrypt）
+
+`tools/build/auth-upstream.sh` + `mk/third-party.mk` 的 auth 段，`make leonos-auth`，
+契约套件 `tests/build/test-auth-stage.sh`（23 项，0 失败）。
+
+### 11.1 为什么只做这两个包
+
+Linux-PAM 1.7.2 上游**只有 Meson**（autotools 在 1.6.0 被移除），而裁定是不降级、不开
+Meson/Ninja 例外、不删认证，所以 libpam 需要手写 Makefile 移植，**本段不包含它**，
+并且用一条断言把它"不在"这件事钉住：`Linux-PAM is honestly absent`（stage 里既没有
+`lib/libpam.so.0` 也没有 `usr/include/security/pam_appl.h`）。仍带 POSIX `configure` 的包
+按计划第 9 节允许由上游自己的 configure/Makefile 构建，因此这里做的是 `linux-headers`
+（`make headers_install`）与 `libxcrypt`。
+
+configure argv 与交叉编译环境逐条抄自退役的 `tools/build_auth_upstream.py:89-98,166-195`
+（`--host/--prefix/--sysconfdir/--localstatedir/--libdir=/lib/--enable-hashes=all/
+--enable-obsolete-api=no`，`LDFLAGS=-Wl,-z,relro,-z,now ...`，`PKG_CONFIG_*`），差异只有一处，
+见 11.3。
+
+### 11.2 与旧系统的一致性
+
+| 比较 | 结果 |
+| --- | --- |
+| `usr/include/crypt.h` | 与 `build/auth-upstream/root/usr/include/crypt.h` **逐字节相同**（11195 字节，`cmp` 通过） |
+| `config.h` 的 `#define` 集合 | 两侧各 304 条，`diff` **无差异**：所有探测结果一致 |
+| 动态符号表 / SONAME | `SONAME=libcrypt.so.2`，导出 `crypt`、`crypt_r`、`crypt_gensalt`、`crypt_gensalt_rn`、`crypt_checksalt`，`NEEDED` 只有 `libc.so`（musl 的 SONAME；出现 `libgcc_s.so.1` 会被判为链到了宿主） |
+| 库二进制 | 见 11.3：差异的**唯一来源**是构建目录路径字符串 |
+
+### 11.3 一处有意的偏离：`-fmacro-prefix-map`
+比较新旧 `libcrypt.so.2.0.0` 时先得到"`.text` 大小相同但 206 字节不同、文件差 240 字节"。
+根因是 libxcrypt 的断言把 `__FILE__` 编进 `.rodata`：旧树里嵌的是
+`/home/xiaobai/.../build/auth-upstream/src/libxcrypt-4.5.2/lib/*.c`，新树是
+`/tmp/auth1/third-party/auth/src/libxcrypt-4.5.2/lib/*.c`。`.rodata` 短了 240 字节，
+`.eh_frame_hdr` 及其后**所有段地址整体平移 0xF0**，于是 `.text` 里所有与地址相关的立即数
+都变了——代码本身相同，差异全部来自编译路径。
+
+这与旧系统行为一致，但对新链是不可接受的：产物字节会随 `O=` 路径变化，直接违反计划第 6.4
+节对可重现的要求。因此 auth 适配器额外传 `-fmacro-prefix-map=<srcdir>=libxcrypt`，并用断言
+钉住结果：**两个不同深度的输出树构建出的 `libcrypt.so.2.0.0` 与 `libcrypt.a` 逐字节相同**。
+
+### 11.4 顺带修掉的两个真实缺陷
+
+1. **`O=` 泄漏进内核构建。** 内核 Makefile 自己把 `O=` 解释为 out-of-tree 构建目录，而顶层
+   `make O=/path` 通过 `MAKEFLAGS` 把它传给了子 make，于是 `headers_install` 把整套
+   `arch/`、`scripts/` 内核构建树写进了本项目的输出目录。现在显式传
+   `O=$work/build/linux-headers`，并新增断言"`$(O)` 顶层只允许布局里声明过的目录"——
+   这条断言属于计划第 6.3/12 节的输出目录安全范围（A12）。
+2. **`make clean` 认不出只做构建目标产生的树。** 所有权标记原先只有 `defconfig` 一类目标才写，
+   因此 `make kernel`/`make leonos-auth` 造出来的树会被 clean 以"不是我创建的"拒绝，
+   而 `$(O)/auth` 也不在 clean 的显式清单里。现在标记随每次非被动调用写入，`auth` 已加入
+   清理清单，并由 `make clean removes the staged tree and keeps the directory` 断言覆盖。
+
+### 11.5 本轮的一次自身失误与恢复（如实记录）
+
+做 11.3 的比较时，我用了 `llvm-objcopy -j .text --dump-section .text=FILE <输入>` 且**没有给
+输出文件参数**：`llvm-objcopy` 就地重写输入，于是同时毁掉了新树和旧基线的
+`build/auth-upstream/root/lib/libcrypt.so.2.0.0`（`readelf -d` 报 `no .dynamic section`）。
+因此那一次比较得到的"段大小相同 / dynsym 相同"结论是在已损坏文件上算的，**作废**。
+恢复方式：用旧系统自己的 action 重新生成（`python3 build.py run auth-upstream`，rc=0，
+`0 errors`，文件回到受损前的 227216 字节且 `readelf -d` 正常）。该次重建把两个**受跟踪**文件
+按旧系统的习惯向前跳了一个构建号（`buildsystem/state/build_number.txt` 3833→3834、
+`include/generated/build_info.h` 的 `LEONOS_BUILD_NUMBER`/`LEONOS_BUILD_TIME`），
+我已把这两个文件恢复到来时状态，`git status` 现在只剩本阶段的改动。这也从反面说明新链为什么
+坚持不写受跟踪文件（A17）。正确且只读的比较方式是
+`objcopy -O binary --only-section=.text <输入> <输出>`（显式输出文件），本文的结论以重做后的
+数据为准。
