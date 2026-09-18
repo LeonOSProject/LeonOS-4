@@ -53,7 +53,9 @@ $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,kernel-link)))
 # mtime, which regenerates the list, which is a prerequisite of the link. A
 # deleted source therefore relinks even though every surviving object is current
 # (plan section 6.1).
-$(KERNEL_SOURCES_LIST): FORCE
+# leonos-emit is what keeps the manifest mtime stable, so the rule must wait for
+# it: a fresh output directory builds host tools on demand.
+$(KERNEL_SOURCES_LIST): FORCE $(LEONOS_EMIT)
 	$(Q)mkdir -p $(dir $@)
 	$(Q)find $(KERNEL_SOURCE_DIRS) -path '$(KERNEL_SOURCE_EXCLUDE)/*' -prune -o \
 	    -type f \( -name '*.c' -o -name '*.S' \) -print \

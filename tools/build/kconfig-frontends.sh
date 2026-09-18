@@ -78,7 +78,30 @@ fi
 
 [ -n "$conf" ] && [ -n "$kconfig" ] && [ -n "$config" ] || die 'run needs --conf --kconfig --config'
 
-KCONFIG_CONFIG=$config
+# kconfig-frontends 3.12 cannot write an absolute KCONFIG_CONFIG that lives
+# outside the Kconfig root: conf_write() reports "Error during writing of the
+# configuration" and unlinks the half-written file. Stage the file inside the
+# Kconfig root, which is also where relative source paths resolve, and publish
+# the result to the requested output directory afterwards. This keeps any O=
+# location working without leaving anything behind.
+kconfig_dir=$(CDPATH= readlink -f -- "$(dirname -- "$kconfig")" 2>/dev/null || dirname -- "$kconfig")
+cd "$kconfig_dir" || die "cannot enter $kconfig_dir"
+stage=".leonos-kconfig-stage.$$"
+cleanup_stage() { rm -f "$stage" "$stage~"; }
+trap cleanup_stage EXIT INT TERM
+if [ -f "$config" ]; then
+    cp "$config" "$stage" || die "cannot stage the existing configuration"
+elif [ -n "$seed" ] && [ -f "$seed" ] && [ ! -s "$stage" ]; then
+    :
+fi
+# The front end writes through a .tmpconfig.PID next to the current directory and
+# renames it into place; a rename across filesystems fails, which is why an
+# absolute out-of-tree KCONFIG_CONFIG reports a write error and unlinks its
+# output. Staging locally and publishing with mv (copy fallback) fixes that.
+# Anything it leaves behind is removed on the way out so the source tree stays clean.
+mkdir -p include/config || die 'cannot create the kconfig scratch directory'
+tmpconfig_before=$(ls .tmpconfig.* 2>/dev/null | sort)
+KCONFIG_CONFIG=$stage
 export KCONFIG_CONFIG
 
 case "$mode" in
@@ -99,6 +122,8 @@ case "$mode" in
         # First build with no configuration initialises from the committed
         # profile, but an existing .config is never silently rewritten.
         if [ -f "$config" ]; then
+            trap - EXIT INT TERM
+            rm -f "$stage"
             exit 0
         fi
         [ -n "$seed" ] && [ -f "$seed" ] || die 'no .config and no seed to initialise from'
@@ -108,3 +133,13 @@ case "$mode" in
         die "unknown configuration mode '$mode'"
         ;;
 esac
+
+mkdir -p "$(dirname -- "$config")" || die 'cannot create the configuration directory'
+mv "$stage" "$config" || die "cannot publish the configuration to $config"
+rm -f "$stage~"
+for leftover in $(ls .tmpconfig.* 2>/dev/null | sort); do
+    printf '%s\n' "$tmpconfig_before" | grep -qxF -- "$leftover" || rm -f -- "$leftover"
+done
+if [ -d include/config ] && [ -z "$(ls -A include/config 2>/dev/null)" ]; then
+    rmdir include/config 2>/dev/null || true
+fi
