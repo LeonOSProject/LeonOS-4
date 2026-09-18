@@ -74,8 +74,10 @@ expect_output_contains "doctor reports the host compiler separately" "HOSTCC" \
     make -s doctor
 check "host tools build with a plain host compiler" \
     env HOSTCC=cc make -s tools
-expect_output_contains "an explicit target CC override is honoured" "target-cc-probe" \
-    env HOSTCC=cc make -s V=1 tools CC=target-cc-probe
+# doctor resolves the override before anything compiles, so a bogus CC is
+# reported rather than discovered halfway through a link.
+expect_failure "an explicit target CC override reaches doctor" "target-cc-probe" \
+    env HOSTCC=cc make -s doctor CC=target-cc-probe
 
 # --- rejected inputs ------------------------------------------------------
 expect_failure "unknown ARCH is rejected" "ARCH" \
