@@ -12,6 +12,10 @@ LEONOS_HOST_TEST_SANITISED := $(O_HOST)/tests-sanitised/test_common \
 
 # Shell contract tests. test-bootstrap.sh is the public entry-point surface.
 LEONOS_BUILD_TESTS := $(sort $(wildcard $(LEONOS_SRC)/tests/build/test-*.sh))
+# Suites that are too long to run on every change but must not be forgotten:
+# repeated -j1/-j8 comparisons and, later, guest boots. Plan section 13 forbids
+# presenting an unrun long test as a skipped pass, so they are a separate goal.
+LEONOS_LONG_TESTS := $(sort $(wildcard $(LEONOS_SRC)/tests/long/test-*.sh))
 
 # The plain and sanitised suites are separate goals so `test-tools` keeps a
 # single recipe: the plan requires ASan/UBSan at the tool boundary, not merely a
@@ -35,8 +39,14 @@ leonos-test-tools-sanitised: $(LEONOS_HOST_TEST_SANITISED)
 
 # Contract tests get the built tool and the lock file by name so they never
 # reach for a stale copy left in the output tree.
-test-build: test-tools $(LEONOS_HOST_TOOLS)
-	@set -eu; for contract_test in $(LEONOS_BUILD_TESTS); do \
+#
+# A suite can report ok lines while still exiting 0 on a failure it counted
+# itself, and it can exit non-zero after printing nothing. Both are checked: the
+# status *and* any `FAIL - ` line in the captured report.
+#
+# $(call LEONOS_RUN_CONTRACT_TESTS,tests...)
+define LEONOS_RUN_CONTRACT_TESTS
+	set -eu; for contract_test in $(1); do \
 	    printf '  %-8s %s\n' RUN $$contract_test; \
 	    report=$$(mktemp); \
 	    if LEONOS_DEPS='$(LEONOS_DEPS_TOOL)' \
@@ -50,6 +60,13 @@ test-build: test-tools $(LEONOS_HOST_TOOLS)
 	        printf 'not ok - %s reported a failure\n' $$contract_test; exit 1; \
 	    fi; \
 	done
+endef
+
+test-build: test-tools $(LEONOS_HOST_TOOLS)
+	@$(call LEONOS_RUN_CONTRACT_TESTS,$(LEONOS_BUILD_TESTS))
+
+test-long: $(LEONOS_HOST_TOOLS)
+	@$(call LEONOS_RUN_CONTRACT_TESTS,$(LEONOS_LONG_TESTS))
 
 test: test-tools test-build
 
@@ -98,4 +115,4 @@ LEONOS_SIG_host-cc-sanitised := argv=$(HOSTCC) $(LEONOS_STRICT_WARNINGS) $(LEONO
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,host-cc-sanitised)))
 
 -include $(shell find $(O_HOST)/obj/tests $(O_HOST)/obj/tests-sanitised -name '*.o.d' 2>/dev/null)
-.PHONY: test test-tools test-build
+.PHONY: test test-tools test-build test-long

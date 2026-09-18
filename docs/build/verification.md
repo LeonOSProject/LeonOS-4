@@ -136,14 +136,23 @@ tests/host/common/... fatal error: ../../tools/host/common/buffer.h：没有那�
 
 | 套件 | 命令 | 结果 |
 | --- | --- | --- |
-| C 单元测试 | `make test-tools` | `ok - host/common: 74 checks passed` 两次（普通构建与 ASan+UBSan 构建各一次），rc=0 |
-| 入口契约 | `sh tests/build/test-bootstrap.sh` | **20 checks, 0 failures** |
-| 增量契约 | `sh tests/build/test-incremental.sh` | **20 checks, 0 failures** |
+| C 单元测试（普通 + ASan/UBSan） | `make test-tools` | `ok - host/common: 74 checks passed` 与 `test_json` 各两次，rc=0 |
+| 入口契约 | `sh tests/build/test-bootstrap.sh` | **22 checks, 0 failures** |
+| 并发互斥（A09） | `sh tests/build/test-concurrency.sh` | **17 checks, 0 failures** |
+| 依赖锁 CLI | `sh tests/build/test-deps.sh` | **44 checks, 0 failures** |
+| 增量契约（A02–A07） | `sh tests/build/test-incremental.sh` | **21 checks, 0 failures** |
+| 可重现性（A13） | `sh tests/build/test-reproducible.sh` | **11 checks, 0 failures** |
+| 第三方/sysroot（A11 部分） | `sh tests/build/test-third-party.sh` | **29 checks, 0 failures** |
+| 长测（A08/A10/A16） | `make test-long` | `test-execchain` **20 checks**、`test-jobs` **19 checks**，均 0 failures |
+
+`make test` 的 rc=0 记录：P1+P2-a/P2-b 批次跑为 2:05（`make -j12 test`，宿主同第 1 节）；
+`make test-long` 两个套件合计约 6 分钟，独立于 `make test`。
 
 ### 4.2 目标面
 
 `make help`（PATH 中无编译器时仍可用）、`make doctor`、`make tools`、`make defconfig`、
-`make kernel`、`make test-tools`、`make clean` 已实现并实测；`fetch`、`userland`、`runtime`、
+`make kernel`、`make fetch`、`make test-tools`、`make test-build`、`make test-long`、
+`make clean` 已实现并实测；`userland`、`runtime`、
 `sdk`、`rootfs`、`apk-repo`、`image-vmdk`、`iso`、`installer`、`run*`、`test-smoke`、`test-legacy`
 由 `scripts/not-migrated.sh` 显式 **exit 2**，不伪装成功。
 
@@ -179,13 +188,13 @@ tests/host/common/... fatal error: ../../tools/host/common/buffer.h：没有那�
 | --- | --- |
 | A02 A03 A04 A05 A06 A07 A12 A14 A17 | **内核范围内通过**（证据见 4.3；A12/A14/A17 只覆盖已实现部分） |
 | A01 | 部分：干净 O 可构建内核与 musl sysroot，`make fetch` 已实现并验证（见 6.2），但 `userland/runtime/sdk/镜像` 目标未迁移，故"全目标"未达成 |
-| A08 | **未运行**：`-j1` 与 `-j8` 三轮对比未做 |
+| A08 | **通过**：`-j1` 与 `-j8` 各三轮（含一轮 82 对象的重轮），选中的对象集合两侧**逐行相同**，六个产物 SHA-256 两两相同（见 7.4，19 项） |
 | A09 | **通过**：同 O 双进程按"明确拒绝"契约实现并有变异检验；两个不同 O 并行互不串用；嵌套 make 继承同一 O 的锁不死锁（机制与证据见第 7 节，17 项） |
-| A10 | **未运行**：中断、写失败、子进程失败的产物保真未做（`.DELETE_ON_ERROR` 与 `write_file_if_changed` 已就位，但未证） |
+| A10 | **部分通过**：中断恢复已证（SIGTERM 落在工作中、无伪产物、重跑逐字节恢复，见 7.5）。**未做**：磁盘写失败（需容量受限文件系统）、交互 Ctrl-C（需 pty）、子进程失败的独立 fixture |
 | A11 | 部分通过：`make fetch` 下载 19 项并逐一校验 SHA-256（实测 `alpine-findutils` 摘要与锁文件一致）；`--verify-only` 在缺项时列出 id 并非零退出、不联网。**未覆盖**：断网下完成全套生产目标（属 P4） |
 | A13 | **通过**：固定 `SOURCE_DATE_EPOCH=1700000000` + `BUILD_ID` 下，两个不同深度的干净 O 全量重建，`autoconf.h`、`boot_logo.h`、`build_info.h`、`obj/kernel/sources.list`、`kernel.unstripped`、`kernel.sys`、`kernel.debug` 七个产物 SHA-256 **两两相同**；原地重建后镜像不变（`tests/build/test-reproducible.sh`，11 项） |
 | A15 | **未运行**：SDK/APK/三类镜像与升级尚未迁移 |
-| A16 | **未运行**：execve 跟踪未做。已确认可实现性：新入口的生产规则中无 `python3`，但 `fetch`/`sdk`/镜像链未迁移，无法证明全链 |
+| A16 | **已迁移范围内通过**（见 7.6）：`defconfig`(4259)、`tools`(204)、`kernel`(348)、musl sysroot(3040)、暖缓存 `fetch`(100)、缓存校验(97) 六条 execve 跟踪**零** python/meson/ninja，且每条都断言跟踪非空。**未覆盖**：SDK 与镜像链（未迁移） |
 | A18 起 | 不适用 |
 
 ### 5.1 P1-d 的来宾运行验证：受阻，未通过
@@ -278,7 +287,7 @@ stamp 记录的提交/补丁摘要与锁文件一致、锁文件内容变化会�
    `export LC_ALL=C`。
 5. **同 O 双 make 并未被拒绝**（上一条遗留的问题）：见第 7 节。
 
-## 7. P2-b：同一输出目录的并发互斥（A09）
+## 7. P2-b/P2-c：并发互斥、并行调度与执行链（A09、A08、A10、A16）
 
 ### 7.1 要求与为什么不是 flock
 
@@ -317,6 +326,58 @@ SIGKILL 也不会永久卡住输出目录。
 `host/kconfig-frontends` 的构建目录上把先起的进程撞失败（`kconfig-frontends: front end build
 failed`）。这正是该锁要防的事，也证明这些断言测的是生产规则而不是测试自己的空文件。
 
+长测套件独立成 `tests/long/`，由 `make test-long` 运行（`make test` 只跑 `tests/build/`）：
+它们要重复整棵树的构建，按第 13 节不能混进每次改动都要跑的套件里，但也必须是**可运行的目标**
+而不是"忘了跑的脚本"。
+
+### 7.4 A08：`-j1` 与 `-j8` 各三轮（`tests/long/test-jobs.sh`，19 项）
+
+两侧都从干净 O 开始，固定 `SOURCE_DATE_EPOCH=1700000000` 与 `BUILD_ID=7`，因此两棵树**按构造
+可比**；对象快照记 `%T@`（纳秒）并按各自树的相对路径记录，否则比的是测试自己的目录名而不是
+Make 选中的工作集。
+
+| 观察 | 结果 |
+| --- | --- |
+| 第 1 轮（`types.h`，82 个消费者） | `-j1` 与 `-j8` 移动的**对象集合完全相同**（82 = 82，逐行 `cmp`） |
+| 第 2、3 轮（单个 `.c` + 链接脚本） | 两侧同为 1 个对象，集合相同 |
+| 产物内容 | `kernel.sys`、`kernel.debug`、`kernel.unstripped`、`sources.list`、`autoconf.h`、`build_info.h` 六个产物 SHA-256 **两两相同**（如 `kernel.sys 4afa332cc79e…`） |
+| 签名 | 归一化 `-I<tree>/include` 后，两个 job level 的 `kernel-cc.sig` 相同：工具、身份、flags 一致 |
+| 声明 | 四个内核动作类（cc/as/link/objcopy）都发布了 `.sig`；未被本目标用到的类没有签名是**预期**的 |
+
+### 7.5 A10（中断部分）：并行构建被打断不留伪产物
+
+同一套件里用 `-j2` 重编 82 个对象，**等到确实有对象被重写**再发信号（`kill -INT` 一度得到
+status=0，原因是 POSIX shell 在关闭 job control 时会给后台命令把 SIGINT 设为 ignore，信号被
+吞掉、构建跑完了；改用 SIGTERM 后 status=143，这才是真的打断）。断言与结果：
+
+- 中断确实落在工作中（`objects rewritten while interrupted > 0`，退出码非零）；
+- 被中断后 `kernel.sys` 要么不存在、要么仍是上一份完整产物——实测**不存在**，没有半成品被
+  Make 当作最新；
+- 重跑恢复出**逐字节相同**的镜像（`cmp` 通过）。
+
+**未覆盖**：计划第 13 节要求的"写失败"（容量受限文件系统）与交互 Ctrl-C（需要 pty）。A10 因此
+记为**部分通过**，不是全通过。
+
+### 7.6 A16：execve 跟踪（`tests/long/test-execchain.sh`，20 项）
+
+对每个已迁移的生产入口跑 `strace -f -e trace=execve`，然后检查被执行程序的路径与 argv 里的
+可执行词。"没有 Python"必须是**看到的**，不是推理出来的。
+
+| 入口 | execve 记录数 | python/meson/ninja |
+| --- | --- | --- |
+| `make defconfig` | 4259 | 0 |
+| `make tools` | 204 | 0 |
+| `make -j4 kernel` | 348 | 0 |
+| musl sysroot（上游 configure + make） | 3040 | 0 |
+| `make fetch`（硬链接暖缓存，不联网） | 100 | 0 |
+| 缓存校验（`--verify-only` 路径） | 97 | 0 |
+
+每条目还断言"跟踪确实看到了真实工作"（execve 记录 >20 且包含编译器/make），否则"零命中"是空
+跟踪造成的假象。另外 8 项断言 `userland/runtime/sdk/rootfs/apk-repo/image-vmdk/iso/installer`
+仍然以退出码 2 明确拒绝——这是"旧 Python 链没有被偷偷留着"的另一半证据。
+
+**未覆盖**：SDK 与镜像链本身（尚未迁移），所以 A16 记为**已迁移范围内通过**。
+
 ## 8. 发现并已修的计划/环境问题
 
 `.gitignore` 第 1 行的 `build/` 会匹配**任意层级**名为 `build` 的目录，导致计划第 5、12、15 节要求的
@@ -335,3 +396,33 @@ failed`）。这正是该锁要防的事，也证明这些断言测的是生产�
 - `docs/build/research/` 三份底稿是未复核的调研稿，其中两条论断已确认有误（见
   `migration-inventory.md` 第 5 节），不得当验收证据引用。
 - 本轮改动未推送、未合并、未发布镜像。
+
+## 10. 性能记录与产物事实（计划第 15 节要求）
+
+测量方法与第 2 节一致（同一宿主、同一配置）。命令为 `make -s O=<全新临时目录> -j8 kernel`，
+用 GNU time 的 `-v` 取墙钟与最大驻留；`incremental` 是 `touch kernel/ntclks/futex.c` 之后同命令，
+`noop` 是紧接着再跑一次同命令。
+
+| 用例 | 墙钟 | 峰值 RSS | 说明 |
+| --- | --- | --- | --- |
+| clean kernel（85 个对象 + 链接 + 两个 objcopy，含 host 工具与 kconfig 前端） | 16.1 s | 128 MB | 全新 O，一次性 |
+| incremental（1 个对象 + 链接 + 镜像） | 0.24 s | 104 MB | |
+| no-op | 0.11 s | 46 MB | 与 A02 的"零动作"一致 |
+| `make test`（C 单测双份 + 6 个 shell 套件，含内核全量构建） | 2:05 | — | `make -j12 test` |
+| `make test-long`（A16 六条 execve 跟踪 + A08 两轮树 + A10 中断） | 约 6 分 | — | `make test-long` |
+
+**不做倍数对比**：第 2 节的旧系统 `kernel-1 = 1.52 s` 是热目录上重复同一条命令的采集，不是干净
+构建，旧系统**没有**干净内核构建的同法基线；按计划第 15 节"无可比基线就只报告观察"。
+`installer` 也没有可比数据（旧值 266.7 s，新链未迁移）。
+
+产物事实（截至本提交，新链**实际产出并被验证**的东西）：
+
+| 产物 | 路径 | SHA-256（前 12） | 是否启动过 |
+| --- | --- | --- | --- |
+| 内核镜像（固定 epoch 1700000000 / BUILD_ID 7） | `<O>/generated/system/kernel.sys` | `4afa332cc79e` | **否**（见 5.1：受阻，且无回归证据也无成功启动证据） |
+| 未剥离内核 | `<O>/generated/system/kernel.unstripped` | `45ce7e9b2c02` | — |
+| 调试内核 | `<O>/generated/system/kernel.debug` | `c61de02c4d2f` | — |
+| musl sysroot | `<O>/sysroot/musl/`（14 个声明产物） | 见 6.3 的逐文件比较表 | — |
+
+**新链没有产出过任何 SDK、APK 仓库或镜像**，因此本审查包不附带任何镜像哈希，也没有"旧镜像
+冒充新结果"的风险：交付物只有源码、Make 片段、C 工具、脚本与测试。

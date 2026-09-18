@@ -156,16 +156,32 @@ RPATH 因此手写版必须自行处理（否则会把绝对工作区路径写�
 本身是坏的（`-fuse-ld=lld`/`--rtlib` 混入 cross `c=` 导致 22 个加固旗标被静默丢弃），这属于**既有缺陷**，
 是否顺带修需单独决策。
 
-## 6. 尚未完成的部分（P2-a 之后）
+## 6. 尚未完成的部分（P2-c 之后）
 
-- **P0-b 不完整**：`installer` 与 `all` 两个基线用例因我自己的测量脚本缺陷（`tests/build/measure.sh`
-  被一次批量缩进规范化弄丢了可执行位）返回 rc=126，未取到有效基线。正在以新文件名重跑，结论见
-  `docs/build/verification.md`。
-- **P1 未交付可运行的 Make 入口**。我按 TDD 先写了 `tests/build/test-bootstrap.sh`
-  （第 4 节命令契约与 §6.3 输出目录安全契约），它是**红的**：仓库根目录当前没有 `Makefile`，
-  `make help` 无从执行。该测试**尚未接入** `make test-build`，因此不会把失败伪装成通过。
-- **P1-a 只完成共享原语层**：`tools/host/common/{buffer,io,process}` 与其 74 项契约检查、
-  `tools/host/gen/leonos-emit` 已完成并在 GCC/Clang/ASan+UBSan 下验证；
-  `leonos-config`、`leonos-version`、`leonos-boot-logo` 三个工具尚未落地（`leonos-boot-logo` 需
-  PNG/zlib 解码，`leonos-config` 需多输出转换）。
-- **P2–P5 完全未开始**；A01–A17 中除与 P0 基线相关的观察外均未执行。
+已完成并提交的：P0 台账与基线、P1（Make 入口 + 4 个 C 宿主工具 + 内核闭环 + 契约测试）、
+P2-a（依赖锁、`make fetch`、musl sysroot）、P2-b/P2-c（同 O 互斥、A08/A10/A16 长测）。
+
+**仍缺的产品能力**（每项都还是 `exit 2` 的显式拒绝，不存在"看起来完成"的假象）：
+
+- **P2-a3 认证链**：Linux-PAM/libxcrypt/libbsd/util-linux/sudo/shadow 的 Makefile 移植。
+  用户裁定不降级、不开 Meson/Ninja 例外、不删认证。`tools/build_auth_upstream.py` 是现状。
+  它是 `runtime` 的硬前置：`userland/auth/*.c` 需要 `security/pam_appl.h` 与 `libcrypt.so.2`，
+  `libleonos.so.2` 的链接命令直接把它们列在 `-lc` 之前（`build.py:1467-1471`）。
+- **P2-a2 runtime**：`libleonos.so.2`（`build/system/lib/`）+ `libleonos.a` /
+  `libleonos-installer.a`（`build/musl/lib/`）。源集合、flags 与链接 argv 已核到行号，见
+  `verification.md` 的 P2 计划段；`ar rcs` 追加缺陷（`build.py:1426/1436/2114`）改为
+  `rm -f tmp && ar rcsD tmp && mv`。
+- **P2-a2 userland**：62 个 app-kind 组件（`configs/components.toml` 驱动，`_BUILD` 符号来自
+  `tools/generate_component_kconfig.py`）→ 需要组件清单工具（用已有的 `json.c`，不许 sed 解析）。
+- **P2 SDK**：`tools/leonos_musl_cc.py` 的 C 移植 + `package_musl_sdk.py`/`package_devtools.py`
+  两条打包路径；A16 目前**无法**覆盖 SDK，因为包装器还是 Python。
+- **P3**：资源生成器（字体/图标/GBK 表）、APK 仓库、rootfs 组装与 staging 剪枝、三类镜像；
+  含 `time_ns()`/`uuid4()` 两处不可重现源（`apk_distribution.py:421`、`make_image.py:114,128`）。
+- **P3/P5 运行验证**：`mk/run.mk` + QMP/截图成功标记判定（5.1 节的受阻项），以及安装升级
+  保留用户环境的实测。
+- **P4 旧实现删除**：见 `legacy-removal.md`。`build.py`(4958 行)、`buildsystem/**`(48 个 py)、
+  `tools/*.py`(198) 全部仍在；两个 GitHub 工作流与 `AGENT.md`/`README.md`/`docs/BUILDSYSTEM.md`
+  仍指向旧入口，因此 A17 的"CI/文档无活跃旧入口"未达成。
+
+**仍缺的验收证据**：A01 的"全目标"、A11 的断网全量、A13 的镜像/SDK 级哈希、A15 全部、
+A16 的 SDK 与镜像链、A10 的写失败与真 Ctrl-C、P1-d 的来宾启动。

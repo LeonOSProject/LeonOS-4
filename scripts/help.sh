@@ -34,6 +34,7 @@ LeonOS 4 build system (GNU Make + C host tools)
   make test-tools      C host tool tests, plain and under ASan/UBSan
   make test-build      shell contract tests for the build surface
   make test            test-tools plus test-build
+  make test-long       repeated -j1/-j8 comparisons and interrupt recovery
   make test-smoke      QEMU boot tests (long; explicit)
   make test-legacy     pre-existing regression tests, some need Python
 
@@ -52,6 +53,8 @@ Variables
   HOSTCC=              host compiler for the C helpers; independent of CC
   SOURCE_DATE_EPOCH=N  pin generated timestamps for reproducible output
   BUILD_ID=N           pin the numeric build id instead of deriving it
+  LEONOS_BUILD_OWNER   internal lock token; nested makes inherit it, and setting
+                       it by hand is the only way to skip the lock deliberately
 
 Environment values of ARCH, PROFILE, O and the target tools are ignored so an
 unrelated shell setting cannot silently change what gets built.
@@ -65,6 +68,14 @@ Examples
   make run CPUS=2 MEMORY=4G
   make kernel V=1
   make test-build
+  make kernel O=out/x86_64/debug -j8   # alongside a release build: different O,
+                                       # so both are allowed to run
+
+Concurrency
+  Two builds that share one output directory do not interleave: the second make
+  exits non-zero and names the owner pid. Build the other configuration into a
+  different O= instead. make -n, make -q, help and doctor never take that lock,
+  so inspecting a tree that is being built still works.
 
 Diagnosing
   make --trace, make -n and make -p are the supported inspection tools.
