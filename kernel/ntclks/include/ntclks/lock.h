@@ -25,4 +25,9 @@ void kernel_spin_unlock_irqrestore(struct kernel_spinlock *lock, uint64_t flags)
 void kernel_execution_lock_irqsave(uint64_t *flags);
 void kernel_execution_unlock_irqrestore(uint64_t flags);
 
+/* Try a private-memory transaction. No nesting, upgrades, or scheduling.
+ * On failure, no lock is held and the original IRQ state is restored. */
+bool kernel_execution_try_read_lock_irqsave(uint64_t *flags);
+void kernel_execution_read_unlock_irqrestore(uint64_t flags);
+
 #endif

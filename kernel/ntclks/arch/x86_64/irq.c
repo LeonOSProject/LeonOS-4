@@ -6,6 +6,7 @@
 #include <ntclks/apic.h>
 #include <ntclks/driver_manager.h>
 #include <ntclks/input.h>
+#include <ntclks/lock.h>
 #include <ntclks/pty.h>
 #include <ntclks/sched.h>
 #include <ntclks/smp.h>
@@ -259,4 +260,22 @@ struct task *irq_dispatch(struct trap_frame *frame)
         irq_send_eoi(0);
     }
     return NULL;
+}
+
+/* x86_64 local interrupt state used by kernel synchronization. */
+
+uint64_t kernel_irq_save(void)
+{
+    uint64_t flags;
+    __asm__ volatile("pushfq; popq %0; cli" : "=r"(flags) : : "memory");
+    return flags;
+}
+
+void kernel_irq_restore(uint64_t flags)
+{
+    if (flags & (1ULL << 9)) {
+        __asm__ volatile("sti" : : : "memory");
+    } else {
+        __asm__ volatile("cli" : : : "memory");
+    }
 }

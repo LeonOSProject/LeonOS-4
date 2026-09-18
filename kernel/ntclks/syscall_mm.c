@@ -790,6 +790,28 @@ int syscall_page_fault_signal_code(struct task *task, uint64_t address)
     return LINUX_SEGV_MAPERR;
 }
 
+int syscall_handle_private_anon_fault(struct task *task, uint64_t fault_addr, uint64_t error)
+{
+    /* The execution read gate keeps fork/exec/munmap and remote memory
+     * operations out. An unshared MM has exactly one running owner, so its
+     * VMA/page tables need no additional lock here. CLONE_VM (including
+     * vfork) and all file/shared mappings retain the exclusive slow path.
+     * The physical allocator has its own lock. No usercopy or VFS calls are
+     * permitted here: they could recursively acquire the exclusive gate. */
+    if (!task || task->kind != TASK_KIND_USER || task->shared_mm || (error & 0x8ULL))
+        return 0;
+    uint64_t page = align_down_page(fault_addr);
+    if (page < NTCLKS_USER_BASE || page >= NTCLKS_USER_TOP ||
+        address_space_user_page_phys(sched_task_as(task), page)) return 0;
+    struct task_vma *vma = task_vma_containing(task, page, page + PAGE_SIZE);
+    if (!vma || !(vma->flags & TASK_VMA_FLAG_ANON) ||
+        (vma->flags & (TASK_VMA_FLAG_SHARED | TASK_VMA_FLAG_FILE)) ||
+        vma->prot == LINUX_PROT_NONE ||
+        ((error & 0x2ULL) && !(vma->prot & LINUX_PROT_WRITE)) ||
+        ((error & 0x10ULL) && !(vma->prot & LINUX_PROT_EXEC))) return 0;
+    return task_map_anonymous_page(task, vma, page) == 0;
+}
+
 int syscall_handle_task_page_fault(struct task *task, uint64_t fault_addr, uint64_t error)
 {
     if (!task || task->kind != TASK_KIND_USER) {
