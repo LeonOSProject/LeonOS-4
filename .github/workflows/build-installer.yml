@@ -82,6 +82,8 @@ jobs:
             make \
             bison \
             flex \
+            gperf \
+            libncurses-dev \
             bc \
             pkg-config \
             autoconf \

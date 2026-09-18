@@ -75,8 +75,12 @@ python3 build.py status <九位任务ID>
 ```
 
 构建产物统一位于`build/`；构建核心、依赖缓存、配置、任务状态与日志位于
-`buildsystem/`。通过`python3 build.py settings`编辑并行设置；系统 Kconfig 配置继续使用
-`python3 build.py run menuconfig`。查询命令默认输出可读文本；传入`--json`
+`buildsystem/`。克隆仓库时应使用 `git clone --recurse-submodules`，已有工作树可运行
+`git submodule update --init --recursive` 补齐第三方源码。通过`python3 build.py settings`
+编辑并行设置；系统 Kconfig 配置继续使用 `python3 build.py run menuconfig`。该命令会先从
+`third_party/kconfig-frontends` 构建仓库固定版本的 `kconfig-mconf` 到
+`build/host/kconfig-frontends/`，再启动配置界面，不依赖系统安装的 `kconfig-mconf`。
+查询命令默认输出可读文本；传入`--json`
 （可置于命令前后）才输出机器可读 JSON。
 `-v` 或 `--verbose` 同样可置于命令前后；它会展开构建图、缓存命中/失效原因、
 每个目标的输入输出、实际命令、工作目录、显式环境覆盖、子进程输出和 action 处理细节。

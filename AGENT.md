@@ -255,6 +255,10 @@ python3 build.py run image-vmdk --profile <name>
 python3 build.py run image-vmdk --set CONFIG_KEY=VALUE
 ```
 
+- `python3 build.py run menuconfig` 不依赖系统预装的 `kconfig-mconf`。构建图会先从
+  `third_party/kconfig-frontends` submodule 编译固定版本的 host frontend 到
+  `build/host/kconfig-frontends/`，然后运行该产物；干净 checkout 必须先执行
+  `git submodule update --init --recursive`。
 - 命令行 `--set` 只对当前构建有效且优先级最高；`--profile` 不应修改 active
   config；profile 优先于默认配置。
 - Debug、Develop、Release 预设管理优化级别、符号、LTO、strip 和诊断。只有

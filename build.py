@@ -154,6 +154,7 @@ BUILD_NUMBER_EXEMPT_TARGETS = frozenset({
     "test-qmp-stardust",
     "test-qmp-glxgears",
     "test-component-config",
+    "test-kconfig-frontends",
     "test-linux-abi-contract",
     "test-linux-memory",
     "test-linux-process-vm",
@@ -927,6 +928,10 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
     pleditor_elf = paths.out / "userland/pleditor.elf"
     pleditor_stamp = paths.out / "userland/pleditor.stamp"
     pleditor_work_dir = paths.out / "pleditor-work"
+    kconfig_frontends_source = ROOT / "third_party/kconfig-frontends"
+    kconfig_frontends_prefix = paths.out / "host/kconfig-frontends"
+    kconfig_frontends_work_dir = paths.out / "host/kconfig-frontends-work"
+    kconfig_mconf = kconfig_frontends_prefix / "bin/kconfig-mconf"
     developer_sdk = ROOT / "LeonOS4-Developer-SDK.zip"
     grub_efi_dir = paths.build_modules
     system_grub_efi_dir = Path("/usr/lib/grub/x86_64-efi")
@@ -3612,13 +3617,36 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         action_key="release-artifacts-v1",
     ))
 
+    kconfig_frontends_inputs = (
+        ROOT / "tools/build_kconfig_frontends.py",
+        *(path for path in collect("third_party/kconfig-frontends/**/*")
+          if ".git" not in path.relative_to(kconfig_frontends_source).parts),
+    )
+    graph.add(Target(
+        name="kconfig-mconf",
+        outputs=(kconfig_mconf,),
+        inputs=kconfig_frontends_inputs,
+        kind="compile",
+        command=(
+            PYTHON,
+            "tools/build_kconfig_frontends.py",
+            "--source",
+            relative(kconfig_frontends_source),
+            "--work-dir",
+            relative(kconfig_frontends_work_dir),
+            "--prefix",
+            relative(kconfig_frontends_prefix),
+        ),
+        action_key="kconfig-frontends-mconf-v1",
+    ))
+
     def menuconfig(context: ActionContext) -> None:
         context.run((PYTHON, "tools/generate_component_kconfig.py"), announce=True)
         config_path.parent.mkdir(parents=True, exist_ok=True)
         if not config_path.exists():
             shutil.copy2(ROOT / "configs/default.conf", config_path)
         context.run(
-            ("kconfig-mconf", "Kconfig"),
+            (str(kconfig_mconf), "Kconfig"),
             environment={"KCONFIG_CONFIG": str(config_path)},
             announce=True,
             interactive=True,
@@ -3631,11 +3659,12 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
 
     graph.add(Target(
         name="menuconfig",
-        inputs=(ROOT / "Kconfig", ROOT / "Kconfig.components",
+        inputs=(ROOT / "Kconfig", ROOT / "Kconfig.components", kconfig_mconf,
                 ROOT / "configs/default.conf", ROOT / "configs/components.toml",
                 ROOT / "tools/generate_component_kconfig.py",
                 ROOT / "tools/kconfig_sync.py", ROOT / "buildsystem/components.py"),
-        kind="command", action=menuconfig, action_key="menuconfig-v4", always=True,
+        depends_on=("kconfig-mconf",),
+        kind="command", action=menuconfig, action_key="menuconfig-v5", always=True,
     ))
 
     def clean(context: ActionContext) -> None:
@@ -3790,6 +3819,14 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
                 ROOT / "configs/components.toml"),
         kind="command",
         command=(PYTHON, "tools/test_component_config.py"),
+    ))
+    graph.add(Target(
+        name="test-kconfig-frontends",
+        inputs=(ROOT / "tools/test_kconfig_frontends.py",
+                ROOT / "tools/build_kconfig_frontends.py",
+                ROOT / "build.py", ROOT / ".gitmodules"),
+        kind="command",
+        command=(PYTHON, "tools/test_kconfig_frontends.py"),
     ))
 
     def qmp_test(context: ActionContext, editor: str = "nano",
@@ -4076,6 +4113,7 @@ def build_graph(paths: BuildPaths, config_path: Path | None = None) -> BuildGrap
         selected_tests.append("test-qmp-suite")
     if config_bool(values, "CONFIG_TEST_COMPONENT_CONFIG"):
         selected_tests.append("test-component-config")
+    selected_tests.append("test-kconfig-frontends")
     graph.add(Target(name="test-all", depends_on=tuple(selected_tests), group=True, kind="aggregate"))
     return graph
 
@@ -4141,8 +4179,9 @@ def task_tools(task: str) -> tuple[str, ...]:
         return (*vmdk, "qemu-system-x86_64")
     if task == "run-iso":
         return (*vmdk, "grub-mkrescue", "xorriso", "qemu-system-x86_64")
-    if task == "menuconfig":
-        return ("kconfig-mconf",)
+    if task in {"kconfig-mconf", "menuconfig"}:
+        return ("autoreconf", "autoconf", "automake", "libtoolize", "make",
+                "gcc", "g++", "gperf", "flex", "bison")
     if task in {"test-qmp-terminal", "test-qmp-pleditor", "test-qmp-fastfetch", "test-qmp-sl", "test-qmp-less",
                 "test-qmp-dynlinkerror", "test-qmp-cmd", "test-qmp-abittest", "test-qmp-stardust", "test-qmp-glxgears",
                 "test-linux-abi-contract", "test-all"}:
@@ -4184,7 +4223,7 @@ Commands:
   build.py settings
   build.py map
   build.py gen <file>
-  build.py test <license-server|los2w|component-config|svga|installer-input|oobe|qmp-terminal|qmp-pleditor|qmp-fastfetch|qmp-sl|qmp-less|qmp-dynlinkerror|qmp-cmd|qmp-stardust|qmp-glxgears|all>
+  build.py test <license-server|los2w|component-config|kconfig-frontends|svga|installer-input|oobe|qmp-terminal|qmp-pleditor|qmp-fastfetch|qmp-sl|qmp-less|qmp-dynlinkerror|qmp-cmd|qmp-stardust|qmp-glxgears|all>
   build.py client <run|gen|test|profile> ...
   build.py status <task-id>
   build.py log <task-id>
@@ -4673,7 +4712,7 @@ def parser() -> argparse.ArgumentParser:
     test.add_argument("item", choices=("license-server", "los2w", "component-config", "svga", "installer-input", "installer-setup", "oobe", "sudo-policy",
                                        "qmp-terminal", "qmp-pleditor", "qmp-fastfetch", "qmp-sl", "qmp-less",
                                        "qmp-dynlinkerror", "qmp-cmd", "qmp-abittest", "qmp-stardust", "qmp-glxgears",
-                                       "linux-abi-contract", "linux-memory", "linux-pty", "linux-permissions",
+                                       "kconfig-frontends", "linux-abi-contract", "linux-memory", "linux-pty", "linux-permissions",
                                        "linux-ioctl-cloexec", "builtin-tool-removal",
                                        "storage-metadata", "storage-rename", "storage-mkdir-mount", "musl-abi", "uapi", "all"))
     add_config_options(test)
