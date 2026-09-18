@@ -37,16 +37,17 @@ rc=127 全表失败），故改用此自研脚本，新旧系统将使用同一�
 | sdk | `python3 build.py -v run sdk` | 0 | 146.7 s | 1.25 GB | `.../sdk.log` |
 | image-vmdk | `python3 build.py -v run image-vmdk` | 0 | 193.4 s | 1.58 GB | `.../image-vmdk.log` |
 | image-iso | `python3 build.py -v run image-iso` | 0 | 198.4 s | 1.64 GB | `.../image-iso.log` |
-| installer | `python3 build.py -v run installer` | 126 → 重跑中 | — | — | `.../installer-retry.log` |
-| all | `python3 build.py -v run all` | 126 → 重跑中 | — | — | — |
+| installer | `python3 build.py -v run installer` | 0 | 266.7 s | 1.60 GB | `.../installer-retry.log` |
+| all | `python3 build.py -v run all` | 重跑进行中 | — | — | `.../all-retry.log` |
 
 `image-iso` 日志尾部为 `Started 6 tasks / Entered 159 folders / Built 563 files / Generated 424
 files / Ran 541 commands / Downloaded 0 files / 0 errors`。
+`installer` 日志尾部为 `Started 12 tasks / Entered 162 folders / Built 565 files / Generated 427
+files / Ran 545 commands / Downloaded 0 files / 0 errors`。
 
-**installer 与 all 的 rc=126 不是构建失败**，是我自己的工具链缺陷：批量缩进规范化用
+**首次 installer 与 all 采集的 rc=126 不是构建失败**，是我自己的工具链缺陷：批量缩进规范化用
 `expand -t4 $f > $f.tmp && mv` 覆盖了 `tests/build/measure.sh`，`mv` 带上了重定向产生的 0644，
-可执行位丢失，于是 `"$MEASURE"` 无法执行。已 `chmod +x` 并以新文件名重跑；这两个用例在重跑完成前
-**没有有效基线**，不得引用。
+可执行位丢失，于是 `"$MEASURE"` 无法执行。已 `chmod +x` 并以新文件名重跑，上表取自重跑结果。
 
 产物哈希（本轮旧系统实际产出）：
 
@@ -55,6 +56,7 @@ b93d66628f80796e0b837fae3c229f44176390f4f9672e64d49394cd80ac087c  build/images/l
 8a672b5f5e52f29a35bee3028dd8513e12095ef8c8d9134b93d2a05c8804cf6a  build/images/leonos4.iso
 87b7da68dee236932f8e0d4c787e327d6dab6d4c8b0d4043b3fd028d0d6e6f2c  build/system/kernel.sys
 357275d0b76111905491f875768def6069cea5dbe5f7536e9f033d08a66f51ea  build/system/kernel.debug
+2c7c89ced5b5d219fe2e13bcdd925a75ad8c5d4d121a217f9c010c2e46690479  build/images/leonos4-installer.iso
 ```
 
 本轮**未在 QEMU 中启动**这些镜像，因此它们只是文件产出证据，不构成第 11 节要求的运行验证。
@@ -161,7 +163,7 @@ P4 整理 `.gitignore` 时应把首行改成锚定根目录的 `/build/`。
 
 ## 7. 已知限制
 
-- 基线不完整：`installer` 与 `all` 缺有效数据（重跑进行中）。
+- 基线不完整：`all` 聚合目标的重跑在本文写就时仍未结束，缺有效数据。
 - 没有 QEMU 运行证据：本轮未启动任何镜像。
 - P1 的 Make 入口、`leonos-config`、`leonos-version`、`leonos-boot-logo` 均未交付；`P2–P5` 未开始。
 - `leonos-emit` 与 `tools/host/common/` 只有直接 `gcc` 编译与手工/单元测试证据，
