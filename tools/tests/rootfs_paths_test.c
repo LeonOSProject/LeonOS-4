@@ -26,8 +26,16 @@ int storage_readlink(const char *path,char *out,uint32_t capacity,uint32_t *leng
 }
 int storage_inode_permissions(const struct storage_node *node,struct leonos_permissions *out,bool write)
 { (void)node; (void)out; (void)write; assert(0); return -95; }
+int pty_inode_permissions(const struct storage_node *node,struct leonos_permissions *out,bool write)
+{ (void)node; (void)out; (void)write; assert(0); return -95; }
 int osmlayer_auth_op(uint32_t op,void *data)
-{ (void)op; (void)data; assert(0); return -95; }
+{
+    assert(op == LEONOS_AUTH_OP_POSIX_PERMISSIONS);
+    struct leonos_permissions_request *request = data;
+    assert(request->action == LEONOS_PERMISSIONS_GET);
+    request->value = (struct leonos_permissions){0755, 0, 0};
+    return 0;
+}
 int main(void)
 {
     current.uid=current.euid=current.fsuid=0;

@@ -88,6 +88,7 @@ struct storage_node;
 #define LINUX_SYS_SETPGID __NR_setpgid
 #define LINUX_SYS_GETCWD __NR_getcwd
 #define LINUX_SYS_CHDIR __NR_chdir
+#define LINUX_SYS_CHROOT __NR_chroot
 #define LINUX_SYS_RENAME __NR_rename
 #define LINUX_SYS_MKDIR __NR_mkdir
 #define LINUX_SYS_RMDIR __NR_rmdir

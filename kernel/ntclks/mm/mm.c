@@ -33,6 +33,10 @@ static uint32_t reserved_range_count;
  * and is large enough for the supported physical address range while still
  * allowing COW and shared file pages to use the same ownership accounting. */
 static uint16_t page_refs[MM_PAGE_COUNT];
+/* Runtime free pages cannot be represented by a bounded list of fragments. */
+static uint64_t *free_pages;
+static uint32_t free_page_count;
+static uint32_t allocation_hint;
 static struct kernel_spinlock mm_lock = KERNEL_SPINLOCK_INIT;
 
 /**
@@ -418,6 +422,32 @@ void mm_init(const struct boot_info *boot, const struct leonos_boot_handoff *han
  * @brief Report the same range the allocator can actually serve. Previously this value came from the legacy lower/upper fields and could include low reserved memory or addresses above the allocator limit.
  */
     recompute_total_allocatable_kib();
+    const uint64_t bitmap_bytes = MM_PAGE_COUNT / 8;
+    free_pages = NULL;
+    for (uint32_t i = 0; i < free_range_count; ++i) {
+        if (free_ranges[i].end - free_ranges[i].start >= bitmap_bytes) {
+            free_pages = (uint64_t *)(uintptr_t)free_ranges[i].start;
+            reserve_range(free_ranges[i].start, free_ranges[i].start + bitmap_bytes, "page-bitmap");
+            break;
+        }
+    }
+    if (!free_pages) {
+        console_printf("[ntclks] no memory for physical page bitmap\n");
+        free_page_count = 0;
+        allocation_hint = MM_PAGE_COUNT;
+        return;
+    }
+    __builtin_memset(free_pages, 0, bitmap_bytes);
+    free_page_count = 0;
+    allocation_hint = MM_PAGE_COUNT;
+    for (uint32_t i = 0; i < free_range_count; ++i) {
+        for (uint64_t page = free_ranges[i].start; page < free_ranges[i].end; page += PAGE_SIZE) {
+            uint32_t index = page_index(page);
+            free_pages[index / 64] |= 1ULL << (index % 64);
+            ++free_page_count;
+            if (index < allocation_hint) allocation_hint = index;
+        }
+    }
 
     console_printf("[ntclks] mm initialized usable=%llu KiB mmap_entries=%u efi_mmap_entries=%u\n",
                    (unsigned long long)total_kib,
@@ -442,17 +472,13 @@ uint64_t mm_free_memory_kib(void)
     uint64_t free_kib = 0;
     uint64_t flags;
     kernel_spin_lock_irqsave(&mm_lock, &flags);
-    for (uint32_t i = 0; i < free_range_count; ++i) {
-        if (free_ranges[i].end > free_ranges[i].start) {
-            free_kib += (free_ranges[i].end - free_ranges[i].start) / 1024ULL;
-        }
-    }
+    free_kib = (uint64_t)free_page_count * (PAGE_SIZE / 1024);
     kernel_spin_unlock_irqrestore(&mm_lock, flags);
     return free_kib;
 }
 
 /**
- * @brief Carve page_count contiguous, zeroed pages off the first fitting free range, mark them referenced, and return the base address; 0 when no range is large enough.
+ * @brief Find contiguous free bitmap pages, reference and zero them; return 0 when no run fits.
  */
 uint64_t mm_alloc_pages(uint32_t page_count)
 {
@@ -462,22 +488,24 @@ uint64_t mm_alloc_pages(uint32_t page_count)
         return 0;
     }
     kernel_spin_lock_irqsave(&mm_lock, &flags);
-    uint64_t bytes = (uint64_t)page_count * PAGE_SIZE;
-    for (uint32_t i = 0; i < free_range_count; ++i) {
-        uint64_t start = align_up(free_ranges[i].start, PAGE_SIZE);
-        if (start + bytes < start || start + bytes > free_ranges[i].end) {
+    uint32_t run = 0;
+    if (page_count <= free_page_count) for (uint32_t i = allocation_hint; i < MM_PAGE_COUNT; ++i) {
+        if (!(free_pages[i / 64] & (1ULL << (i % 64)))) {
+            run = 0;
+            if (!(i % 64) && !free_pages[i / 64]) i += 63;
             continue;
         }
-        uint64_t phys = start;
-        free_ranges[i].start = start + bytes;
-        if (free_ranges[i].start >= free_ranges[i].end) {
-            remove_free_range(i);
+        if (++run < page_count) continue;
+        uint32_t first = i + 1 - page_count;
+        for (uint32_t page = first; page <= i; ++page) {
+            free_pages[page / 64] &= ~(1ULL << (page % 64));
+            page_refs[page] = 1;
         }
-        zero_pages(phys, page_count);
-        for (uint32_t page = 0; page < page_count; ++page) {
-            page_refs[page_index(phys + (uint64_t)page * PAGE_SIZE)] = 1;
-        }
-        result = phys;
+        free_page_count -= page_count;
+        /* A multi-page search can skip smaller holes; retain those for later. */
+        if (page_count == 1 || first == allocation_hint) allocation_hint = i + 1;
+        result = (uint64_t)first * PAGE_SIZE;
+        zero_pages(result, page_count);
         break;
     }
     kernel_spin_unlock_irqrestore(&mm_lock, flags);
@@ -516,15 +544,10 @@ void mm_free_pages(uint64_t phys, uint32_t page_count)
         if (*refs) {
             continue;
         }
-        if (free_range_count >= MM_MAX_FREE_RANGES) {
-            /* This should be impossible after normal coalescing.  Keep the
-             * page reserved rather than corrupting the free-range table. */
-            *refs = 1;
-            continue;
-        }
-        free_ranges[free_range_count++] =
-            (struct phys_range){current, current + PAGE_SIZE, "free"};
-        coalesce_free_ranges();
+        uint32_t index = page_index(current);
+        free_pages[index / 64] |= 1ULL << (index % 64);
+        ++free_page_count;
+        if (index < allocation_hint) allocation_hint = index;
     }
     kernel_spin_unlock_irqrestore(&mm_lock, flags);
 }

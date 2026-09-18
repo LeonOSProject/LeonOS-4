@@ -115,7 +115,7 @@ int page_cache_load(const struct storage_node *node, uint64_t offset,
     kernel_spin_unlock_irqrestore(&cache_lock, flags);
     if (!entry) {
         mm_free_page(page);
-        return -1;
+        return PAGE_CACHE_FULL;
     }
     if (entry->phys != page) {
         mm_free_page(page);

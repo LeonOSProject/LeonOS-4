@@ -794,14 +794,17 @@ int elf64_map_task_image(struct task *task, const struct storage_node *node,
         return 0;
     }
 
-    ret = storage_lookup_path(main_info.interp, &interp_node);
+    char interpreter_path[LEONOS_FS_PATH_LEN];
+    ret = fs_permissions_resolve(task, sched_task_cwd(task), main_info.interp,
+                                 interpreter_path, sizeof(interpreter_path), false);
+    if (!ret) ret = storage_lookup_path(interpreter_path, &interp_node);
     if (ret < 0) {
         console_printf("[ntclks] ELF interpreter lookup failed path=%s\n", main_info.interp);
         return ret;
     }
-    ret = fs_permissions_check(task, main_info.interp, FS_ACCESS_EXEC, false);
+    ret = fs_permissions_check(task, interpreter_path, FS_ACCESS_EXEC, false);
     if (ret < 0) return ret;
-    if (fs_permissions_check(task, main_info.interp, FS_ACCESS_READ, false) < 0)
+    if (fs_permissions_check(task, interpreter_path, FS_ACCESS_READ, false) < 0)
         sched_task_mm(task)->nondumpable = true;
     ret = elf64_read_headers(&interp_node, &interp_image, &interp_len);
     if (ret < 0) {

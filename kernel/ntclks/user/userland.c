@@ -1086,6 +1086,8 @@ int userland_exec_current_node(const char *path, const struct storage_node *held
     if (!prepared) return -12;
     __builtin_memset(prepared, 0, sizeof(*prepared));
     prepared->credentials = task->credentials;
+    copy_text(prepared->cwd, sizeof(prepared->cwd), sched_task_cwd(task));
+    copy_text(prepared->root_dir, sizeof(prepared->root_dir), sched_task_root(task));
     prepared->limits = *sched_task_limits(task);
     prepared->stack_top = USER_STACK_TOP;
     prepared->stack_low = USER_STACK_TOP - (uint64_t)NTCLKS_USER_STACK_PAGES * 4096ULL;

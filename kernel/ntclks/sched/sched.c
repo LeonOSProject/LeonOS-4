@@ -416,6 +416,7 @@ static void task_copy_identity_from_parent(struct task *task, const struct task 
     task->session_id = parent->session_id;
     task_copy_identity_text(task->username, sizeof(task->username), parent->username);
     task_copy_identity_text(task->home, sizeof(task->home), parent->home);
+    task_copy_identity_text(sched_task_root_dir(task), LEONOS_FS_PATH_LEN, sched_task_root(parent));
 }
 
 /**
@@ -751,6 +752,7 @@ static int task_promote_shared(struct task *task, uint64_t flags)
         if (!fs) return -12;
         fs->umask = *sched_task_umask(task);
         for (unsigned i = 0; i < sizeof(fs->cwd); ++i) fs->cwd[i] = sched_task_cwd(task)[i];
+        task_copy_identity_text(fs->root_dir, sizeof(fs->root_dir), sched_task_root(task));
         fs->references = 1;
         task->shared_fs = fs;
     }
@@ -884,6 +886,7 @@ int64_t sched_clone_current(const struct trap_frame *parent_frame, uint64_t flag
     child->fd_table.file_extra_count = 0;
     child->fd_table.file_extra_capacity = 0;
     task_copy_cwd(child, sched_task_cwd(parent));
+    task_copy_identity_text(child->root_dir, sizeof(child->root_dir), sched_task_root(parent));
     *sched_task_umask(child) = *sched_task_umask(parent);
     for (unsigned i = 0; i < KERNEL_SIGNAL_ACTION_MAX; ++i)
         child->signal_actions[i] = sched_task_actions(parent)[i];
@@ -1516,6 +1519,7 @@ int sched_prepare_exec_current(struct task *task)
         struct task_fs_state *old = task->shared_fs;
         task->shared_fs = NULL;
         task_copy_cwd(task, old->cwd);
+        task_copy_identity_text(task->root_dir, sizeof(task->root_dir), old->root_dir);
         *sched_task_umask(task) = old->umask;
         if (!--old->references) kernel_free(old);
     }

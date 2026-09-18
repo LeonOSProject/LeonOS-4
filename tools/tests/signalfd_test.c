@@ -10,6 +10,8 @@ static struct task readers[2], *current;
 static struct task_file descriptor;
 static unsigned allocations, reconfigured, sleeps;
 static uint64_t fault_at;
+void power_reboot(void) { abort(); }
+void power_shutdown(void) { abort(); }
 void *kernel_malloc(size_t n) { void *p = malloc(n); if (p) ++allocations; return p; }
 void kernel_free(void *p) { if (p) { assert(allocations); --allocations; free(p); } }
 void kernel_spin_lock_irqsave(struct kernel_spinlock *lock, uint64_t *flags)

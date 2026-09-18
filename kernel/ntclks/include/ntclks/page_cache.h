@@ -10,6 +10,9 @@
 
 typedef int (*page_cache_loader)(uint64_t phys, void *context);
 
+/* All cache slots are pinned; the caller may use a private backing page. */
+#define PAGE_CACHE_FULL (-2)
+
 void page_cache_init(void);
 int page_cache_lookup(const struct storage_node *node, uint64_t offset,
                       uint64_t *phys);
