@@ -20,14 +20,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=ROOT / "build/execution-lock-qemu")
     parser.add_argument("--timeout", type=int, default=600)
+    parser.add_argument("--scheduler", action="store_true", help="run CPU fairness/affinity probe")
     args = parser.parse_args()
     work = args.out.resolve()
     work.mkdir(parents=True, exist_ok=True)
     executable = work / "probe"
     subprocess.run([str(ROOT / "build/musl/sdk/bin/leonos-musl-cc"), "-static", "-O2",
-                    "-pthread", str(ROOT / "tools/tests/execution_lock_runtime_probe.c"),
+                    "-pthread", str(ROOT / "tools/tests" / (
+                        "eevdf_runtime_probe.c" if args.scheduler else "execution_lock_runtime_probe.c")),
                     "-o", str(executable)], check=True)
-    subprocess.run([str(executable)], check=True, timeout=60)
+    if not args.scheduler:
+        subprocess.run([str(executable)], check=True, timeout=60)
     with tempfile.TemporaryDirectory(prefix="stage-", dir=work) as tmp:
         stage = Path(tmp) / "root"
         make_live_tree(ROOT / "build/apk/root", stage)
@@ -43,6 +46,10 @@ def main():
     runner.WORK = work
     runner.guest(args.timeout)
     serial = (work / "guest-serial.log").read_text(errors="replace")
+    if args.scheduler:
+        print("\n".join(line for line in serial.splitlines() if "[eevdf-probe]" in line))
+        assert len(re.findall(r"\[eevdf-probe\] nice=", serial)) == 2
+        return
     measurements = [dict(processes=int(p), pages=int(n), seconds=float(s))
                     for p, n, s in re.findall(
                         r"\[execution-bench\] processes=(\d+) pages=(\d+) seconds=([\d.]+)", serial)]

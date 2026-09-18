@@ -126,6 +126,8 @@ static uint32_t scheduler_current_pid(void)
     return current_pid[scheduler_cpu_index()];
 }
 
+#include "eevdf.inc"
+
 static bool task_frame_valid(const struct task *task, const struct trap_frame *frame)
 {
     return task && frame && (*sched_task_as(task)).cr3 && task->stack_low && task->stack_top &&
@@ -435,10 +437,14 @@ void sched_init(void)
     scheduler_busy_ticks = 0;
     scheduler_idle_ticks = 0;
     for (uint32_t i = 0; i < SMP_MAX_CPUS; ++i) {
+        fair_queues[i] = (struct eevdf_queue){0};
+        fair_running[i] = NULL;
+        fair_started[i] = 0;
         scheduler_cpu_busy_ticks[i] = 0;
         scheduler_cpu_idle_ticks[i] = 0;
     }
-    console_printf("[ntclks] scheduler initialized\n");
+    fair_clock = 0;
+    console_printf("[ntclks] EEVDF scheduler initialized\n");
 }
 
 /**
@@ -520,6 +526,7 @@ static struct task *alloc_task_slot(void)
             !thread_group_pending(sched_task_tgid(tasks[i]), tasks[i]) &&
             (!(tasks[i]->flags & TASK_FLAG_WAITABLE_CHILD) || tasks[i]->parent_pid == 0)) {
             task_release_limits(tasks[i]);
+            fair_forget(tasks[i]);
             task_zero(tasks[i]);
             return tasks[i];
         }
@@ -863,6 +870,7 @@ int64_t sched_clone_current(const struct trap_frame *parent_frame, uint64_t flag
     }
     task_zero(child);
     *child = *parent;
+    child->fair = (struct eevdf_entity){0};
     child->limits = *sched_task_limits(parent);
     child->limits.references = 1;
     child->shared_limits = NULL;
@@ -1262,6 +1270,7 @@ void sched_set_running(uint32_t pid)
         kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
         return;
     }
+    fair_stop_cpu(cpu);
     current_pid[cpu] = pid;
     for (uint32_t i = 0; i < task_count; ++i) {
         if (tasks[i] == selected) {
@@ -1273,6 +1282,11 @@ void sched_set_running(uint32_t pid)
             tasks[i]->running_cpu = SCHED_CPU_NONE;
         }
     }
+    if (selected->fair.queued && selected->fair.cpu != cpu)
+        eevdf_dequeue(&fair_queues[selected->fair.cpu], &selected->fair);
+    fair_sync();
+    fair_running[cpu] = selected;
+    fair_started[cpu] = fair_now();
     kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
 }
 
@@ -1938,10 +1952,13 @@ uint64_t sched_tick_count(void)
 
 void sched_yield_current(void)
 {
-    /**
- * @brief The kernel debugger runs before the first user task exists. A real context switch is therefore neither useful nor safe here; the timer interrupt remains the scheduling boundary for the normal system.
- */
-    __asm__ volatile("pause");
+    uint64_t flags;
+    kernel_spin_lock_irqsave(&scheduler_lock, &flags);
+    uint32_t cpu = scheduler_cpu_index();
+    fair_account_cpu(cpu, fair_now());
+    struct task *task = sched_current_task();
+    if (task && task->fair.queued) eevdf_yield(&task->fair);
+    kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
 }
 
 /**
@@ -2254,6 +2271,7 @@ bool sched_capture_current_user_frame(const struct trap_frame *frame)
         kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
         return false;
     }
+    fair_stop_cpu(cpu);
     /* execve has already installed a fresh address space and reset the saved
      * frame for the pending image.  The trap frame passed here still belongs
      * to the replaced program; copying it would resurrect the old RIP and
@@ -2291,6 +2309,7 @@ void sched_quiesce_exited_current(void)
     uint32_t gpu_owner = 0;
 
     kernel_spin_lock_irqsave(&scheduler_lock, &flags);
+    fair_stop_cpu(cpu);
     pid = current_pid[cpu];
     for (uint32_t i = 0; i < task_count; ++i) {
         if (tasks[i]->pid == pid && tasks[i]->state == TASK_EXITED) {
@@ -2308,47 +2327,14 @@ void sched_quiesce_exited_current(void)
 }
 
 /**
- * @brief Round-robin scan for the next READY, fully-loaded user task with the lowest priority.
+ * @brief Select the earliest eligible virtual deadline on this CPU.
  */
 struct task *sched_select_next_user(void)
 {
-    uint32_t current_index = 0;
     struct task *best = NULL;
     uint64_t flags;
     kernel_spin_lock_irqsave(&scheduler_lock, &flags);
-    for (uint32_t i = 0; i < task_count; ++i) {
-        if (tasks[i]->pid == scheduler_current_pid()) {
-            current_index = i;
-            break;
-        }
-    }
-
-    /*
-     * Services (especially desktop.elf) must participate in the same
-     * round-robin queue as normal applications.  The old two-pass policy
-     * skipped every service while any ordinary process was READY; a compiler
-     * or shell that stayed runnable could therefore starve the window server
-     * indefinitely and make the whole desktop appear frozen.
-     */
-    for (uint32_t n = 1; n <= task_count; ++n) {
-        uint32_t i = (current_index + n) % task_count;
-        if (tasks[i]->kind != TASK_KIND_USER || tasks[i]->state != TASK_READY ||
-            (tasks[i]->vfork_child && !kernel_signal_fatal_pending(tasks[i])) ||
-            (tasks[i]->running_cpu != SCHED_CPU_NONE && tasks[i]->running_cpu != scheduler_cpu_index())) {
-            continue;
-        }
-        if (!task_cpu_allowed(tasks[i], scheduler_cpu_index())) {
-            continue;
-        }
-        if ((!tasks[i]->entry && !(tasks[i]->image && tasks[i]->image_len) &&
-             !(tasks[i]->flags & TASK_FLAG_PENDING_LOAD)) ||
-            !tasks[i]->stack_top || !(*sched_task_as(tasks[i])).cr3) {
-            continue;
-        }
-        if (!best || tasks[i]->priority < best->priority) {
-            best = tasks[i];
-        }
-    }
+    best = fair_select(scheduler_cpu_index());
     if (best) {
         uint32_t cpu = scheduler_cpu_index();
         uint32_t old_pid = current_pid[cpu];
@@ -2362,47 +2348,19 @@ struct task *sched_select_next_user(void)
         best->running_cpu = cpu;
         best->last_cpu = cpu;
         current_pid[cpu] = best->pid;
+        fair_running[cpu] = best;
+        fair_started[cpu] = fair_now();
     }
     kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
     return best;
 }
 
 /**
- * @brief Atomically put this CPU's saved task back on the running slot.
- *
- * A preemption path first changes RUNNING to READY while publishing the
- * interrupted frame. If the run queue is otherwise empty, the same task must
- * be claimed again before its frame is returned to the iret path. Leaving it
- * READY permits another CPU to claim the same address space concurrently.
+ * @brief Retry selection without bypassing EEVDF eligibility or CPU ownership.
  */
 struct task *sched_reclaim_current_user(void)
 {
-    uint32_t cpu = scheduler_cpu_index();
-    uint32_t pid;
-    struct task *task = NULL;
-    uint64_t flags;
-
-    kernel_spin_lock_irqsave(&scheduler_lock, &flags);
-    pid = current_pid[cpu];
-    for (uint32_t i = 0; i < task_count; ++i) {
-        if (tasks[i]->pid == pid) {
-            task = tasks[i];
-            break;
-        }
-    }
-    if (!task || task->kind != TASK_KIND_USER || task->state != TASK_READY ||
-        (task->vfork_child && !kernel_signal_fatal_pending(task)) ||
-        (task->running_cpu != SCHED_CPU_NONE && task->running_cpu != cpu) ||
-        !task_cpu_allowed(task, cpu) ||
-        !task_frame_valid(task, &task->frame)) {
-        task = NULL;
-    } else {
-        task->state = TASK_RUNNING;
-        task->running_cpu = cpu;
-        task->last_cpu = cpu;
-    }
-    kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
-    return task;
+    return sched_select_next_user();
 }
 
 /**
@@ -2974,17 +2932,25 @@ int64_t sched_get_process_session(uint32_t pid)
  */
 int sched_task_priority(uint32_t pid, int priority, int set)
 {
+    uint64_t flags;
+    kernel_spin_lock_irqsave(&scheduler_lock, &flags);
     struct task *task = sched_find(pid);
     if (!task || task->pid == 0 || task->kind != TASK_KIND_USER ||
         task->state == TASK_EXITED) {
+        kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
         return -1;
     }
     if (set) {
+        for (uint32_t cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) fair_account_cpu(cpu, fair_now());
         if (priority < -20) priority = -20;
         if (priority > 19) priority = 19;
         task->priority = priority;
+        if (task->fair.initialized)
+            eevdf_reweight(&fair_queues[task->fair.cpu], &task->fair, priority);
     }
-    return task->priority;
+    int result = task->priority;
+    kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
+    return result;
 }
 
 /**

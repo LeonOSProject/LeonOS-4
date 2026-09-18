@@ -6755,6 +6755,7 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
     }
 
     if (number == LINUX_SYS_SCHED_YIELD) {
+        sched_yield_current();
         userland_yield_if_runnable();
         return 0;
     }

@@ -10,6 +10,7 @@
 #include <ntclks/storage.h>
 #include <ntclks/trap.h>
 #include <ntclks/types.h>
+#include <ntclks/eevdf.h>
 #include <ntclks/heap.h>
 #include <leonos/auth.h>
 #include <leonos/elf_abi.h>
@@ -383,6 +384,7 @@ struct task_mmsg_state {
 };
 
 struct task {
+    struct eevdf_entity fair;
     uint64_t start_uptime_ms;
     bool no_new_privs;
     bool nproc_exceeded;
