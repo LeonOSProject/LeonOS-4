@@ -17,7 +17,7 @@ Debian/Ubuntu 的典型依赖：
 
 ```sh
 sudo apt install build-essential clang lld llvm libclang-rt-dev \
-  autoconf automake libtool libtool-bin pkg-config bison flex gperf libncurses-dev \
+  autoconf automake libtool libtool-bin pkg-config bison flex gperf gettext libncurses-dev \
   grub-efi-amd64-bin grub-common xorriso mtools dosfstools e2fsprogs libext2fs-dev \
   fakeroot fdisk qemu-utils qemu-system-x86 ovmf zip curl xz-utils patch git
 rustup target add x86_64-unknown-none

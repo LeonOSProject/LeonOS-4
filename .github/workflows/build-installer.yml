@@ -83,6 +83,7 @@ jobs:
             bison \
             flex \
             gperf \
+            gettext \
             perl \
             libncurses-dev \
             bc \
@@ -113,6 +114,7 @@ jobs:
           qemu-img --version
           rustc --version
           cargo --version
+          msgfmt --version
 
       - name: Verify third-party sources
         run: |

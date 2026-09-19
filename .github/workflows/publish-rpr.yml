@@ -34,7 +34,8 @@ jobs:
             grub-efi-amd64-bin grub-pc-bin grub-common xorriso mtools \
             dosfstools e2fsprogs libext2fs-dev fdisk fakeroot gdisk qemu-utils zip \
             git make bison flex bc pkg-config autoconf automake libtool \
-            libtool-bin gawk gperf libncurses-dev ncurses-bin exfatprogs openssl perl
+            libtool-bin gawk gperf gettext libncurses-dev ncurses-bin exfatprogs openssl perl
+          msgfmt --version
 
       - name: Install Rust
         run: |

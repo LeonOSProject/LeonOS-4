@@ -26,7 +26,7 @@ printf 'toolchain\t%s\n\n' "${TOOLCHAIN:-unset}"
 group 'host tools (required by make itself and the C helpers)'
 for tool in sh grep sed awk find sort cmp mv ln mkdir rm printf date tr head \
             cut expr uname nproc xz tar patch curl flock make readelf stat od \
-            gzip sha256sum timeout perl autoconf automake libtoolize gperf bison flex pkg-config; do
+            gzip sha256sum timeout perl autoconf automake libtoolize gperf bison flex pkg-config msgfmt; do
     check_tool "$tool"
 done
 printf '  HOSTCC     %s\n' "${HOSTCC:-cc}"
