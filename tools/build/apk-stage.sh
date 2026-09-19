@@ -1,6 +1,7 @@
 #!/bin/sh
 # Build signed local packages and install them with the verified upstream apk.
 set -eu
+. "$(CDPATH= cd -- "$(dirname "$0")/../../scripts" && pwd)/logging.sh"
 
 if [ "$#" -ne 10 ]; then
     echo 'usage: apk-stage.sh SRC RAW_ROOT OUTPUT_ROOT WORK APK UPSTREAM POLICY OWN_TOOL KEY VERSION' >&2
@@ -158,7 +159,7 @@ package_name()
 
 # Copy exactly the classified payload. Quoting and tab-delimited reads preserve
 # spaces; the inventory tool rejects tabs/newlines because this is its format.
-printf '  APK      copying %s payload entries\n' "$(wc -l < "$scratch/ownership.tsv")"
+leonos_log APK "copying $(wc -l < "$scratch/ownership.tsv") payload entries"
 copied=0
 while IFS="$(printf '\t')" read -r group type mode relative target; do
     package=$(package_name "$group")
@@ -171,7 +172,7 @@ while IFS="$(printf '\t')" read -r group type mode relative target; do
         cp -a "$tree/$relative" "$destination"
     fi
     copied=$((copied + 1))
-    if [ $((copied % 2000)) = 0 ]; then printf '  APK      copied %s entries\n' "$copied"; fi
+    if [ $((copied % 2000)) = 0 ]; then leonos_log APK "copied $copied entries"; fi
 done <"$scratch/ownership.tsv"
 # Shared parent directories must have the canonical mode in every package.
 for payload in "$scratch"/payload/*; do
@@ -184,7 +185,7 @@ for payload in "$scratch"/payload/*; do
 done
 
 # Derive real ELF capabilities and dependencies from the package payload.
-printf '  APK      scanning ELF dependencies and signing packages\n'
+leonos_log APK 'scanning ELF dependencies and signing packages'
 : >"$scratch/providers"
 : >"$scratch/needed"
 while IFS= read -r group; do
@@ -306,4 +307,4 @@ rm -rf "$output.previous"
 [ ! -e "$output" ] || mv "$output" "$output.previous"
 mv "$managed" "$output"
 rm -rf "$output.previous"
-printf '  APK      signed root: %s packages -> %s\n' "$(wc -l <"$scratch/groups")" "$output"
+leonos_log APK "signed root: $(wc -l <"$scratch/groups") packages -> $output"

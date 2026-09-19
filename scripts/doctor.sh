@@ -3,10 +3,12 @@
 # so CI and a fresh checkout get a single actionable report (plan section 6.2).
 set -u
 
+. "$(CDPATH= cd -- "$(dirname "$0")" && pwd)/logging.sh"
+
 failures=0
 group() { printf '%s\n' "$1"; }
-missing() { printf '  MISSING  %s\n' "$1"; failures=$((failures + 1)); }
-present() { printf '  ok       %s -> %s\n' "$1" "$2"; }
+missing() { leonos_log MISSING "$1"; failures=$((failures + 1)); }
+present() { leonos_log ok "$1 -> $2"; }
 
 check_tool() {
     found=$(command -v "$1" 2>/dev/null || true)
@@ -29,7 +31,7 @@ for tool in sh grep sed awk find sort cmp mv ln mkdir rm printf date tr head \
             gzip sha256sum timeout perl autoconf automake libtoolize gperf bison flex pkg-config msgfmt; do
     check_tool "$tool"
 done
-printf '  HOSTCC     %s\n' "${HOSTCC:-cc}"
+leonos_log HOSTCC "${HOSTCC:-cc}"
 if ! command -v "${HOSTCC:-cc}" >/dev/null 2>&1; then
     missing "HOSTCC=${HOSTCC:-cc}"
 fi
@@ -39,8 +41,8 @@ group 'target toolchain (validated by actually compiling)'
 # Named explicitly: HOSTCC and TARGET_CC must be visible as two different
 # variables in one output, or "the host compiler works" proves nothing about the
 # cross compiler.
-printf '  TARGET_CC  %s\n' "${TARGET_CC:-unset}"
-printf '  TARGET_LD  %s\n' "${TARGET_LD:-unset}"
+leonos_log TARGET_CC "${TARGET_CC:-unset}"
+leonos_log TARGET_LD "${TARGET_LD:-unset}"
 for tool in "$TARGET_CC" "$TARGET_LD" "$TARGET_AR" "$TARGET_OBJCOPY" \
             "$TARGET_STRIP" "$TARGET_RUSTC"; do
     check_tool "$tool"
@@ -55,13 +57,13 @@ if command -v "$TARGET_CC" >/dev/null 2>&1; then
         printf 'int main(void){return 0;}\n' > "$probe_dir/probe.c"
         if "$TARGET_CC" -target "${TARGET_TRIPLE_KERNEL}" -ffreestanding -c \
                 "$probe_dir/probe.c" -o "$probe_dir/probe.o" >/dev/null 2>&1; then
-            printf '  ok       %s can target %s\n' "$TARGET_CC" "$TARGET_TRIPLE_KERNEL"
+            leonos_log ok "$TARGET_CC can target $TARGET_TRIPLE_KERNEL"
         else
             missing "$TARGET_CC cannot target $TARGET_TRIPLE_KERNEL"
         fi
         resource_dir=$("$TARGET_CC" -print-resource-dir 2>/dev/null || echo "")
         if [ -n "$resource_dir" ] && [ -d "$resource_dir/include" ]; then
-            printf '  ok       compiler-rt headers %s\n' "$resource_dir/include"
+            leonos_log ok "compiler-rt headers $resource_dir/include"
         else
             missing "$TARGET_CC compiler-rt headers (clang -print-resource-dir)"
         fi
@@ -84,7 +86,7 @@ if command -v "$TARGET_CC" >/dev/null 2>&1; then
             fi
         fi
         if "$TARGET_LD" --version >/dev/null 2>&1; then
-            printf '  ok       linker %s responds\n' "$TARGET_LD"
+            leonos_log ok "linker $TARGET_LD responds"
         else
             missing "$TARGET_LD is not runnable"
         fi
@@ -134,7 +136,7 @@ for candidate in "${SRC:-.}/buildsystem/firmware/OVMF.fd" \
     fi
 done
 if [ -n "$firmware_found" ]; then
-    printf '  ok       UEFI firmware %s\n' "$firmware_found"
+    leonos_log ok "UEFI firmware $firmware_found"
 else
     missing 'UEFI firmware for QEMU (install edk2-ovmf, or place OVMF.fd in buildsystem/firmware/)'
 fi
@@ -142,12 +144,12 @@ fi
 group ''
 group 'third-party build inputs'
 if [ -f third_party/kconfig-frontends/configure.ac ]; then
-    printf '  ok       kconfig-frontends submodule present\n'
+    leonos_log ok 'kconfig-frontends submodule present'
 else
     missing 'third_party/kconfig-frontends (git submodule update --init --recursive)'
 fi
 if [ -f third_party/zlib/contrib/puff/puff.c ]; then
-    printf '  ok       zlib reference inflate (contrib/puff) present\n'
+    leonos_log ok 'zlib reference inflate (contrib/puff) present'
 else
     missing 'third_party/zlib/contrib/puff/puff.c'
 fi
@@ -160,8 +162,7 @@ if [ -n "$lock" ] && [ ! -f "$lock" ]; then
     missing "$lock (the dependency lock file is gone)"
 elif [ -n "$deps_tool" ] && [ -x "$deps_tool" ] && [ -n "$lock" ]; then
     if "$deps_tool" --lock "$lock" --check --root "$PWD" >/dev/null 2>&1; then
-        printf '  ok       %s (%s dependencies)\n' \
-            "$lock" "$("$deps_tool" --lock "$lock" --list | grep -c '')"
+        leonos_log ok "$lock ($("$deps_tool" --lock "$lock" --list | grep -c '') dependencies"
     else
         missing "$lock does not validate: $deps_tool --lock $lock --check --root ."
     fi
@@ -173,21 +174,19 @@ elif [ -n "$deps_tool" ] && [ -x "$deps_tool" ] && [ -n "$lock" ]; then
         kind=$("$deps_tool" --lock "$lock" --id "$dependency" --print kind 2>/dev/null) || continue
         [ "$kind" = submodule ] || continue
         if [ -n "$directory" ] && [ -n "$(ls -A "$directory" 2>/dev/null)" ]; then
-            printf '  ok       %s\n' "$directory"
+            leonos_log ok "$directory"
         else
-            printf '  MISSING  %s (git submodule update --init)\n' "$directory"
+            leonos_log MISSING "$directory (git submodule update --init)"
         fi
     done
     if [ -n "$cache" ]; then
         wanted=$("$deps_tool" --lock "$lock" --fetch-list 2>/dev/null | grep -c '')
         have=0
         [ -d "$cache" ] && have=$(cd "$cache" && find . -type f -name '.*.partial.*' -prune -o -type f -print | wc -l)
-        printf '  %-8s %s of %s locked downloads in %s (make fetch)\n' \
-            "$([ "$have" -ge "$wanted" ] && echo ok || echo note)" "$have" "$wanted" "$cache"
+        leonos_log "$([ "$have" -ge "$wanted" ] && echo ok || echo note)" "$have of $wanted locked downloads in $cache (make fetch)"
     fi
 elif [ -n "$lock" ]; then
-    printf '  note     lock file not validated: %s is not built yet (make tools)\n' \
-        "$deps_tool"
+    leonos_log note "lock file not validated: $deps_tool is not built yet (make tools)"
 fi
 
 printf '\n'

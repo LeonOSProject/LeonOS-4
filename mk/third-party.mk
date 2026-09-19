@@ -76,7 +76,7 @@ leonos_git_path := $(if $(LEONOS_PASSIVE),deferred,$(shell command -v git 2>/dev
 LEONOS_SIG_musl-sysroot := script=$(MUSL_SCRIPT)|lock=$(LEONOS_LOCK_DIGEST)|cc=$(TARGET_CC)|ar=$(TARGET_AR)|ranlib=$(TARGET_RANLIB)|ld=$(TARGET_LD)|triple=$(TRIPLE_USER)|cflags=$(LEONOS_MUSL_CFLAGS)|git=$(leonos_git_path)
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,musl-sysroot)))
 
-$(MUSL_STAMP) $(LEONOS_MUSL_ARTIFACTS) &: $(LEONOS_LOCK) $(MUSL_SCRIPT) $(LEONOS_DEPS_TOOL) $(O_META)/musl-sysroot.sig \
+$(MUSL_STAMP) $(LEONOS_MUSL_ARTIFACTS) &: $(LEONOS_LOCK) $(MUSL_SCRIPT) $(LEONOS_SHELL_LOG) $(LEONOS_DEPS_TOOL) $(O_META)/musl-sysroot.sig \
 	| $(MUSL_SYSROOT) $(MUSL_WORK) $(O_LOGS)
 	$(call LEONOS_LOG,SYSROOT,musl)
 	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0;; esac; sh $(MUSL_SCRIPT) --src '$(LEONOS_SRC)' --deps '$(abspath $(LEONOS_DEPS_TOOL))' \
@@ -118,7 +118,7 @@ $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,auth-upstream)))
 .PHONY: leonos-auth
 leonos-auth: $(AUTH_STAMP) $(LEONOS_AUTH_ARTIFACTS)
 
-$(AUTH_STAMP) $(LEONOS_AUTH_ARTIFACTS) &: $(LEONOS_LOCK) $(AUTH_SCRIPT) $(LEONOS_DEPS_TOOL) \
+$(AUTH_STAMP) $(LEONOS_AUTH_ARTIFACTS) &: $(LEONOS_LOCK) $(AUTH_SCRIPT) $(LEONOS_SHELL_LOG) $(LEONOS_DEPS_TOOL) \
 	$(O_META)/auth-upstream.sig $(MUSL_STAMP) | $(O_AUTH) $(AUTH_WORK) $(O_LOGS)
 	$(call LEONOS_LOG,AUTH,auth)
 	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0;; esac; sh $(AUTH_SCRIPT) --src '$(LEONOS_SRC)' --deps '$(abspath $(LEONOS_DEPS_TOOL))' \

@@ -1,6 +1,7 @@
 #!/bin/sh
 # Stream a command to the terminal and a log without losing its exit status.
 set -eu
+. "$(CDPATH= cd -- "$(dirname "$0")/../../scripts" && pwd)/logging.sh"
 tag=
 if [ "${1:-}" = --tag ]; then
     [ "$#" -ge 4 ] || { echo 'usage: run-logged [--tag TAG] LOG COMMAND [ARG...]' >&2; exit 2; }
@@ -31,6 +32,6 @@ if [ -n "$tag" ]; then
     wait "$formatter" || { [ "$status" != 0 ] || status=1; }
 fi
 if [ -n "$tag" ] && [ "$status" != 0 ]; then
-    printf '  %-8s %s exited %s; raw log: %s\n' ERROR "$tag" "$status" "$log" >&2
+    leonos_log ERROR "$tag exited $status; raw log: $log" >&2
 fi
 exit "$status"

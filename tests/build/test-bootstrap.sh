@@ -72,13 +72,13 @@ check "help does not create a source-tree version header" \
     test ! -e include/generated/build_info.h
 
 # --- HOSTCC and target CC are independent ---------------------------------
-expect_output_contains "doctor reports the host compiler separately" "HOSTCC     cc" \
+expect_output_contains "doctor reports the host compiler separately" "HOSTCC   cc" \
     make -s doctor
 # One variable per side: if doctor printed a single "compiler" line the assertion
 # above would pass even when the host and target compilers were the same binary.
 expect_output_contains "doctor names the target compiler and linker apart from it" \
-    "TARGET_CC  clang" make -s doctor
-expect_output_contains "doctor reports the target linker" "TARGET_LD  ld.lld" \
+    "TARGET_CC clang" make -s doctor
+expect_output_contains "doctor reports the target linker" "TARGET_LD ld.lld" \
     make -s doctor
 check "host tools build with a plain host compiler" \
     env HOSTCC=cc make -s tools

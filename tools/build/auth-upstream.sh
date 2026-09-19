@@ -18,6 +18,7 @@
 # this script, so the two cannot drift apart.
 set -eu
 # A '+' recipe preserves Make's jobserver, but also runs during make -n.
+. "$(CDPATH= cd -- "$(dirname "$0")/../../scripts" && pwd)/logging.sh"
 case ${MAKEFLAGS%% *} in *n*) exit 0 ;; esac
 
 die() {
@@ -160,7 +161,7 @@ if [ "$inputs_changed" = 0 ]; then
     # the configured tree below when Make requests repair.
     :
 else
-    printf '  %-8s %s\n' RESET "$work/build"
+    leonos_log RESET "$work/build"
     rm -rf "$work/build" "$work/src" "$stage"
 fi
 
@@ -264,4 +265,4 @@ done
 } >"$work/.leonos-auth.json.tmp"
 mv "$work/.leonos-auth.json.tmp" "$work/.leonos-auth.json"
 
-printf '  %-8s %s\n' AUTH "$stage"
+leonos_log AUTH "$stage"

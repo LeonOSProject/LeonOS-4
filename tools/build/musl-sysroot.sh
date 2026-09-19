@@ -11,6 +11,8 @@
 # that Make already recorded; a change to any of them re-runs this script, which
 # is what keeps a stale libc from surviving a toolchain switch.
 set -eu
+
+. "$(CDPATH= cd -- "$(dirname "$0")/../../scripts" && pwd)/logging.sh"
 case ${MAKEFLAGS%% *} in *n*) exit 0 ;; esac
 
 die() {
@@ -115,7 +117,7 @@ if [ -f "$key_file" ] && cmp -s "$key_file" "$key_file.new"; then
 else
     # A different compiler, flag set or patch digest invalidates whatever
     # upstream's configure already probed: start the build directory over.
-    printf '  %-8s %s\n' RESET "$work/build"
+    leonos_log RESET "$work/build"
     rm -rf "$work/build" "$work/src"
     mv "$key_file.new" "$key_file"
 fi
@@ -135,7 +137,7 @@ if [ ! -f "$tree/.leonos-unpacked" ]; then
     # repository root, so the archive cannot name a file outside $tree.
     git -C "$musl_source" archive "$musl_commit" | tar -x -C "$tree"
     : >"$tree/.leonos-unpacked"
-    printf '  %-8s %s\n' PATCH "$musl_directory"
+    leonos_log PATCH "$musl_directory"
     printf '%s\n' "$patch_lines" | while IFS='	' read -r digest path; do
         [ -n "$digest" ] || continue
         actual=$(sha256sum "$src/$path" | cut -d' ' -f1)
@@ -228,4 +230,4 @@ printf '%s\n' "$patch_lines" | awk -F'\t' \
      }' >"$stamp.tmp"
 mv "$stamp.tmp" "$stamp"
 
-printf '  %-8s %s\n' SYSROOT "$sysroot"
+leonos_log SYSROOT "$sysroot"

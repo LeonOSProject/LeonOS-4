@@ -2,6 +2,7 @@
 # Build both installer policy roots through the same signed APK transaction as
 # the ordinary system, then embed the installed root and minimal ESP payload.
 set -eu
+. "$(CDPATH= cd -- "$(dirname "$0")/../../scripts" && pwd)/logging.sh"
 [ "$#" = 6 ] || { echo 'usage: installer-stage SRC O RAW_ROOT ESP OUTPUT EPOCH' >&2; exit 2; }
 src=$1 out=$2 raw=$3 esp=$4 output=$5 epoch=$6
 : "${APK_TOOL:?}" "${APK_UPSTREAM:?}" "${APK_OWN_TOOL:?}" "${APK_KEY:?}" "${APK_VERSION:?}"
@@ -15,7 +16,7 @@ done
 cp "$out/installer/lib/libleonos.so.2" "$work/installed-raw/usr/lib/leonos/libleonos.so.2"
 rm -f "$work/installed-raw/etc/license.conf" "$work/installed-raw/etc/install.id"
 package_root() {
-    printf '  APK      %s\n' "$3"
+    leonos_log APK "$3"
     SOURCE_DATE_EPOCH=$epoch APK_MUSL_SYSROOT=$out/sysroot/musl sh "$src/tools/build/apk-stage.sh" "$src" "$1" "$2" "$3" \
         "$APK_TOOL" "$APK_UPSTREAM" "$src/configs/apk-ownership.json" "$APK_OWN_TOOL" "$APK_KEY" "$APK_VERSION"
 }
@@ -49,7 +50,7 @@ package_root "$work/runtime-raw" "$work/runtime" "$out/packages/apk-installer-ru
     exit 1
 }
 mkdir -p "$work/runtime/install"
-printf '  STAGE    installer payload and ESP\n'
+leonos_log STAGE 'installer payload and ESP'
 mv "$work/installed" "$work/runtime/install/root"
 cp -a "$esp" "$work/runtime/install/esp"
 "${INSTALLER_DEDUP_TOOL:-$out/host/bin/leonos-dedup}" "$work/runtime"

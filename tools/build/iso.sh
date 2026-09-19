@@ -1,6 +1,7 @@
 #!/bin/sh
 # UEFI live/installer ISO. xorriso and dosfstools own the on-disk formats.
 set -eu
+. "$(CDPATH= cd -- "$(dirname "$0")/../../scripts" && pwd)/logging.sh"
 [ "$#" = 8 ] || { echo 'usage: iso SRC MODULES ESP ROOT CONFIG OUTPUT EPOCH VOLUME' >&2; exit 2; }
 src=$1 modules=$2 esp=$3 root=$4 config=$5 output=$6 epoch=$7 volume=$8
 export SOURCE_DATE_EPOCH=$epoch TZ=UTC LC_ALL=C
@@ -23,7 +24,7 @@ truncate -s "${size}M" "$work/tree/boot/efiboot.img"
 mkfs.fat --invariant -F 16 -n LEONOSINST "$work/tree/boot/efiboot.img"
 mcopy -s -m -i "$work/tree/boot/efiboot.img" "$work/efi/EFI" ::/
 touch -d "@$epoch" "$work/tree/boot/efiboot.img"
-printf '  ISO      %s\n' "$output"
+leonos_log ISO "$output"
 sh "$src/tools/build/run-logged.sh" --tag XORRISO "${output%.iso}.xorriso.log" \
  xorriso -as mkisofs -iso-level 3 -R -J -V "$volume" \
  -uid 0 -gid 0 --set_all_file_dates "$(date -u -d "@$epoch" +%Y%m%d%H%M%S)00" \

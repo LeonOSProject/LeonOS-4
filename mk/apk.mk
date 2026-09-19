@@ -14,7 +14,7 @@ APK_SIGNING_KEY ?= $(HOME)/.local/share/leonos/apk-signing/key.pem
 APK_BUILD_VERSION ?= 2.$(SOURCE_DATE_EPOCH)-r0
 APK_STAGE_SCRIPT := $(LEONOS_SRC)/tools/build/apk-stage.sh
 APK_STAGE_INPUTS := $(LEONOS_SRC)/tools/build/apk-layout.sh $(LEONOS_LAYOUT_TOOL) $(LEONOS_LOCK)
-BUILD_LOG_INPUTS := $(LEONOS_SRC)/tools/build/run-logged.sh $(LEONOS_SRC)/tools/build/format-log.awk
+BUILD_LOG_INPUTS := $(LEONOS_SHELL_LOG) $(LEONOS_SRC)/tools/build/run-logged.sh $(LEONOS_SRC)/tools/build/format-log.awk
 APK_STAGE_INPUTS += $(BUILD_LOG_INPUTS)
 
 LEONOS_SIG_apk-stage := version=$(APK_BUILD_VERSION)|epoch=$(SOURCE_DATE_EPOCH)|raw=$(abspath $(APK_RAW_ROOT))|key=$(APK_SIGNING_KEY)|key-identity=$(shell sha256sum '$(APK_SIGNING_KEY)' 2>/dev/null | cut -d' ' -f1)|policy=$(shell sha256sum $(LEONOS_SRC)/configs/apk-ownership.json 2>/dev/null | cut -d' ' -f1)|script=$(shell sha256sum $(APK_STAGE_SCRIPT) 2>/dev/null | cut -d' ' -f1)
