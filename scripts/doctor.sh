@@ -8,7 +8,7 @@ set -u
 failures=0
 group() { printf '%s\n' "$1"; }
 missing() { leonos_log MISSING "$1"; failures=$((failures + 1)); }
-present() { leonos_log ok "$1 -> $2"; }
+present() { leonos_log OK "$1 -> $2"; }
 
 check_tool() {
     found=$(command -v "$1" 2>/dev/null || true)
@@ -57,13 +57,13 @@ if command -v "$TARGET_CC" >/dev/null 2>&1; then
         printf 'int main(void){return 0;}\n' > "$probe_dir/probe.c"
         if "$TARGET_CC" -target "${TARGET_TRIPLE_KERNEL}" -ffreestanding -c \
                 "$probe_dir/probe.c" -o "$probe_dir/probe.o" >/dev/null 2>&1; then
-            leonos_log ok "$TARGET_CC can target $TARGET_TRIPLE_KERNEL"
+            leonos_log OK "$TARGET_CC can target $TARGET_TRIPLE_KERNEL"
         else
             missing "$TARGET_CC cannot target $TARGET_TRIPLE_KERNEL"
         fi
         resource_dir=$("$TARGET_CC" -print-resource-dir 2>/dev/null || echo "")
         if [ -n "$resource_dir" ] && [ -d "$resource_dir/include" ]; then
-            leonos_log ok "compiler-rt headers $resource_dir/include"
+            leonos_log OK "compiler-rt headers $resource_dir/include"
         else
             missing "$TARGET_CC compiler-rt headers (clang -print-resource-dir)"
         fi
@@ -86,7 +86,7 @@ if command -v "$TARGET_CC" >/dev/null 2>&1; then
             fi
         fi
         if "$TARGET_LD" --version >/dev/null 2>&1; then
-            leonos_log ok "linker $TARGET_LD responds"
+            leonos_log OK "linker $TARGET_LD responds"
         else
             missing "$TARGET_LD is not runnable"
         fi
@@ -136,7 +136,7 @@ for candidate in "${SRC:-.}/buildsystem/firmware/OVMF.fd" \
     fi
 done
 if [ -n "$firmware_found" ]; then
-    leonos_log ok "UEFI firmware $firmware_found"
+    leonos_log OK "UEFI firmware $firmware_found"
 else
     missing 'UEFI firmware for QEMU (install edk2-ovmf, or place OVMF.fd in buildsystem/firmware/)'
 fi
@@ -144,12 +144,12 @@ fi
 group ''
 group 'third-party build inputs'
 if [ -f third_party/kconfig-frontends/configure.ac ]; then
-    leonos_log ok 'kconfig-frontends submodule present'
+    leonos_log OK 'kconfig-frontends submodule present'
 else
     missing 'third_party/kconfig-frontends (git submodule update --init --recursive)'
 fi
 if [ -f third_party/zlib/contrib/puff/puff.c ]; then
-    leonos_log ok 'zlib reference inflate (contrib/puff) present'
+    leonos_log OK 'zlib reference inflate (contrib/puff) present'
 else
     missing 'third_party/zlib/contrib/puff/puff.c'
 fi
@@ -162,7 +162,7 @@ if [ -n "$lock" ] && [ ! -f "$lock" ]; then
     missing "$lock (the dependency lock file is gone)"
 elif [ -n "$deps_tool" ] && [ -x "$deps_tool" ] && [ -n "$lock" ]; then
     if "$deps_tool" --lock "$lock" --check --root "$PWD" >/dev/null 2>&1; then
-        leonos_log ok "$lock ($("$deps_tool" --lock "$lock" --list | grep -c '') dependencies"
+        leonos_log OK "$lock ($("$deps_tool" --lock "$lock" --list | grep -c '') dependencies"
     else
         missing "$lock does not validate: $deps_tool --lock $lock --check --root ."
     fi
@@ -174,7 +174,7 @@ elif [ -n "$deps_tool" ] && [ -x "$deps_tool" ] && [ -n "$lock" ]; then
         kind=$("$deps_tool" --lock "$lock" --id "$dependency" --print kind 2>/dev/null) || continue
         [ "$kind" = submodule ] || continue
         if [ -n "$directory" ] && [ -n "$(ls -A "$directory" 2>/dev/null)" ]; then
-            leonos_log ok "$directory"
+            leonos_log OK "$directory"
         else
             leonos_log MISSING "$directory (git submodule update --init)"
         fi
@@ -183,10 +183,10 @@ elif [ -n "$deps_tool" ] && [ -x "$deps_tool" ] && [ -n "$lock" ]; then
         wanted=$("$deps_tool" --lock "$lock" --fetch-list 2>/dev/null | grep -c '')
         have=0
         [ -d "$cache" ] && have=$(cd "$cache" && find . -type f -name '.*.partial.*' -prune -o -type f -print | wc -l)
-        leonos_log "$([ "$have" -ge "$wanted" ] && echo ok || echo note)" "$have of $wanted locked downloads in $cache (make fetch)"
+        leonos_log "$([ "$have" -ge "$wanted" ] && echo OK || echo NOTE)" "$have of $wanted locked downloads in $cache (make fetch)"
     fi
 elif [ -n "$lock" ]; then
-    leonos_log note "lock file not validated: $deps_tool is not built yet (make tools)"
+    leonos_log NOTE "lock file not validated: $deps_tool is not built yet (make tools)"
 fi
 
 printf '\n'

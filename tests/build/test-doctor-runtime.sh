@@ -20,5 +20,5 @@ if [ "$status" -eq 0 ] || ! grep -q 'MISSING.*compiler-rt builtins' "$w/log"; th
  echo 'FAIL: doctor did not diagnose absent target builtins archive'; cat "$w/log"; exit 1
 fi
 echo 'ok: doctor diagnoses missing compiler-rt archive despite valid headers/compiler'
-grep -q 'ok .*flock' "$w/log" || { echo 'FAIL: doctor did not check flock'; exit 1; }
+grep -q 'OK .*flock' "$w/log" || { echo 'FAIL: doctor did not check flock'; exit 1; }
 echo 'ok: doctor checks flock'
