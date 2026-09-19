@@ -5,7 +5,8 @@
 # help, clean and distclean may not probe a compiler, regenerate configuration
 # or start production work (plan section 4). Deciding it once here stops the
 # other fragments from attaching that work implicitly.
-LEONOS_PASSIVE_GOALS := help clean distclean
+LEONOS_PASSIVE_GOALS := help doctor clean distclean test-legacy
+LEONOS_INSPECT := $(or $(findstring n,$(firstword -$(MAKEFLAGS))),$(findstring q,$(firstword -$(MAKEFLAGS))))
 ifeq ($(MAKECMDGOALS),)
 	LEONOS_PASSIVE := 1
 else ifeq ($(words $(filter $(LEONOS_PASSIVE_GOALS),$(MAKECMDGOALS))),$(words $(MAKECMDGOALS)))
@@ -59,9 +60,14 @@ LEONOS_CONFIG_TOOL := $(LEONOS_HOST_BIN)/leonos-config
 LEONOS_VERSION_TOOL := $(LEONOS_HOST_BIN)/leonos-version
 LEONOS_BOOT_LOGO_TOOL := $(LEONOS_HOST_BIN)/leonos-boot-logo
 LEONOS_DEPS_TOOL := $(LEONOS_HOST_BIN)/leonos-deps
+LEONOS_GBK_TOOL := $(LEONOS_HOST_BIN)/leonos-gbk
+LEONOS_SDK_DRIVER := $(LEONOS_HOST_BIN)/leonos-musl-cc
+LEONOS_APK_OWN := $(LEONOS_HOST_BIN)/leonos-apk-own
 
 LEONOS_HOST_TOOLS := $(LEONOS_EMIT) $(LEONOS_CONFIG_TOOL) \
-	$(LEONOS_VERSION_TOOL) $(LEONOS_BOOT_LOGO_TOOL) $(LEONOS_DEPS_TOOL)
+	$(LEONOS_VERSION_TOOL) $(LEONOS_BOOT_LOGO_TOOL) $(LEONOS_DEPS_TOOL) $(LEONOS_GBK_TOOL) $(LEONOS_SDK_DRIVER)
+
+LEONOS_HOST_TOOLS += $(LEONOS_APK_OWN)
 
 LEONOS_HOST_COMMON_OBJS := $(patsubst %.c,$(O_HOST)/obj/%.c.o,$(LEONOS_HOST_COMMON_SRCS))
 LEONOS_HOST_PUFF_OBJ := $(O_HOST)/obj/$(LEONOS_HOST_PUFF_SRC).o
@@ -169,7 +175,18 @@ $(LEONOS_BOOT_LOGO_TOOL): $(O_HOST)/obj/tools/host/assets/leonos-boot-logo.c.o \
 
 # The lock-file reader links the JSON module as well as the shared primitives.
 LEONOS_JSON_OBJ := $(O_HOST)/obj/tools/host/manifest/json.c.o
+$(LEONOS_SDK_DRIVER): $(O_HOST)/obj/tools/host/sdk/leonos-musl-cc.c.o | $(LEONOS_HOST_BIN)
+	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
+
+$(LEONOS_GBK_TOOL): $(O_HOST)/obj/tools/host/assets/leonos-gbk.c.o $(LEONOS_HOST_COMMON_OBJS) | $(LEONOS_HOST_BIN)
+	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
+
 $(LEONOS_DEPS_TOOL): $(O_HOST)/obj/tools/host/manifest/leonos-deps.c.o $(LEONOS_JSON_OBJ) \
+	$(LEONOS_HOST_COMMON_OBJS) | $(LEONOS_HOST_BIN)
+	$(Q)printf '  %-8s %s\n' HOSTLD $@
+	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
+
+$(LEONOS_APK_OWN): $(O_HOST)/obj/tools/host/apk/leonos-apk-own.c.o $(LEONOS_JSON_OBJ) \
 	$(LEONOS_HOST_COMMON_OBJS) | $(LEONOS_HOST_BIN)
 	$(Q)printf '  %-8s %s\n' HOSTLD $@
 	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@

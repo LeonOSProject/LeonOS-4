@@ -25,7 +25,8 @@ printf 'toolchain\t%s\n\n' "${TOOLCHAIN:-unset}"
 
 group 'host tools (required by make itself and the C helpers)'
 for tool in sh grep sed awk find sort cmp mv ln mkdir rm printf date tr head \
-            cut expr uname nproc xz tar patch curl; do
+            cut expr uname nproc xz tar patch curl flock make readelf stat od \
+            gzip sha256sum timeout perl autoconf automake libtoolize gperf bison flex pkg-config; do
     check_tool "$tool"
 done
 printf '  HOSTCC     %s\n' "${HOSTCC:-cc}"
@@ -64,20 +65,60 @@ if command -v "$TARGET_CC" >/dev/null 2>&1; then
         else
             missing "$TARGET_CC compiler-rt headers (clang -print-resource-dir)"
         fi
+        builtins=$("$TARGET_CC" --target="${TARGET_TRIPLE_USER}" --rtlib=compiler-rt \
+            --print-libgcc-file-name 2>/dev/null || :)
+        if [ -z "$builtins" ] || [ ! -s "$builtins" ]; then
+            missing "$TARGET_CC compiler-rt builtins archive for $TARGET_TRIPLE_USER ($builtins)"
+        else
+            # Force a runtime helper reference; file existence alone can accept
+            # an empty archive or one built for a different architecture.
+            printf 'unsigned __int128 leonos_probe(unsigned __int128 a, unsigned __int128 b){return a/b;}\n' \
+                > "$probe_dir/runtime.c"
+            if "$TARGET_CC" --target="$TARGET_TRIPLE_USER" -ffreestanding -fno-stack-protector \
+                    -c "$probe_dir/runtime.c" -o "$probe_dir/runtime.o" >/dev/null 2>&1 &&
+               "$TARGET_LD" -e leonos_probe --no-undefined "$probe_dir/runtime.o" \
+                    "$builtins" -o "$probe_dir/runtime.elf" >/dev/null 2>&1; then
+                present 'compiler-rt builtins' "$builtins"
+            else
+                missing "$TARGET_CC compiler-rt builtins cannot link for $TARGET_TRIPLE_USER ($builtins)"
+            fi
+        fi
         if "$TARGET_LD" --version >/dev/null 2>&1; then
             printf '  ok       linker %s responds\n' "$TARGET_LD"
         else
             missing "$TARGET_LD is not runnable"
         fi
         rm -rf "$probe_dir"
+    else
+        missing 'cannot create temporary directory for compiler validation'
     fi
+fi
+
+if command -v "$TARGET_RUSTC" >/dev/null 2>&1; then
+    rust_probe=$(mktemp -d)
+    printf '#![no_std]\npub fn probe() -> u64 { 1 }\n' > "$rust_probe/probe.rs"
+    if "$TARGET_RUSTC" --target x86_64-unknown-none --crate-type lib \
+            "$rust_probe/probe.rs" -o "$rust_probe/probe.rlib" >/dev/null 2>&1; then
+        present 'Rust freestanding core' x86_64-unknown-none
+    else
+        missing 'Rust x86_64-unknown-none target (rustup target add x86_64-unknown-none)'
+    fi
+    rm -rf "$rust_probe"
 fi
 
 group ''
 group 'image and run tools (needed by the image and run phases)'
-for tool in mke2fs mkfs.fat mformat mcopy xorriso qemu-img qemu-system-x86_64; do
+for tool in mke2fs e2fsck mkfs.fat mformat mcopy xorriso qemu-img qemu-system-x86_64 grub-mkstandalone grub-mkfont sfdisk fakeroot openssl zip; do
     check_tool "$tool"
 done
+image_probe=$(mktemp -d)
+if printf '#include <sys/types.h>\n#include <ext2fs/ext2fs.h>\nint main(void){ext2_filsys fs=0; ext2fs_close(fs); return 0;}\n' | \
+        "${HOSTCC:-cc}" -x c - -lext2fs -lcom_err -o "$image_probe/probe" >/dev/null 2>&1; then
+    present 'libext2fs development headers and library' 'host link verified'
+else
+    missing 'libext2fs development headers/library (Debian: libext2fs-dev; Alpine: e2fsprogs-dev)'
+fi
+rm -rf "$image_probe"
 
 # LeonOS 4 boots through UEFI, so a QEMU without firmware cannot be tested at
 # all. Reporting this as satisfied is how a run target ends up looking green

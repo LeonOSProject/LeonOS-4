@@ -1,5 +1,9 @@
 # 审查包：GNU Make + C 构建重建（P0–P2c）
 
+> 当前工作区全量迁移审查入口：[全量迁移记录](full-migration-2026-09-19.md)。包含未提交变更，审查时同时查看 `git diff` 和 `git ls-files --others --exclude-standard`，不能只查看旧提交范围。
+
+> 接管后的修改和最新边界见 [接管记录](takeover-2026-09-19.md)。下文保留原交接历史；PAM、runtime、musl SDK 子集已经继续迁移，原“未开始”描述不再代表当前工作区。
+
 计划：`docs/superpowers/plans/2026-09-19-make-c-build-rewrite.md`
 分支：`xiaobai/dev/buildsystem`　基线提交：`6be4c69`
 完整 diff：`git diff 6be4c69..HEAD`（提交清单以 `git log --oneline 6be4c69..HEAD` 为准）

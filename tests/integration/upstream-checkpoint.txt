@@ -1,0 +1,42 @@
+Final upstream migration checkpoint — 2026-09-19
+
+Implementation:
+- mk/upstream.mk; include after third-party.mk, pam.mk and runtime.mk. Root Makefile already includes it.
+- tools/build/upstream.sh: libmd, libbsd, util-linux, sudo, shadow, e2fsprogs, dosfstools, exfatprogs (pinned tarballs, configure/Make, offline SHA verification, isolated atomic staging).
+- upstream-terminal.sh: pinned ncurses + Vim; embedded fallback terminfo and case-fold dedup retained.
+- upstream-app.sh: lua, sl, nano, less, file/libmagic, sqlite, pleditor, cmd, TinyCC plus private runtime SDK. Original port patches are source-only embedded diffs in upstream-cmd-patch.sh and upstream-tcc-patch.sh. No old binaries copied.
+- upstream-busybox.sh: original official-source mode, pinned git archive, config fragment, static musl+mimalloc, applet links.
+- fastfetch: original locked upstream prebuilt static ELF, SHA256 + ELF validation in Make.
+- upstream-magic.sh: matching host file builds magic.mgc via autoreconf/configure/Make; no Python execution.
+- upstream-apk.sh: pinned apk.static extracted and RSA SHA256 verified; five OpenRC Alpine APKs SHA/signature verified, offline.
+- upstream-verify.sh: complete install inventory presence check; stable signature on intact install, missing secondary files invalidate package. TCC copied primary header mtime normalized after successful recipe so no-op is stable.
+
+Output interfaces:
+UPSTREAM_ROOT=$(O)/upstream; PACKAGE roots $(UPSTREAM_ROOT)/PACKAGE/root.
+UPSTREAM_APP_DIR=$(O)/userland; busybox/lua/sl/nano/less/file/pleditor/cmd/tcc/fastfetch.elf.
+LUA_SO=$(O)/userland/liblua.so.5; liblua.a adjacent.
+MAGIC_SO=$(O)/userland/libmagic.so.1; libmagic.a and magic.h adjacent.
+SQLITE_SO=$(O)/userland/sqlite.so.3; SQLITE_HEADER=$(O)/userland/sqlite3.h; libsqlite3.a adjacent.
+BUSYBOX_LINKS=$(O)/userland/busybox.links.
+TinyCC runtime: $(O)/userland/tcc-runtime (includes, CRT, libc, mimalloc, libtcc1, libleonos, separate libz/libpng, licenses/examples).
+FILE_MAGIC=$(O)/resources/magic.mgc.
+UPSTREAM_APK=$(O)/upstream/apk/apk.static; verified APKs $(UPSTREAM_APK_ROOT)/packages.
+Aggregate leonos-upstream; per-package upstream-NAME; app upstream-app-NAME; leonos-storage.
+
+Validation, all exit 0:
+PATH=/usr/bin:/bin make O=out/upstream-migration-graph leonos-upstream -j8
+PATH=/usr/bin:/bin sh tests/integration/upstream-products.sh out/upstream-migration-graph/upstream out/upstream-migration-graph/userland
+PATH=/usr/bin:/bin sh tests/integration/upstream-presence.sh
+PATH=/usr/bin:/bin sh tests/integration/upstream-incremental.sh out/upstream-migration-graph
+Incremental test checks all published file sizes+mtimes across repeat full Make, then removes dosfstools README (non-primary installed file) and proves automatic reconstruction.
+Clang version 22.1.8, compiler-rt; default /usr/bin:/bin. Final Make graph O rebuilt its own musl, auth, PAM and runtime, no out/takeover dependency. Initial adapter probes used only out/takeover libraries as explicitly allowed.
+Full execution trace: /tmp/leonos-upstream-verified-exec.log. No execve of Python/Ninja/Meson/CMake; full build log /tmp/leonos-upstream-verified.log. Final minor patch-format/mtime changes were rebuilt in /tmp/leonos-upstream-patches-final.log. Final no-op trace /tmp/leonos-upstream-final-noop-exec.log.
+Validation logs /tmp/leonos-upstream-incremental.log and O/logs/upstream-*.log.
+Product hashes O/validation/upstream.sha256 (14 application/library/database artifacts).
+All new shell and mk files passed git diff --no-index --check /dev/null FILE; shell syntax checks passed.
+
+Parent follow-up:
+- apk-tools-static APK does not contain .LICENSE despite current lock annotation; legacy separate LICENSE cache/hash/URL documented in docs/build/agent-coordination-current.md. Parent owns dependency lock/rootfs; add explicit license resource and staging.
+- Rootfs/APK ownership and collisions (BusyBox links vs upstream su/login/etc.) remain parent integration responsibility. These roots retain upstream file permissions (sudo/passwd 4755).
+- Update lock script metadata from old Python adapters to replacements when removing legacy paths.
+- No QEMU/guest execution performed; this checkpoint proves fresh builds, ELF/static-link contracts and Make incrementality only.

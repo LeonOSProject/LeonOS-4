@@ -14,12 +14,17 @@ cd "$repo_root" || exit 1
 deps=${LEONOS_DEPS:?set by mk/tests.mk}
 lock=${LEONOS_LOCK:?set by mk/tests.mk}
 fetch=./tools/build/fetch.sh
-sysroot=$repo_root/out/x86_64/release/sysroot/musl
-stamp=$sysroot/.leonos-musl.json
 
 failures=0
 checks=0
-work=./leonos-third-party.$$
+work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-third-party.XXXXXX") || exit 1
+test_out=$work/out
+sysroot=$test_out/sysroot/musl
+stamp=$sysroot/.leonos-musl.json
+# Do not inherit the caller's O= or mutate the shared dependency lock.
+cp "$lock" "$work/dependencies.lock.json" || exit 1
+lock=$work/dependencies.lock.json
+make() { command make O="$test_out" LEONOS_LOCK="$lock" "$@"; }
 
 cleanup() { rm -rf "$work"; }
 trap 'cleanup; exit 130' INT
@@ -128,14 +133,14 @@ fi
 # Building musl takes about a minute; it is the component this phase is actually
 # about, so the test builds it rather than asserting around a directory that may
 # not exist.
-if [ ! -f "$stamp" ]; then
-    printf 'note - building the musl sysroot for these checks\n'
+# An existing stamp can predate updated adapters/tooling. Establish a current
+# baseline before measuring the *second* build, even in a reused output tree.
+    printf 'note - bringing the musl sysroot up to date for these checks\n'
     make -j"$(nproc)" "$stamp" >"$work/sysroot.log" 2>&1 || {
         printf 'FAIL - the musl sysroot did not build; see the tail below\n'
         tail -n 20 "$work/sysroot.log"
         exit 1
     }
-fi
 checks=$((checks + 1))
 if [ -f "$stamp" ]; then
     printf 'ok   - the sysroot stamp exists\n'
@@ -217,7 +222,7 @@ fi
 # noticed even when the mtime is kept. The candidate text is written while Make
 # parses, so comparing candidate against the published signature proves the
 # dependency without paying for a rebuild.
-meta=$repo_root/out/x86_64/release/meta
+meta=$test_out/meta
 sig=$meta/musl-sysroot.sig
 # The candidate is named after the make process that wrote it, so that two
 # concurrent makes cannot promote each other's signature.

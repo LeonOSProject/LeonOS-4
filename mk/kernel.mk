@@ -16,6 +16,9 @@ LEONOS_KERNEL_SYS := $(O_GENERATED)/system/kernel.sys
 LEONOS_KERNEL_DEBUG := $(O_GENERATED)/system/kernel.debug
 BOOT_LOGO_HEADER := $(O_INCLUDE)/generated/boot_logo.h
 BUILD_INFO_HEADER := $(O_INCLUDE)/generated/build_info.h
+LEONOS_SOURCE_ID := $(shell git -C $(LEONOS_SRC) rev-parse --short HEAD 2>/dev/null || echo unknown)
+LEONOS_SIG_version := source=$(LEONOS_SOURCE_ID)|epoch=$(SOURCE_DATE_EPOCH)|build=$(BUILD_ID)
+$(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,version)))
 
 # --- flags ------------------------------------------------------------------
 # Include order puts the output tree first: include/generated/ still holds
@@ -82,7 +85,11 @@ ifeq ($(LEONOS_PASSIVE),1)
 # help, clean and distclean must not materialise or regenerate a make fragment
 # they do not need (plan section 4).
 else
+ifneq ($(LEONOS_INSPECT),)
+$(eval $(file <$(KERNEL_SOURCES_MK)))
+else
 -include $(KERNEL_SOURCES_MK)
+endif
 endif
 -include $(shell find $(O_OBJ)/kernel -name '*.o.d' 2>/dev/null)
 
@@ -117,11 +124,11 @@ $(BOOT_LOGO_HEADER): $(LEONOS_SRC)/logo.png $(LEONOS_BOOT_LOGO_TOOL) | $(O_INCLU
 	$(Q)printf '  %-8s %s\n' GEN $@
 	$(Q)$(LEONOS_BOOT_LOGO_TOOL) --input $< --output $@ --size 192
 
-$(BUILD_INFO_HEADER): $(LEONOS_SRC)/configs/build-version $(LEONOS_VERSION_TOOL) \
+$(BUILD_INFO_HEADER): $(LEONOS_SRC)/configs/build-version $(LEONOS_VERSION_TOOL) $(O_META)/version.sig \
 	| $(O_INCLUDE)/generated
 	$(Q)printf '  %-8s %s\n' GEN $@
 	$(Q)$(LEONOS_VERSION_TOOL) --version-file $< \
-	    --source-id '$(shell git -C $(LEONOS_SRC) rev-parse --short HEAD 2>/dev/null || echo unknown)' \
+        --source-id '$(LEONOS_SOURCE_ID)' \
 	    --epoch '$(or $(SOURCE_DATE_EPOCH),$(shell git -C $(LEONOS_SRC) show -s --format=%ct HEAD 2>/dev/null || echo 0))' \
 	    $(if $(BUILD_ID),--build-id $(BUILD_ID),) --output $@
 

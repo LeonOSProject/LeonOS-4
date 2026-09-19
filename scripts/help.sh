@@ -18,13 +18,17 @@ LeonOS 4 build system (GNU Make + C host tools)
   make tools           build this project's C host tools (HOSTCC only)
   make kernel          freestanding kernel image and debug symbols
   make userland        ring-3 programs and libraries
-  make runtime         shared runtime objects
+  make runtime         normal/installer shared and static runtime libraries
+  make leonos-pam      Linux-PAM and LeonOS password-policy module
+  make musl-sdk        relocatable musl SDK subset and tar.gz archive
   make sdk             developer SDK (relocatable, no Python wrappers)
   make rootfs          staged root filesystem
   make apk-repo        signed local package repository
   make image-vmdk      bootable disk image
   make iso             live ISO
   make installer       installer ISO
+  make rpr-pages       local signed APK/kernel Pages tree (does not publish)
+  make release         all plus rpr-pages
   make all             kernel userland runtime sdk apk-repo image-vmdk iso installer
 
   make run             boot the VMDK in QEMU          (no root required)
@@ -46,7 +50,7 @@ Variables
   PROFILE=debug|release  compile policy; anything else is an error
   O=PATH               output directory, default out/<arch>/<profile>
   V=1                  echo the real command, its working directory and overrides
-  CPUS=n               guest virtual CPU count for the run targets
+  CPUS=n               override Kconfig guest CPU count
   MEMORY=4G            guest memory for the run targets
   TOOLCHAIN=FILE       toolchain description, default configs/toolchains/llvm-x86_64.mk
   CC/CXX/AR/LD/OBJCOPY/STRIP=  explicit target tool override (command line only)

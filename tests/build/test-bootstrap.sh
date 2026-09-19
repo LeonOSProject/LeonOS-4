@@ -69,7 +69,7 @@ check "help and clean leave no output tree behind" \
     sh -c 'make -s help >/dev/null 2>&1; make -s clean O=out/test-bootstrap >/dev/null 2>&1; test ! -e out/test-bootstrap/generated' \
     sh
 check "help does not rewrite tracked generated files" \
-    git diff --quiet -- buildsystem/state/build_number.txt include/generated/build_info.h
+    git diff --quiet -- include/generated/build_info.h
 
 # --- HOSTCC and target CC are independent ---------------------------------
 expect_output_contains "doctor reports the host compiler separately" "HOSTCC     cc" \

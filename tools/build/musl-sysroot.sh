@@ -11,6 +11,7 @@
 # that Make already recorded; a change to any of them re-runs this script, which
 # is what keeps a stale libc from surviving a toolchain switch.
 set -eu
+case ${MAKEFLAGS%% *} in *n*) exit 0 ;; esac
 
 die() {
     printf '%s\n' "musl-sysroot: $*" >&2
@@ -178,8 +179,8 @@ run_logged() {
 
 run_logged "$tree/configure" --target="$target" "--prefix=$sysroot" \
     "--syslibdir=$sysroot/lib" --disable-gcc-wrapper
-run_logged make --no-print-directory -C "$build"
-run_logged make --no-print-directory -C "$build" install
+run_logged make --no-print-directory -C "$build" CC="$CC" AR="$AR" RANLIB="$RANLIB"
+run_logged make --no-print-directory -C "$build" install CC="$CC" AR="$AR" RANLIB="$RANLIB"
 
 # --- the pieces musl does not ship -------------------------------------------
 # musl builds without stack protection; anything compiled with it still needs

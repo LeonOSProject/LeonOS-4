@@ -38,7 +38,7 @@ endif
 # --- generated headers ------------------------------------------------------
 # The installer root uses a second autoconf header so an installed-system policy
 # can differ from the shipped-image one; both come from the same .config.
-$(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(RUSTCFG_ARGS) $(LEONOS_AUTOCONF_MK): \
+$(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(RUSTCFG_ARGS) $(LEONOS_AUTOCONF_MK) &: \
 	$(LEONOS_CONFIG_FILE) $(LEONOS_CONFIG_TOOL) | $(O_INCLUDE)/generated
 	$(Q)printf '  %-8s %s\n' GEN $@
 	$(Q)$(LEONOS_CONFIG_TOOL) --input $(LEONOS_CONFIG_FILE) \
@@ -54,8 +54,8 @@ $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(RUSTCFG_ARGS) $(LEONOS_AUTOCONF_MK): \
 $(LEONOS_CONFIG_FILE): $(KCONFIG_SEED) $(KCONFIG_ROOT) $(LEONOS_SRC)/Kconfig.components $(KCONFIG_CONF)
 	$(Q)printf '  %-8s %s\n' CONFIG $@
 	$(Q)sh $(LEONOS_SRC)/tools/build/kconfig-frontends.sh run \
-		--conf $(KCONFIG_CONF) --mconf $(KCONFIG_MCONF) \
-		--kconfig $(KCONFIG_ROOT) --config $@ --seed $(KCONFIG_SEED) \
+		--conf $(abspath $(KCONFIG_CONF)) --mconf $(abspath $(KCONFIG_MCONF)) \
+		--kconfig $(KCONFIG_ROOT) --config $(abspath $@) --seed $(KCONFIG_SEED) \
 		--mode '$(LEONOS_KCONFIG_MODE)'
 
 # Rebuild the derived files when the Kconfig inputs change even if .config was
@@ -63,11 +63,11 @@ $(LEONOS_CONFIG_FILE): $(KCONFIG_SEED) $(KCONFIG_ROOT) $(LEONOS_SRC)/Kconfig.com
 $(LEONOS_CONFIG_FILE): | $(O_CONFIG)
 
 # --- host build of the pinned front end ------------------------------------
-$(KCONFIG_CONF) $(KCONFIG_MCONF): $(LEONOS_SRC)/$(LEONOS_HOST_PUFF_SRC)
+$(KCONFIG_CONF) $(KCONFIG_MCONF) &: $(LEONOS_SRC)/$(LEONOS_HOST_PUFF_SRC)
 	$(Q)sh $(LEONOS_SRC)/tools/build/kconfig-frontends.sh build \
 		--source $(LEONOS_SRC)/third_party/kconfig-frontends \
-		--work $(O_HOST)/kconfig-frontends-build \
-		--prefix $(KCONFIG_PREFIX)
+		--work $(abspath $(O_HOST)/kconfig-frontends-build) \
+		--prefix $(abspath $(KCONFIG_PREFIX))
 
 # Make restarts after a generated include is rebuilt. The include is produced by
 # leonos-config, which publishes only on content change, so a stable
@@ -75,7 +75,11 @@ $(KCONFIG_CONF) $(KCONFIG_MCONF): $(LEONOS_SRC)/$(LEONOS_HOST_PUFF_SRC)
 # instead of hanging (plan section 7).
 ifeq ($(LEONOS_PASSIVE),1)
 else ifneq ($(wildcard $(LEONOS_AUTOCONF_MK)),)
+ifneq ($(LEONOS_INSPECT),)
+$(eval $(file <$(LEONOS_AUTOCONF_MK)))
+else
 -include $(LEONOS_AUTOCONF_MK)
+endif
 else
 $(if $(filter-out help clean distclean,$(MAKECMDGOALS)),,\
 	$(info no configuration in $(O_CONFIG) yet; run 'make defconfig' or let a build target create it))

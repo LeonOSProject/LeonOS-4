@@ -52,6 +52,9 @@ struct image {
     unsigned char *pixels;
 };
 
+#if defined(__GNUC__) || defined(__clang__)
+static int report(const char *format, ...) __attribute__((format(printf, 1, 2)));
+#endif
 static int report(const char *format, ...)
 {
     va_list arguments;
@@ -78,6 +81,9 @@ static int append(struct byte_buffer *buffer, const void *data, size_t size)
     return 0;
 }
 
+#if defined(__GNUC__) || defined(__clang__)
+static int appendf(struct byte_buffer *buffer, const char *format, ...) __attribute__((format(printf, 2, 3)));
+#endif
 static int appendf(struct byte_buffer *buffer, const char *format, ...)
 {
     va_list arguments;

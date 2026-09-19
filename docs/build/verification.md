@@ -1,5 +1,9 @@
 # LeonOS 4 构建迁移验证记录（P0 与 P1 局部）
 
+> 当前全量迁移结果见 [全量迁移记录](full-migration-2026-09-19.md)，以下为历史分阶段证据。
+
+> 接管后的新增验证及修正见 [接管记录](takeover-2026-09-19.md)。本文原有通过记录只对应当时提交和范围，尤其不能代替当前锁实现或新 PAM/SDK 链的验收。
+
 配套计划：`docs/superpowers/plans/2026-09-19-make-c-build-rewrite.md`
 分支：`xiaobai/dev/buildsystem`，基线提交 `6be4c69`
 记录时间：2026-09-19（宿主 Linux 7.2.4-3-cachyos-bore-lto，x86_64）

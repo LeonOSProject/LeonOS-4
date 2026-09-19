@@ -17,6 +17,8 @@
 # Pinned versions, digests and license paths come from the lock file, never from
 # this script, so the two cannot drift apart.
 set -eu
+# A '+' recipe preserves Make's jobserver, but also runs during make -n.
+case ${MAKEFLAGS%% *} in *n*) exit 0 ;; esac
 
 die() {
     printf '%s\n' "auth-upstream: $*" >&2
@@ -76,7 +78,7 @@ done
 # The packages are a fixed list because each one needs its own configure argv: an
 # unknown id fails below rather than being configured with generic flags.
 packages="linux-headers libxcrypt"
-jobs=$(nproc 2>/dev/null || echo 1)
+jobs=1
 
 lock_value() {
     "$deps" --lock "$lock" --id "$1" --print "$2"
@@ -136,6 +138,7 @@ mkdir -p "$work"
     done
     printf 'target %s\ncflags %s\n' "$target" "$cflags"
     "$cc" --version 2>&1 | head -n1
+    sha256sum "$0"
 } >"$key_file.new"
 
 # One decision, two consequences: the key is always published (otherwise the next
@@ -152,9 +155,10 @@ if [ "$inputs_changed" = 0 ]; then
     # Nothing about the inputs changed and the stage is already there, so leave
     # upstream's configure alone: re-running it costs twenty seconds to rediscover
     # the same 304 defines.
-    if [ -f "$work/.leonos-auth.json" ] && [ -d "$stage/lib" ]; then
-        exit 0
-    fi
+    # Make calls this adapter only after a declared input/output invalidation.
+    # A stamp alone cannot prove installed files still exist. Reinstall from
+    # the configured tree below when Make requests repair.
+    :
 else
     printf '  %-8s %s\n' RESET "$work/build"
     rm -rf "$work/build" "$work/src" "$stage"
@@ -209,6 +213,7 @@ build_libxcrypt() {
     (
         cd "$build"
         run_logged env \
+            ac_cv_path_python3_passlib='not found' \
             CC="$compiler" AR="$ar" RANLIB="$ranlib" \
             CFLAGS="$cflags -fmacro-prefix-map=$work/src/$directory=libxcrypt" \
             CPPFLAGS="-I$stage/usr/include" LIBS= \
@@ -219,8 +224,8 @@ build_libxcrypt() {
             "$work/src/$directory/configure" \
             --host="$target" --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
             --libdir=/lib --enable-hashes=all --enable-obsolete-api=no
-        run_logged make -C "$build" -j"$jobs"
-        run_logged make -C "$build" install DESTDIR="$stage"
+        run_logged make -C "$build" -j"$jobs" CC="$compiler" AR="$ar" RANLIB="$ranlib"
+        run_logged make -C "$build" install DESTDIR="$stage" CC="$compiler" AR="$ar" RANLIB="$ranlib"
     )
 }
 

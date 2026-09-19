@@ -6,9 +6,8 @@
 # is only evidence if somebody looked, so this traces execve() over the real entry
 # points and fails on a hit.
 #
-# A16 as written also covers the SDK and the image chain; those goals are not
-# migrated yet, so this suite reports exactly the surface that exists and the
-# report says which rows remain uncovered. Growing this list is the point of P3.
+# Full production coverage includes SDK, signed packages, all images and RPR.
+# This deliberately takes longer than unit and contract tests.
 set -u
 
 LC_ALL=C
@@ -109,20 +108,8 @@ trace sysroot -j4 "$O/sysroot/musl/.leonos-musl.json"
 trace fetch-fetch fetch
 trace verify leonos-verify-cache
 
-printf '\n=== A16: the entry points must stay honest about what is missing ===\n'
-# Not-migrated goals fail loudly rather than quietly doing nothing, which is the
-# other half of "no Python in the production build": a stub that exits 0 would let
-# the old Python path come back unnoticed.
-for goal in userland runtime sdk rootfs apk-repo image-vmdk iso installer; do
-    make -s O="$O" "$goal" >"$work/stub-$goal.out" 2>&1
-    status=$?
-    if [ "$status" -eq 2 ] || grep -q 'not migrated' "$work/stub-$goal.out"; then
-        pass "make $goal still refuses instead of pretending"
-    else
-        fail "make $goal still refuses instead of pretending" \
-            "status $status: $(head -c 120 "$work/stub-$goal.out")"
-    fi
-done
+printf '\n=== A16: complete production chain ===\n'
+trace production -j8 all rpr-pages
 
 printf '\n%s: %d checks, %d failures\n' 'test-execchain' "$checks" "$failures"
 [ "$failures" -eq 0 ] || exit 1

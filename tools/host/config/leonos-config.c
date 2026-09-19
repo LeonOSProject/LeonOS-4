@@ -53,6 +53,9 @@ struct options {
     const char *installer_require_license;
 };
 
+#if defined(__GNUC__) || defined(__clang__)
+static int report(const char *format, ...) __attribute__((format(printf, 1, 2)));
+#endif
 static int report(const char *format, ...)
 {
     va_list arguments;
@@ -84,6 +87,9 @@ static int append_text(struct byte_buffer *buffer, const char *text)
     return append(buffer, text, strlen(text));
 }
 
+#if defined(__GNUC__) || defined(__clang__)
+static int appendf(struct byte_buffer *buffer, const char *format, ...) __attribute__((format(printf, 2, 3)));
+#endif
 static int appendf(struct byte_buffer *buffer, const char *format, ...)
 {
     va_list arguments;

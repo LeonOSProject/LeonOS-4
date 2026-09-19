@@ -76,16 +76,16 @@ leonos_git_path := $(if $(LEONOS_PASSIVE),deferred,$(shell command -v git 2>/dev
 LEONOS_SIG_musl-sysroot := script=$(MUSL_SCRIPT)|lock=$(LEONOS_LOCK_DIGEST)|cc=$(TARGET_CC)|ar=$(TARGET_AR)|ranlib=$(TARGET_RANLIB)|ld=$(TARGET_LD)|triple=$(TRIPLE_USER)|cflags=$(LEONOS_MUSL_CFLAGS)|git=$(leonos_git_path)
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,musl-sysroot)))
 
-$(MUSL_STAMP): $(LEONOS_LOCK) $(MUSL_SCRIPT) $(LEONOS_DEPS_TOOL) $(O_META)/musl-sysroot.sig \
+$(MUSL_STAMP) $(LEONOS_MUSL_ARTIFACTS) &: $(LEONOS_LOCK) $(MUSL_SCRIPT) $(LEONOS_DEPS_TOOL) $(O_META)/musl-sysroot.sig \
 	| $(MUSL_SYSROOT) $(MUSL_WORK) $(O_LOGS)
 	$(Q)printf '  %-8s %s\n' SYSROOT musl
-	$(Q)sh $(MUSL_SCRIPT) --src '$(LEONOS_SRC)' --deps '$(LEONOS_DEPS_TOOL)' \
-		--lock '$(LEONOS_LOCK)' --work '$(MUSL_WORK)' --sysroot '$(MUSL_SYSROOT)' \
+	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0;; esac; sh $(MUSL_SCRIPT) --src '$(LEONOS_SRC)' --deps '$(abspath $(LEONOS_DEPS_TOOL))' \
+		--lock '$(LEONOS_LOCK)' --work '$(abspath $(MUSL_WORK))' --sysroot '$(abspath $(MUSL_SYSROOT))' \
 		--cc '$(TARGET_CC)' --ar '$(TARGET_AR)' --ranlib '$(TARGET_RANLIB)' \
 		--ld '$(TARGET_LD)' --target '$(TRIPLE_USER)' \
-		--cflags '$(LEONOS_MUSL_CFLAGS)' --log $(O_LOGS)/musl.log
-
-$(LEONOS_MUSL_ARTIFACTS): | $(MUSL_STAMP)
+		--cflags '$(LEONOS_MUSL_CFLAGS)' --log $(abspath $(O_LOGS))/musl.log
+	$(Q)for product in $(LEONOS_MUSL_ARTIFACTS); do test -e "$$product" || exit 1; touch "$$product"; done
+	$(Q)touch $(MUSL_STAMP)
 
 $(MUSL_SYSROOT) $(MUSL_WORK) $(O_THIRD_PARTY):
 	$(Q)mkdir -p $@
@@ -94,8 +94,7 @@ $(MUSL_SYSROOT) $(MUSL_WORK) $(O_THIRD_PARTY):
 
 # --- authentication chain -----------------------------------------------------
 # Only the packages that still ship a POSIX `configure` are built here:
-# Linux-PAM 1.7 is Meson-only upstream, and this project does not use Meson, so
-# libpam stays un-migrated and is *not* faked by a generic configure call. Staged:
+# Linux-PAM 1.7 uses its dedicated Make port in pam.mk. This adapter stages:
 # the Linux UAPI headers and libxcrypt, which is what `crypt()` in the userland
 # extensions links against.
 AUTH_ROOT := $(O_AUTH)/root
@@ -119,17 +118,18 @@ $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,auth-upstream)))
 .PHONY: leonos-auth
 leonos-auth: $(AUTH_STAMP) $(LEONOS_AUTH_ARTIFACTS)
 
-$(AUTH_STAMP): $(LEONOS_LOCK) $(AUTH_SCRIPT) $(LEONOS_DEPS_TOOL) \
+$(AUTH_STAMP) $(LEONOS_AUTH_ARTIFACTS) &: $(LEONOS_LOCK) $(AUTH_SCRIPT) $(LEONOS_DEPS_TOOL) \
 	$(O_META)/auth-upstream.sig $(MUSL_STAMP) | $(O_AUTH) $(AUTH_WORK) $(O_LOGS)
 	$(Q)printf '  %-8s %s\n' AUTH auth
-	$(Q)sh $(AUTH_SCRIPT) --src '$(LEONOS_SRC)' --deps '$(LEONOS_DEPS_TOOL)' \
-		--lock '$(LEONOS_LOCK)' --cache '$(LEONOS_CACHE)' --work '$(AUTH_WORK)' \
-		--stage '$(AUTH_ROOT)' --sysroot '$(MUSL_SYSROOT)' \
+	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0;; esac; sh $(AUTH_SCRIPT) --src '$(LEONOS_SRC)' --deps '$(abspath $(LEONOS_DEPS_TOOL))' \
+		--lock '$(LEONOS_LOCK)' --cache '$(LEONOS_CACHE)' --work '$(abspath $(AUTH_WORK))' \
+		--stage '$(abspath $(AUTH_ROOT))' --sysroot '$(abspath $(MUSL_SYSROOT))' \
 		--cc '$(TARGET_CC)' --ar '$(TARGET_AR)' --ranlib '$(TARGET_RANLIB)' \
 		--target '$(TRIPLE_USER)' --cflags '$(LEONOS_AUTH_CFLAGS)' \
-		--log $(O_LOGS)/auth.log
-
-$(LEONOS_AUTH_ARTIFACTS): | $(AUTH_STAMP)
+		--log $(abspath $(O_LOGS))/auth.log
+	$(Q)cp $(AUTH_WORK)/.leonos-auth.json $(AUTH_STAMP).tmp
+	$(Q)mv $(AUTH_STAMP).tmp $(AUTH_STAMP)
+	$(Q)for product in $(LEONOS_AUTH_ARTIFACTS); do test -e "$$product" || exit 1; touch "$$product"; done
 
 $(O_AUTH) $(AUTH_WORK):
 	$(Q)mkdir -p $@

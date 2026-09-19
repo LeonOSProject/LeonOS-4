@@ -1,3 +1,24 @@
+# Make 全量迁移：当前接口
+
+2026-09-19：旧的 P0/P1 盘点是历史记录；以下为当前生产接口。历史验收证据保存在 verification.md。
+
+| 功能 | 当前目标 / 实现 | 产物 |
+| --- | --- | --- |
+| 配置、版本、依赖 | defconfig / olddefconfig / menuconfig / fetch；C host helpers | O/config、O/include/generated、cache/downloads |
+| 内核、驱动、loader、Rust middlelayer | kernel / drivers / loader / middlelayer；mk/kernel.mk、boot.mk | O/generated/system、drivers、loader |
+| 运行库、认证、应用 | runtime / leonos-pam / userland / leonos-upstream | O/system、O/userland、独立上游安装树 |
+| SDK | sdk / musl-sdk；C 编译驱动，按 SDK 选择导出 | O/packages/LeonOS4-Developer-SDK.zip、leonos-musl-sdk.tar.gz |
+| 根文件系统 | rootfs-raw / rootfs；C stage 清单与签名 APK 安装 | O/rootfs/{raw,managed}、manifest.json |
+| 签名 APK 与升级 | apk-repo；真实上游 apk mkpkg/mkndx/add | O/packages/apk/repository；真实 installed DB |
+| 磁盘、live、安装器 | image-vmdk / iso / installer | O/images/leonos4.{raw,vmdk}、leonos4-live.iso、leonos4-installer.iso |
+| RPR | rpr-apps / rpr-pages；本地生成，不发布 | O/rpr-pages |
+| 聚合与运行 | all / release / run / run-debug / run-iso / run-installer | all 含 SDK 和三类镜像；release 再含 RPR |
+| 验收 | test / test-long / test-legacy / test-smoke | 明确区分主机测试、生产 exec 跟踪、旧 Python 回归、来宾启动 |
+
+生产规则不回退到旧 Python 引擎；已删除清单与保留测试参考的边界见 legacy-removal.md。
+
+## 历史 P0 盘点（仅供对照，不代表当前状态）
+
 # LeonOS 4 构建系统迁移台账（P0）
 
 本文是 `docs/superpowers/plans/2026-09-19-make-c-build-rewrite.md` 第 12 节 P0 阶段的交付物之一：

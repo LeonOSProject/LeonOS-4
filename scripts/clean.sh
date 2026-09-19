@@ -26,6 +26,17 @@ esac
 [ "$target" = "/" ] && refuse 'O is the filesystem root'
 [ -n "$src" ] && [ "$target" = "$src" ] && refuse "O is the source root ($src)"
 
+# Resolve all components before reading the marker or removing products.
+resolved=$(realpath -ms -- "$target" 2>/dev/null) || refuse 'cannot resolve O'
+physical=$(realpath -m -- "$target" 2>/dev/null) || refuse 'cannot resolve O'
+[ "$physical" = "$resolved" ] || refuse 'O contains a symlink component'
+[ "$resolved" != / ] || refuse 'resolved O is the filesystem root'
+if [ -n "$src" ]; then
+    source_root=$(realpath -m -- "$src") || refuse 'cannot resolve source root'
+    [ "$resolved" != "$source_root" ] || refuse 'resolved O is the source root'
+fi
+target=$resolved
+[ ! -L "$target/.leonos-out" ] || refuse 'ownership marker is a symlink'
 marker="$target/.leonos-out"
 if [ ! -f "$marker" ]; then
     refuse "no ownership marker at $marker (not a build output directory created by this Makefile)"
@@ -38,23 +49,10 @@ if [ -n "$src" ] && [ -n "$marker_root" ] && [ "$marker_root" != "$src" ]; then
     refuse "output directory belongs to a different source root ($marker_root)"
 fi
 
-# Resolve symlinks before deleting anything: an escaping link would take the
-# removal outside the output tree.
-resolved=$(realpath -s "$target" 2>/dev/null || echo "")
-[ -n "$resolved" ] || refuse 'cannot resolve the output directory'
-case "$resolved" in
-    "/"|"" ) refuse 'resolved output directory is unsafe' ;;
-esac
-if [ -L "$target" ]; then
-    real=$(readlink -f "$target" 2>/dev/null || echo "")
-    [ -n "$real" ] || refuse 'output symlink does not resolve'
-    [ "$real" = "$resolved" ] || refuse "output directory is a symlink to $real"
-fi
-
 # Explicit list rather than a glob: an unknown entry in the tree is not ours to
 # delete, and this is what makes `clean` auditable.
 # third-party holds upstream build directories this configuration owns (see mk/third-party.mk).
-products="obj generated host include auth sysroot stage packages images logs meta third-party"
+products="userland userland-installer userland-installer-policy upstream rootfs resources rpr-apps rpr-pages obj generated host include auth pam system musl installer sdk sysroot stage packages images logs meta third-party"
 if [ "$keep" = 0 ]; then
     products="$products config"
 fi

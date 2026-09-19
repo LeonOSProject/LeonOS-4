@@ -36,6 +36,9 @@
 
 #define LOCK_SCHEMA_VERSION 1L
 
+#if defined(__GNUC__) || defined(__clang__)
+static int report(const char *format, ...) __attribute__((format(printf, 1, 2)));
+#endif
 static int report(const char *format, ...)
 {
     va_list arguments;

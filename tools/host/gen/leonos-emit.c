@@ -47,6 +47,9 @@ static void usage(FILE *stream)
         TOOL_NAME);
 }
 
+#if defined(__GNUC__) || defined(__clang__)
+static int fail(const char *format, ...) __attribute__((format(printf, 1, 2)));
+#endif
 static int fail(const char *format, ...)
 {
     va_list arguments;

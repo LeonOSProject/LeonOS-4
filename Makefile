@@ -32,9 +32,9 @@ O := $(LEONOS_SRC)/out/$(ARCH)/$(PROFILE)
 endif
 
 V ?= 0
-CPUS ?= $(shell nproc 2>/dev/null || echo 1)
+CPUS ?=
 MEMORY ?=
-SOURCE_DATE_EPOCH ?=
+SOURCE_DATE_EPOCH ?= $(shell git -C $(LEONOS_SRC) show -s --format=%ct HEAD)
 BUILD_ID ?=
 TOOLCHAIN ?= $(LEONOS_SRC)/configs/toolchains/llvm-x86_64.mk
 
@@ -132,11 +132,8 @@ leonos_lock_not_needed := 1
 else ifeq ($(words $(filter $(leonos_read_only_goals),$(MAKECMDGOALS))),$(words $(MAKECMDGOALS)))
 leonos_lock_not_needed := 1
 endif
-leonos_owner_id := $(word 1,$(subst :, ,$(LEONOS_BUILD_OWNER)))
-leonos_owner_o := $(word 2,$(subst :, ,$(LEONOS_BUILD_OWNER)))
-leonos_lock_inherited := $(if $(leonos_owner_id),$(if $(filter $(leonos_owner_o),$(leonos_O_absolute)),1),)
-leonos_lock_dir := $(O_META)/build-lock
-leonos_lock_skip := $(leonos_lock_inherited)\
+leonos_lock_dir := $(O)/.build-lock
+leonos_lock_skip := \
 	$(if $(findstring n,$(firstword -$(MAKEFLAGS))),1)\
 	$(if $(findstring q,$(firstword -$(MAKEFLAGS))),1)\
 	$(leonos_lock_not_needed)
@@ -154,11 +151,25 @@ include $(LEONOS_SRC)/mk/host.mk
 include $(LEONOS_SRC)/mk/toolchain.mk
 include $(LEONOS_SRC)/mk/config.mk
 include $(LEONOS_SRC)/mk/kernel.mk
+include $(LEONOS_SRC)/mk/boot.mk
 include $(LEONOS_SRC)/mk/third-party.mk
+include $(LEONOS_SRC)/mk/pam.mk
+include $(LEONOS_SRC)/mk/runtime.mk
+include $(LEONOS_SRC)/mk/upstream.mk
+include $(LEONOS_SRC)/mk/userland.mk
+include $(LEONOS_SRC)/mk/resources.mk
+include $(LEONOS_SRC)/mk/sdk.mk
+include $(LEONOS_SRC)/mk/rootfs.mk
+include $(LEONOS_SRC)/mk/apk.mk
+include $(LEONOS_SRC)/mk/images.mk
+include $(LEONOS_SRC)/mk/rpr.mk
+include $(LEONOS_SRC)/mk/run.mk
 include $(LEONOS_SRC)/mk/tests.mk
 
 # --- public goals -----------------------------------------------------------
 .DEFAULT_GOAL := help
+# Source inventories are inputs, never implicit host executable targets.
+.SUFFIXES:
 
 .PHONY: help doctor fetch defconfig olddefconfig menuconfig tools \
 	kernel userland runtime sdk rootfs apk-repo image-vmdk iso installer all \
@@ -195,11 +206,19 @@ clean:
 distclean:
 	@O='$(O)' SRC='$(LEONOS_SRC)' KEEP_CONFIG=0 sh $(LEONOS_SRC)/scripts/clean.sh
 
-# Goals that land in later phases fail loudly. A stub that exits 0 would look
-# green while shipping nothing (plan section 8).
-userland runtime sdk rootfs apk-repo image-vmdk iso installer run run-iso \
-run-installer test-smoke test-legacy:
-	@sh $(LEONOS_SRC)/scripts/not-migrated.sh $@ "a later phase of the Make+C rebuild"
+test-smoke: image-vmdk iso installer
+	@QEMU='$(QEMU)' sh $(LEONOS_SRC)/scripts/test-smoke.sh $(O_IMAGES) $(O_LOGS) '$(QEMU_FIRMWARE)'
 
-all: kernel
-	@sh $(LEONOS_SRC)/scripts/not-migrated.sh all "a later phase (userland, sdk, apk-repo, images)"
+test-legacy:
+	@sh $(LEONOS_SRC)/scripts/test-legacy.sh $(LEONOS_SRC)
+
+rootfs: apk-repo
+
+all: kernel userland runtime sdk apk-repo image-vmdk iso installer
+
+.PHONY: image-iso release config-sync build-info test-all
+image-iso: iso
+release: all rpr-pages
+config-sync: $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(RUSTCFG_ARGS) $(LEONOS_COMPONENT_MK)
+build-info: $(BUILD_INFO_HEADER)
+test-all: test test-long test-legacy test-smoke

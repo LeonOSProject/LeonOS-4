@@ -8,7 +8,7 @@
       "url": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main/x86_64/busybox-openrc-1.37.0-r31.apk",
       "sha256": "e0aafdbbcf62119611b7fad19b7653bc9ae2a602e432549fc96937a99e68a4b3",
       "directory": "busybox-openrc-1.37.0-r31",
-      "script": "tools/openrc_packages.py",
+      "script": "tools/build/upstream-apk.sh",
       "target": "apk-root",
       "note": "Alpine aports recipe commit c3ef5d10e6ef6528852c51f0564963e2f8c1be19 apk-tools installs .LICENSE as usr/share/licenses/busybox-openrc",
       "license_in_source": ".LICENSE"
@@ -20,7 +20,7 @@
       "url": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main/x86_64/findutils-4.10.0-r1.apk",
       "sha256": "86cf2b3f8aa3b1092cb3225fcc8179fc1229d178aa126266cfeadfda09487dc2",
       "directory": "findutils-4.10.0-r1",
-      "script": "tools/openrc_packages.py",
+      "script": "tools/build/upstream-apk.sh",
       "target": "apk-root",
       "note": "Alpine aports recipe commit 1a4e2ce6309586205b7e4c500c7ae287be39ea31 apk-tools installs .LICENSE as usr/share/licenses/findutils",
       "license_in_source": ".LICENSE"
@@ -32,7 +32,7 @@
       "url": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main/x86_64/libcap2-2.78-r0.apk",
       "sha256": "42886a7b4bcde26347c712925c8dc7db202b6029ef9b8c7ee81577ab7bdd8fad",
       "directory": "libcap2-2.78-r0",
-      "script": "tools/openrc_packages.py",
+      "script": "tools/build/upstream-apk.sh",
       "target": "apk-root",
       "note": "Alpine aports recipe commit 0c35848136c4c16a1b1672cb812efa88fffef1c2 apk-tools installs .LICENSE as usr/share/licenses/libcap2",
       "license_in_source": ".LICENSE"
@@ -44,7 +44,7 @@
       "url": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main/x86_64/openrc-0.63.2-r0.apk",
       "sha256": "cda5779b160ddbdf1d1b9cc9514b7b72f0a18453792ff7c0a6eb6e28d5bc2225",
       "directory": "openrc-0.63.2-r0",
-      "script": "tools/openrc_packages.py",
+      "script": "tools/build/upstream-apk.sh",
       "target": "apk-root",
       "note": "Alpine aports recipe commit 30c61338b7a04d3c94509eabba5210b7bf81151a apk-tools installs .LICENSE as usr/share/licenses/openrc",
       "license_in_source": ".LICENSE"
@@ -56,10 +56,22 @@
       "url": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main/x86_64/openrc-user-0.63.2-r0.apk",
       "sha256": "c350ab9e3de14d5eb33e609bca2f1c4c4d45c9cf3d1ee7a152800e76c26e3863",
       "directory": "openrc-user-0.63.2-r0",
-      "script": "tools/openrc_packages.py",
+      "script": "tools/build/upstream-apk.sh",
       "target": "apk-root",
       "note": "Alpine aports recipe commit 30c61338b7a04d3c94509eabba5210b7bf81151a apk-tools installs .LICENSE as usr/share/licenses/openrc-user",
       "license_in_source": ".LICENSE"
+    },
+    {
+      "id": "apk-tools-license",
+      "kind": "binary",
+      "version": "3.0.8",
+      "url": "https://raw.githubusercontent.com/alpinelinux/apk-tools/v3.0.8/LICENSE",
+      "sha256": "b3c87315aae4c9f276c37168f2655dd8bd990544d7a0bbfb929664155c7ab257",
+      "directory": "apk-tools-license",
+      "script": "tools/build/rootfs-stage.sh",
+      "target": "rootfs-raw",
+      "license": "resources/licenses/apk-tools-LICENSE",
+      "note": "Unmodified upstream apk-tools license text"
     },
     {
       "id": "apk-tools-static",
@@ -68,17 +80,17 @@
       "url": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main/x86_64/apk-tools-static-3.0.8-r0.apk",
       "sha256": "c8e2c88c13ba12a12269b79a3543e1190ff8c0ab0beb32b58cadfd5881c619e3",
       "directory": "apk-tools-static-3.0.8-r0",
-      "script": "tools/apk_distribution.py",
-      "target": "apk-root",
-      "note": "archive digest; the extracted apk.static is 5118a57ae7c07e13268a754f78aa9c7d39a0bed708bb11c101d78e2a884cee5d apk-tools installs .LICENSE as usr/share/licenses/apk-tools-static",
-      "license_in_source": ".LICENSE"
+      "script": "tools/build/upstream-apk.sh",
+      "target": "upstream-apk",
+      "note": "Verified static apk binary; license supplied by apk-tools-license lock entry",
+      "license": "resources/licenses/apk-tools-LICENSE"
     },
     {
       "id": "busybox",
       "kind": "submodule",
       "commit": "1a64f6a20aaf6ea4dbba68bbfa8cc1ab7e5c57c4",
       "directory": "third_party/busybox",
-      "script": "tools/build_busybox.py",
+      "script": "tools/build/upstream-busybox.sh",
       "target": "busybox",
       "license": "third_party/busybox/LICENSE"
     },
@@ -87,7 +99,7 @@
       "kind": "submodule",
       "commit": "2290c38bc9da54db53aa56161a7204a27b388e21",
       "directory": "third_party/cmd",
-      "script": "tools/build_cmd.py",
+      "script": "tools/build/upstream-app.sh",
       "target": "cmd",
       "license": "third_party/cmd/LICENSE"
     },
@@ -100,7 +112,7 @@
       "directory": "dosfstools-4.2",
       "license_in_source": "COPYING",
       "checksum_source": "https://raw.githubusercontent.com/buildroot/buildroot/2025.02/package/dosfstools/dosfstools.hash",
-      "script": "tools/build_storage_upstream.py",
+      "script": "tools/build/upstream.sh",
       "target": "storage-upstream"
     },
     {
@@ -112,7 +124,7 @@
       "directory": "e2fsprogs-1.47.3",
       "license_in_source": "NOTICE",
       "checksum_source": "https://www.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.3/sha256sums.asc",
-      "script": "tools/build_storage_upstream.py",
+      "script": "tools/build/upstream.sh",
       "target": "storage-upstream"
     },
     {
@@ -124,7 +136,7 @@
       "directory": "exfatprogs-1.4.3",
       "license_in_source": "COPYING",
       "checksum_source": "https://api.github.com/repos/exfatprogs/exfatprogs/releases/tags/1.4.3",
-      "script": "tools/build_storage_upstream.py",
+      "script": "tools/build/upstream.sh",
       "target": "storage-upstream"
     },
     {
@@ -134,7 +146,7 @@
       "url": "https://github.com/VasilyZa/fastfetch/releases/download/2.68.1/fastfetch",
       "sha256": "25107efd56d0286059487bab17d964a6ec72275263de2ab09095a46637b06be1",
       "directory": "fastfetch-2.68.1-leonos-x86_64-linux-musl",
-      "script": "tools/package_fastfetch.py",
+      "script": "mk/upstream.mk",
       "target": "fastfetch",
       "note": "upstream musl binary; the cache file is named after the directory",
       "license": "userland/fastfetch/LICENSE"
@@ -144,7 +156,7 @@
       "kind": "submodule",
       "commit": "711ccc264519cdc5073ccb26651c0a9bafc3b47a",
       "directory": "third_party/file",
-      "script": "tools/build_file.py",
+      "script": "tools/build/upstream-app.sh",
       "target": "file",
       "license": "third_party/file/COPYING"
     },
@@ -162,7 +174,7 @@
       "kind": "submodule",
       "commit": "b8bbf4297169e20d35e1cc3e015180e8a011bcf2",
       "directory": "third_party/less",
-      "script": "tools/build_less.py",
+      "script": "tools/build/upstream-app.sh",
       "target": "less",
       "license": "third_party/less/LICENSE"
     },
@@ -175,7 +187,7 @@
       "directory": "libbsd-0.12.2",
       "license_in_source": "COPYING",
       "checksum_source": "https://lists.freedesktop.org/archives/libbsd/2024-March/000455.html",
-      "script": "tools/build_auth_upstream.py",
+      "script": "tools/build/upstream.sh",
       "target": "auth-upstream"
     },
     {
@@ -187,7 +199,7 @@
       "directory": "libmd-1.2.0",
       "license_in_source": "COPYING",
       "checksum_source": "https://lists.freedesktop.org/archives/libbsd/2026-May/000509.html",
-      "script": "tools/build_auth_upstream.py",
+      "script": "tools/build/upstream.sh",
       "target": "auth-upstream"
     },
     {
@@ -208,7 +220,7 @@
       "directory": "libxcrypt-4.5.2",
       "license_in_source": "COPYING.LIB",
       "checksum_source": "https://api.github.com/repos/besser82/libxcrypt/releases/tags/v4.5.2",
-      "script": "tools/build_auth_upstream.py",
+      "script": "tools/build/upstream.sh",
       "target": "auth-upstream"
     },
     {
@@ -219,7 +231,7 @@
       "sha256": "b1a2562be56e42afb3f8489d4c2a7ac472ac23098f1ef1c1e40da601f54625eb",
       "directory": "linux-6.12",
       "license_in_source": "COPYING",
-      "script": "tools/build_auth_upstream.py",
+      "script": "tools/build/upstream.sh",
       "target": "auth-upstream"
     },
     {
@@ -231,7 +243,7 @@
       "directory": "Linux-PAM-1.7.2",
       "license_in_source": "Copyright",
       "checksum_source": "https://api.github.com/repos/linux-pam/linux-pam/releases/tags/v1.7.2",
-      "script": "tools/build_auth_upstream.py",
+      "script": "tools/build/upstream.sh",
       "target": "auth-upstream",
       "patches": [
         {
@@ -271,7 +283,7 @@
       "kind": "submodule",
       "commit": "6e22fedb74cf0c9b6656e9fce8b7331db847c605",
       "directory": "third_party/lua",
-      "script": "tools/build_lua.py",
+      "script": "tools/build/upstream-app.sh",
       "target": "lua",
       "license": "userland/lua/LICENSE"
     },
@@ -321,7 +333,7 @@
       "kind": "submodule",
       "commit": "8e6360d1663998c62ddd0cf934923d1f18004e3e",
       "directory": "third_party/nano",
-      "script": "tools/build_nano.py",
+      "script": "tools/build/upstream-app.sh",
       "target": "nano",
       "license": "third_party/nano/COPYING"
     },
@@ -330,7 +342,7 @@
       "kind": "submodule",
       "commit": "0096bd402c4a9c8f39bd7ed266e1b8920327e4d8",
       "directory": "third_party/ncurses",
-      "script": "tools/build_terminal_packages.py",
+      "script": "tools/build/upstream-terminal.sh",
       "target": "terminal-packages",
       "license": "third_party/ncurses/COPYING"
     },
@@ -339,7 +351,7 @@
       "kind": "submodule",
       "commit": "22fae7a1bc2362486d8bf845f0daf6ec7060a3a1",
       "directory": "third_party/pl_editor",
-      "script": "tools/build_pleditor.py",
+      "script": "tools/build/upstream-app.sh",
       "target": "app:pleditor",
       "license": "third_party/pl_editor/LICENSE"
     },
@@ -348,7 +360,7 @@
       "kind": "submodule",
       "commit": "7cf39dc1741ea2be60ce3bd327f6e5337f60207f",
       "directory": "third_party/portablegl",
-      "script": "tools/build_portablegl.py",
+      "script": "mk/components/graphics.mk",
       "target": "portablegl",
       "license": "third_party/portablegl/LICENSE"
     },
@@ -361,7 +373,7 @@
       "directory": "shadow-4.20.2",
       "license_in_source": "COPYING",
       "checksum_source": "https://api.github.com/repos/shadow-maint/shadow/releases/tags/4.20.2",
-      "script": "tools/build_auth_upstream.py",
+      "script": "tools/build/upstream.sh",
       "target": "auth-upstream"
     },
     {
@@ -369,7 +381,7 @@
       "kind": "submodule",
       "commit": "923e7d7ebc5c1f009755bdeb789ac25658ccce03",
       "directory": "third_party/sl",
-      "script": "tools/build_sl.py",
+      "script": "tools/build/upstream-app.sh",
       "target": "sl",
       "license": "third_party/sl/LICENSE"
     },
@@ -378,7 +390,7 @@
       "kind": "submodule",
       "commit": "f3d536d37825302e31ed0eddd811c689f38f85a3",
       "directory": "third_party/sqlite",
-      "script": "tools/build_sqlite.py",
+      "script": "tools/build/upstream-app.sh",
       "target": "sqlite",
       "license": "third_party/sqlite/LICENSE.md"
     },
@@ -400,7 +412,7 @@
       "directory": "sudo-1.9.17p2",
       "license_in_source": "LICENSE.md",
       "checksum_source": "https://api.github.com/repos/sudo-project/sudo/releases/tags/v1.9.17p2",
-      "script": "tools/build_auth_upstream.py",
+      "script": "tools/build/upstream.sh",
       "target": "auth-upstream"
     },
     {
@@ -408,7 +420,7 @@
       "kind": "submodule",
       "commit": "2ba12e83b3599ca8f5d50c179fe5138fe956f0c9",
       "directory": "third_party/tinycc",
-      "script": "tools/build_tcc.py",
+      "script": "tools/build/upstream-app.sh",
       "target": "tcc",
       "license": "third_party/tinycc/COPYING"
     },
@@ -421,7 +433,7 @@
       "directory": "util-linux-2.41.6",
       "license_in_source": "README.licensing",
       "checksum_source": "https://www.kernel.org/pub/linux/utils/util-linux/v2.41/sha256sums.asc",
-      "script": "tools/build_auth_upstream.py",
+      "script": "tools/build/upstream.sh",
       "target": "auth-upstream"
     },
     {
@@ -429,7 +441,7 @@
       "kind": "submodule",
       "commit": "af9a7a04f18693eee4400dd134135527f4e8cd5f",
       "directory": "third_party/vim",
-      "script": "tools/build_terminal_packages.py",
+      "script": "tools/build/upstream-terminal.sh",
       "target": "terminal-packages",
       "license": "third_party/vim/LICENSE"
     },
