@@ -4,9 +4,12 @@ set -eu
 [ "$#" = 8 ] || exit 2
 src=$1 out=$2 build=$3 index=$4 apk=$5 key=$6 output=$7 epoch=$8
 export SOURCE_DATE_EPOCH=$epoch
-version=$(sed -n 's/^#define LEONOS_KERNEL_VERSION "\([0-9.]*-[0-9]*\)"$/\1/p' "$build")
-[ -n "$version" ] || { echo 'invalid numeric build version' >&2; exit 1; }
-package_version=${version%-*}-r${version##*-}
+version=$(sed -n 's/^#define LEONOS_KERNEL_VERSION "\([0-9.]*\)"$/\1/p' "$build")
+printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo 'invalid release version' >&2; exit 1; }
+case $epoch in ''|*[!0-9]*) echo 'invalid package epoch' >&2; exit 1;; esac
+# APK revisions retain chronological ordering against previously published
+# packages. This is packaging metadata, not a kernel build number or counter.
+package_version=$version-r$epoch
 mkdir -p "$(dirname "$output")"
 work=$(mktemp -d "$output.new.XXXXXX")
 work=$(CDPATH= cd -- "$work" && pwd -P)
