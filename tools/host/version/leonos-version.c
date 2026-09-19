@@ -5,7 +5,7 @@
  * clock on every invocation, which dirtied the tree and forced every kernel to
  * relink (docs/build/migration-inventory.md section 3). This tool derives its
  * text from reviewed inputs only: the release version file, a fixed source
- * identifier, an optional explicit build id, and a timestamp supplied by
+ * identifier and a timestamp supplied by
  * SOURCE_DATE_EPOCH or a commit time (plan section 7).
  */
 
@@ -36,7 +36,6 @@ struct options {
     const char *version_file;
     const char *output;
     const char *source_id;
-    const char *build_id;
     const char *epoch;
 };
 
@@ -65,7 +64,6 @@ static void usage(void)
 {
     printf(
         "usage: %s --version-file FILE --output PATH\n"
-        "               [--source-id ID] [--epoch SECONDS] [--build-id N]\n"
         "\n"
         "Render the build identity header. Output is content-stable: identical\n"
         "inputs leave an existing file's mtime untouched, so nothing downstream\n"
@@ -76,7 +74,6 @@ static void usage(void)
         "  --output PATH        header to publish; its directory must exist\n"
         "  --source-id ID       fixed source identifier, e.g. an abbreviated commit\n"
         "  --epoch SECONDS      Unix time for the build timestamp and copyright year\n"
-        "  --build-id N         numeric build id; 0 when omitted\n"
         "  --help               show this message\n",
         TOOL_NAME);
 }
@@ -104,8 +101,6 @@ static int parse_options(int argc, char **argv, struct options *options)
             options->source_id = argv[++index];
         } else if (strcmp(argument, "--epoch") == 0) {
             options->epoch = argv[++index];
-        } else if (strcmp(argument, "--build-id") == 0) {
-            options->build_id = argv[++index];
         } else {
             return report("unrecognised argument '%s'; try --help", argument);
         }
@@ -306,7 +301,6 @@ int main(int argc, char **argv)
     char timestamp[32];
     char copyright[160];
     char version_string[128];
-    unsigned long long build_number = 0;
     unsigned long long epoch = 0;
     long major = 0;
     long minor = 0;
@@ -325,11 +319,6 @@ int main(int argc, char **argv)
     if (split_version(identity.release_version, &major, &minor, &patch) != 0) {
         status = report("release_version must be major.minor.patch, got '%s'",
             identity.release_version);
-        goto cleanup;
-    }
-    if (options.build_id != NULL &&
-        parse_decimal(options.build_id, &build_number) != 0) {
-        status = report("--build-id must be a decimal number");
         goto cleanup;
     }
     if (options.epoch != NULL && parse_decimal(options.epoch, &epoch) != 0) {
@@ -356,16 +345,14 @@ int main(int argc, char **argv)
         }
     }
 
-    /* The updater's public ABI is major.minor.patch-decimal_build. Keep the
-     * commit identity separately; a hexadecimal suffix is rejected by guests. */
-    if (options.build_id == NULL) build_number = epoch;
+    /* Source identity is independent of the public release version. */
     const char *source_id = options.source_id != NULL ? options.source_id : "unknown";
     if (strspn(source_id, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-") != strlen(source_id)) {
         status = report("--source-id contains unsafe characters");
         goto cleanup;
     }
-    if (snprintf(version_string, sizeof(version_string), "%s-%llu",
-            identity.release_version, build_number) >= (int)sizeof(version_string)) {
+    if (snprintf(version_string, sizeof(version_string), "%s",
+            identity.release_version) >= (int)sizeof(version_string)) {
         status = report("the derived version string does not fit");
         goto cleanup;
     }
@@ -384,7 +371,6 @@ int main(int argc, char **argv)
         append_line(&out, "#define LEONOS_KERNEL_VERSION_MAJOR %ld\n", major) != 0 ||
         append_line(&out, "#define LEONOS_KERNEL_VERSION_MINOR %ld\n", minor) != 0 ||
         append_line(&out, "#define LEONOS_KERNEL_VERSION_PATCH %ld\n", patch) != 0 ||
-        append_line(&out, "#define LEONOS_BUILD_NUMBER %llu\n", build_number) != 0 ||
         append_line(&out, "#define LEONOS_SOURCE_ID \"%s\"\n", source_id) != 0 ||
         append_line(&out, "#define LEONOS_KERNEL_VERSION \"%s\"\n", version_string) != 0 ||
         append_line(&out, "#define LEONOS_MIDDLELAYER_NAME \"%s\"\n", identity.middlelayer_name) != 0 ||

@@ -56,7 +56,6 @@ Variables
   CC/CXX/AR/LD/OBJCOPY/STRIP=  explicit target tool override (command line only)
   HOSTCC=              host compiler for the C helpers; independent of CC
   SOURCE_DATE_EPOCH=N  pin generated timestamps for reproducible output
-  BUILD_ID=N           pin the numeric build id instead of deriving it
   LEONOS_BUILD_OWNER   internal lock token; nested makes inherit it, and setting
                        it by hand is the only way to skip the lock deliberately
 

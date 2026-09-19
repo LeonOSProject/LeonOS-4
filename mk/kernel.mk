@@ -17,7 +17,7 @@ LEONOS_KERNEL_DEBUG := $(O_GENERATED)/system/kernel.debug
 BOOT_LOGO_HEADER := $(O_INCLUDE)/generated/boot_logo.h
 BUILD_INFO_HEADER := $(O_INCLUDE)/generated/build_info.h
 LEONOS_SOURCE_ID := $(shell git -C $(LEONOS_SRC) rev-parse --short HEAD 2>/dev/null || echo unknown)
-LEONOS_SIG_version := source=$(LEONOS_SOURCE_ID)|epoch=$(SOURCE_DATE_EPOCH)|build=$(BUILD_ID)
+LEONOS_SIG_version := source=$(LEONOS_SOURCE_ID)|epoch=$(SOURCE_DATE_EPOCH)
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,version)))
 
 # --- flags ------------------------------------------------------------------
@@ -130,7 +130,7 @@ $(BUILD_INFO_HEADER): $(LEONOS_SRC)/configs/build-version $(LEONOS_VERSION_TOOL)
 	$(Q)$(LEONOS_VERSION_TOOL) --version-file $< \
         --source-id '$(LEONOS_SOURCE_ID)' \
 	    --epoch '$(or $(SOURCE_DATE_EPOCH),$(shell git -C $(LEONOS_SRC) show -s --format=%ct HEAD 2>/dev/null || echo 0))' \
-	    $(if $(BUILD_ID),--build-id $(BUILD_ID),) --output $@
+	    --output $@
 
 # --- link and images --------------------------------------------------------
 # Grouped target: kernel.unstripped is the only output of the link, but the two

@@ -56,7 +56,7 @@ $(LEONOS_CONFIG_FILE): $(KCONFIG_SEED) $(KCONFIG_ROOT) $(LEONOS_SRC)/Kconfig.com
 	$(Q)sh $(LEONOS_SRC)/tools/build/kconfig-frontends.sh run \
 		--conf $(abspath $(KCONFIG_CONF)) --mconf $(abspath $(KCONFIG_MCONF)) \
 		--kconfig $(KCONFIG_ROOT) --config $(abspath $@) --seed $(KCONFIG_SEED) \
-		--mode '$(LEONOS_KCONFIG_MODE)'
+		--mode ''
 
 # Rebuild the derived files when the Kconfig inputs change even if .config was
 # produced by hand.

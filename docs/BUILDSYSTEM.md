@@ -24,8 +24,8 @@ ext2fs 头文件/库和镜像工具。fetch 校验锁定摘要，是唯一联网
 defconfig 重置为 configs/default.conf。可以复制 `.config` 保存配置，再 olddefconfig。
 Kconfig 与 configs/components.toml 区分 BUILD、IMAGE、ENTRY、SDK、API；required 组件强制开启。
 
-生成文件只写 O。`SOURCE_DATE_EPOCH` 默认为提交时间，`BUILD_ID` 为可选数字版本覆盖；
-生成版本保持 `major.minor.patch-decimal` 来宾更新 ABI，提交身份另存 LEONOS_SOURCE_ID。
+生成文件只写 O。`SOURCE_DATE_EPOCH` 默认为提交时间，仅用于时间元数据与可复现打包；
+版本为 `major.minor.patch`，没有构建号覆盖或计数器，提交身份另存 LEONOS_SOURCE_ID。
 
 | 目标 | 输出 |
 | --- | --- |

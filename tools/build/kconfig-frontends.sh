@@ -92,7 +92,7 @@ trap cleanup_stage EXIT INT TERM
 if [ -f "$config" ]; then
     cp "$config" "$stage" || die "cannot stage the existing configuration"
 elif [ -n "$seed" ] && [ -f "$seed" ] && [ ! -s "$stage" ]; then
-    :
+    cp "$seed" "$stage" || die 'cannot stage the default configuration'
 fi
 # The front end writes through a .tmpconfig.PID next to the current directory and
 # renames it into place; a rename across filesystems fails, which is why an
@@ -110,11 +110,9 @@ case "$mode" in
         "$conf" --defconfig="$seed" "$kconfig" || die 'kconfig-conf --defconfig failed'
         ;;
     olddefconfig)
-        [ -f "$config" ] || { [ -n "$seed" ] && cp "$seed" "$config"; }
         "$conf" --olddefconfig "$kconfig" || die 'kconfig-conf --olddefconfig failed'
         ;;
-    menu)
-        [ -f "$config" ] || { [ -n "$seed" ] && cp "$seed" "$config"; }
+    menu|menuconfig)
         [ -x "$mconf" ] || die 'kconfig-mconf was not built'
         "$mconf" "$kconfig" || die 'menuconfig cancelled or failed'
         ;;
@@ -135,7 +133,11 @@ case "$mode" in
 esac
 
 mkdir -p "$(dirname -- "$config")" || die 'cannot create the configuration directory'
-mv "$stage" "$config" || die "cannot publish the configuration to $config"
+if cmp -s "$stage" "$config"; then
+    rm "$stage"
+else
+    mv "$stage" "$config" || die "cannot publish the configuration to $config"
+fi
 rm -f "$stage~"
 for leftover in $(ls .tmpconfig.* 2>/dev/null | sort); do
     printf '%s\n' "$tmpconfig_before" | grep -qxF -- "$leftover" || rm -f -- "$leftover"

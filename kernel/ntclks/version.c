@@ -23,7 +23,7 @@ static const struct leonos_system_info system_info = {
     .version_major = LEONOS_KERNEL_VERSION_MAJOR,
     .version_minor = LEONOS_KERNEL_VERSION_MINOR,
     .version_patch = LEONOS_KERNEL_VERSION_PATCH,
-    .build_number = LEONOS_BUILD_NUMBER,
+    .reserved_version = 0,
     .copyright_year = LEONOS_COPYRIGHT_YEAR,
     .architecture = NTCLKS_ARCHITECTURE,
 };
