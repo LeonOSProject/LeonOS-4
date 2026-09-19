@@ -417,8 +417,13 @@ int leonos_app_registry_resolve(const char *name_or_path, char *path,
     struct leonos_app_info info;
     uint32_t length;
     if (!path || capacity == 0 || !name_or_path || !name_or_path[0]) return -EINVAL;
+    /* Resolve before clearing output: callers may resolve a previously returned
+     * path in place through leonos_launch_builtin_path(). */
+    if (leonos_app_registry_find(name_or_path, &info) < 0) {
+        path[0] = 0;
+        return -ENOENT;
+    }
     path[0] = 0;
-    if (leonos_app_registry_find(name_or_path, &info) < 0) return -ENOENT;
     length = text_len(info.exec);
     if (length + 1U > capacity) return -ENAMETOOLONG;
     copy_text(path, capacity, info.exec);

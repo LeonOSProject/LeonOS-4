@@ -196,11 +196,6 @@ static void treeview_clamp(struct leonos_ui_treeview_state *state,
         state->has_selection = 1;
         selected_row = 0;
     }
-    if ((uint32_t)selected_row < state->scroll) {
-        state->scroll = (uint32_t)selected_row;
-    } else if ((uint32_t)selected_row >= state->scroll + visible) {
-        state->scroll = (uint32_t)selected_row - visible + 1U;
-    }
 }
 
 static void treeview_select_row(struct leonos_ui_treeview_state *state,
@@ -213,6 +208,10 @@ static void treeview_select_row(struct leonos_ui_treeview_state *state,
     state->selected_id = items[state->visible_indices[row]].id;
     state->has_selection = 1;
     treeview_clamp(state, items);
+    /* Follow explicit selection, not repaint/snapshot synchronization. */
+    uint32_t visible = state->visible_rows ? state->visible_rows : 1;
+    if (row < state->scroll) state->scroll = row;
+    else if (row >= state->scroll + visible) state->scroll = row - visible + 1;
 }
 
 void leonos_ui_treeview_state_init(struct leonos_ui_treeview_state *state,
@@ -402,6 +401,8 @@ int leonos_ui_treeview_state_handle_key(struct leonos_ui_treeview_state *state,
                 state->selected_id = items[parent].id;
                 state->has_selection = 1;
                 leonos_ui_treeview_state_sync(state, items, count);
+                int row = treeview_selected_row(state, items);
+                if (row >= 0) treeview_select_row(state, items, (uint32_t)row);
                 return 1;
             }
         }
