@@ -21,9 +21,8 @@ LEONOS_SIG_version := source=$(LEONOS_SOURCE_ID)|epoch=$(SOURCE_DATE_EPOCH)
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,version)))
 
 # --- flags ------------------------------------------------------------------
-# Include order puts the output tree first: include/generated/ still holds
-# committed copies of autoconf.h and build_info.h, and a stale tracked header
-# must not shadow what this build just produced. P4 removes those copies.
+# Generated headers come from O/include first. The version header is generated
+# only there; source-tree configuration snapshots must not shadow build outputs.
 KERNEL_INCLUDES := -I$(O_INCLUDE) -I$(LEONOS_SRC)/kernel/ntclks/include \
 	-I$(LEONOS_SRC)/include/uapi -I$(LEONOS_SRC)/include
 
