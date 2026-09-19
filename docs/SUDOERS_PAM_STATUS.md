@@ -1,7 +1,7 @@
 # sudoers / PAM implementation and evidence
 
 Status: INCOMPLETE. This is the current main agent's running record for
-`SUDOERS_PAM_AGENT_PROMPT.md`. The production broker is now removed; historical
+the original sudoers/PAM implementation requirements (the retired prompt is available in Git history). The production broker is now removed; historical
 broker results below are not evidence for the replacement. No commit, push, host account mutation,
 subagent or separate task is authorized or used.
 

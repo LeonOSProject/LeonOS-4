@@ -25,7 +25,12 @@ void pty_init(void);
  */
 int pty_bind_console(uint32_t pty_id, uint32_t owner_pid);
 /**
- * @brief Deliver a normalized keyboard event to the console PTY.
+ * @brief Offer one physical keyboard event to the console terminal.
+ * @param keycode Set-1 make/break code after 0xe0 extension normalization.
+ * @param pressed Non-zero for a make code, zero for a break code.
+ *
+ * Modifier tracking is unconditional; terminal bytes reach the console PTY
+ * only while input_keyboard_owner() is INPUT_KEYBOARD_OWNER_CONSOLE.
  */
 void pty_console_key_event(uint8_t keycode, uint8_t pressed);
 /**

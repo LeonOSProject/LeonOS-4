@@ -5,6 +5,7 @@
 #include <ntclks/input.h>
 #include <ntclks/framebuffer.h>
 #include <ntclks/lock.h>
+#include <ntclks/pty.h>
 #include <ntclks/storage.h>
 #include <ntclks/time.h>
 #include <linux/input.h>
@@ -34,6 +35,46 @@ static uint32_t evdev_grab_owner[INPUT_EVDEV_DEVICES];
 static uint64_t evdev_grab_token[INPUT_EVDEV_DEVICES];
 static uint64_t evdev_next_grab_token = 1;
 static struct kernel_spinlock input_lock = KERNEL_SPINLOCK_INIT;
+/* Owner of physical keyboard input. Initialized to the console so the boot
+ * log and any pre-userland console remain usable until userland.c decides the
+ * boot mode; a single writer sets it before PID 1 is marked ready. */
+static uint32_t keyboard_owner = INPUT_KEYBOARD_OWNER_CONSOLE;
+
+/**
+ * @brief Read the physical keyboard sink selected before userland starts.
+ * @return Console or GUI ownership, loaded with acquire ordering.
+ */
+enum input_keyboard_owner input_keyboard_owner(void)
+{
+    return (enum input_keyboard_owner)__atomic_load_n(&keyboard_owner,
+                                                      __ATOMIC_ACQUIRE);
+}
+
+/**
+ * @brief Publish the boot mode's physical keyboard sink.
+ * @param owner Console or GUI sink selected by userland initialization.
+ */
+void input_set_keyboard_owner(enum input_keyboard_owner owner)
+{
+    __atomic_store_n(&keyboard_owner, (uint32_t)owner, __ATOMIC_RELEASE);
+}
+
+/**
+ * @brief Deliver one physical-key event from a keyboard driver to the kernel.
+ * @param keycode Set-1 make/break code after 0xe0 extension normalization.
+ * @param pressed Non-zero for a make code, zero for a break code.
+ *
+ * Shared entry point for PS/2 and USB HID so the hardware paths cannot
+ * diverge. Always publishes the normalized and evdev streams, and offers the
+ * event to the console PTY, which applies keyboard ownership before accepting
+ * it. Callable from interrupt context; takes the input lock internally, so
+ * callers must not hold it.
+ */
+void input_handle_scancode(uint8_t keycode, uint8_t pressed)
+{
+    input_push_key(keycode, pressed);
+    pty_console_key_event(keycode, pressed);
+}
 
 static uint64_t evdev_oldest_sequence(void)
 {
@@ -153,13 +194,14 @@ static void push_event(const struct input_raw_event *event)
     }
 }
 
-/** @brief Reset raw and evdev input streams and their device state. */
+/** @brief Reset raw and evdev input streams, device state and keyboard owner. */
 void input_init(void)
 {
     uint64_t flags;
     kernel_spin_lock_irqsave(&input_lock, &flags);
     head = 0;
     tail = 0;
+    keyboard_owner = INPUT_KEYBOARD_OWNER_CONSOLE;
     evdev_next_sequence = 1;
     evdev_mouse_buttons = 0;
     __atomic_store_n(&caps_lock_active, 0, __ATOMIC_RELAXED);

@@ -24,6 +24,20 @@ struct input_raw_event {
 };
 
 /**
+ * @brief Which terminal sink the physical keyboards currently feed as input.
+ *
+ * A keystroke may drive at most one line discipline. The GUI modes route the
+ * keyboard through the evdev stream to windowd and then to the focused
+ * application's own PTY; the tty modes hand it to the single console PTY.
+ * The mapping from LEONOS_BOOT_MODE to an owner lives in userland.c and must
+ * stay in sync with system/rootfs/usr/lib/leonos/console-session.
+ */
+enum input_keyboard_owner {
+    INPUT_KEYBOARD_OWNER_CONSOLE = 0,
+    INPUT_KEYBOARD_OWNER_GUI = 1
+};
+
+/**
  * @brief Initialize the input event queue.
  */
 void input_init(void);
@@ -39,6 +53,30 @@ void input_push_mouse_wheel(int32_t x, int32_t y, int32_t wheel, uint8_t buttons
  * @brief Enqueue a keyboard event: keycode is the key, pressed is 1 for down / 0 for up.
  */
 void input_push_key(uint8_t keycode, uint8_t pressed);
+/**
+ * @brief Deliver one physical-key event from a keyboard driver to the kernel.
+ * @param keycode Set-1 make/break code after 0xe0 extension normalization.
+ * @param pressed Non-zero for a make code, zero for a break code.
+ *
+ * Shared entry point for PS/2 and USB HID so the hardware paths cannot
+ * diverge. Always publishes the normalized and evdev streams, and offers the
+ * event to the console PTY, which applies keyboard ownership before accepting
+ * it. Callable from interrupt context; takes the input lock internally, so
+ * callers must not hold it.
+ */
+void input_handle_scancode(uint8_t keycode, uint8_t pressed);
+/**
+ * @brief Transfer physical keyboard input ownership to the console or the GUI.
+ * @param owner Sink that subsequent keystrokes feed as terminal input.
+ *
+ * Existing buffered console input is not flushed: a GUI session never fills
+ * the console queue, so no stale keystroke can be delivered on the switch.
+ */
+void input_set_keyboard_owner(enum input_keyboard_owner owner);
+/**
+ * @brief Return which sink currently owns physical keyboard input.
+ */
+enum input_keyboard_owner input_keyboard_owner(void);
 uint8_t input_caps_lock_active(void);
 /**
  * @brief Dequeue the oldest event into event; returns non-zero when one was available.

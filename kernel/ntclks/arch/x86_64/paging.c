@@ -5,6 +5,7 @@
 #include <ntclks/mm.h>
 #include <ntclks/page_cache.h>
 #include <ntclks/paging.h>
+#include <ntclks/smp.h>
 
 #define PAGE_SIZE 4096ULL
 #define PAGE_SIZE_2M 0x200000ULL
@@ -262,7 +263,9 @@ bool address_space_create(struct address_space *as)
 }
 
 /**
- * @brief Clones populated user mappings and turns private writable pages into COW pages.
+ * @brief Clone user mappings and write-protect private pages across all CPUs.
+ * Caller holds the kernel execution transaction, including on failure; remote
+ * CPUs acknowledge TLB invalidation before the child can become runnable.
  * @param source Parent address space whose writable mappings are write-protected in place.
  * @param destination Empty output address space with independently allocated page tables.
  * @return True if all mappings were cloned; false after releasing the partial destination.
@@ -320,10 +323,16 @@ bool address_space_clone_cow(struct address_space *source, struct address_space 
                     mm_free_page(phys);
                 }
                 address_space_destroy(destination);
+                /* Earlier entries in the parent may already be read-only. */
+                smp_flush_user_tlb();
                 return false;
             }
         }
     }
+    /* A CLONE_VM sibling may retain writable translations of the parent's
+     * newly COW pages. The caller holds the execution transaction; invalidate
+     * remote translations before publishing the child to the scheduler. */
+    smp_flush_user_tlb();
     return true;
 }
 

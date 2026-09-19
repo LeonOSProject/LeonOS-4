@@ -1,8 +1,28 @@
 # Caps Lock state
 
 The input layer owns the global Caps Lock state. PS/2 and USB key reports enter
-`input_push_key`; only a released-to-pressed transition changes the lock.
+the shared `input_handle_scancode` entry, which forwards to `input_push_key`;
+only a released-to-pressed transition changes the lock.
 Typematic repeats do not change it. The console reads the same state.
+
+## Physical keyboard ownership
+
+A keystroke may feed one terminal line discipline at a time. The input layer
+tracks the current owner, and `userland_init()` sets it from the same flags that
+select `LEONOS_BOOT_MODE`: `tty` and `installer-tty` give the keyboard to the
+single console PTY, while `default` and `installer` give it to the GUI session,
+which reads `/dev/input/event0` through windowd and routes it to the focused
+application's own PTY. `pty_console_key_event()` still tracks console modifiers
+in every mode, because that state is derived from make/break codes and must not
+go stale, but it only translates a key into console input while the console owns
+the keyboard. This mirrors the console-session policy, which execs `login.elf`
+in the tty modes and sleeps in the GUI modes; keep the two in sync. Left and
+right Ctrl, Shift and Alt are tracked as separate held keys so releasing one
+side cannot clear the other.
+
+The `/dev/input/event*` streams are published in every mode: they are the device
+interface, and Linux exclusivity there is `EVIOCGRAB`, which no GUI component
+currently requests.
 
 The keyboard evdev stream includes an absolute `EV_LED/LED_CAPSL` snapshot before
 each key event. Repeating the snapshot lets late readers and readers recovering

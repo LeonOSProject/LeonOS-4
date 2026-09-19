@@ -2275,8 +2275,8 @@ bool sched_capture_current_user_frame(const struct trap_frame *frame)
     /* execve has already installed a fresh address space and reset the saved
      * frame for the pending image.  The trap frame passed here still belongs
      * to the replaced program; copying it would resurrect the old RIP and
-     * register state.  Only release this CPU's reservation so the normal
-     * image-loader path can construct the new initial frame. */
+     * register state. Keep the replacement frame intact for the normal
+     * image-loader path; selection will retire this CPU's reservation. */
     if (!(current->flags & TASK_FLAG_PENDING_LOAD)) {
         if (!task_frame_valid(current, frame)) {
             kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
@@ -2287,10 +2287,8 @@ bool sched_capture_current_user_frame(const struct trap_frame *frame)
     if (current->state == TASK_RUNNING) {
         current->state = TASK_READY;
     }
-    /* The interrupted frame is fully published under scheduler_lock. The
-     * task is no longer executing on this CPU, so release the reservation and
-     * allow another eligible CPU to steal it if this CPU has better work. */
-    current->running_cpu = SCHED_CPU_NONE;
+    /* Saving registers does not retire CR3 or the caller's task pointer.
+     * Keep ownership until selection switches to the kernel page tables. */
     kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
     return true;
 }
@@ -2327,23 +2325,27 @@ void sched_quiesce_exited_current(void)
 }
 
 /**
- * @brief Select the earliest eligible virtual deadline on this CPU.
+ * @brief Retire the old CR3 and select this CPU's earliest eligible deadline.
+ * Caller holds the execution transaction with interrupts disabled and has
+ * saved the live frame. scheduler_lock serializes ownership publication.
+ * @return Reserved user task, or NULL after retiring into the kernel CR3.
  */
 struct task *sched_select_next_user(void)
 {
     struct task *best = NULL;
     uint64_t flags;
     kernel_spin_lock_irqsave(&scheduler_lock, &flags);
-    best = fair_select(scheduler_cpu_index());
+    uint32_t cpu = scheduler_cpu_index();
+    struct task *old = sched_find(current_pid[cpu]);
+    /* The execution transaction pins task metadata around this handoff.
+     * Switch CR3 before publishing the old task to remote CPUs/reapers,
+     * including the no-runnable-task path that enters the idle loop. */
+    paging_load_cr3(paging_kernel_cr3());
+    fair_stop_cpu(cpu);
+    if (old && old->running_cpu == cpu) old->running_cpu = SCHED_CPU_NONE;
+    current_pid[cpu] = 0;
+    best = fair_select(cpu);
     if (best) {
-        uint32_t cpu = scheduler_cpu_index();
-        uint32_t old_pid = current_pid[cpu];
-        if (old_pid && old_pid != best->pid) {
-            struct task *old = sched_find(old_pid);
-            if (old && old->running_cpu == cpu) {
-                old->running_cpu = SCHED_CPU_NONE;
-            }
-        }
         best->state = TASK_RUNNING;
         best->running_cpu = cpu;
         best->last_cpu = cpu;
@@ -2452,7 +2454,6 @@ void sched_wake_interruptible(struct task *task)
 void sched_mark_ready(uint32_t pid)
 {
     uint64_t flags;
-    uint32_t cpu = scheduler_cpu_index();
     kernel_spin_lock_irqsave(&scheduler_lock, &flags);
     struct task *task = sched_find(pid);
     if (!task || task->state == TASK_EXITED || task->vfork_child) {
@@ -2467,14 +2468,11 @@ void sched_mark_ready(uint32_t pid)
         kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
         return;
     }
-    if (task->running_cpu != SCHED_CPU_NONE && task->running_cpu != cpu) {
-        kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
-        return;
-    }
+    /* A wakeup may race the owner's syscall epilogue. Publish readiness,
+     * but never release another CPU's still-live frame/CR3 reservation. */
     task->wake_tick = 0;
     task->wait_window_id = 0;
     task->state = TASK_READY;
-    task->running_cpu = SCHED_CPU_NONE;
     kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
 }
 
@@ -3150,6 +3148,10 @@ int64_t sched_wait_reap(uint32_t waiter_pid, int32_t wanted_pid,
                 sched_task_fds(reap_task)->files[j].offset = 0;
                 sched_task_fds(reap_task)->files[j].aux = 0;
             }
+            /* A zombie owns its PID until wait consumes it, not until this
+             * storage slot happens to be reused. Unpublish under the same
+             * scheduler lock as reaping so kill(pid, 0) returns ESRCH now. */
+            reap_task->pid = 0;
             console_printf("[ntclks] scheduler wait reaped pid=%u by pid=%u\n",
                            reap_pid, waiter_pid);
         }
