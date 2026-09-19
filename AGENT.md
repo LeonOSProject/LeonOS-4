@@ -57,7 +57,7 @@ UEFI/GRUB
 | `system/` | 被 staging 的系统配置、字体、壁纸、证书、图标、应用资源和默认内容。 |
 | `configs/` | 动态组件清单、可提交 build profile 与默认配置。 |
 | `tools/` | 构建、Kconfig 同步、镜像、安装器、SDK、资源生成和验证脚本。 |
-| `buildsystem/` | `build.py` 的实现、任务状态、缓存、日志、本机设置及依赖。 |
+| `mk/`、`tools/host/`、`tools/build/` | Make 依赖规则、C 工具及上游适配器。 |
 | `devtools/` | 开发 SDK 输入（公共头文件、库、示例、文档、链接脚本）。 |
 | `docs/` | 架构、ABI、构建、文件系统、驱动、安全等项目文档。 |
 | `third_party/` | 通过 Git submodule 引入的上游源码；见 `.gitmodules`。 |
@@ -181,108 +181,51 @@ UI 修改必须横向检查，而不是只改一个应用。典型关联范围�
 
 ## 6. 构建系统和动态 Menuconfig
 
-### 支持的平台与入口
-
-- Linux 或 WSL 是唯一权威的交叉编译和运行验证环境。Windows 本机可用于
-  下载、编辑、Git 操作或启动 VMware，但不能把 Windows 构建输出当作最终证明。
-- 根目录 `build.py` 是唯一受支持的构建入口。不要直接维护或调用 Ninja 图；
-  不要引入平行的手工编译流程。
-- 在本工作区从 Windows 调用时，使用 WSL 路径与当前仓库：
-
-  ```powershell
-  wsl.exe --cd "/mnt/d/Projects/C/LeonOS 4" -- bash -lc "python3 build.py run <task>"
-  ```
-
-  WSL 中若 `rg` 被错误解析到不可执行的 Windows 路径，改用 `git grep` 或
-  确认 Linux `PATH` 后再搜索。
-
-### 常用任务
+根 `Makefile` 是唯一受支持的生产入口。GNU Make 负责依赖图、增量判断及 jobserver；
+`mk/*.mk` 声明规则，`tools/host/` 的 C 程序只转换数据，`tools/build/` 的短 Shell 脚本
+适配上游 configure/Make 和镜像格式工具。不得另建调度器、调用旧 Python 引擎，或让生产链
+执行 Python、Meson、Ninja。现存 Rust middlelayer 不属于被替换的构建工具。
 
 ```sh
-python3 build.py help
-python3 build.py run userland
-python3 build.py run kernel
-python3 build.py run test-unix-paths
-python3 build.py run all
-python3 build.py run image-vmdk
-python3 build.py run installer
-python3 build.py run release
-python3 build.py run run
-python3 build.py run run-debug
-python3 build.py run run-iso
-python3 build.py test component-config
-python3 build.py test all
-python3 build.py -v run image-vmdk
+make help
+make doctor
+make fetch
+make defconfig
+make -j8 all
+make menuconfig
+make olddefconfig
+make O=out/debug PROFILE=debug -j8 kernel
+make V=1 image-vmdk
+make --trace userland
+make -n installer
+make test
+make test-long
+make test-legacy
+make test-smoke
 ```
 
-- 使用 `python3 build.py why <目标>` 与 `affected <文件>` 判断增量构建范围。
-- `-v/--verbose` 会输出图、缓存、命令、工作目录、环境、子进程与 action 细节；
-  出现“卡住”或 CI 失败时先用它收集证据。
-- `client` 任务要用 `status <九位任务 ID>` 和 `log <九位任务 ID>` 查询。
-  长时间无输出不等于失败；例如 VMDK 转换可以耗时数分钟。
-- `build.py tui`、`settings`、`map` 是交互式 TUI。发现它们正在运行时，不要
-  同时发起会争用同一生成目录/配置状态的构建。
-
-### 配置来源与生成物
-
-- `configs/components.toml` 是可选应用、第三方组件、API 包、SDK 内容和桌面
-  入口的**清单真源**。组件记录决定构建、镜像 staging、入口和发行物选择。
-- `tools/generate_component_kconfig.py` 根据该清单生成根目录
-  `Kconfig.components`；不要手工修改生成文件。根 `Kconfig` 负责核心静态选项
-  并 `source` 它。
-- `tools/kconfig_sync.py`、`buildsystem/components.py` 和 `build.py` 共同将
-  Kconfig 结果解析为构建、staging、API 与 SDK 选择。新增/变更组件时必须检查
-  这四层与组件配置测试，避免出现菜单能勾选但 VMDK 不生效的情况。
-- 实际构建配置为 `buildsystem/config/leonos.conf`；根 `.config`、
-  `include/generated/autoconf*.h`、`include/generated/build_info.h` 等是配置或
-  构建过程的生成物。不要直接手改生成头文件来实现产品功能。
-- `configs/default.conf` 是可提交默认 profile，`configs/profiles/*.conf` 是
-  命名 profile。宿主机并行度、进程上限和下载重试在
-  `buildsystem/config/settings.toml` 中管理，不能塞进可提交 profile。
-
-### Profile 与临时覆写
-
-```sh
-python3 build.py run menuconfig
-python3 build.py run defconfig
-python3 build.py config list
-python3 build.py config save <name>
-python3 build.py config load <name>
-python3 build.py config reset
-python3 build.py config import <name> <file>
-python3 build.py config export <name> <file>
-python3 build.py run image-vmdk --profile <name>
-python3 build.py run image-vmdk --set CONFIG_KEY=VALUE
-```
-
-- `python3 build.py run menuconfig` 不依赖系统预装的 `kconfig-mconf`。构建图会先从
-  `third_party/kconfig-frontends` submodule 编译固定版本的 host frontend 到
-  `build/host/kconfig-frontends/`，然后运行该产物；干净 checkout 必须先执行
-  `git submodule update --init --recursive`。
-- 命令行 `--set` 只对当前构建有效且优先级最高；`--profile` 不应修改 active
-  config；profile 优先于默认配置。
-- Debug、Develop、Release 预设管理优化级别、符号、LTO、strip 和诊断。只有
-  开启高级覆写后，才分别调整这些底层选项。
-- 组件的 build/image/entry/API/SDK 选择彼此有关联但并非同义：构建表示生成
-  产物，image 表示纳入镜像，entry 表示生成桌面入口，API/SDK 表示纳入相应
-  发行物。不要仅勾选一个就假设全部发生。
-- 关闭组件只能清理其清单显式登记的受管产物和 staging 路径，绝不能广泛删除
-  未知用户文件或第三方内容。
-
-### 产物与 staging
-
-- 常规系统 staging tree 是 `build/esp/`；镜像工具从它派生 FAT32 ESP 与 ext2 根，VMDK 位于
-  `build/images/leonos4.vmdk`，普通 ISO 位于 `build/images/leonos4.iso`，
-  Installer ISO 位于 `build/images/leonos4-installer.iso`。
-- 安装器 root 是 `build/install/root.fat`；其 `/install/esp` 会复制到安装目标
-  的 FAT32 `/target/boot`，`/install/root` 会复制到 ext2 `/target`。改变程序是否进入镜像时
-  必须验证常规 VMDK、installer root 与安装后两组 payload 的对应行为。
-- 每次 OS 构建、生成或 profile 任务都可能更新构建号和
-  `include/generated/build_info.h`。不要把这种自动改动误认为用户业务逻辑；
-  若只为验证而触发递增，恢复时只能回退自己这次产生的元数据差异，绝不能覆盖
-  用户原有的构建号/时间改动。
-- `build/` 和大部分 `include/generated/` 内容应由构建系统重建；修改构建图
-  时改源脚本、Kconfig 或清单，而不是修补生成输出。
+- 默认 O 为 `out/<arch>/<profile>`，支持 `ARCH=x86_64`、`PROFILE=release|debug`。
+  修改输出目录用 O，修改目标工具用显式 CC/CXX/LD/AR/RUSTC；HOSTCC 独立。
+- `O/config/.config` 是当前配置，Kconfig、Kconfig.components 与 configs/components.toml
+  是受跟踪输入。组件 BUILD、IMAGE、ENTRY、SDK、API 选择不得混用；required 组件不可关闭。
+  修改组件元数据时保持 Kconfig.components 同步，运行组件 fixture。
+- 生成的 C/Rust 配置和版本头写入 O。生产构建不得改写源码目录、递增版本计数，或使用
+  当前时钟/随机 UUID 破坏可重现性；SOURCE_DATE_EPOCH 默认来自提交时间。
+- 下载只能出现在显式 fetch；生产消费已校验缓存，不允许隐式联网。依赖锁是唯一下载身份来源。
+- 新源文件、删除源文件、编译/链接参数变化、多输出成员缺失必须正确触发重建。
+  对目录 stage 使用完整成员清单，临时树完成并校验后再发布，不能以 stamp 代替存在性检查。
+- 同一 O 的真实构建互斥，不手工伪造 LEONOS_BUILD_OWNER。不同 O 可并行。
+  `-n/-q` 不重建被包含的配置，避免干扰持锁构建；首次准确预览前先 defconfig。
+- `all` 包括 kernel、userland、runtime、sdk、apk-repo、image-vmdk、iso、installer；
+  `release` 再加本地 rpr-pages。run/run-debug/run-iso/run-installer 只负责运行对应产物。
+- SDK 必须用随包 C 编译器驱动实际编译/链接，覆盖路径含空格的重定位和静态/动态程序。
+  APK 必须保留真实上游数据库、签名、依赖和文件所有权；本地 world 请求不可精确锁版本。
+- 更新已安装系统必须保留 Alpine 包与本地配置；正式发布包版本必须递增。
+  新 APK 的版本代际为 1，兼容旧 0.time_ns 版本升级；脏工作区内容哈希本身不保证时序。
+- clean/distclean 仅清有所有权标记的 O，拒绝 symlink/源码根/不明目录，保留下载缓存。
+  不删除用户旧 build/、buildsystem/cache/、buildsystem/deps/、ISO 或 VMDK。
+- Python 仅允许现存非生产 OS 测试、维护工具及上游参考代码。详见
+  `docs/build/legacy-removal.md`；不以保留的参考实现冒充新链验收。
 
 ## 7. 验证要求
 
@@ -291,7 +234,7 @@ python3 build.py run image-vmdk --set CONFIG_KEY=VALUE
 | 修改类型 | 至少应验证 | 完成标准 |
 | --- | --- | --- |
 | 文档/单文件说明 | 定向检查 + `git diff --check` | 内容正确、无格式/空白问题。 |
-| 构建脚本/Kconfig/组件清单 | `test component-config`、相关 `build.py run` | 菜单、同步和目标选择真实生效。 |
+| 构建脚本/Kconfig/组件清单 | `make test`、相关 Make 目标 | 菜单、同步和目标选择真实生效。 |
 | 内核/中间层/ABI/libc | 受影响目标编译 + 相关用户态重建 | 编译链接、头文件与调用链一致。 |
 | 应用/UI/主题/字体 | 受影响应用、VMDK/ESP 构建 + QEMU | GUI 可见行为、交互和日志被证明。 |
 | VMware 专属显示/驱动 | VMware 启动与可见操作 | 不以 QEMU 成功替代 VMware 证明。 |
@@ -368,7 +311,7 @@ int subsystem_handle(const struct request *request, struct result *out_result);
 1. `git status --short`，查看是否有用户进行中的工作。
 2. `git diff -- <相关路径>`，确定当前改动与请求关系。
 3. `rg` 或 `git grep` 找到从 UI/API/构建到 staging 的完整调用链。
-4. 用 `build.py why`、`affected` 和 `-v` 证明实际构建路径。
+4. 用 `make --trace`、`make -n` 和 `V=1` 证明实际构建路径。
 5. 以最小相关目标编译；必要时构建 VMDK/Installer。
 6. 在对应的 QEMU 或 VMware 平台进行运行/可视验证。
 7. `git diff --check`，并在交付中区分已验证与未验证项。

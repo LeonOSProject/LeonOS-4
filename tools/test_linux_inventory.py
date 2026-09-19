@@ -23,18 +23,6 @@ def host():
     run(['cc','-std=c11','-O1','-g','-fsanitize=address,undefined','-ffunction-sections','-fdata-sections','-Wl,--gc-sections',
          '-Iinclude','-Iinclude/uapi','-Ikernel/ntclks/include','tools/tests/linux_inventory_test.c','-o',executable])
     run([executable])
-    import sys
-    sys.path.insert(0,str(ROOT))
-    from buildsystem.core.runner import artifact_mtime
-    with tempfile.TemporaryDirectory(prefix='leonos-root-link-') as directory:
-        link=Path(directory)/'mtab'; link.symlink_to('../proc/mounts')
-        assert artifact_mtime(link)==link.lstat().st_mtime_ns
-        target=Path(directory)/'payload'; target.write_text('payload')
-        link.unlink(); link.symlink_to('payload')
-        later=link.lstat().st_mtime_ns+1000000
-        os.utime(target,ns=(later,later))
-        assert artifact_mtime(link)==later
-    print('PASS build artifacts: runtime-only symlink and target modification')
 
 def guest(args):
     from make_live_root import make_live_tree

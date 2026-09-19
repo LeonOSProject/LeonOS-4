@@ -30,11 +30,12 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential ninja-build meson clang libclang-rt-dev llvm lld \
+            build-essential clang libclang-rt-dev llvm lld \
             grub-efi-amd64-bin grub-pc-bin grub-common xorriso mtools \
-            dosfstools e2fsprogs fakeroot gdisk qemu-utils python3 python3-pil \
+            dosfstools e2fsprogs libext2fs-dev fdisk fakeroot gdisk qemu-utils zip \
             git make bison flex bc pkg-config autoconf automake libtool \
-            libtool-bin gawk ncurses-bin exfatprogs openssl
+            libtool-bin gawk gperf gettext libncurses-dev ncurses-bin exfatprogs openssl perl
+          msgfmt --version
 
       - name: Install Rust
         run: |
@@ -65,18 +66,19 @@ jobs:
           LEONOS_APK_SIGNING_KEY: ${{ steps.signing_key.outputs.path }}
         run: |
           set -euo pipefail
-          python3 ./build.py run defconfig
-          python3 ./build.py run rpr-pages
+          make fetch
+          make defconfig
+          make -j"$(nproc)" APK_SIGNING_KEY="$LEONOS_APK_SIGNING_KEY" rpr-pages
 
       - name: Verify publication boundary
         run: |
           set -euo pipefail
-          test -s build/rpr-pages/apk/packages.adb
-          test -s build/rpr-pages/apk/leonos-rpr.rsa.pub
-          test -s build/rpr-pages/kernel/kernel.sys
-          test -s build/rpr-pages/kernel/middlelayer.sys
-          test -s build/rpr-pages/kernel/release.txt
-          if grep -R -E -- 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' build/rpr-pages; then
+          test -s out/x86_64/release/rpr-pages/apk/packages.adb
+          test -s out/x86_64/release/rpr-pages/apk/leonos-rpr.rsa.pub
+          test -s out/x86_64/release/rpr-pages/kernel/kernel.sys
+          test -s out/x86_64/release/rpr-pages/kernel/middlelayer.sys
+          test -s out/x86_64/release/rpr-pages/kernel/release.txt
+          if grep -R -E -- 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' out/x86_64/release/rpr-pages; then
             echo 'Private key material reached the Pages directory' >&2
             exit 1
           fi
@@ -93,7 +95,7 @@ jobs:
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: build/rpr-pages
+          path: out/x86_64/release/rpr-pages
 
       - name: Deploy GitHub Pages
         id: deployment

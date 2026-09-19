@@ -17,6 +17,7 @@ for language, compiler in (("c", "clang"), ("c++", "clang++")):
     # include order, and C++ checks cover SDK application consumers.
     for source in headers:
         subprocess.run([compiler, "-x", language, "-fsyntax-only", "-Werror",
-                        "-I", str(ROOT / "include/uapi"), str(source)], check=True,
+                        "-I", str(ROOT / "include/uapi"), "-I", str(ROOT / "include"),
+                        str(source)], check=True,
                        stdout=subprocess.DEVNULL)
 print(f"PASS shared syscall ownership and {len(headers)} standalone C/C++ UAPI headers")

@@ -60,8 +60,6 @@ jobs:
 
           sudo apt-get install -y \
             build-essential \
-            ninja-build \
-            meson \
             clang \
             libclang-rt-dev \
             llvm \
@@ -73,16 +71,20 @@ jobs:
             mtools \
             dosfstools \
             e2fsprogs \
+            libext2fs-dev \
+            fdisk \
+            zip \
+            openssl \
             fakeroot \
             gdisk \
             qemu-utils \
-            python3 \
-            python3-pil \
             git \
             make \
             bison \
             flex \
             gperf \
+            gettext \
+            perl \
             libncurses-dev \
             bc \
             pkg-config \
@@ -107,12 +109,12 @@ jobs:
           clang --version
           ld.lld --version
           llvm-ar --version
-          meson --version
           grub-mkstandalone --version
           grub-mkrescue --version
           qemu-img --version
           rustc --version
           cargo --version
+          msgfmt --version
 
       - name: Verify third-party sources
         run: |
@@ -138,11 +140,12 @@ jobs:
           : "${KCONFIG_LICENSE_SERVER_URL:=http://127.0.0.1:30301}"
           : "${KCONFIG_LICENSE_DEBUG_LOG:=true}"
 
-          config_path=buildsystem/config/leonos.conf
+          config_path=out/x86_64/release/config/.config
           # Always start from the checked-in defconfig.  This also runs the
           # component/Kconfig synchronizer, so removed symbols cannot leak
           # into a fresh CI checkout from a stale workspace configuration.
-          python3 ./build.py run defconfig
+          make fetch
+          make defconfig
 
           set_config() {
             local key=$1
@@ -183,13 +186,10 @@ jobs:
       - name: Verify dynamic component configuration
         run: |
           set -euo pipefail
-
-          python3 tools/test_component_config.py
-          python3 build.py info release --profile default >/dev/null
-          python3 build.py info app:stardusthello --profile default \
-            --set CONFIG_LEON_COMPONENT_LIB_STARDUSTUI_BUILD=n >/dev/null
-          if python3 build.py info userland --profile default \
-              --set CONFIG_NOT_A_REAL_OPTION=y; then
+          make olddefconfig
+          sh tests/build/test-components.sh
+          sh tests/build/test-components-metadata.sh
+          if make CONFIG_NOT_A_REAL_OPTION=y kernel; then
             echo "unknown CONFIG override unexpectedly succeeded" >&2
             exit 1
           fi
@@ -198,18 +198,16 @@ jobs:
         run: |
           set -euo pipefail
 
-          python3 ./build.py run image-vmdk
-          python3 ./build.py run image-iso
-          python3 ./build.py run installer
+          make -j"$(nproc)" all
 
       - name: Verify generated images
         run: |
           set -euo pipefail
 
-          test -s build/images/leonos4.vmdk
-          test -s build/images/leonos4.iso
-          test -s build/images/leonos4-installer.iso
-          qemu-img info build/images/leonos4.vmdk
+          test -s out/x86_64/release/images/leonos4.vmdk
+          test -s out/x86_64/release/images/leonos4-live.iso
+          test -s out/x86_64/release/images/leonos4-installer.iso
+          qemu-img info out/x86_64/release/images/leonos4.vmdk
 
       # ---------- 新增：生成构建摘要 Markdown ----------
       - name: Generate build summary
@@ -233,7 +231,7 @@ jobs:
 
           ## Generated Artifacts
           - leonos4.vmdk
-          - leonos4.iso
+          - leonos4-live.iso
           - leonos4-installer.iso
           - leonos.conf
           - build-summary.md (this file)
@@ -252,10 +250,10 @@ jobs:
         with:
           name: LeonOS-4-${{ github.run_number }}
           path: |
-            build/images/leonos4.vmdk
-            build/images/leonos4.iso
-            build/images/leonos4-installer.iso
-            buildsystem/config/leonos.conf
+            out/x86_64/release/images/leonos4.vmdk
+            out/x86_64/release/images/leonos4-live.iso
+            out/x86_64/release/images/leonos4-installer.iso
+            out/x86_64/release/config/.config
             build-summary.md                       # 包含摘要文档
           if-no-files-found: error
           compression-level: 0

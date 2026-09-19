@@ -9,89 +9,59 @@
 感谢 [@VasilyZa](https://github.com/VasilyZa/) 对 LeonOS 4 的 Linux ABI 和 musl libc 等等有着至高无上的贡献，他的贡献将会被永远记住。
 
 ## 编译源代码
-> 本项目只能在 Linux 和 WSL 平台编译
 
-首次克隆必须递归获取第三方子模块：
+构建环境为 Linux/WSL，入口为 GNU Make 4.3+。项目自己的构建工具使用 C，生产构建不运行
+Python、Meson 或 Ninja；已有 Rust middlelayer 继续使用 Rust 工具链。
 
-```bash
-git clone --recurse-submodules https://github.com/Leonmmcoset/LeonOS-4.git
-cd LeonOS-4
-```
+Debian/Ubuntu 的典型依赖：
 
-Ubuntu 或 WSL 需要安装完整构建依赖：
-
-```bash
-sudo apt-get update
-sudo apt-get install -y \
-  build-essential ninja-build meson clang llvm lld \
-  grub-efi-amd64-bin grub-pc-bin grub-common xorriso \
-  mtools dosfstools e2fsprogs fakeroot gdisk qemu-utils python3 python3-pil \
-  git make bison flex bc pkg-config curl ca-certificates openssl
-
-# Requires rustup; install it from https://rustup.rs when it is unavailable.
-rustup toolchain install stable --profile minimal
-rustup default stable
+```sh
+sudo apt install build-essential clang lld llvm libclang-rt-dev \
+  autoconf automake libtool libtool-bin pkg-config bison flex gperf gettext libncurses-dev \
+  grub-efi-amd64-bin grub-common xorriso mtools dosfstools e2fsprogs libext2fs-dev \
+  fakeroot fdisk qemu-utils qemu-system-x86 ovmf zip curl xz-utils patch git
 rustup target add x86_64-unknown-none
 ```
 
-构建下载默认直连，不要求运行本机代理服务，也不绑定任何代理端口。
-需要代理时可自行设置标准的 `http_proxy`、`https_proxy`、`all_proxy` 和
-`no_proxy` 环境变量；构建脚本不会覆盖它们。下载仍保留 TLS、校验和及签名验证。
-
-编译命令：
-
-```bash
-python3 build.py run image-vmdk
-```
-编译出来的产物位于`build/images/leonos4.vmdk`，可以通过
-```
-python3 build.py run run
-```
-来通过 QEMU + KVM 运行操作系统。
-
-常规 VMDK 使用 GPT 双分区：FAT32 ESP 存放 UEFI/GRUB、loader、kernel 和
-middlelayer，ext2 分区作为运行时 `/` 根目录。FAT32 仍用于 ESP、安装器
-ramdisk、旧镜像兼容和可移动介质；构建 ext2 镜像需要 `e2fsprogs` 提供的
-`mke2fs`。
-
-`build.py` 是唯一受支持的构建入口，不再兼容 Ninja。常用命令包括：
-
-```bash
-python3 build.py help
-python3 build.py run all
-python3 build.py gen build/userland/browser.elf
-python3 build.py why build/userland/browser.elf
-python3 build.py affected userland/apps/browser/navigation.c
-python3 build.py profile all
-python3 build.py cache stats
-python3 build.py why kernel --json
-python3 build.py test all
-python3 build.py client run image-vmdk
-python3 build.py -v run image-vmdk
-python3 build.py --theme=linux run image-vmdk
-python3 build.py run image-vmdk --theme=meson
-python3 build.py --theme=cargo run image-vmdk
-python3 build.py status <九位任务ID>
+```sh
+git submodule update --init --recursive
+make help
+make doctor
+make fetch
+make defconfig
+make -j8 all
+make run
 ```
 
-构建产物统一位于`build/`；构建核心、依赖缓存、配置、任务状态与日志位于
-`buildsystem/`。克隆仓库时应使用 `git clone --recurse-submodules`，已有工作树可运行
-`git submodule update --init --recursive` 补齐第三方源码。通过`python3 build.py settings`
-编辑并行设置；系统 Kconfig 配置继续使用 `python3 build.py run menuconfig`。该命令会先从
-`third_party/kconfig-frontends` 构建仓库固定版本的 `kconfig-mconf` 到
-`build/host/kconfig-frontends/`，再启动配置界面，不依赖系统安装的 `kconfig-mconf`。
-查询命令默认输出可读文本；传入`--json`
-（可置于命令前后）才输出机器可读 JSON。
-`-v` 或 `--verbose` 同样可置于命令前后；它会展开构建图、缓存命中/失效原因、
-每个目标的输入输出、实际命令、工作目录、显式环境覆盖、子进程输出和 action 处理细节。
-后台任务使用 `python3 build.py client -v run image-vmdk`，详细内容会写入该任务的日志。
-构建日志默认使用 LeonOS 原有主题；也可用 `--theme=linux`、`--theme=meson` 或
-`--theme=cargo` 切换为 Linux Kbuild、Meson/Ninja 或 Cargo 风格。主题会传递给后台
-`client` worker，日志文件始终保存为不含 ANSI 控制序列的纯文本。
-非默认主题不会追加 LeonOS 自定义的 `Result:` 汇总块，以保持对应上游工具的原生收尾格式。
+`make fetch` 是唯一联网阶段，校验 `configs/dependencies.lock.json` 中的摘要。
+构建缺缓存时会报错，不会暗中下载。`make doctor` 实际检查目标编译、compiler-rt、Rust target
+及镜像工具。Clang 必须包含 x86_64 compiler-rt builtins；仅有头文件不够。
 
-版本元数据头文件保留在`include/generated/build_info.h`，`python3 build.py run clean`
-不会删除它。每次 OS 构建、生成或 profile 任务都会递增构建号；清理、配置和纯主机测试不递增。
+常用目标：`kernel`、`userland`、`runtime`、`sdk`、`rootfs`、`apk-repo`、`image-vmdk`、
+`iso`、`installer`、`rpr-pages`。`all` 构建 SDK 与三类镜像；`release` 再包含本地 RPR 目录，
+不自动上传。`run-iso`、`run-installer` 启动对应镜像，`QEMU_KVM=0` 可使用 TCG。
+
+默认产物在 `out/x86_64/release/`：
+
+- `images/leonos4.vmdk`、`images/leonos4-live.iso`、`images/leonos4-installer.iso`
+- `packages/LeonOS4-Developer-SDK.zip`、`packages/leonos-musl-sdk.tar.gz`
+- `packages/apk/repository/`、`rootfs/manifest.json`、`rpr-pages/`
+
+`make menuconfig` 编辑所选 `O/config/.config`；`make olddefconfig` 保留选择并补全新项。
+用 `O=out/my-build PROFILE=debug` 隔离不同配置。`V=1` 显示命令，`make --trace` 和
+`make -n` 检查依赖；首次准确预览前先 `make defconfig`。同一 O 的两个真实构建互斥。
+
+`SOURCE_DATE_EPOCH` 默认取提交时间，`BUILD_ID` 可显式指定数字版本；构建不修改源码版本头或
+递增计数。签名密钥默认保存在用户目录，可用 `APK_SIGNING_KEY` 指定，绝不会放入发行目录。
+新发行 APK 使用 `1.<epoch>.<content-id>-r0`，排序高于旧 `0.<time_ns>-r0`。
+正式发行应使用递增提交时间或显式递增 `APK_BUILD_VERSION`；同一提交的脏工作区内容哈希不保证排序。
+
+验证入口为 `make test`、`make test-long`、`make test-legacy` 和 `make test-smoke`。
+后两者分别运行显式 Python OS 回归和真实 QEMU 启动；主机产物生成成功不等于来宾验收通过。
+本机 GRUB/OVMF 在 loader 之前的页错误及其验证边界见 [验收记录](docs/build/verification.md)。
+
+`make clean` 清产物并保留配置，`distclean` 同时清配置；均保留下载缓存和旧 `build/` 镜像。
+详细规则见 [构建系统文档](docs/BUILDSYSTEM.md)。
 
 ## 界面样式
 
@@ -103,8 +73,8 @@ python3 build.py status <九位任务ID>
 
 - `arch/`：各架构相关说明和预留代码（当前主要支持 x86_64）。
 - `boot/`：GRUB 配置、启动汇编和早期 loader 源代码。
-- `build.py`：唯一受支持的构建入口。
-- `buildsystem/`：构建图、缓存、依赖、任务状态、日志和本机设置实现。
+- `Makefile` 与 `mk/`：GNU Make 构建入口和依赖规则。
+- `tools/host/`、`tools/build/`：C 数据工具和短上游构建适配器。
 - `configs/`：组件清单、默认配置和可提交的构建 profile。
 - `devtools/`：面向应用开发的 SDK 头文件、库、链接脚本、示例和文档。
 - `docs/`：架构、ABI、构建、文件系统、安全和工具文档。

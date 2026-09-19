@@ -1,4 +1,13 @@
-build/
+# Anchored: the output tree is only ever <root>/build. An unanchored rule also
+# matched docs/build/, tests/build/ and tools/build/, which silently made the
+# migration documents and the build contract tests uncommittable.
+/build/
+# The new Make build writes out/<arch>/<profile>; like /build/ it is generated
+# and must never be tracked.
+/out/
+# Verified downloads shared by every arch and profile. `distclean` deliberately
+# keeps it, and it is tens of megabytes of upstream tarballs.
+/cache/
 buildsystem/firmware/
 buildsystem/state/*
 !buildsystem/state/build_number.txt

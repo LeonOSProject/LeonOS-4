@@ -3,10 +3,10 @@
 
 SDK_ROOT ?= $(CURDIR)
 ifeq ($(origin CC), default)
-CC := python3 "$(SDK_ROOT)/bin/leonos-musl-cc"
+CC := "$(SDK_ROOT)/bin/leonos-musl-cc"
 endif
 ifeq ($(origin CXX), default)
-CXX := python3 "$(SDK_ROOT)/bin/leonos-musl-cc"
+CXX := "$(SDK_ROOT)/bin/leonos-musl-cc"
 endif
 
 APP ?= examples/helloworld
@@ -73,13 +73,13 @@ APP_LIBS += $(LUA_LIB)
 else
 APP_LIBS += $(LUA_SO)
 endif
+endif
 
 ifeq ($(USE_SQLITE),1)
 ifeq ($(STATIC),1)
 APP_LIBS += $(SQLITE_LIB)
 else
 APP_LIBS += $(SQLITE_SO)
-endif
 endif
 endif
 

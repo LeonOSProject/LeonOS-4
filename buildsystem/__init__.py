@@ -1,1 +1,0 @@
-"""LeonOS BuildSystem package."""

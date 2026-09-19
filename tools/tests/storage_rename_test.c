@@ -231,7 +231,7 @@ int main(int argc, char **argv)
     assert(ext2_lookup_path("/right", &target) == 0 && target.type == LEONOS_FS_TYPE_DIR);
     assert(ext2_write_file("/socket", "", 0) == 0);
     assert(ext2_lookup_path("/socket", &source) == 0);
-    assert(ext2_mark_socket("/socket", &source) == 0);
+    assert(ext2_mark_special("/socket", &source, LINUX_S_IFSOCK) == 0);
     assert(ext2_lookup_path("/socket", &source) == 0 && source.type == LEONOS_FS_TYPE_SOCKET);
     assert(ext2_write_file("/replaced", "old", 3) == 0);
     assert(ext2_rename("/socket", "/replaced") == 0);
@@ -240,7 +240,7 @@ int main(int argc, char **argv)
     assert(ext2_lookup_path("/socket-persisted", &target) == 0 && target.type == LEONOS_FS_TYPE_SOCKET);
     assert(ext2_write_file("/deleted-socket", "", 0) == 0);
     assert(ext2_lookup_path("/deleted-socket", &source) == 0);
-    assert(ext2_mark_socket("/deleted-socket", &source) == 0 && ext2_unlink("/deleted-socket") == 0);
+    assert(ext2_mark_special("/deleted-socket", &source, LINUX_S_IFSOCK) == 0 && ext2_unlink("/deleted-socket") == 0);
     assert(fclose(disk) == 0);
     puts("ext2 rename: replacement, inode identity, type errors, empty-directory rules PASS");
     return 0;
