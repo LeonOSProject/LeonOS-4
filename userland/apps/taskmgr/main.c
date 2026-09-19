@@ -1443,6 +1443,52 @@ static void present_taskmgr(uint32_t window_id, struct leonos_ui_surface *ui)
     leonos_gui_present_window(window_id, view_w, view_h, TASKMGR_MAX_W, pixels);
 }
 
+/* Keep thumb geometry identical to leonos_ui_vscrollbar. Capture the drag
+ * until release, including motion outside the narrow scrollbar rectangle. */
+static int process_scroll_event(const struct leonos_gui_app_event *event)
+{
+    static int dragging;
+    static int32_t grab_offset;
+    uint32_t h = view_h > 104 ? view_h - 104 : 24;
+    uint32_t arrow = 18 < h / 2 ? 18 : h / 2;
+    uint32_t track = h - 2 * arrow;
+    uint32_t page = process_tree.visible_rows;
+    uint32_t count = process_tree.visible_count;
+    if (event->type == LEONOS_GUI_APP_EVENT_BLUR ||
+        event->type == LEONOS_GUI_APP_EVENT_RESIZE ||
+        active_tab != TASKMGR_TAB_PROCESSES) dragging = 0;
+    if (event->type != LEONOS_GUI_APP_EVENT_MOUSE_MOVE &&
+        event->type != LEONOS_GUI_APP_EVENT_MOUSE_BUTTON) return 0;
+    if (!(event->buttons & 1U)) { dragging = 0; return 0; }
+    if (count <= page || track < 8) { dragging = 0; return 0; }
+    uint32_t thumb = track * page / count;
+    if (thumb < 12) thumb = 12;
+    if (thumb > track) thumb = track;
+    uint32_t range = track - thumb;
+    uint32_t max = count - page;
+    uint32_t top = 74 + arrow;
+    uint32_t offset = range * process_tree.scroll / max;
+    if (!dragging) {
+        if (event->type != LEONOS_GUI_APP_EVENT_MOUSE_BUTTON ||
+            !hit_rect_i(event->x, event->y, view_w - 26, 74, 18, h)) return 0;
+        if (event->y >= (int32_t)(top + offset) &&
+            event->y < (int32_t)(top + offset + thumb)) {
+            grab_offset = event->y - (int32_t)(top + offset);
+            dragging = 1;
+        } else {
+            leonos_ui_vscrollbar_handle_mouse(&process_tree.scroll, count, page,
+                                              view_w - 26, 74, 18, h,
+                                              event->x, event->y);
+            return 1;
+        }
+    }
+    int32_t position = event->y - (int32_t)top - grab_offset;
+    if (position < 0) position = 0;
+    if ((uint32_t)position > range) position = (int32_t)range;
+    if (range) process_tree.scroll = (uint32_t)((uint64_t)position * max / range);
+    return 1;
+}
+
 int main(void)
 {
     struct leonos_ui_surface ui;
@@ -1473,6 +1519,10 @@ int main(void)
                                          context_menu_animating ? 20U : LEONOS_GUI_IDLE_WAIT_MS) > 0) {
             if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
                 return 0;
+            }
+            if (!menu_open && !context_menu_active && process_scroll_event(&event)) {
+                present_taskmgr((uint32_t)window_id, &ui);
+                continue;
             }
             if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 3u)) {
                 if (event.buttons & 2u) {

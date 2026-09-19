@@ -23,3 +23,5 @@ __pycache__/
 /LeonOS4-Developer-SDK.zip
 .trae-html-share-packages/
 .zig_cache/
+# Reference Source Code
+/linux/
