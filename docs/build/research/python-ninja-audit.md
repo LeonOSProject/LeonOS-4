@@ -1,6 +1,6 @@
 # Python / Ninja / Meson 调用点审计 + Linux-PAM 1.7.2 Makefile 移植技术底稿
 
-生成时间：2026-09-19。范围：`docs/superpowers/plans/2026-09-19-make-c-build-rewrite.md` §2 末两段、§3、§9、§12 P0。
+生成时间：2026-09-19。范围：原构建重建计划（已清理，历史版本可从 Git 查看） §2 末两段、§3、§9、§12 P0。
 方法：只读检查（`ls`/`grep`/`find`/`file`/`diff`/AST 解析/读取既有构建产物）。**未修改任何源码，未运行 `build.py`。**
 
 标注约定：

@@ -44,6 +44,15 @@ struct pty_session {
 static struct pty_session sessions[PTY_MAX];
 static uint32_t next_generation;
 static uint32_t console_pty_id;
+/* Set-1 modifier keys currently held, tracked per physical key so the derived
+ * shift/ctrl/alt levels survive either side being released first. */
+#define CONSOLE_KEY_LSHIFT (1U << 0)
+#define CONSOLE_KEY_RSHIFT (1U << 1)
+#define CONSOLE_KEY_LCTRL  (1U << 2)
+#define CONSOLE_KEY_RCTRL  (1U << 3)
+#define CONSOLE_KEY_LALT   (1U << 4)
+#define CONSOLE_KEY_RALT   (1U << 5)
+static uint32_t console_modifier_keys;
 static uint8_t console_shift_down;
 static uint8_t console_ctrl_down;
 static uint8_t console_alt_down;
@@ -163,6 +172,7 @@ static int pty_canonical_mode(const struct pty_session *session)
 void pty_init(void)
 {
     console_pty_id = 0;
+    console_modifier_keys = 0;
     console_shift_down = 0;
     console_ctrl_down = 0;
     console_alt_down = 0;
@@ -257,34 +267,78 @@ static int console_key_to_bytes(uint8_t keycode, char *buffer, uint32_t *length)
     return 1;
 }
 
+/**
+ * @brief Record a modifier make/break code and refresh the derived key levels.
+ * @param held Bit identifying this physical modifier key.
+ * @param pressed Non-zero for a make code, zero for a break code.
+ *
+ * Only the keyboard interrupt path on the CPU owning that IRQ calls this, so
+ * the held-key set needs no lock. Tracking left and right sides separately
+ * keeps, for example, a released left Ctrl from clearing a still-held right
+ * Ctrl, which would otherwise turn the next plain letter into a control byte.
+ */
+static void console_update_modifier(uint32_t held, uint8_t pressed)
+{
+    if (pressed) {
+        console_modifier_keys |= held;
+    } else {
+        console_modifier_keys &= ~held;
+    }
+    console_shift_down = (uint8_t)((console_modifier_keys &
+                                    (CONSOLE_KEY_LSHIFT | CONSOLE_KEY_RSHIFT)) != 0);
+    console_ctrl_down = (uint8_t)((console_modifier_keys &
+                                   (CONSOLE_KEY_LCTRL | CONSOLE_KEY_RCTRL)) != 0);
+    console_alt_down = (uint8_t)((console_modifier_keys &
+                                  (CONSOLE_KEY_LALT | CONSOLE_KEY_RALT)) != 0);
+}
+
+/**
+ * @brief Offer one physical keyboard event to the console terminal.
+ * @param keycode Set-1 make/break code after 0xe0 extension normalization.
+ * @param pressed Non-zero for a make code, zero for a break code.
+ * @return Nothing.
+ *
+ * Modifier tracking and the diagnostic escape hatch run for every event
+ * because they neither enqueue bytes nor signal a process. Translating the key
+ * to terminal bytes and feeding the console PTY's line discipline happens only
+ * while the console owns the keyboard, so a GUI session cannot also drive the
+ * console's foreground group. Called from interrupt context with the console
+ * PTY already bound by pty_bind_console().
+ */
 void pty_console_key_event(uint8_t keycode, uint8_t pressed)
 {
     struct pty_session *session = find_session(console_pty_id);
     char bytes[8];
     uint32_t length;
-    if (keycode == 42 || keycode == 54) {
-        console_shift_down = pressed ? 1 : 0;
-        return;
-    }
-    if (keycode == 58) {
-        return;
-    }
-    if (keycode == 29 || keycode == 116) {
-        console_ctrl_down = pressed ? 1 : 0;
-        return;
-    }
-    if (keycode == 56 || keycode == 115) {
-        console_alt_down = pressed ? 1 : 0;
-        return;
+    switch (keycode) {
+    case 42: console_update_modifier(CONSOLE_KEY_LSHIFT, pressed); return;
+    case 54: console_update_modifier(CONSOLE_KEY_RSHIFT, pressed); return;
+    case 58: return; /* Caps Lock: the input layer already applied the state. */
+    case 29: console_update_modifier(CONSOLE_KEY_LCTRL, pressed); return;
+    case 116: console_update_modifier(CONSOLE_KEY_RCTRL, pressed); return;
+    case 56: console_update_modifier(CONSOLE_KEY_LALT, pressed); return;
+    case 115: console_update_modifier(CONSOLE_KEY_RALT, pressed); return;
+    default: break;
     }
     /* Diagnostic escape hatch for distinguishing a frozen display from a
      * stalled TTY process.  console_write_tty_len() deliberately bypasses
      * kernel-log timestamps and writes the same bytes to the framebuffer,
-     * serial console, and log buffer. */
+     * serial console, and log buffer.  Kept available in every mode because
+     * it produces no terminal input and sends no signal. */
     if (pressed && keycode == 88 && console_ctrl_down &&
         console_alt_down && console_shift_down) {
         static const char test_message[] = "\r\nTest message\r\n";
         console_write_tty_len(test_message, sizeof(test_message) - 1U);
+        return;
+    }
+    if (input_keyboard_owner() != INPUT_KEYBOARD_OWNER_CONSOLE) {
+        /* A GUI session owns the keyboard: windowd reads the evdev stream and
+         * the focused application feeds its own terminal.  Delivering the same
+         * keystroke here would drive a second, unattended line discipline --
+         * in GUI modes console-session only sleeps, so the console's
+         * foreground group is still PID 1 and Ctrl-C in a GUI terminal becomes
+         * SIGINT to init, which runs its ctrlaltdel action and shuts the
+         * desktop down. */
         return;
     }
     if (!pressed || !session || !console_key_to_bytes(keycode, bytes, &length)) {

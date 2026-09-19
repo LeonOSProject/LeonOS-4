@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 #define TITLEBAR_DOUBLE_CLICK_MS 350UL
 
@@ -11,6 +12,8 @@ static uint8_t last_title_click_valid;
 static uint8_t last_title_click_window;
 static unsigned long last_title_click_ms;
 static int startup_worker_pid;
+static pid_t power_worker_pid;
+static uint8_t power_worker_action;
 
 void minimize_window(uint8_t id)
 {
@@ -620,24 +623,63 @@ int handle_login_lock_mouse_wheel(uint32_t x, uint32_t y, int32_t wheel, uint8_t
     return login_lock_active ? 1 : 0;
 }
 
+/**
+ * @brief Submit a privileged power request without blocking the compositor.
+ * @param action Reboot or shutdown; duplicate pending requests are ignored.
+ * Sudo may need an askpass window, so only the forked worker may wait for it.
+ */
+static void desktop_power_begin(uint8_t action)
+{
+    if (power_worker_action) return;
+    pid_t pid = fork();
+    if (pid < 0) {
+        desktop_show_message(leonos_i18n("Power request failed", "电源请求失败"), strerror(errno));
+        return;
+    }
+    if (!pid) {
+        int result = action == POWER_CONFIRM_REBOOT
+            ? leonos_system_reboot() : leonos_system_shutdown();
+        int error = errno;
+        _exit(result < 0 ? (error > 0 && error < 126 ? error : EIO) : 0);
+    }
+    power_worker_pid = pid;
+    power_worker_action = action;
+    fprintf(stderr, "[desktop.elf] %s requested from Start menu worker=%d\n",
+            action == POWER_CONFIRM_REBOOT ? "restart" : "shutdown", (int)pid);
+}
+
+/** @brief Collect a power worker without preventing askpass/window events. */
+static void desktop_power_update(void)
+{
+    if (power_worker_pid <= 0) return;
+    int status = 0;
+    pid_t result = waitpid(power_worker_pid, &status, WNOHANG);
+    if (!result || (result < 0 && errno == EINTR)) return;
+    int error = result < 0 ? errno :
+        (WIFEXITED(status) ? WEXITSTATUS(status) : EIO);
+    power_worker_pid = 0;
+    if (!error) {
+        /* PID 1 has accepted the request. Keep duplicate actions disabled
+         * while OpenRC stops services; the compositor remains responsive. */
+        fprintf(stderr, "[desktop.elf] power request accepted by helper\n");
+        return;
+    }
+    uint8_t action = power_worker_action;
+    power_worker_action = POWER_CONFIRM_NONE;
+    fprintf(stderr, "[desktop.elf] power request failed: %s\n", strerror(error));
+    desktop_show_message(action == POWER_CONFIRM_REBOOT
+        ? leonos_i18n("Restart failed", "重启失败")
+        : leonos_i18n("Shutdown failed", "关机失败"), strerror(error));
+}
+
 void desktop_reboot(void)
 {
-    fprintf(stderr, "[desktop.elf] restart requested from Start menu\n");
-    if (leonos_system_reboot() < 0) {
-        const char *error = strerror(errno);
-        fprintf(stderr, "[desktop.elf] restart failed: %s\n", error);
-        desktop_show_message(leonos_i18n("Restart failed", "重启失败"), error);
-    }
+    desktop_power_begin(POWER_CONFIRM_REBOOT);
 }
 
 void desktop_shutdown(void)
 {
-    fprintf(stderr, "[desktop.elf] shutdown requested from Start menu\n");
-    if (leonos_system_shutdown() < 0) {
-        const char *error = strerror(errno);
-        fprintf(stderr, "[desktop.elf] shutdown failed: %s\n", error);
-        desktop_show_message(leonos_i18n("Shutdown failed", "关机失败"), error);
-    }
+    desktop_power_begin(POWER_CONFIRM_SHUTDOWN);
 }
 
 void desktop_logout(void)
@@ -715,7 +757,7 @@ void desktop_lifecycle_begin(uint8_t action)
         action != POWER_CONFIRM_SHUTDOWN) {
         return;
     }
-    if (desktop_lifecycle_state != DESKTOP_LIFECYCLE_IDLE) {
+    if (desktop_lifecycle_state != DESKTOP_LIFECYCLE_IDLE || power_worker_action) {
         return;
     }
     user = (struct leonos_user_info){0};
@@ -770,6 +812,7 @@ void desktop_lifecycle_begin(uint8_t action)
 
 void desktop_lifecycle_update(void)
 {
+    desktop_power_update();
     static unsigned long last_poll_ms;
     struct leonos_task_info tasks[LEONOS_TASK_MAX];
     uint64_t tick;
@@ -900,7 +943,7 @@ void desktop_request_power_confirm(uint8_t action)
     if (action != POWER_CONFIRM_REBOOT && action != POWER_CONFIRM_SHUTDOWN) {
         return;
     }
-    if (desktop_lifecycle_state != DESKTOP_LIFECYCLE_IDLE) {
+    if (desktop_lifecycle_state != DESKTOP_LIFECYCLE_IDLE || power_worker_action) {
         return;
     }
     power_confirm_action = action;

@@ -1,7 +1,7 @@
 # OpenRC 迁移实施记录
 
-实施中，尚未通过目标机验收。依据 OPENRC_MIGRATION_AGENT_PROMPT.md，当前分支
-xiaobai/openrc-support；保留原有需求文档，不委派、不提交。
+以下保留迁移实施时的历史记录，当时尚未通过目标机验收，分支为
+`xiaobai/openrc-support`。旧实施提示词已清理，可从 Git 历史查看。
 
 ## 职责审计和实施顺序
 

@@ -862,10 +862,20 @@ struct task *sched_find_by_path_basename(const char *basename);
 /** Returns true when a CWD, file, image, or mapping references a volume. */
 bool sched_volume_in_use(uint32_t volume_id);
 bool sched_volume_has_writers(uint32_t volume_id);
-/** Save this CPU's user trap frame and release its current task when runnable. */
+/**
+ * @brief Save the current user frame without releasing its CPU reservation.
+ * @param frame User context to publish while holding the execution transaction.
+ * @return True on capture; false if the frame or CPU ownership is invalid.
+ */
 bool sched_capture_current_user_frame(const struct trap_frame *frame);
 /** Release this CPU's ownership after its current task was marked EXITED. */
 void sched_quiesce_exited_current(void);
+/**
+ * @brief Retire the old CR3 and reserve the next eligible task on this CPU.
+ * Caller holds the execution transaction, has saved the live user frame,
+ * and has interrupts disabled. Even an idle return retires the old task.
+ * @return CPU-reserved task, or NULL with the kernel CR3 active.
+ */
 struct task *sched_select_next_user(void);
 /* Reclaim the task just saved by this CPU when no other task is runnable. */
 struct task *sched_reclaim_current_user(void);

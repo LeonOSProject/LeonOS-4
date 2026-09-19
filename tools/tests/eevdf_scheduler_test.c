@@ -7,6 +7,15 @@ static uint32_t fake_cpu;
 static uint64_t fake_time;
 uint32_t smp_current_cpu(void) { return fake_cpu; }
 uint32_t smp_cpu_count(void) { return 2; }
+static bool offline_ap;
+bool smp_cpu_online(uint32_t cpu) { return cpu < 2 && !(cpu == 1 && offline_ap); }
+uint64_t paging_kernel_cr3(void) { return 0x1000; }
+void paging_load_cr3(uint64_t cr3)
+{
+    assert(cr3 == 0x1000);
+    struct task *old = sched_find(current_pid[fake_cpu]);
+    if (old && old->pid) assert(old->running_cpu == fake_cpu);
+}
 uint64_t time_uptime_us(void) { return fake_time; }
 void kernel_spin_lock_irqsave(struct kernel_spinlock *lock, uint64_t *flags)
 { (void)lock; *flags = 0; }
@@ -18,7 +27,7 @@ static void finish(struct task *task, uint64_t elapsed)
 {
     fake_time += elapsed;
     assert(sched_capture_current_user_frame(&task->frame));
-    assert(task->state == TASK_READY && task->running_cpu == SCHED_CPU_NONE);
+    assert(task->state == TASK_READY && task->running_cpu == fake_cpu);
 }
 
 int main(void)
@@ -43,6 +52,9 @@ int main(void)
     }
     tasks[1]->priority = 5;
     tasks[2]->affinity_mask = 2;
+    offline_ap = true;
+    assert(fair_choose_cpu(tasks[2]) == SCHED_CPU_NONE);
+    offline_ap = false;
     fake_cpu = 0;
     struct task *a = sched_select_next_user();
     assert(a && a != tasks[2]);
@@ -51,6 +63,21 @@ int main(void)
     assert(b == tasks[2] && b != a);
     assert(a->running_cpu == 0 && b->running_cpu == 1);
     finish(b, 100);
+    /* A captured frame remains reserved until its owner retires CR3. */
+    tasks[2]->affinity_mask = 3;
+    fake_cpu = 0;
+    assert(b->running_cpu == 1);
+    tasks[2]->affinity_mask = 2;
+    fake_cpu = 1;
+    tasks[2]->state = TASK_BLOCKED;
+    fake_cpu = 0;
+    sched_mark_ready(b->pid);
+    assert(b->state == TASK_READY && b->running_cpu == 1);
+    tasks[2]->state = TASK_BLOCKED;
+    fake_cpu = 1;
+    assert(!sched_select_next_user());
+    assert(b->running_cpu == SCHED_CPU_NONE && current_pid[1] == 0);
+    tasks[2]->state = TASK_READY;
     fake_cpu = 0;
     finish(a, 100);
     for (unsigned i = 0; i < 10000; ++i) {

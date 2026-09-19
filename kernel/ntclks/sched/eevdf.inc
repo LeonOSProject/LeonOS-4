@@ -57,7 +57,7 @@ static uint32_t fair_choose_cpu(const struct task *task)
     if (!cpus) cpus = 1;
     if (cpus > SMP_MAX_CPUS) cpus = SMP_MAX_CPUS;
     for (uint32_t cpu = 0; cpu < cpus; ++cpu) {
-        if (!task_cpu_allowed(task, cpu)) continue;
+        if (!smp_cpu_online(cpu) || !task_cpu_allowed(task, cpu)) continue;
         uint32_t n = fair_count(cpu);
         if (n < count || (n == count && cpu == task->last_cpu)) {
             best = cpu; count = n;

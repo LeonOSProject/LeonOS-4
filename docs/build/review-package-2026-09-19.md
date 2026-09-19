@@ -4,7 +4,7 @@
 
 > 接管后的修改和最新边界见 [接管记录](takeover-2026-09-19.md)。下文保留原交接历史；PAM、runtime、musl SDK 子集已经继续迁移，原“未开始”描述不再代表当前工作区。
 
-计划：`docs/superpowers/plans/2026-09-19-make-c-build-rewrite.md`
+计划：原构建重建计划（已清理，历史版本可从 Git 查看）
 分支：`xiaobai/dev/buildsystem`　基线提交：`6be4c69`
 完整 diff：`git diff 6be4c69..HEAD`（提交清单以 `git log --oneline 6be4c69..HEAD` 为准）
 审查人：原 Agent（按用户要求，不替换审查者）。**未推送、未合并、未发布镜像。**
@@ -31,7 +31,7 @@
 | 最新提交 | P2-d | `tools/build/auth-upstream.sh` + `make leonos-auth`：Linux UAPI 头与 libxcrypt 由上游 configure 构建（计划第 9 节允许），`crypt.h` 与旧树逐字节等价、`.o` 跨 `O=` 路径字节稳定（`-fmacro-prefix-map`），23 项契约；顺带修掉 `O=` 泄漏进内核构建树、以及 `make clean` 认不出纯构建目标产物树两个缺陷（`verification.md` 第 11 节）|
 
 **任务开始前工作区已有的改动**：仅一个未跟踪文件
-`docs/superpowers/plans/2026-09-19-make-c-build-rewrite.md`（计划本体，留给用户处置，未被本分支提交）。
+原构建重建计划（已清理，历史版本可从 Git 查看）（计划本体，留给用户处置，未被本分支提交）。
 本分支的改动没有覆盖、重置或批量格式化任何用户未提交内容；旧实现**一行未删**（diff 只有 1 行删除，
 是 `.gitignore` 首行的锚定改写）。
 

@@ -5,6 +5,7 @@
 #include <ntclks/arch.h>
 #include <ntclks/console.h>
 #include <ntclks/elf.h>
+#include <ntclks/input.h>
 #include <ntclks/kernel.h>
 #include <ntclks/mm.h>
 #include <ntclks/pty.h>
@@ -710,23 +711,38 @@ static int64_t spawn_path_internal_deferred(const char *path, const char *task_n
 }
 
 /**
- * @brief Halt with interrupts enabled until a user task is ready to run.
+ * @brief Wait for runnable work, dropping the execution transaction while idle.
+ * @param execution_flags IRQ state of the single held execution transaction;
+ * updated when it is reacquired after idle. Caller must not hold other locks.
+ * @return A task reserved by the current CPU, with the transaction held.
  */
-static struct task *wait_for_runnable_task(void)
+static struct task *wait_for_runnable_task(uint64_t *execution_flags)
 {
     struct task *next;
     while (!(next = sched_select_next_user())) {
+        /* Selection retired the previous CR3 and task reservation. Never
+         * sleep holding the transaction needed by CPUs producing work. */
+        kernel_execution_unlock_irqrestore(*execution_flags);
         __asm__ volatile("sti; hlt; cli");
+        kernel_execution_lock_irqsave(execution_flags);
     }
     return next;
 }
 
 /**
- * @brief Save the current task's frame/FPU, pick and prepare the next user task, and return it (or NULL).
+ * @brief Serialize task retirement and selection against exec, exit and reaping.
+ * @param frame Current user frame, or NULL on AP entry or a selection retry.
+ * Caller has interrupts disabled and must not hold the execution transaction.
+ * @return A CPU-reserved task ready for user entry, or NULL for an invalid frame.
  */
 struct task *userland_schedule_from_frame(struct trap_frame *frame)
 {
-    struct task *current = sched_current_task();
+    uint64_t execution_flags;
+    kernel_execution_lock_irqsave(&execution_flags);
+    struct task *current;
+    struct task *next;
+retry:
+    current = sched_current_task();
     if (current && current->kind == TASK_KIND_USER && frame &&
         current->state != TASK_EXITED) {
         /* A faulting user RIP may be zero. Deliver its synchronous signal
@@ -741,6 +757,7 @@ struct task *userland_schedule_from_frame(struct trap_frame *frame)
                                current->pid,
                                (unsigned long long)frame->rip,
                                (unsigned long long)frame->cs);
+                kernel_execution_unlock_irqrestore(execution_flags);
                 return NULL;
             }
         } else {
@@ -748,45 +765,47 @@ struct task *userland_schedule_from_frame(struct trap_frame *frame)
                            current->pid,
                            (unsigned long long)frame->rip,
                            (unsigned long long)frame->cs);
+            kernel_execution_unlock_irqrestore(execution_flags);
             return NULL;
         }
     }
     if (current && current->kind == TASK_KIND_USER && current->state == TASK_EXITED) {
-        uint64_t cleanup_flags;
-        kernel_execution_lock_irqsave(&cleanup_flags);
         /* Stop using the retiring page tables before releasing the last mm
          * reference. Other threads retain their own reference to shared mm. */
         paging_load_cr3(paging_kernel_cr3());
         sched_quiesce_exited_current();
         sched_release_task_resources(current);
-        kernel_execution_unlock_irqrestore(cleanup_flags);
     }
 
-    struct task *next = sched_select_next_user();
+    next = sched_select_next_user();
     if (!next && current && current->kind == TASK_KIND_USER && current->state == TASK_READY) {
         next = sched_reclaim_current_user();
     }
     if (!next) {
-        next = wait_for_runnable_task();
+        next = wait_for_runnable_task(&execution_flags);
     }
     if (!next) {
+        kernel_execution_unlock_irqrestore(execution_flags);
         return NULL;
     }
     /* A task that was woken for a pending signal never passed through the
      * live-frame path above; prepare its saved frame before entering it. */
     (void)kernel_signal_deliver_pending(next, &next->frame);
-    if (next->state == TASK_EXITED) return userland_schedule_from_frame(NULL);
+    if (next->state == TASK_EXITED) { frame = NULL; goto retry; }
     if (next->state == TASK_STOPPED || next->state == TASK_BLOCKED) {
         (void)sched_capture_current_user_frame(&next->frame);
-        return userland_schedule_from_frame(NULL);
+        frame = NULL;
+        goto retry;
     }
     if (!userland_load_task_image(next)) {
         sched_exit(next->pid, 127);
-        return userland_schedule_from_frame(NULL);
+        frame = NULL;
+        goto retry;
     }
     arch_set_user_fs(next->fs_base);
     userland_yield_if_runnable();
     arch_fpu_restore(next->fpu_state);
+    kernel_execution_unlock_irqrestore(execution_flags);
     return next;
 }
 
@@ -964,6 +983,16 @@ void userland_init(const struct boot_info *boot)
         tty_mode = 0;
     }
 
+    /* Resolve physical keyboard ownership from the same two flags that pick
+     * LEONOS_BOOT_MODE below.  console-session execs login.elf against the
+     * console PTY in the tty and installer-tty modes, and merely sleeps in the
+     * GUI modes, so only those two may translate keystrokes into console
+     * input; otherwise a keystroke drives two terminals at once and Ctrl-C in
+     * a GUI terminal signals PID 1, whose ctrlaltdel action reboots the
+     * machine.  Keep this mapping in sync with that script. */
+    input_set_keyboard_owner(tty_mode ? INPUT_KEYBOARD_OWNER_CONSOLE
+                                      : INPUT_KEYBOARD_OWNER_GUI);
+
     /* The boot environment selects policy; it never grants image privileges. */
     const char *boot_mode = installer_mode ? (tty_mode ? "LEONOS_BOOT_MODE=installer-tty" :
                                                        "LEONOS_BOOT_MODE=installer") :
@@ -1007,7 +1036,9 @@ void userland_init(const struct boot_info *boot)
         console_printf("[ntclks] cannot attach PID 1 console pty=%d\n", pty);
         kernel_idle_loop();
     }
-    console_printf("[ntclks] PID 1 path=%s mode=%s console-pty=%d\n", init_path, boot_mode, pty);
+    console_printf("[ntclks] PID 1 path=%s mode=%s console-pty=%d keyboard-owner=%s\n",
+                   init_path, boot_mode, pty,
+                   tty_mode ? "console" : "gui");
     sched_mark_ready(init_pid);
 }
 
