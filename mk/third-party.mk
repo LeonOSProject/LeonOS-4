@@ -18,11 +18,11 @@ $(LEONOS_CACHE):
 
 .PHONY: leonos-check-lock
 leonos-check-lock: | $(LEONOS_O_MARKER) $(LEONOS_DEPS_TOOL)
-	$(Q)printf '  %-8s %s\n' CHECK $(LEONOS_LOCK)
+	$(call LEONOS_LOG,CHECK,$(LEONOS_LOCK))
 	$(Q)$(LEONOS_DEPS_TOOL) --lock $(LEONOS_LOCK) --check --root $(LEONOS_SRC)
 
 fetch: leonos-check-lock | $(LEONOS_CACHE)
-	$(Q)printf '  %-8s %s\n' FETCH $(LEONOS_CACHE)
+	$(call LEONOS_LOG,FETCH,$(LEONOS_CACHE))
 	$(Q)sh $(LEONOS_FETCH_SCRIPT) --deps $(LEONOS_DEPS_TOOL) --lock $(LEONOS_LOCK) \
 		--cache $(LEONOS_CACHE)
 
@@ -78,7 +78,7 @@ $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,musl-sysroot)))
 
 $(MUSL_STAMP) $(LEONOS_MUSL_ARTIFACTS) &: $(LEONOS_LOCK) $(MUSL_SCRIPT) $(LEONOS_DEPS_TOOL) $(O_META)/musl-sysroot.sig \
 	| $(MUSL_SYSROOT) $(MUSL_WORK) $(O_LOGS)
-	$(Q)printf '  %-8s %s\n' SYSROOT musl
+	$(call LEONOS_LOG,SYSROOT,musl)
 	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0;; esac; sh $(MUSL_SCRIPT) --src '$(LEONOS_SRC)' --deps '$(abspath $(LEONOS_DEPS_TOOL))' \
 		--lock '$(LEONOS_LOCK)' --work '$(abspath $(MUSL_WORK))' --sysroot '$(abspath $(MUSL_SYSROOT))' \
 		--cc '$(TARGET_CC)' --ar '$(TARGET_AR)' --ranlib '$(TARGET_RANLIB)' \
@@ -120,7 +120,7 @@ leonos-auth: $(AUTH_STAMP) $(LEONOS_AUTH_ARTIFACTS)
 
 $(AUTH_STAMP) $(LEONOS_AUTH_ARTIFACTS) &: $(LEONOS_LOCK) $(AUTH_SCRIPT) $(LEONOS_DEPS_TOOL) \
 	$(O_META)/auth-upstream.sig $(MUSL_STAMP) | $(O_AUTH) $(AUTH_WORK) $(O_LOGS)
-	$(Q)printf '  %-8s %s\n' AUTH auth
+	$(call LEONOS_LOG,AUTH,auth)
 	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0;; esac; sh $(AUTH_SCRIPT) --src '$(LEONOS_SRC)' --deps '$(abspath $(LEONOS_DEPS_TOOL))' \
 		--lock '$(LEONOS_LOCK)' --cache '$(LEONOS_CACHE)' --work '$(abspath $(AUTH_WORK))' \
 		--stage '$(abspath $(AUTH_ROOT))' --sysroot '$(abspath $(MUSL_SYSROOT))' \

@@ -44,7 +44,7 @@ $$(if $$(LEONOS_PASSIVE),,$$(eval $$(call LEONOS_SIGNATURE_RULE,app-$(1)-cc)))
 $$(if $$(LEONOS_PASSIVE),,$$(eval $$(call LEONOS_SIGNATURE_RULE,app-$(1)-ld)))
 $(O_OBJ)/app-$(1)/%.c.o: $(LEONOS_SRC)/%.c $(4) $(MUSL_STAMP) $(PNG_CONFIG) $$(USERLAND_DEPS_$(2)) $(O_META)/app-$(1)-cc.sig
 	$$(Q)mkdir -p $$(dir $$@)
-	$$(Q)printf '  %-8s %s\n' CC $$<
+	$$(call LEONOS_LOG,CC,$$<)
 	$$(Q)$$(TARGET_CC) $$(USERLAND_FLAGS) $$(USERLAND_CFLAGS) $$(USERLAND_EXTRA_$(2)) -include $(4) -MMD -MP -MF $$@.d -MT $$@ -c $$< -o $$@.tmp
 	$$(Q)mv $$@.tmp $$@
 $(O_OBJ)/app-$(1)/%.S.o: $(LEONOS_SRC)/%.S $(4) $(O_META)/app-$(1)-cc.sig
@@ -53,7 +53,7 @@ $(O_OBJ)/app-$(1)/%.S.o: $(LEONOS_SRC)/%.S $(4) $(O_META)/app-$(1)-cc.sig
 	$$(Q)mv $$@.tmp $$@
 $(3): $$(USERLAND_OBJECTS_$(1)) $(5) $$(USERLAND_LIBS_$(2)) $(USERLAND_CRT) $(MUSL_SYSROOT)/lib/libc.so $(MUSL_SYSROOT)/lib/libmimalloc.so.3 $(O_META)/app-$(1)-ld.sig
 	$$(Q)mkdir -p $$(dir $$@)
-	$$(Q)printf '  %-8s %s\n' LD $$@
+	$$(call LEONOS_LOG,LD,$$@)
 	$$(Q)$$(TARGET_LD) $$(USERLAND_LINK_FLAGS) $$(USERLAND_LDFLAGS) -o $$@.tmp $(MUSL_SYSROOT)/lib/Scrt1.o $(MUSL_SYSROOT)/lib/crti.o $$(USERLAND_OBJECTS_$(1)) -L$(MUSL_SYSROOT)/lib -l:libmimalloc.so.3 --start-group $(5) $$(USERLAND_LIBS_$(2)) -lc --end-group $(MUSL_SYSROOT)/lib/crtn.o
 	$$(Q)mv $$@.tmp $$@
 .PHONY: app-$(1)

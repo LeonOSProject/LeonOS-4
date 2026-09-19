@@ -146,31 +146,31 @@ $(LEONOS_O_MARKER): | $(O_META)
 # --- host objects and programs ---------------------------------------------
 $(O_HOST)/obj/tools/host/%.c.o: $(LEONOS_SRC)/tools/host/%.c $(O_META)/host-cc.sig
 	$(Q)mkdir -p $(dir $@)
-	$(Q)printf '  %-8s %s\n' HOSTCC $<
+	$(call LEONOS_LOG,HOSTCC,$<)
 	$(Q)$(HOSTCC) $(LEONOS_STRICT_WARNINGS) $(LEONOS_HOST_INCLUDES) $(HOST_CFLAGS) \
 		-MMD -MF $@.d -c $< -o $@
 
 $(LEONOS_HOST_PUFF_OBJ): $(LEONOS_SRC)/$(LEONOS_HOST_PUFF_SRC) $(O_META)/host-cc.sig
 	$(Q)mkdir -p $(dir $@)
-	$(Q)printf '  %-8s %s\n' HOSTCC $<
+	$(call LEONOS_LOG,HOSTCC,$<)
 	$(Q)$(HOSTCC) $(LEONOS_HOST_PUFF_WARNINGS) $(HOST_CFLAGS) \
 		-MMD -MF $@.d -c $< -o $@
 
 $(LEONOS_EMIT): $(O_HOST)/obj/tools/host/gen/leonos-emit.c.o $(LEONOS_HOST_COMMON_OBJS) | $(LEONOS_HOST_BIN)
-	$(Q)printf '  %-8s %s\n' HOSTLD $@
+	$(call LEONOS_LOG,HOSTLD,$@)
 	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
 
 $(LEONOS_CONFIG_TOOL): $(O_HOST)/obj/tools/host/config/leonos-config.c.o $(LEONOS_HOST_COMMON_OBJS) | $(LEONOS_HOST_BIN)
-	$(Q)printf '  %-8s %s\n' HOSTLD $@
+	$(call LEONOS_LOG,HOSTLD,$@)
 	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
 
 $(LEONOS_VERSION_TOOL): $(O_HOST)/obj/tools/host/version/leonos-version.c.o $(LEONOS_HOST_COMMON_OBJS) | $(LEONOS_HOST_BIN)
-	$(Q)printf '  %-8s %s\n' HOSTLD $@
+	$(call LEONOS_LOG,HOSTLD,$@)
 	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
 
 $(LEONOS_BOOT_LOGO_TOOL): $(O_HOST)/obj/tools/host/assets/leonos-boot-logo.c.o \
 	$(LEONOS_HOST_PUFF_OBJ) $(LEONOS_HOST_COMMON_OBJS) | $(LEONOS_HOST_BIN)
-	$(Q)printf '  %-8s %s\n' HOSTLD $@
+	$(call LEONOS_LOG,HOSTLD,$@)
 	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
 
 # The lock-file reader links the JSON module as well as the shared primitives.
@@ -183,12 +183,12 @@ $(LEONOS_GBK_TOOL): $(O_HOST)/obj/tools/host/assets/leonos-gbk.c.o $(LEONOS_HOST
 
 $(LEONOS_DEPS_TOOL): $(O_HOST)/obj/tools/host/manifest/leonos-deps.c.o $(LEONOS_JSON_OBJ) \
 	$(LEONOS_HOST_COMMON_OBJS) | $(LEONOS_HOST_BIN)
-	$(Q)printf '  %-8s %s\n' HOSTLD $@
+	$(call LEONOS_LOG,HOSTLD,$@)
 	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
 
 $(LEONOS_APK_OWN): $(O_HOST)/obj/tools/host/apk/leonos-apk-own.c.o $(LEONOS_JSON_OBJ) \
 	$(LEONOS_HOST_COMMON_OBJS) | $(LEONOS_HOST_BIN)
-	$(Q)printf '  %-8s %s\n' HOSTLD $@
+	$(call LEONOS_LOG,HOSTLD,$@)
 	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
 
 -include $(shell find $(O_HOST)/obj -name '*.o.d' 2>/dev/null)

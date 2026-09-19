@@ -53,7 +53,7 @@ $(PNG_CONFIG): $(LEONOS_SRC)/third_party/libpng/scripts/pnglibconf.h.prebuilt $(
 define LEONOS_RUNTIME_COMPILE
 $(O_OBJ)/$(1)/%.c.o: $(LEONOS_SRC)/%.c $(2) $(GBK_TABLE) $(PNG_CONFIG) $(MUSL_STAMP) $(RUNTIME_HEADERS) $(O_META)/runtime-cc.sig
 	$$(Q)mkdir -p $$(dir $$@)
-	$$(Q)printf '  %-8s %s\n' CC $$<
+	$$(call LEONOS_LOG,CC,$$<)
 	$$(Q)$$(TARGET_CC) $$(RUNTIME_FLAGS) $$(RUNTIME_CFLAGS) -include $(2) \
 	 $$(if $$(findstring /zlib/,$$<),-DZ_SOLO -include stddef.h) \
 	 $$(if $$(findstring /libpng/,$$<),-DLEONOS_LIBPNG_FIXED_POINT=3) \

@@ -26,13 +26,13 @@ test-tools: leonos-test-tools-plain leonos-test-tools-sanitised
 
 leonos-test-tools-plain: $(LEONOS_HOST_TEST_BINS)
 	@set -eu; for test_binary in $(LEONOS_HOST_TEST_BINS); do \
-	    printf '  %-8s %s\n' RUN $$test_binary; \
+	    $(call LEONOS_LOG_SHELL,RUN,$$test_binary); \
 	    $$test_binary; \
 	done
 
 leonos-test-tools-sanitised: $(LEONOS_HOST_TEST_SANITISED)
 	@set -eu; for test_binary in $(LEONOS_HOST_TEST_SANITISED); do \
-	    printf '  %-8s %s\n' RUN $$test_binary; \
+	    $(call LEONOS_LOG_SHELL,RUN,$$test_binary); \
 	    ASAN_OPTIONS=detect_leaks=1 \
 	    UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 $$test_binary; \
 	done
@@ -47,7 +47,7 @@ leonos-test-tools-sanitised: $(LEONOS_HOST_TEST_SANITISED)
 # $(call LEONOS_RUN_CONTRACT_TESTS,tests...)
 define LEONOS_RUN_CONTRACT_TESTS
 	set -eu; for contract_test in $(1); do \
-	    printf '  %-8s %s\n' RUN $$contract_test; \
+	    $(call LEONOS_LOG_SHELL,RUN,$$contract_test); \
 	    report=$$(mktemp); \
 	    if LEONOS_DEPS='$(LEONOS_DEPS_TOOL)' \
 	       LEONOS_LOCK='$(LEONOS_SRC)/configs/dependencies.lock.json' \
@@ -72,13 +72,13 @@ test: test-tools test-build
 
 $(O_HOST)/obj/tests/host/%.c.o: $(LEONOS_SRC)/tests/host/%.c $(O_META)/host-cc.sig
 	$(Q)mkdir -p $(dir $@)
-	$(Q)printf '  %-8s %s\n' HOSTCC $<
+	$(call LEONOS_LOG,HOSTCC,$<)
 	$(Q)$(HOSTCC) $(LEONOS_STRICT_WARNINGS) -I$(LEONOS_SRC)/tests/host \
 	    $(LEONOS_HOST_INCLUDES) $(HOST_CFLAGS) -MMD -MF $@.d -c $< -o $@
 
 $(O_HOST)/obj/tests-sanitised/host/%.c.o: $(LEONOS_SRC)/tests/host/%.c $(O_META)/host-cc-sanitised.sig
 	$(Q)mkdir -p $(dir $@)
-	$(Q)printf '  %-8s %s\n' HOSTCC $<
+	$(call LEONOS_LOG,HOSTCC,$<)
 	$(Q)$(HOSTCC) $(LEONOS_STRICT_WARNINGS) $(LEONOS_SANITISE) \
 	    -I$(LEONOS_SRC)/tests/host $(LEONOS_HOST_INCLUDES) -g -O1 \
 	    -MMD -MF $@.d -c $< -o $@

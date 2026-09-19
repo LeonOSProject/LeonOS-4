@@ -100,12 +100,12 @@ LEONOS_KERNEL_OBJS := $(LEONOS_KERNEL_CC_OBJS) $(LEONOS_KERNEL_AS_OBJS)
 # object wait for every asset.
 $(O_OBJ)/kernel/%.c.o: $(LEONOS_SRC)/%.c $(AUTOCONF_H) $(O_META)/kernel-cc.sig
 	$(Q)mkdir -p $(dir $@)
-	$(Q)printf '  %-8s %s\n' CC $<
+	$(call LEONOS_LOG,CC,$<)
 	$(Q)$(KERNEL_CC_BASE) $(KERNEL_CFLAGS) -MMD -MF $@.d -c $< -o $@
 
 $(O_OBJ)/kernel/%.S.o: $(LEONOS_SRC)/%.S $(O_META)/kernel-as.sig
 	$(Q)mkdir -p $(dir $@)
-	$(Q)printf '  %-8s %s\n' AS $<
+	$(call LEONOS_LOG,AS,$<)
 	$(Q)$(KERNEL_AS_BASE) $(KERNEL_AFLAGS) -MMD -MF $@.d -c $< -o $@
 
 # Extra prerequisites for the objects that consume generated headers. Depfiles
@@ -120,12 +120,12 @@ $(O_OBJ)/kernel/drivers/bootstrap/storage.c.o: \
 
 # --- generated inputs -------------------------------------------------------
 $(BOOT_LOGO_HEADER): $(LEONOS_SRC)/logo.png $(LEONOS_BOOT_LOGO_TOOL) | $(O_INCLUDE)/generated
-	$(Q)printf '  %-8s %s\n' GEN $@
+	$(call LEONOS_LOG,GEN,$@)
 	$(Q)$(LEONOS_BOOT_LOGO_TOOL) --input $< --output $@ --size 192
 
 $(BUILD_INFO_HEADER): $(LEONOS_SRC)/configs/build-version $(LEONOS_VERSION_TOOL) $(O_META)/version.sig \
 	| $(O_INCLUDE)/generated
-	$(Q)printf '  %-8s %s\n' GEN $@
+	$(call LEONOS_LOG,GEN,$@)
 	$(Q)$(LEONOS_VERSION_TOOL) --version-file $< \
         --source-id '$(LEONOS_SOURCE_ID)' \
 	    --epoch '$(or $(SOURCE_DATE_EPOCH),$(shell git -C $(LEONOS_SRC) show -s --format=%ct HEAD 2>/dev/null || echo 0))' \
@@ -138,17 +138,17 @@ $(BUILD_INFO_HEADER): $(LEONOS_SRC)/configs/build-version $(LEONOS_VERSION_TOOL)
 $(KERNEL_UNSTRIPPED): $(LEONOS_KERNEL_OBJS) $(KERNEL_LD_SCRIPT) \
 	$(KERNEL_SOURCES_LIST) $(O_META)/kernel-link.sig | $(O_GENERATED)/system
 	$(Q)mkdir -p $(dir $@)
-	$(Q)printf '  %-8s %s\n' LD $@
+	$(call LEONOS_LOG,LD,$@)
 	$(Q)$(KERNEL_LD_BASE) $(KERNEL_LDFLAGS) -o $@ \
 	    $(LEONOS_KERNEL_CC_OBJS) $(LEONOS_KERNEL_AS_OBJS)
 
 $(LEONOS_KERNEL_SYS): $(KERNEL_UNSTRIPPED) $(O_META)/kernel-objcopy.sig | $(O_GENERATED)/system
-	$(Q)printf '  %-8s %s\n' IMAGE $@
+	$(call LEONOS_LOG,IMAGE,$@)
 	$(Q)$(TARGET_OBJCOPY) --strip-debug $< $@.tmp
 	$(Q)mv $@.tmp $@
 
 $(LEONOS_KERNEL_DEBUG): $(KERNEL_UNSTRIPPED) $(O_META)/kernel-objcopy.sig | $(O_GENERATED)/system
-	$(Q)printf '  %-8s %s\n' IMAGE $@
+	$(call LEONOS_LOG,IMAGE,$@)
 	$(Q)$(TARGET_OBJCOPY) --only-keep-debug $< $@.tmp
 	$(Q)mv $@.tmp $@
 

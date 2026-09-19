@@ -40,7 +40,7 @@ endif
 # can differ from the shipped-image one; both come from the same .config.
 $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(RUSTCFG_ARGS) $(LEONOS_AUTOCONF_MK) &: \
 	$(LEONOS_CONFIG_FILE) $(LEONOS_CONFIG_TOOL) | $(O_INCLUDE)/generated
-	$(Q)printf '  %-8s %s\n' GEN $@
+	$(call LEONOS_LOG,GEN,$@)
 	$(Q)$(LEONOS_CONFIG_TOOL) --input $(LEONOS_CONFIG_FILE) \
 		--out-header $(AUTOCONF_H) --guard LEONOS4_AUTOCONF_H \
 		--require-license CONFIG_VMDK_REQUIRE_LICENSE \
@@ -52,7 +52,7 @@ $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(RUSTCFG_ARGS) $(LEONOS_AUTOCONF_MK) &: \
 # .config is never silently rewritten: only an explicit defconfig, olddefconfig
 # or menuconfig goal changes it.
 $(LEONOS_CONFIG_FILE): $(KCONFIG_SEED) $(KCONFIG_ROOT) $(LEONOS_SRC)/Kconfig.components $(KCONFIG_CONF)
-	$(Q)printf '  %-8s %s\n' CONFIG $@
+	$(call LEONOS_LOG,CONFIG,$@)
 	$(Q)sh $(LEONOS_SRC)/tools/build/kconfig-frontends.sh run \
 		--conf $(abspath $(KCONFIG_CONF)) --mconf $(abspath $(KCONFIG_MCONF)) \
 		--kconfig $(KCONFIG_ROOT) --config $(abspath $@) --seed $(KCONFIG_SEED) \

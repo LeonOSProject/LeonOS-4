@@ -146,6 +146,7 @@ export LEONOS_BUILD_OWNER
 endif
 
 # --- fragment includes ------------------------------------------------------
+include $(LEONOS_SRC)/mk/logging.mk
 include $(LEONOS_SRC)/mk/host.mk
 include $(LEONOS_SRC)/mk/toolchain.mk
 include $(LEONOS_SRC)/mk/config.mk
