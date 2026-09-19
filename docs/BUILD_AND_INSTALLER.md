@@ -95,16 +95,19 @@ request before completion; its completion-page restart is not yet guest-verified
 
 ## Source of truth
 
-`build.py` is the maintained build entry point. Component selection comes from
-`configs/components.toml` and Kconfig. Generated graph files are not edited by hand.
+GNU Make is the maintained build entry point. Component selection comes from
+`configs/components.toml` and Kconfig. Generated files are not edited by hand.
 
 Important generated files include:
 
-- `include/generated/autoconf.h`
-- `include/generated/autoconf-installer.h`
-- `include/generated/build_info.h`
-- `include/generated/loader_integrity.h`
-- `include/generated/rustcfg.args`
+- `<O>/include/generated/autoconf.h`
+- `<O>/include/generated/autoconf-installer.h`
+- `<O>/include/generated/build_info.h`
+- `<O>/include/generated/loader_integrity.h`
+- `<O>/include/generated/rustcfg.args`
+
+The default output directory is `out/x86_64/release`; source-tree version headers
+are not build inputs.
 
 ## Configuration
 

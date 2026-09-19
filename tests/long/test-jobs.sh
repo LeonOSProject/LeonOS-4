@@ -34,11 +34,10 @@ fail() {
     fi
 }
 
-# Fixed inputs on both sides: the epoch removes the wall clock and BUILD_ID the
-# version counter, so the two trees are byte-comparable by construction and any
+# Fixed inputs on both sides: the epoch removes the wall clock,
+# so the two trees are byte-comparable by construction and any
 # difference left over belongs to the scheduler.
 epoch=1700000000
-build_id=7
 jobs="1 8"
 rounds=3
 
@@ -63,7 +62,7 @@ kernel/ntclks/arch/x86_64/linker.ld"
 printf '=== A08: -j1 and -j8 from clean output directories ===\n'
 for level in $jobs; do
     tree=$work/j$level
-    make -s O="$tree" -j"$level" SOURCE_DATE_EPOCH=$epoch BUILD_ID=$build_id \
+    make -s O="$tree" -j"$level" SOURCE_DATE_EPOCH=$epoch \
         kernel >"$work/clean-j$level.log" 2>&1
     status=$?
     if [ "$status" -eq 0 ] && [ -s "$tree/generated/system/kernel.sys" ]; then
@@ -137,7 +136,7 @@ for round in 1 2 3; do
     done
     for level in $jobs; do
         tree=$work/j$level
-        make -s O="$tree" -j"$level" SOURCE_DATE_EPOCH=$epoch BUILD_ID=$build_id \
+        make -s O="$tree" -j"$level" SOURCE_DATE_EPOCH=$epoch \
             kernel >"$work/round-j$level-$round.log" 2>&1
         status=$?
         snapshot "$tree" >"$work/after-j$level-$round"
@@ -187,7 +186,7 @@ printf '\n=== A10: an interrupted parallel build leaves no false product ===\n'
 # objects to recompile gives the section room to land the signal in the middle of
 # real work, which the first assertion then proves rather than assumes.
 victim=$work/interrupt
-make -s O="$victim" -j8 SOURCE_DATE_EPOCH=$epoch BUILD_ID=$build_id kernel \
+make -s O="$victim" -j8 SOURCE_DATE_EPOCH=$epoch kernel \
         >"$work/interrupt-base.log" 2>&1
 good=$work/interrupt-image
 cp "$victim/generated/system/kernel.sys" "$good"
@@ -205,7 +204,7 @@ done
 # Make handles both signals through the same cleanup path that honours
 # .DELETE_ON_ERROR; the interactive Ctrl-C case needs a pty and is not covered.
 : >"$work/interrupt-trigger"
-make -s O="$victim" -j2 SOURCE_DATE_EPOCH=$epoch BUILD_ID=$build_id kernel \
+make -s O="$victim" -j2 SOURCE_DATE_EPOCH=$epoch kernel \
         >"$work/interrupt.log" 2>&1 &
 victim_pid=$!
 waited=0
@@ -238,7 +237,7 @@ else
     pass 'an interrupted build does not leave a partial image claimed as current'
 fi
 # The rerun has to recover on its own.
-make -s O="$victim" -j8 SOURCE_DATE_EPOCH=$epoch BUILD_ID=$build_id kernel \
+make -s O="$victim" -j8 SOURCE_DATE_EPOCH=$epoch kernel \
         >"$work/recover.log" 2>&1
 status=$?
 if [ "$status" -eq 0 ] && cmp -s "$victim/generated/system/kernel.sys" "$good"; then

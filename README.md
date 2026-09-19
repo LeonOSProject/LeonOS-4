@@ -51,8 +51,8 @@ make run
 用 `O=out/my-build PROFILE=debug` 隔离不同配置。`V=1` 显示命令，`make --trace` 和
 `make -n` 检查依赖；首次准确预览前先 `make defconfig`。同一 O 的两个真实构建互斥。
 
-`SOURCE_DATE_EPOCH` 默认取提交时间，`BUILD_ID` 可显式指定数字版本；构建不修改源码版本头或
-递增计数。签名密钥默认保存在用户目录，可用 `APK_SIGNING_KEY` 指定，绝不会放入发行目录。
+`SOURCE_DATE_EPOCH` 默认取提交时间，仅用于时间元数据与可复现打包。内核版本取
+`configs/build-version`，不附加构建号；Git 身份单独记录。签名密钥默认保存在用户目录，可用 `APK_SIGNING_KEY` 指定，绝不会放入发行目录。
 新发行 APK 使用 `1.<epoch>.<content-id>-r0`，排序高于旧 `0.<time_ns>-r0`。
 正式发行应使用递增提交时间或显式递增 `APK_BUILD_VERSION`；同一提交的脏工作区内容哈希不保证排序。
 

@@ -15,7 +15,6 @@ failures=0
 checks=0
 work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-repro.XXXXXX") || exit 1
 epoch=${SOURCE_DATE_EPOCH:-1700000000}
-build_id=2026091900
 
 cleanup() { [ -n "${KEEP_WORK:-}" ] || rm -rf "$work"; }
 trap 'cleanup; exit 130' INT
@@ -37,7 +36,7 @@ build_into() {
     mkdir -p "$1" || return 1
     # Different output paths, including a different depth from the source root,
     # so an accidentally embedded build directory shows up as a hash difference.
-    SOURCE_DATE_EPOCH="$epoch" BUILD_ID="$build_id" \
+    SOURCE_DATE_EPOCH="$epoch" \
         make -s O="$1" -j"$(nproc)" kernel >"$1.log" 2>&1
 }
 
@@ -106,11 +105,6 @@ if grep -q "$epoch" "$first/include/generated/build_info.h" 2>/dev/null \
 else
     fail 'the build info header carries a fixed, derived timestamp' \
         "no dated macro found in build_info.h"
-fi
-if [ "$(grep -c "$build_id" "$first/include/generated/build_info.h" 2>/dev/null)" -gt 0 ]; then
-    pass 'BUILD_ID reaches the generated header'
-else
-    fail 'BUILD_ID reaches the generated header' "not found in build_info.h"
 fi
 
 printf -- '---\n'

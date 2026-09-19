@@ -35,7 +35,6 @@ V ?= 0
 CPUS ?=
 MEMORY ?=
 SOURCE_DATE_EPOCH ?= $(shell git -C $(LEONOS_SRC) show -s --format=%ct HEAD)
-BUILD_ID ?=
 TOOLCHAIN ?= $(LEONOS_SRC)/configs/toolchains/llvm-x86_64.mk
 
 O := $(patsubst %/,%,$(O))
@@ -116,8 +115,8 @@ LEONOS_O_MARKER := $(O)/.leonos-out
 #
 # The owner is the make process that acquired the lock, and the token names the
 # output directory it owns: LEONOS_BUILD_OWNER is "<pid>.<start ticks>:<absolute O>".
-# A nested make for that same directory inherits it, which is what keeps the
-# recursive $(MAKE) in `defconfig` from refusing its own outer build. A nested
+# A nested make for that same directory inherits it, so recursive build
+# invocations do not refuse their own outer build. A nested
 # make for a different directory acquires its own lock, so a test suite that
 # spawns builds still gets real exclusion for the trees it creates.
 #
@@ -191,8 +190,11 @@ doctor:
 	DEPS='$(LEONOS_DEPS_TOOL)' LOCK='$(LEONOS_LOCK)' CACHE='$(LEONOS_CACHE)' \
 	sh $(LEONOS_SRC)/scripts/doctor.sh
 
-defconfig olddefconfig menuconfig: $(LEONOS_O_MARKER)
-	@$(MAKE) --no-print-directory $(LEONOS_CONFIG_FILE) LEONOS_KCONFIG_MODE=$@
+defconfig olddefconfig menuconfig: $(LEONOS_O_MARKER) $(KCONFIG_CONF) $(KCONFIG_MCONF) | $(O_CONFIG)
+	$(Q)sh $(LEONOS_SRC)/tools/build/kconfig-frontends.sh run \
+		--conf $(abspath $(KCONFIG_CONF)) --mconf $(abspath $(KCONFIG_MCONF)) \
+		--kconfig $(KCONFIG_ROOT) --config $(abspath $(LEONOS_CONFIG_FILE)) \
+		--seed $(KCONFIG_SEED) --mode $@
 
 tools: $(LEONOS_HOST_TOOLS)
 

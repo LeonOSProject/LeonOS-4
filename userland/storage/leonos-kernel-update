@@ -69,24 +69,20 @@ field() {
 }
 format=$(field format_version) || { printf '%s\n' 'Invalid kernel release manifest' >&2; exit 1; }
 remote_image=$(field image_version) || remote_image=
-remote_release=$(field version) || { printf '%s\n' 'Kernel release has no build version' >&2; exit 1; }
+remote_release=$(field version) || { printf '%s\n' 'Kernel release has no version' >&2; exit 1; }
 kernel_file=$(field kernel_file) || exit 1
 kernel_hash=$(field kernel_sha256) || exit 1
 middle_file=$(field middlelayer_file) || exit 1
 middle_hash=$(field middlelayer_sha256) || exit 1
 [ "$format" = 1 ] || { printf 'Unsupported kernel release manifest: %s\n' "$format" >&2; exit 1; }
-case "$remote_release" in *[!0-9.-]*|''|.*|*.) printf 'Invalid remote build version: %s\n' "$remote_release" >&2; exit 1;; esac
-remote_build=${remote_release##*-}
-[ "$remote_build" != "$remote_release" ] || {
-    printf '%s\n' 'Remote build version has no build number' >&2
-    exit 1
+printf '%s\n' "$remote_release" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || {
+    printf 'Invalid remote release version: %s\n' "$remote_release" >&2; exit 1;
 }
-case "$remote_build" in *[!0-9]*|'') printf '%s\n' 'Invalid remote build number' >&2; exit 1;; esac
-release_image=${remote_release%-*}
+release_image=$remote_release
 [ -n "$remote_image" ] || remote_image=$release_image
 case "$remote_image" in *[!0-9.]*|''|.*|*.) printf 'Invalid remote image version: %s\n' "$remote_image" >&2; exit 1;; esac
 [ "$release_image" = "$remote_image" ] || {
-    printf '%s\n' 'Remote image and build versions disagree' >&2
+    printf '%s\n' 'Remote image and release versions disagree' >&2
     exit 1
 }
 case "$kernel_file:$middle_file" in kernel.sys:middlelayer.sys) ;; *) printf '%s\n' 'Invalid kernel release filenames' >&2; exit 1;; esac
@@ -115,7 +111,7 @@ version_is_newer "$local_image" "$remote_image"
 comparison=$?
 [ "$comparison" -ne 2 ] || { printf 'Invalid local image version: %s\n' "$local_image" >&2; exit 1; }
 if [ "$comparison" -ne 0 ]; then
-    printf 'Kernel image is current: local=%s remote=%s (builds %s / %s ignored)\n' \
+    printf 'Kernel image is current: local=%s remote=%s (releases %s / %s)\n' \
         "$local_image" "$remote_image" "$local_release" "$remote_release"
     exit 0
 fi

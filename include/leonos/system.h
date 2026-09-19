@@ -32,7 +32,7 @@ struct leonos_system_info {
     uint32_t version_major;
     uint32_t version_minor;
     uint32_t version_patch;
-    uint32_t build_number;
+    uint32_t reserved_version; /* Reserved; keep system-info ABI offsets stable. */
     uint32_t copyright_year;
     char architecture[LEONOS_SYSTEM_ARCH_LEN];
 };

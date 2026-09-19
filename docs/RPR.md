@@ -77,10 +77,10 @@ The published tree is:
 ```
 
 `release.txt` is the strict line-oriented client protocol. Its
-`image_version` is `major.minor.patch`, while `version` remains
-`major.minor.patch-build` for release traceability. The final field is the
-LeonOS build number exposed by `uname -r`; it does not participate in update
-eligibility. The JSON file is informational and intended for external tools.
+`image_version` and `version` are both `major.minor.patch`; no build counter or
+numeric build suffix is published. The JSON file is informational and intended
+for external tools. Older clients requiring a numeric suffix must first receive
+the updated `leonos-kernel-update` script through a system package update.
 
 ## Client commands
 
