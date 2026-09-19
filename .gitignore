@@ -1,29 +1,24 @@
-# Anchored: the output tree is only ever <root>/build. An unanchored rule also
-# matched docs/build/, tests/build/ and tools/build/, which silently made the
-# migration documents and the build contract tests uncommittable.
-/build/
-# The new Make build writes out/<arch>/<profile>; like /build/ it is generated
-# and must never be tracked.
+# Make output trees (default out/<arch>/<profile>, custom O=out/<name>).
+# Keep these anchored: docs/build/, tests/build/ and tools/build/ are source.
 /out/
-# Verified downloads shared by every arch and profile. `distclean` deliberately
-# keeps it, and it is tens of megabytes of upstream tarballs.
+# Shared verified downloads, intentionally retained by make distclean.
 /cache/
-buildsystem/firmware/
-buildsystem/state/*
-!buildsystem/state/build_number.txt
-buildsystem/logs/
-buildsystem/tmp/
-buildsystem/config/
-buildsystem/deps/
-buildsystem/cache/
-.config
+# Retired build engine outputs retained locally after the Make migration.
+/build/
+/buildsystem/
+/obj/
+# Local configuration, CI summaries and interrupted dependency-test fixtures.
+/.config
+/.config.old
+/build-summary.md
+/leonos-deps-contract.*/
 __pycache__/
 *.egg-info/
 *.log
 *.tmp
 .kagent
-dist/
-tools/dist/
-LeonOS4-Developer-SDK.zip
+/dist/
+/tools/dist/
+/LeonOS4-Developer-SDK.zip
 .trae-html-share-packages/
 .zig_cache/
