@@ -1,8 +1,8 @@
 #!/bin/sh
 # Assemble a local Pages tree only. Publication is a separate user/CI action.
 set -eu
-[ "$#" = 7 ] || exit 2
-repository=$1 apps=$2 kernel=$3 build=$4 apk=$5 key=$6 output=$7
+[ "$#" = 8 ] || exit 2
+repository=$1 apps=$2 kernel=$3 loader=$4 build=$5 apk=$6 key=$7 output=$8
 [ ! -L "$key" ] && [ -f "$key" ] && [ "$(stat -c %a "$key")" = 600 ] || { echo 'private signing key must be a regular 0600 file' >&2; exit 1; }
 version=$(sed -n 's/^#define LEONOS_KERNEL_VERSION "\([0-9.]*\)"$/\1/p' "$build")
 printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo 'invalid release version' >&2; exit 1; }
@@ -37,16 +37,20 @@ done
     printf ']}\n'
 } > "$work/site/apk/repository.json"
 cp "$kernel" "$work/site/kernel/kernel.sys"
+cp "$loader" "$work/site/kernel/loader.elf"
 kernel_hash=$(sha256sum "$kernel" | cut -d' ' -f1)
+loader_hash=$(sha256sum "$loader" | cut -d' ' -f1)
 cat > "$work/site/kernel/release.txt" <<RELEASE
 format_version=2
 image_version=$image
 version=$version
 kernel_file=kernel.sys
 kernel_sha256=$kernel_hash
+loader_file=loader.elf
+loader_sha256=$loader_hash
 RELEASE
-printf '%s  kernel.sys\n' "$kernel_hash" > "$work/site/kernel/SHA256SUMS"
-printf '{"architecture":"x86_64","image_version":"%s","files":{"kernel.sys":{"sha256":"%s"}},"schema":1,"version":"%s"}\n' "$image" "$kernel_hash" "$version" > "$work/site/kernel/release.json"
+printf '%s  kernel.sys\n%s  loader.elf\n' "$kernel_hash" "$loader_hash" > "$work/site/kernel/SHA256SUMS"
+printf '{"architecture":"x86_64","image_version":"%s","files":{"kernel.sys":{"sha256":"%s"},"loader.elf":{"sha256":"%s"}},"schema":1,"version":"%s"}\n' "$image" "$kernel_hash" "$loader_hash" "$version" > "$work/site/kernel/release.json"
 printf '{"apk":"/apk/packages.adb","kernel":"/kernel/release.txt","schema":1,"version":"%s"}\n' "$version" > "$work/site/manifest.json"
 printf '<!doctype html><meta charset=utf-8><title>LeonOS RPR</title><h1>LeonOS 4 Remote Package Repository</h1><p>Latest kernel: %s</p><ul><li><a href="apk/repository.json">APK repository</a></li><li><a href="kernel/release.json">Kernel release</a></li></ul>\n' "$version" > "$work/site/index.html"
 : > "$work/site/.nojekyll"

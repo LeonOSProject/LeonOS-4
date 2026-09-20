@@ -66,6 +66,7 @@ printf package > "$tmp/pages-repository/leonos-base-1-r0.apk"
 printf package > "$tmp/pages-apps/leonos-broken.apk"
 printf leonos-broken.apk > "$tmp/pages-apps/packages.list"
 printf kernel > "$tmp/kernel.sys"
+printf loader > "$tmp/loader.elf"
 cat > "$tmp/pages-build.h" <<'EOF'
 #define LEONOS_KERNEL_VERSION "4.7.1"
 EOF
@@ -73,7 +74,7 @@ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
     -out "$tmp/pages-key" 2>/dev/null
 chmod 600 "$tmp/pages-key"
 if sh "$src/tools/build/rpr-pages.sh" "$tmp/pages-repository" "$tmp/pages-apps" \
-    "$tmp/kernel.sys" "$tmp/pages-build.h" \
+    "$tmp/kernel.sys" "$tmp/loader.elf" "$tmp/pages-build.h" \
     "$tmp/fake-bin/apk" "$tmp/pages-key" "$tmp/pages-output" \
     2>"$tmp/pages-error"; then
     echo 'versionless RPR package was accepted' >&2
