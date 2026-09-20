@@ -6,11 +6,10 @@
 #define NTCLKS_PTY_H
 
 #include <ntclks/types.h>
+#include <ntclks/storage.h>
 #include <leonos/pty.h>
-#include <leonos/permissions.h>
 #include <linux/tty.h>
 
-struct storage_node;
 int pty_lookup_path(const char *path, struct storage_node *node);
 int pty_get_node(uint32_t pty_id, struct storage_node *node);
 int pty_inode_permissions(const struct storage_node *node,

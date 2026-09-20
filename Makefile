@@ -186,7 +186,7 @@ doctor:
 	TOOLCHAIN='$(TOOLCHAIN)' HOSTCC='$(HOSTCC)' \
 	TARGET_CC='$(TARGET_CC)' TARGET_LD='$(TARGET_LD)' TARGET_AR='$(TARGET_AR)' \
 	TARGET_OBJCOPY='$(TARGET_OBJCOPY)' TARGET_STRIP='$(TARGET_STRIP)' \
-	TARGET_RUSTC='$(TARGET_RUSTC)' TARGET_TRIPLE_KERNEL='$(TRIPLE_KERNEL)' \
+	TARGET_TRIPLE_KERNEL='$(TRIPLE_KERNEL)' \
 	TARGET_TRIPLE_USER='$(TRIPLE_USER)' \
 	DEPS='$(LEONOS_DEPS_TOOL)' LOCK='$(LEONOS_LOCK)' CACHE='$(LEONOS_CACHE)' \
 	sh $(LEONOS_SRC)/scripts/doctor.sh
@@ -222,6 +222,6 @@ all: kernel userland runtime sdk apk-repo image-vmdk iso installer
 .PHONY: image-iso release config-sync build-info test-all
 image-iso: iso
 release: all rpr-pages
-config-sync: $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(RUSTCFG_ARGS) $(LEONOS_COMPONENT_MK)
+config-sync: $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(LEONOS_COMPONENT_MK)
 build-info: $(BUILD_INFO_HEADER)
 test-all: test test-long test-legacy test-smoke

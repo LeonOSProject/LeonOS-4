@@ -11,8 +11,8 @@ RPR_INPUTS := $(wildcard $(LEONOS_SRC)/third_party/rime-pinyin-simp/* $(LEONOS_S
 $(RPR_APP_PACKAGES) &: $(addprefix $(USERLAND_DIR)/,helloworld.elf doom.elf doomlauncher.elf oschinpt.elf) $(OSCHINPT_INDEX) $(BUILD_INFO_HEADER) $(RPR_INPUTS) $(APK_MANIFEST) $(LEONOS_SRC)/tools/build/rpr-apps.sh
 	$(Q)sh $(LEONOS_SRC)/tools/build/rpr-apps.sh $(LEONOS_SRC) $(O) $(BUILD_INFO_HEADER) $(OSCHINPT_INDEX) $(UPSTREAM_APK) '$(APK_SIGNING_KEY)' $(RPR_APPS) $(SOURCE_DATE_EPOCH)
 RPR_PAGES := $(O)/rpr-pages
-$(RPR_PAGES)/.complete $(RPR_PAGES)/manifest.json &: $(RPR_APP_PACKAGES) $(APK_MANIFEST) $(APK_REPOSITORY)/packages.adb $(LEONOS_KERNEL_SYS) $(MIDDLELAYER_SYS) $(BUILD_INFO_HEADER) $(LEONOS_SRC)/tools/build/rpr-pages.sh
-	$(Q)SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) sh $(LEONOS_SRC)/tools/build/rpr-pages.sh $(APK_REPOSITORY) $(RPR_APPS) $(LEONOS_KERNEL_SYS) $(MIDDLELAYER_SYS) $(BUILD_INFO_HEADER) $(UPSTREAM_APK) '$(APK_SIGNING_KEY)' $(RPR_PAGES)
+$(RPR_PAGES)/.complete $(RPR_PAGES)/manifest.json &: $(RPR_APP_PACKAGES) $(APK_MANIFEST) $(APK_REPOSITORY)/packages.adb $(LEONOS_KERNEL_SYS) $(BUILD_INFO_HEADER) $(LEONOS_SRC)/tools/build/rpr-pages.sh
+	$(Q)SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) sh $(LEONOS_SRC)/tools/build/rpr-pages.sh $(APK_REPOSITORY) $(RPR_APPS) $(LEONOS_KERNEL_SYS) $(BUILD_INFO_HEADER) $(UPSTREAM_APK) '$(APK_SIGNING_KEY)' $(RPR_PAGES)
 	$(Q)sh $(LEONOS_SRC)/tools/build/stage-inventory.sh write $(RPR_PAGES) $(O_META)/rpr-pages.files
 $(O_META)/rpr-pages-present.sig: FORCE
 	$(Q)sh $(LEONOS_SRC)/tools/build/stage-inventory.sh check $(RPR_PAGES) $(O_META)/rpr-pages.files $@

@@ -46,7 +46,6 @@ def stage_installer_tree(
     boot_efi: Path,
     loader: Path,
     kernel: Path,
-    middlelayer: Path,
     installer_root: Path,
     grub_font: Path,
     grub_config: Path,
@@ -61,7 +60,6 @@ def stage_installer_tree(
     (stage / "leonos-installer-iso.marker").write_text("LeonOS installer ISO volume\n", encoding="ascii")
     copy_file(loader, stage / "loader.elf")
     copy_file(kernel, stage / "leonos/kernel.sys")
-    copy_file(middlelayer, stage / "leonos/middlelayer.sys")
     copy_file(installer_root, stage / "install/root.fat")
     copy_file(boot_image, stage / "boot/efiboot.img")
 
@@ -94,7 +92,6 @@ def main() -> int:
     parser.add_argument("--boot-image", default="build/install/installer-efiboot.img")
     parser.add_argument("--loader", default="build/boot/loader.elf")
     parser.add_argument("--kernel", default="build/system/kernel.sys")
-    parser.add_argument("--middlelayer", default="build/system/middlelayer.sys")
     parser.add_argument("--installer-root", default="build/install/root.fat")
     parser.add_argument("--grub-font", default="build/generated/grub/leonos-unicode.pf2")
     parser.add_argument("--work-dir", default="build/install")
@@ -108,7 +105,6 @@ def main() -> int:
     boot_image = ROOT / args.boot_image
     loader = ROOT / args.loader
     kernel = ROOT / args.kernel
-    middlelayer = ROOT / args.middlelayer
     installer_root = ROOT / args.installer_root
     grub_font = ROOT / args.grub_font
     work_dir = ROOT / args.work_dir
@@ -122,7 +118,7 @@ def main() -> int:
 
     boot_efi = build_installer_boot_efi(work_dir / "installer-BOOTX64.EFI", grub_efi_dir)
     create_boot_image(boot_image, boot_efi, work_dir / "efi-boot")
-    stage_installer_tree(stage, boot_image, boot_efi, loader, kernel, middlelayer,
+    stage_installer_tree(stage, boot_image, boot_efi, loader, kernel,
                          installer_root, grub_font, ROOT / args.grub_config)
     if args.bios:
         copy_file(ROOT / args.grub_config, stage / "boot/grub/grub.cfg")

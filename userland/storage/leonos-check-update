@@ -9,7 +9,7 @@ export PATH
 }
 [ "$#" -eq 0 ] || { printf '%s\n' 'Usage: leonos-check-update' >&2; exit 2; }
 
-printf '%s\n' 'Checking LeonOS kernel and middle-layer release...'
+printf '%s\n' 'Checking LeonOS kernel release...'
 leonos-kernel-update --check
 
 printf '%s\n' 'Refreshing APK indexes...'

@@ -44,7 +44,7 @@ group 'target toolchain (validated by actually compiling)'
 leonos_log TARGET_CC "${TARGET_CC:-unset}"
 leonos_log TARGET_LD "${TARGET_LD:-unset}"
 for tool in "$TARGET_CC" "$TARGET_LD" "$TARGET_AR" "$TARGET_OBJCOPY" \
-            "$TARGET_STRIP" "$TARGET_RUSTC"; do
+            "$TARGET_STRIP"; do
     check_tool "$tool"
 done
 
@@ -94,18 +94,6 @@ if command -v "$TARGET_CC" >/dev/null 2>&1; then
     else
         missing 'cannot create temporary directory for compiler validation'
     fi
-fi
-
-if command -v "$TARGET_RUSTC" >/dev/null 2>&1; then
-    rust_probe=$(mktemp -d)
-    printf '#![no_std]\npub fn probe() -> u64 { 1 }\n' > "$rust_probe/probe.rs"
-    if "$TARGET_RUSTC" --target x86_64-unknown-none --crate-type lib \
-            "$rust_probe/probe.rs" -o "$rust_probe/probe.rlib" >/dev/null 2>&1; then
-        present 'Rust freestanding core' x86_64-unknown-none
-    else
-        missing 'Rust x86_64-unknown-none target (rustup target add x86_64-unknown-none)'
-    fi
-    rm -rf "$rust_probe"
 fi
 
 group ''

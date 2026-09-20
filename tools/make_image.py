@@ -31,7 +31,6 @@ from leonos_layout import (  # noqa: E402  (tools directory is not a package)
     apply_root_symlinks,
     ESP_DISPLAY_CONF,
     ESP_KERNEL,
-    ESP_MIDDLELAYER,
 )
 SECTOR_SIZE = 512
 ESP_FIRST_SECTOR = 2048
@@ -181,8 +180,6 @@ def make_boot_tree(staging: Path, destination: Path) -> None:
     shutil.copytree(staging / "grub", destination / "grub", symlinks=True,
                     dirs_exist_ok=True)
     copy_file(staging / ESP_KERNEL.lstrip("/"), destination / ESP_KERNEL.lstrip("/"))
-    copy_file(staging / ESP_MIDDLELAYER.lstrip("/"),
-              destination / ESP_MIDDLELAYER.lstrip("/"))
     # The loader reads the boot theme from the ESP copy before any root
     # filesystem exists, so the generated display.conf is duplicated at its
     # ESP-internal path.  It is generated from the same source as the root

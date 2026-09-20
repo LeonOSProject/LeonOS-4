@@ -96,12 +96,6 @@ jobs:
             ncurses-bin \
             exfatprogs
 
-      - name: Install Rust
-        run: |
-          rustup toolchain install stable --profile minimal
-          rustup default stable
-          rustup target add x86_64-unknown-none
-
       - name: Verify toolchain
         run: |
           set -euo pipefail
@@ -112,8 +106,6 @@ jobs:
           grub-mkstandalone --version
           grub-mkrescue --version
           qemu-img --version
-          rustc --version
-          cargo --version
           msgfmt --version
 
       - name: Verify third-party sources

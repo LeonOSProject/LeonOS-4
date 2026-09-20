@@ -13,6 +13,7 @@ with tempfile.TemporaryDirectory(prefix="leonos-mkdir-mount-") as directory:
     subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                     "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
                     "-Iinclude", "-Iinclude/uapi", "-Ikernel/ntclks/include",
-                    "tools/tests/storage_mkdir_mount_test.c", "kernel/ntclks/tmpfs.c", "-o", executable],
+                    "tools/tests/storage_mkdir_mount_test.c", "kernel/ntclks/tmpfs.c",
+                    "kernel/ntclks/lib/text_utf16.c", "-o", executable],
                    cwd=ROOT, check=True)
     subprocess.run([executable, image], cwd=ROOT, check=True, timeout=30)

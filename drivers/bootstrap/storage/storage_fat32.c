@@ -634,7 +634,7 @@ static void fat32_build_lfn_name(const uint16_t lfn_parts[20][13], uint32_t lfn_
 {
     uint16_t utf16[260];
     uint32_t len = 0;
-    struct leonos_unicode_utf16_to_utf8 cmd;
+    uint32_t utf8_len = 0;
     if (!dst || cap == 0) {
         return;
     }
@@ -648,16 +648,11 @@ static void fat32_build_lfn_name(const uint16_t lfn_parts[20][13], uint32_t lfn_
             utf16[len++] = ch;
         }
     }
-    cmd.utf16 = utf16;
-    cmd.utf16_len = len;
-    cmd.utf8 = dst;
-    cmd.utf8_capacity = cap;
-    cmd.utf8_len = 0;
-    if (osmlayer_unicode_utf16le_to_utf8(&cmd) < 0) {
+    if (text_utf16le_to_utf8(utf16, len, dst, cap, &utf8_len) < 0) {
         dst[0] = 0;
         return;
     }
-    if (cmd.utf8_len >= cap) {
+    if (utf8_len >= cap) {
         dst[cap - 1] = 0;
     }
 }
@@ -688,7 +683,7 @@ static int fat32_validate_name(const char *name)
 {
     uint32_t len = (uint32_t)storage_strlen(name);
     uint16_t utf16[260];
-    struct leonos_unicode_utf8_to_utf16 cmd;
+    uint32_t utf16_len = 0;
     if (!name || !name[0] || len >= LEONOS_FS_NAME_LEN) {
         return -22;
     }
@@ -703,13 +698,9 @@ static int fat32_validate_name(const char *name)
             return -22;
         }
     }
-    cmd.utf8 = name;
-    cmd.utf8_len = len;
-    cmd.utf16 = utf16;
-    cmd.utf16_capacity = sizeof(utf16) / sizeof(utf16[0]);
-    cmd.utf16_len = 0;
-    if (osmlayer_unicode_utf8_to_utf16le(&cmd) < 0 ||
-        cmd.utf16_len == 0 || cmd.utf16_len > 255u) {
+    if (text_utf8_to_utf16le(name, len, utf16,
+                             sizeof(utf16) / sizeof(utf16[0]), &utf16_len) < 0 ||
+        utf16_len == 0 || utf16_len > 255u) {
         return -22;
     }
     return 0;
@@ -858,17 +849,12 @@ static uint8_t fat32_short_name_checksum(const uint8_t short_name[11])
 
 static uint32_t fat32_utf16_name(const char *name, uint16_t *utf16, uint32_t cap)
 {
-    struct leonos_unicode_utf8_to_utf16 cmd = {
-        .utf8 = name,
-        .utf8_len = (uint32_t)storage_strlen(name),
-        .utf16 = utf16,
-        .utf16_capacity = cap,
-        .utf16_len = 0,
-    };
-    if (osmlayer_unicode_utf8_to_utf16le(&cmd) < 0) {
+    uint32_t utf16_len = 0;
+    if (text_utf8_to_utf16le(name, (uint32_t)storage_strlen(name), utf16, cap,
+                             &utf16_len) < 0) {
         return 0;
     }
-    return cmd.utf16_len;
+    return utf16_len;
 }
 
 static uint32_t fat32_lfn_entry_count(const char *name)

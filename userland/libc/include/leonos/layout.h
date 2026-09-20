@@ -127,11 +127,9 @@
 #define LEONOS_PATH_LIBLEONOS_COMPAT LEONOS_LAYOUT_LEONOS_LIB "/libleonos.so.1"
 #define LEONOS_PATH_OLD_NATIVE_INTERP LEONOS_LAYOUT_LEONOS_LIB "/ld-leonos.elf"
 #define LEONOS_PATH_KERNELDEBUG_MODULE LEONOS_LAYOUT_LEONOS_LIB "/kerneldebug.sys"
-#define LEONOS_PATH_OSMLAYER_MANIFEST LEONOS_LAYOUT_LEONOS_LIB "/osmlayer.manifest"
 
 /* Runtime view of the boot partition; the ESP itself normally mounts /boot. */
 #define LEONOS_PATH_BOOT_KERNEL "/boot/leonos/kernel.sys"
-#define LEONOS_PATH_BOOT_MIDDLELAYER "/boot/leonos/middlelayer.sys"
 #define LEONOS_PATH_BOOT_KERNELDEBUG_MARKER "/boot/leonos/state/kerneldebug.next"
 #define LEONOS_PATH_BOOT_DISPLAY_CONF "/boot/leonos/config/display.conf"
 

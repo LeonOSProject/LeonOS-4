@@ -1,13 +1,13 @@
 #include <ntclks/mm.h>
 #include <ntclks/console.h>
 #include <ntclks/multiboot2.h>
-#include <ntclks/osmlayer.h>
 #include <ntclks/paging.h>
 #include <ntclks/pci.h>
 #include <ntclks/port.h>
 #include <ntclks/sched.h>
 #include <ntclks/smp.h>
 #include <ntclks/storage.h>
+#include <ntclks/text_utf16.h>
 #include <ntclks/tmpfs.h>
 #include <ntclks/syscall.h>
 #include <ntclks/time.h>

@@ -60,7 +60,6 @@ def main():
     stage = output / "stage"
     subprocess.run(["cp", "--reflink=auto", "-a", str(ROOT / "build/esp"), str(stage)], check=True)
     for source, destination in (("build/system/kernel.sys", "leonos/kernel.sys"),
-                                ("build/system/middlelayer.sys", "leonos/middlelayer.sys"),
                                 ("build/boot/loader.elf", "loader.elf")):
         shutil.copy2(ROOT / source, stage / destination)
     auth = ROOT / "build/auth-upstream"
@@ -110,7 +109,7 @@ menuentry "LeonOS PAM runtime probe" {
     artifacts += sorted((stage / "lib").glob("libmd.so*"))
     artifacts += [stage / "sbin" / helper.name for helper in sorted((auth / "root/sbin").iterdir())
                   if helper.is_file()]
-    artifacts += [tests / "gcc-probe.elf", stage / "leonos/kernel.sys", stage / "leonos/middlelayer.sys",
+    artifacts += [tests / "gcc-probe.elf", stage / "leonos/kernel.sys",
                   stage / "loader.elf", stage / "lib/ld-musl-x86_64.so.1"]
     artifacts += [stage / "usr/lib/leonos/libleonos.so.2",
                   stage / "usr/lib/leonos/apps/authd/authd.elf"]

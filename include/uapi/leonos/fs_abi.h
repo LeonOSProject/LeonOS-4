@@ -15,13 +15,6 @@
 #define LEONOS_FS_TYPE_SOCKET 4U
 #define LEONOS_FS_TYPE_SYMLINK 5U
 #define LEONOS_FS_TYPE_FIFO 6U
-#define LEONOS_FS_ACL_ACTION_GET 1U
-#define LEONOS_FS_ACL_ACTION_SET 2U
-#define LEONOS_FS_ACL_ACTION_TAKE_OWNERSHIP 3U
-#define LEONOS_FS_ACL_ACTION_REPAIR 4U
-#define LEONOS_FS_ACL_ACTION_NOTE_CREATE 5U
-#define LEONOS_FS_ACL_ACTION_NOTE_DELETE 6U
-#define LEONOS_FS_ACL_ACTION_NOTE_RENAME 7U
 #define LEONOS_FS_ACL_PRINCIPAL_OWNER 1U
 #define LEONOS_FS_ACL_PRINCIPAL_SYSTEM 2U
 #define LEONOS_FS_ACL_PRINCIPAL_ADMINISTRATORS 3U
@@ -61,6 +54,5 @@ struct leonos_dir_entry { uint32_t type; char name[LEONOS_FS_NAME_LEN]; };
 struct leonos_dir_list { const char *path; uint32_t capacity; uint32_t count; struct leonos_dir_entry *entries; };
 struct leonos_fs_acl_ace { uint32_t principal; uint32_t flags; uint32_t permissions; uint32_t reserved; };
 struct leonos_fs_acl { uint32_t version; uint32_t owner_uid; uint32_t flags; uint32_t ace_count; struct leonos_fs_acl_ace aces[LEONOS_FS_ACL_MAX_ACE]; };
-struct leonos_fs_acl_request { uint32_t action; uint32_t actor_uid; uint32_t actor_role; uint32_t actor_flags; uint32_t status; uint32_t reserved; char username[32]; char home[96]; char path[LEONOS_FS_PATH_LEN]; char path2[LEONOS_FS_PATH_LEN]; struct leonos_fs_acl acl; };
 
 #endif

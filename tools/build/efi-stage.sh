@@ -1,8 +1,8 @@
 #!/bin/sh
 # Build a standalone EFI loader with upstream GRUB, then assemble the ESP tree.
 set -eu
-[ "$#" = 9 ] || { echo 'usage: efi-stage SRC MODULES LOADER KERNEL MIDDLE FONT DISPLAY STAGE EPOCH' >&2; exit 2; }
-src=$1 modules=$2 loader=$3 kernel=$4 middle=$5 font=$6 display=$7 stage=$8 epoch=$9
+[ "$#" = 8 ] || { echo 'usage: efi-stage SRC MODULES LOADER KERNEL FONT DISPLAY STAGE EPOCH' >&2; exit 2; }
+src=$1 modules=$2 loader=$3 kernel=$4 font=$5 display=$6 stage=$7 epoch=$8
 mkdir -p "$(dirname "$stage")"
 work=$(mktemp -d "$stage.new.XXXXXX")
 trap 'rm -rf "$work"' EXIT HUP INT TERM
@@ -12,7 +12,6 @@ SOURCE_DATE_EPOCH=$epoch grub-mkstandalone -d "$modules" -O x86_64-efi -o "$work
  "boot/grub/grub.cfg=$src/boot/grub/embedded.cfg"
 cp "$loader" "$work/loader.elf"
 cp "$kernel" "$work/leonos/kernel.sys"
-cp "$middle" "$work/leonos/middlelayer.sys"
 cp "$font" "$work/grub/fonts/leonos-unicode.pf2"
 cp "$display" "$work/leonos/config/display.conf"
 cp "$src/boot/grub/grub.cfg" "$work/grub/grub.cfg"

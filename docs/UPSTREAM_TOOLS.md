@@ -136,7 +136,7 @@ This is not a service shutdown supervisor: orderly termination of every service
 before power transition remains unimplemented.
 
 The boot copier validates its input files and destination directory, then copies
-`EFI/BOOT/BOOTX64.EFI`, `loader.elf`, `leonos/kernel.sys`, `leonos/middlelayer.sys`
+`EFI/BOOT/BOOTX64.EFI`, `loader.elf`, `leonos/kernel.sys`
 and the complete `grub` directory. Default source is `/install/esp`; `--source DIR`
 supports an explicit prebuilt payload. It does not generate GRUB, format/mount an
 ESP, install boot sectors, or update NVRAM. The supplied destination must already

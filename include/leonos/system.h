@@ -26,7 +26,10 @@
 struct leonos_system_info {
     char kernel_name[LEONOS_SYSTEM_NAME_LEN];
     char kernel_version[LEONOS_SYSTEM_VERSION_LEN];
-    char middlelayer_name[LEONOS_SYSTEM_NAME_LEN];
+    /* Formerly the middle-layer module name.  The slot is kept so every other
+     * field stays at its published offset, and the kernel always reports it
+     * empty: there is no second boot module to name. */
+    char reserved_subsystem_name[LEONOS_SYSTEM_NAME_LEN];
     char build_time[LEONOS_SYSTEM_TIME_LEN];
     char copyright[LEONOS_SYSTEM_COPYRIGHT_LEN];
     uint32_t version_major;

@@ -76,7 +76,6 @@
 #define TARGET_RUN_LEONOS INSTALL_ROOT_MOUNT LEONOS_LAYOUT_RUN_LEONOS
 #define TARGET_BOOT INSTALL_ROOT_MOUNT "/boot"
 #define TARGET_ESP_KERNEL TARGET_BOOT "/leonos/kernel.sys"
-#define TARGET_ESP_MIDDLELAYER TARGET_BOOT "/leonos/middlelayer.sys"
 /* The installer must be able to change language before it has a writable
  * target system.  Do not make rendering depend on persisting locale.conf on
  * the installation medium. */

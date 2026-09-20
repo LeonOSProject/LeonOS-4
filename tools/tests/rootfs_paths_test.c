@@ -28,12 +28,11 @@ int storage_inode_permissions(const struct storage_node *node,struct leonos_perm
 { (void)node; (void)out; (void)write; assert(0); return -95; }
 int pty_inode_permissions(const struct storage_node *node,struct leonos_permissions *out,bool write)
 { (void)node; (void)out; (void)write; assert(0); return -95; }
-int osmlayer_auth_op(uint32_t op,void *data)
+int storage_sidecar_permissions(const char *path, struct leonos_permissions *value, bool write)
 {
-    assert(op == LEONOS_AUTH_OP_POSIX_PERMISSIONS);
-    struct leonos_permissions_request *request = data;
-    assert(request->action == LEONOS_PERMISSIONS_GET);
-    request->value = (struct leonos_permissions){0755, 0, 0};
+    (void)path;
+    (void)write;
+    *value = (struct leonos_permissions){0755, 0, 0};
     return 0;
 }
 int main(void)

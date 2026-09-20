@@ -66,14 +66,14 @@ int pty_inode_permissions(const struct storage_node *node,
     else *value = pty_permissions;
     return 0;
 }
-int osmlayer_auth_op(uint32_t op, void *data)
+/* FAT/exFAT metadata is now reached through the kernel-owned sidecar hook. */
+int storage_sidecar_permissions(const char *path, struct leonos_permissions *value,
+                                bool write)
 {
-    assert(op == LEONOS_AUTH_OP_POSIX_PERMISSIONS);
-    struct leonos_permissions_request *req = data;
-    struct fixture *f = find(req->path);
-    assert(f);
-    if (req->action == LEONOS_PERMISSIONS_GET) req->value = f->value;
-    else { assert(req->action == LEONOS_PERMISSIONS_SET); f->value = req->value; }
+    struct fixture *f = find(path);
+    if (!f) return -LEONOS_ENOENT;
+    if (write) f->value = *value;
+    else *value = f->value;
     return 0;
 }
 

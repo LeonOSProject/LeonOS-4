@@ -9,8 +9,7 @@ struct task *sched_find(uint32_t pid) { return pid == 17 ? &target : NULL; }
 uint64_t sched_user_task_count(uint32_t uid) { (void)uid; return 0; }
 bool user_range_ok(uint64_t p, uint64_t n) { return p >= 4096 && n <= UINT64_MAX - p; }
 bool user_range_writable(uint64_t p, uint64_t n) { return p != readonly && user_range_ok(p, n); }
-/* Standard ID syscalls must not consult the account service or mutate peers. */
-int osmlayer_auth_op(uint32_t op, void *data) { (void)op; (void)data; assert(0); return -1; }
+/* Standard ID syscalls must not consult a userspace service or mutate peers. */
 int storage_read_file(const char *p, const void **d, size_t *n)
 { (void)p; (void)d; (void)n; assert(0); return -1; }
 void sched_set_task_identity(uint32_t p, const struct leonos_user_info *u, uint32_t s)

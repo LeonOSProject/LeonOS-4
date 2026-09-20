@@ -34,7 +34,7 @@
  * alias instead of a physical address as a virtual pointer. */
 #define NTCLKS_KERNEL_DIRECT_MAP_BASE 0xffffff8000000000ULL
 #define NTCLKS_KERNEL_DIRECT_MAP_SIZE (16ULL * 1024ULL * 1024ULL * 1024ULL)
-/* The current loader places the kernel and middlelayer at 128 MiB.  Keep a
+/* The current loader places the kernel at 128 MiB.  Keep a
  * supervisor-only hole in every user CR3 so creating user page tables never
  * replaces those identity-mapped kernel PDEs. */
 #define NTCLKS_KERNEL_HOLE_START 0x0000000008000000ULL

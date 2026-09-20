@@ -17,7 +17,7 @@ cat > "$w/config-tool" <<'SH'
 set -eu
 printf 'generate\n' >> "$TEST_WORK/config-count"
 while [ "$#" -gt 0 ]; do
- case "$1" in --out-header|--out-installer-header|--rustcfg|--make-include) shift; touch "$1";; esac
+ case "$1" in --out-header|--out-installer-header|--make-include) shift; touch "$1";; esac
  shift
 done
 SH
@@ -34,7 +34,7 @@ LEONOS_PASSIVE := 1
 include $(TEST_REPO)/mk/config.mk
 .PHONY: front derived
 front: $(KCONFIG_CONF) $(KCONFIG_MCONF)
-derived: $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(RUSTCFG_ARGS) $(LEONOS_AUTOCONF_MK)
+derived: $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(LEONOS_AUTOCONF_MK)
 $(O_INCLUDE)/generated:
 	@mkdir -p $@
 MAKE
@@ -45,7 +45,7 @@ if [ "$(wc -l < "$w/frontend-count")" -eq 1 ]; then echo 'ok: frontend runs once
 touch "$w/out/config/.config"
 make -s -j8 -f "$w/test.mk" derived
 if [ "$(wc -l < "$w/config-count")" -eq 1 ]; then echo 'ok: config transform runs once'; else echo 'FAIL: config transform executed multiple times'; fail=1; fi
-rm "$w/out/include/generated/rustcfg.args"
+rm "$w/out/config/autoconf.mk"
 make -s -j8 -f "$w/test.mk" derived
-if [ -f "$w/out/include/generated/rustcfg.args" ] && [ "$(wc -l < "$w/config-count")" -eq 2 ]; then echo 'ok: missing grouped output regenerated'; else echo 'FAIL: missing grouped output not regenerated once'; fail=1; fi
+if [ -f "$w/out/config/autoconf.mk" ] && [ "$(wc -l < "$w/config-count")" -eq 2 ]; then echo 'ok: missing grouped output regenerated'; else echo 'FAIL: missing grouped output not regenerated once'; fail=1; fi
 exit "$fail"

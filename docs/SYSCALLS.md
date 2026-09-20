@@ -74,8 +74,9 @@ Only the creator can use a render handle. See [SVGA3D.md](SVGA3D.md) for details
 ## File and Directory Calls
 
 Paths use Unix syntax such as `/usr/lib/leonos/apps/desktop/desktop.elf`. Relative
-paths are resolved against the task current directory through the middlelayer
-VFS resolver when available, with a kernel fallback. Inputs containing `:`
+paths are resolved against the task current directory by
+`fs_permissions_resolve()` in the kernel, which also checks directory search
+permission on every component it walks. Inputs containing `:`
 are rejected.
 
 Open flags are defined in `include/leonos/fs.h`:
@@ -347,9 +348,11 @@ Successful login updates the current desktop session identity in the scheduler:
 task and inherited by child applications. Logout clears the session identity and
 kills ordinary user tasks in the session, then desktop returns to `login.elf`.
 
-The kernel asks middlelayer policy before file, task-kill, user-management, and
-installer-storage operations. File authorization uses the `LEONACL.SYS` ACL
-sidecar model on exFAT, FAT32, and ext2 roots. The mapping is:
+The kernel makes every file, task-kill, user-management, and installer-storage
+decision itself in `kernel/ntclks/permissions.c`, against the permissions the
+storage layer reports: the `LEONACL.SYS` sidecar on exFAT and FAT32, native
+inode fields on ext2 and tmpfs, and fixed modes for PTY and device nodes. The
+mapping is:
 
 - `stat`, directory reads, and file reads: Read/List.
 - `open` create/truncate, `write`, and `mkdir`: Write/Create.

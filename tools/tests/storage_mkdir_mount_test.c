@@ -36,11 +36,6 @@ void x86_64_outw(uint16_t value, uint16_t port) { (void)value; (void)port; abort
 uint64_t time_ticks(void) { abort(); }
 int time_wall_clock(struct leonos_time_info *info)
 { *info = (struct leonos_time_info){.unix_seconds = 1800000000}; return 0; }
-int osmlayer_unicode_utf8_to_utf16le(struct leonos_unicode_utf8_to_utf16 *cmd)
-{ (void)cmd; abort(); }
-int osmlayer_unicode_utf16le_to_utf8(struct leonos_unicode_utf16_to_utf8 *cmd)
-{ (void)cmd; abort(); }
-
 static void load_volume(const char *image, unsigned id, const char *mount_path)
 {
     FILE *file = fopen(image, "rb");

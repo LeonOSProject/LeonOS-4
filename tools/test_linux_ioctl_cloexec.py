@@ -186,7 +186,6 @@ terminal_output gfxterm serial
 menuentry "LeonOS 4 ioctl CLOEXEC regression" {
     multiboot2 /loader.elf root=/ log=serial mode=live startup=desktop syscall-trace=/opt/python/ autospawn=ioctlcloexec autospawn=python315
     module2 /leonos/kernel.sys leonos-kernel
-    module2 /leonos/middlelayer.sys leonos-middlelayer
     module2 /install/root.fat leonos-installer-root
     boot
 }
@@ -242,7 +241,7 @@ def grub_efi_dir() -> str:
 
 def build_iso(root: Path, output: Path, config: Path, work: Path) -> Path:
     for name in ("build/boot/loader.elf", "build/system/kernel.sys",
-                 "build/system/middlelayer.sys", "build/generated/grub/leonos-unicode.pf2"):
+                 "build/generated/grub/leonos-unicode.pf2"):
         assert (ROOT / name).is_file(), f"missing {name}; build kernel and userland targets separately"
     config.write_text(GRUB_TEMPLATE, encoding="ascii")
     assert "bootlog=1" not in config.read_text(encoding="ascii")
@@ -252,7 +251,6 @@ def build_iso(root: Path, output: Path, config: Path, work: Path) -> Path:
         "--stage", str((work / "iso").relative_to(ROOT)),
         "--boot-image", str((work / "efiboot.img").relative_to(ROOT)),
         "--loader", "build/boot/loader.elf", "--kernel", "build/system/kernel.sys",
-        "--middlelayer", "build/system/middlelayer.sys",
         "--installer-root", str(root.relative_to(ROOT)),
         "--grub-font", "build/generated/grub/leonos-unicode.pf2",
         "--work-dir", str(work.relative_to(ROOT)),

@@ -1022,7 +1022,6 @@ static uint16_t exfat_name_hash(const uint16_t *name, uint32_t length)
 
 static int exfat_utf8_name(const char *name, uint16_t out[255], uint32_t *out_length)
 {
-    struct leonos_unicode_utf8_to_utf16 command;
     uint32_t length;
     if (!name || !name[0] || !out || !out_length) return -22;
     length = (uint32_t)storage_strlen(name);
@@ -1034,14 +1033,8 @@ static int exfat_utf8_name(const char *name, uint16_t out[255], uint32_t *out_le
             name[i] == ':' || name[i] == '<' || name[i] == '>' || name[i] == '?' ||
             name[i] == '\\' || name[i] == '|') return -22;
     }
-    command.utf8 = name;
-    command.utf8_len = length;
-    command.utf16 = out;
-    command.utf16_capacity = 255u;
-    command.utf16_len = 0;
-    if (osmlayer_unicode_utf8_to_utf16le(&command) < 0 || command.utf16_len == 0 ||
-        command.utf16_len > 255u) return -22;
-    *out_length = command.utf16_len;
+    if (text_utf8_to_utf16le(name, length, out, 255u, out_length) < 0 ||
+        *out_length == 0 || *out_length > 255u) return -22;
     return 0;
 }
 
@@ -1188,7 +1181,7 @@ static int exfat_read_file_set(uint32_t directory_cluster, uint8_t nofat, uint32
     uint8_t count;
     uint32_t name_length;
     uint32_t name_pos = 0;
-    struct leonos_unicode_utf16_to_utf8 convert;
+    uint32_t rendered_length = 0;
     char rendered[LEONOS_FS_NAME_LEN];
     int ret;
     if (!entries || !out_count || !name || !out_name_length || !out_node) return -22;
@@ -1215,12 +1208,8 @@ static int exfat_read_file_set(uint32_t directory_cluster, uint8_t nofat, uint32
     }
     if (name_pos != name_length) return -5;
     if (exfat_name_hash(name, name_length) != exfat_get_u16(entries[1] + 4u)) return -5;
-    convert.utf16 = name;
-    convert.utf16_len = name_length;
-    convert.utf8 = rendered;
-    convert.utf8_capacity = sizeof(rendered);
-    convert.utf8_len = 0;
-    if (osmlayer_unicode_utf16le_to_utf8(&convert) < 0 || !rendered[0]) return -5;
+    if (text_utf16le_to_utf8(name, name_length, rendered, sizeof(rendered),
+                             &rendered_length) < 0 || !rendered[0]) return -5;
     storage_memzero(out_node, sizeof(*out_node));
     out_node->type = (exfat_get_u16(entries[0] + 4u) & EXFAT_ATTR_DIRECTORY)
                          ? LEONOS_FS_TYPE_DIR : LEONOS_FS_TYPE_FILE;
@@ -1431,7 +1420,7 @@ static int exfat_iter_dir_entry(uint32_t directory_cluster, uint8_t nofat, uint6
     for (uint64_t pos = 0; pos < limit; ) {
         uint8_t first[EXFAT_ENTRY_SIZE];
         struct storage_node node;
-        struct leonos_unicode_utf16_to_utf8 convert;
+        uint32_t rendered_length = 0;
         int ret = exfat_dir_read_entry(directory_cluster, nofat, (uint32_t)pos, first);
         if (ret < 0) return ret;
         if (first[0] == 0u) return -2;
@@ -1442,12 +1431,13 @@ static int exfat_iter_dir_entry(uint32_t directory_cluster, uint8_t nofat, uint6
         ret = exfat_read_file_set(directory_cluster, nofat, (uint32_t)pos, raw, &count,
                                   name, &length, &node);
         if (ret < 0) return ret;
-        convert.utf16 = name;
-        convert.utf16_len = length;
-        convert.utf8 = out->name;
-        convert.utf8_capacity = sizeof(out->name);
-        convert.utf8_len = 0;
-        if (osmlayer_unicode_utf16le_to_utf8(&convert) < 0) return -5;
+        if (text_utf16le_to_utf8(name, length, out->name, sizeof(out->name),
+                                 &rendered_length) < 0) return -5;
+        /* A 255-unit exFAT name needs more room than a directory entry offers;
+         * terminate the retained prefix so callers never read past the array. */
+        if (rendered_length >= sizeof(out->name)) {
+            out->name[sizeof(out->name) - 1u] = 0;
+        }
         if (!storage_is_acl_metadata_name(out->name)) {
             if (ordinal == wanted) {
                 out->type = node.type;
@@ -2243,19 +2233,18 @@ static int exfat_dir_is_empty(const struct storage_node *node)
             char rendered[LEONOS_FS_NAME_LEN];
             uint8_t count;
             uint32_t length;
+            uint32_t rendered_length = 0;
             struct storage_node child;
-            struct leonos_unicode_utf16_to_utf8 convert;
 
             ret = exfat_read_file_set(node->first_cluster,
                                       (node->flags & STORAGE_NODE_FLAG_EXFAT_NOFAT) != 0,
                                       (uint32_t)pos, raw, &count, name, &length, &child);
             if (ret < 0) return ret;
-            convert.utf16 = name;
-            convert.utf16_len = length;
-            convert.utf8 = rendered;
-            convert.utf8_capacity = sizeof(rendered);
-            convert.utf8_len = 0;
-            if (osmlayer_unicode_utf16le_to_utf8(&convert) < 0) return -5;
+            if (text_utf16le_to_utf8(name, length, rendered, sizeof(rendered),
+                                     &rendered_length) < 0) return -5;
+            if (rendered_length >= sizeof(rendered)) {
+                rendered[sizeof(rendered) - 1u] = 0;
+            }
             if (!storage_is_acl_metadata_name(rendered)) return 0;
             pos += count + 1u;
             continue;

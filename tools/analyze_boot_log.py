@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Analyze LeonOS loader, kernel, middlelayer, and dynamic-loader boot logs.
+"""Analyze LeonOS loader, kernel, and dynamic-loader boot logs.
 
 Examples:
     python tools/analyze_boot_log.py serial.log
@@ -48,7 +48,6 @@ class LogAnalysis:
     line_count: int
     components: dict[str, int]
     boot_complete_line: int | None
-    selftest: str | None
     status: str
     findings: tuple[Finding, ...]
 
@@ -72,25 +71,17 @@ DIRECT_RULES = (
         "LOADER-INTEGRITY", "致命", "引导加载器",
         r"^\[loader\] Boot stopped by integrity policy\.",
         "引导加载器因完整性策略停止启动",
-        "loader 检测到 kernel 或 middlelayer 的 SHA-256 与其内置值不一致，且用户拒绝继续。",
-        "重新构建 loader、kernel 与 middlelayer，或检查 ESP/ISO 中是否混入了不同构建的组件。",
+        "loader 检测到 kernel 的 SHA-256 与其内置值不一致，且用户拒绝继续。",
+        "重新构建 loader 与 kernel，或检查 ESP/ISO 中是否混入了不同构建的组件。",
         "boot/loader/main.c:1028",
     ),
     Rule(
         "LOADER-FILE", "致命", "引导加载器",
-        r"^\[loader\].*(?:kernel\.sys load failed|middlelayer\.sys load failed|module load failed|no readable EFI FAT volume|unable to open EFI filesystem)",
+        r"^\[loader\].*(?:kernel\.sys load failed|module load failed|no readable EFI FAT volume|unable to open EFI filesystem)",
         "引导加载器无法读取核心启动组件",
-        "loader 无法从 EFI 文件系统或 GRUB 模块获得 kernel.sys 或 middlelayer.sys。",
-        "检查 ESP 中的 boot/、leonos/kernel.sys、leonos/middlelayer.sys，以及 ext2 根分区和 EFI/FAT32 挂载状态。",
+        "loader 无法从 EFI 文件系统或 GRUB 模块获得 kernel.sys。",
+        "检查 ESP 中的 boot/、leonos/kernel.sys，以及 ext2 根分区和 EFI/FAT32 挂载状态。",
         "boot/loader/main.c:1114",
-    ),
-    Rule(
-        "MIDDLELAYER-ABI", "致命", "中间层",
-        r"^\[osmlayer\] middlelayer ABI rejected ",
-        "内核拒绝中间层 ABI",
-        "kernel.sys 与 middlelayer.sys 的 ABI 版本或 API 指针不兼容，无法继续使用中间层服务。",
-        "确保 kernel.sys 和 middlelayer.sys 来自同一次构建，不要单独替换其中之一。",
-        "kernel/ntclks/osmlayer_bridge.c:455",
     ),
     Rule(
         "STORAGE-ROOT", "错误", "存储",
@@ -180,7 +171,6 @@ EXCEPTION_LINE = re.compile(
     r"rip=(?P<rip>0x[0-9a-fA-F]+).*"
 )
 BOOT_COMPLETE = re.compile(r"^\[ntclks\] boot complete:")
-SELFTEST = re.compile(r"^\[osmlayer\] selftest passed=(?P<passed>\d+)/(?P<total>\d+)")
 TASK_EXIT = re.compile(r"^\[ntclks\] scheduler task exited pid=(?P<pid>\d+) name=(?P<name>.+) code=(?P<code>\d+)$")
 MAP_FAILURE = re.compile(r"^\[ntclks\] failed to map executable (?P<name>.+)$")
 COMPONENT = re.compile(r"^\[(?P<component>[^\]]+)\]")
@@ -284,30 +274,6 @@ def _task_exit_findings(lines: list[str], radius: int) -> list[Finding]:
     return findings
 
 
-def _selftest_finding(lines: list[str], radius: int) -> tuple[str | None, Finding | None]:
-    """Return the latest middlelayer self-test status and a finding when degraded."""
-    latest: tuple[int, re.Match[str]] | None = None
-    for index, line in enumerate(lines):
-        match = SELFTEST.match(line)
-        if match:
-            latest = (index, match)
-    if latest is None:
-        return None, None
-    index, match = latest
-    passed = int(match.group("passed"))
-    total = int(match.group("total"))
-    summary = f"{passed}/{total}"
-    if passed >= total:
-        return summary, None
-    return summary, Finding(
-        "MIDDLELAYER-SELFTEST", "警告", "中间层", f"中间层自检未完全通过 ({summary})",
-        (index + 1,), _context(lines, (index,), radius),
-        "VFS、FAT32、IPC、GUI 或设备目录中的至少一项中间层启动自检失败。",
-        "根据括号中的服务名称检查 middlelayer 启动日志；不要把自检未完成的镜像作为稳定启动基线。",
-        "kernel/ntclks/osmlayer_bridge.c:644",
-    )
-
-
 def _deduplicate(findings: Iterable[Finding]) -> tuple[Finding, ...]:
     """Keep one finding for each diagnostic and exact evidence line set."""
     seen: set[tuple[str, tuple[int, ...]]] = set()
@@ -337,9 +303,6 @@ def analyze_lines(raw_lines: Iterable[str], context: int = 1) -> LogAnalysis:
         for rule in DIRECT_RULES:
             if re.search(rule.expression, line):
                 findings.append(_finding_from_rule(rule, lines, index, context))
-    selftest, selftest_finding = _selftest_finding(lines, context)
-    if selftest_finding:
-        findings.append(selftest_finding)
     complete = next((index + 1 for index, line in enumerate(lines) if BOOT_COMPLETE.match(line)), None)
     normalized = _deduplicate(findings)
     highest = max((SEVERITY_ORDER[item.severity] for item in normalized), default=0)
@@ -355,7 +318,7 @@ def analyze_lines(raw_lines: Iterable[str], context: int = 1) -> LogAnalysis:
         status = "启动完成但存在警告"
     else:
         status = "启动正常"
-    return LogAnalysis(len(lines), components, complete, selftest, status, normalized)
+    return LogAnalysis(len(lines), components, complete, status, normalized)
 
 
 def _print_text(analysis: LogAnalysis) -> None:
@@ -367,7 +330,6 @@ def _print_text(analysis: LogAnalysis) -> None:
     print(f"状态: {analysis.status}")
     print(f"日志行: {analysis.line_count}")
     print("启动完成: " + (f"第 {analysis.boot_complete_line} 行" if analysis.boot_complete_line else "未检测到"))
-    print("中间层自检: " + (analysis.selftest or "未检测到"))
     print("问题统计: " + "，".join(f"{severity} {counts[severity]}" for severity in ("致命", "错误", "警告", "信息")))
     if analysis.components:
         print("日志组件: " + "，".join(f"{name} {count}" for name, count in sorted(analysis.components.items())))

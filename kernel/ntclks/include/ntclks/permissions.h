@@ -2,7 +2,7 @@
 #define NTCLKS_PERMISSIONS_H
 
 #include <ntclks/sched.h>
-#include <leonos/permissions.h>
+#include <ntclks/storage.h>
 
 #define FS_ACCESS_EXEC 1U
 #define FS_ACCESS_WRITE 2U

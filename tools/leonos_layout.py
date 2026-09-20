@@ -177,18 +177,15 @@ P_SESSION_USER = P_RUN_LEONOS + "/session-user"
 
 # Runtime boot payload paths (the ESP is normally mounted at /boot).
 P_BOOT_KERNEL = "/boot/leonos/kernel.sys"
-P_BOOT_MIDDLELAYER = "/boot/leonos/middlelayer.sys"
 P_BOOT_KERNELDEBUG_MARKER = "/boot/leonos/state/kerneldebug.next"
 P_BOOT_DISPLAY_CONF = "/boot/leonos/config/display.conf"
 P_KERNELDEBUG_MODULE = P_LEONOS_LIB + "/kerneldebug.sys"
-P_OSMLAYER_MANIFEST = P_LEONOS_LIB + "/osmlayer.manifest"
 
 # ESP-internal (EFI FAT) paths.  GRUB and loader.elf use these before any
 # root filesystem exists.  The loader is at the ESP root so GRUB's
 # ``search --file /loader.elf`` convention is preserved.
 ESP_LOADER = "/loader.elf"
 ESP_KERNEL = "/leonos/kernel.sys"
-ESP_MIDDLELAYER = "/leonos/middlelayer.sys"
 ESP_KERNELDEBUG_MARKER = "/leonos/state/kerneldebug.next"
 ESP_DISPLAY_CONF = "/leonos/config/display.conf"
 

@@ -64,7 +64,6 @@ int leonos_system_info(struct leonos_system_info *info)
         ps_copy(info->kernel_version, sizeof(info->kernel_version), uts.release);
         ps_copy(info->architecture, sizeof(info->architecture), uts.machine);
     }
-    ps_copy(info->middlelayer_name, sizeof(info->middlelayer_name), "osmlayer");
     info->version_major = 4;
     info->version_minor = 0;
     info->version_patch = 0;

@@ -34,7 +34,7 @@ class BootPayloadTests(unittest.TestCase):
             destination = Path(temporary) / "ESP with spaces"
             destination.mkdir()
             files = ("EFI/BOOT/BOOTX64.EFI", "loader.elf", "leonos/kernel.sys",
-                     "leonos/middlelayer.sys", "grub/grub.cfg", "grub/fonts/font.pf2")
+                     "grub/grub.cfg", "grub/fonts/font.pf2")
             for name in files:
                 p = source / name
                 p.parent.mkdir(parents=True, exist_ok=True)

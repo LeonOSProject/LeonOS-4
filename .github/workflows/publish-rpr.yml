@@ -37,13 +37,6 @@ jobs:
             libtool-bin gawk gperf gettext libncurses-dev ncurses-bin exfatprogs openssl perl
           msgfmt --version
 
-      - name: Install Rust
-        run: |
-          set -euo pipefail
-          rustup toolchain install stable --profile minimal
-          rustup default stable
-          rustup target add x86_64-unknown-none
-
       - name: Import APK signing key
         id: signing_key
         env:
@@ -76,7 +69,6 @@ jobs:
           test -s out/x86_64/release/rpr-pages/apk/packages.adb
           test -s out/x86_64/release/rpr-pages/apk/leonos-rpr.rsa.pub
           test -s out/x86_64/release/rpr-pages/kernel/kernel.sys
-          test -s out/x86_64/release/rpr-pages/kernel/middlelayer.sys
           test -s out/x86_64/release/rpr-pages/kernel/release.txt
           if grep -R -E -- 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' out/x86_64/release/rpr-pages; then
             echo 'Private key material reached the Pages directory' >&2

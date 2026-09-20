@@ -15,12 +15,12 @@ fi
 }
 esp=$1
 # Validate the complete input before writing any destination files.
-for file in EFI/BOOT/BOOTX64.EFI loader.elf leonos/kernel.sys leonos/middlelayer.sys; do
+for file in EFI/BOOT/BOOTX64.EFI loader.elf leonos/kernel.sys; do
     [ -f "$source/$file" ] || { printf 'Missing boot payload: %s\n' "$source/$file" >&2; exit 1; }
 done
 [ -d "$source/grub" ] || { printf 'Missing GRUB payload: %s\n' "$source/grub" >&2; exit 1; }
 mkdir -p -- "$esp/EFI/BOOT" "$esp/leonos" "$esp/grub"
-for file in EFI/BOOT/BOOTX64.EFI loader.elf leonos/kernel.sys leonos/middlelayer.sys; do
+for file in EFI/BOOT/BOOTX64.EFI loader.elf leonos/kernel.sys; do
     cp -- "$source/$file" "$esp/$file"
 done
 cp -R -- "$source/grub/." "$esp/grub/"

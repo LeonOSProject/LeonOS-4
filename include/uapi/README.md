@@ -31,8 +31,11 @@ and allocation objects cannot be mixed with the Picolibc runtime. See
 `docs/MUSL_MIGRATION_2026-09-08.md` for current migration and guest-test status.
 
 Permission wire records use independent 32-bit UID/GID values and Linux mode
-bits. `linux/stat.h`, `linux/statfs.h`, `linux/fcntl.h`, `linux/errno.h` and
-`leonos/permissions.h` are shared declarations, not duplicate libc policy.
+bits. `linux/stat.h`, `linux/statfs.h`, `linux/fcntl.h` and `linux/errno.h` are
+shared declarations, not duplicate libc policy. The kernel's internal
+mode/UID/GID triple is not a published ABI and lives in
+`kernel/ntclks/include/ntclks/storage.h`; userland observes and changes POSIX
+permissions only through stat/chmod/chown.
 On FAT/exFAT, version-1 ACL records remain readable and gain explicit POSIX
 metadata on their next write. ext2 uses its native inode fields. Legacy calls
 that passed zero to O_CREAT/mkdir must be rebuilt with intentional modes;

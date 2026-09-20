@@ -24,7 +24,6 @@ def main():
         shutil.rmtree(stage)
     shutil.copytree(ROOT / "build/esp", stage, symlinks=True)
     shutil.copy2(ROOT / "build/system/kernel.sys", stage / "leonos/kernel.sys")
-    shutil.copy2(ROOT / "build/system/middlelayer.sys", stage / "leonos/middlelayer.sys")
     shutil.copy2(ROOT / "build/boot/loader.elf", stage / "loader.elf")
     from package_musl_gcc import COMMANDS
     for name in ("opt/dyne", "usr/share/licenses/musl-gcc", "usr/share/examples/musl-gcc"):
