@@ -11,8 +11,8 @@ $(IMAGE_DISPLAY): $(LEONOS_CONFIG_FILE) $(LEONOS_EMIT)
 	$(Q)awk 'BEGIN{theme="metro";mode="fill"} /^CONFIG_VMDK_DEFAULT_THEME_WIN95=y$$/{theme="win95"} /^CONFIG_VMDK_WALLPAPER_STRETCH=y$$/{mode="stretch"} /^CONFIG_VMDK_WALLPAPER_CENTER=y$$/{mode="center"} END{print "theme="theme;print "wallpaper.mode="mode}' $< | $(LEONOS_EMIT) --input - --output $@
 LEONOS_SIG_images := epoch=$(SOURCE_DATE_EPOCH)|grub=$(GRUB_EFI_DIR)|grub-identity=$(shell grub-mkstandalone --version 2>/dev/null)|mke2fs=$(shell mke2fs -V 2>&1 | head -n1)|mtools=$(shell mcopy -V 2>&1 | head -n1)|disk-size=$(CONFIG_IMAGE_SIZE_MIB)|installer-size=$(CONFIG_INSTALLER_ROOT_SIZE_MIB)|qemu-img=$(shell qemu-img --version 2>/dev/null | head -n1)|xorriso=$(shell xorriso -version 2>/dev/null | head -n1)|sfdisk=$(shell sfdisk --version 2>/dev/null)
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,images)))
-$(ESP_STAMP): $(LOADER_ELF) $(O_GENERATED)/system/kernel.sys $(MIDDLELAYER_SYS) $(GRUB_FONT) $(IMAGE_DISPLAY) $(LEONOS_SRC)/tools/build/efi-stage.sh $(LEONOS_SRC)/boot/grub/embedded.cfg $(LEONOS_SRC)/boot/grub/grub.cfg $(LEONOS_SRC)/boot/grub/theme/theme.txt $(GRUB_EFI_DIR)/modinfo.sh $(O_META)/images.sig
-	$(Q)sh $(LEONOS_SRC)/tools/build/efi-stage.sh $(LEONOS_SRC) $(GRUB_EFI_DIR) $(LOADER_ELF) $(O_GENERATED)/system/kernel.sys $(MIDDLELAYER_SYS) $(GRUB_FONT) $(IMAGE_DISPLAY) $(ESP_STAGE) $(SOURCE_DATE_EPOCH)
+$(ESP_STAMP): $(LOADER_ELF) $(O_GENERATED)/system/kernel.sys $(GRUB_FONT) $(IMAGE_DISPLAY) $(LEONOS_SRC)/tools/build/efi-stage.sh $(LEONOS_SRC)/boot/grub/embedded.cfg $(LEONOS_SRC)/boot/grub/grub.cfg $(LEONOS_SRC)/boot/grub/theme/theme.txt $(GRUB_EFI_DIR)/modinfo.sh $(O_META)/images.sig
+	$(Q)sh $(LEONOS_SRC)/tools/build/efi-stage.sh $(LEONOS_SRC) $(GRUB_EFI_DIR) $(LOADER_ELF) $(O_GENERATED)/system/kernel.sys $(GRUB_FONT) $(IMAGE_DISPLAY) $(ESP_STAGE) $(SOURCE_DATE_EPOCH)
 	$(Q)touch $@
 	$(Q)sh $(LEONOS_SRC)/tools/build/stage-inventory.sh write $(ESP_STAGE) $(O_META)/esp.files
 .PHONY: esp

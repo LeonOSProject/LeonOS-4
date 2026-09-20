@@ -5,8 +5,8 @@ two independent channels:
 
 - `/apk` contains signed LeonOS APK packages, including the optional official
   applications, the signed APK v3 index, and the corresponding public key.
-- `/kernel` contains the latest matching `kernel.sys` and `middlelayer.sys`
-  pair plus version and SHA-256 metadata.
+- `/kernel` contains the latest `kernel.sys` plus its version and SHA-256
+  metadata.
 
 The default base URL is `https://leonmmcoset.github.io/LeonOS-4`. It can be
 changed under **Build > LeonOS remote package repository URL** in `menuconfig`.
@@ -41,8 +41,8 @@ It:
 
 1. checks out the complete source tree and installs the normal LeonOS toolchain;
 2. decodes the signing key only under `$RUNNER_TEMP` with mode `0600`;
-3. builds the kernel, middle layer, base APK repository, and optional official
-   application APKs through `python3 build.py run rpr-pages`;
+3. builds the kernel, base APK repository, and optional official
+   application APKs through `make rpr-pages`;
 4. merges both APK inputs and signs `/apk/packages.adb` from only
    `leonos-*.apk` packages;
 5. assembles `/kernel` from artifacts produced in the same build;
@@ -70,7 +70,6 @@ The published tree is:
 │   └── SHA256SUMS
 └── kernel/
     ├── kernel.sys
-    ├── middlelayer.sys
     ├── release.txt
     ├── release.json
     └── SHA256SUMS
@@ -78,9 +77,13 @@ The published tree is:
 
 `release.txt` is the strict line-oriented client protocol. Its
 `image_version` and `version` are both `major.minor.patch`; no build counter or
-numeric build suffix is published. The JSON file is informational and intended
-for external tools. Older clients requiring a numeric suffix must first receive
-the updated `leonos-kernel-update` script through a system package update.
+numeric build suffix is published. `format_version` is `2` and the record lists
+`kernel_file` and `kernel_sha256` only. Format 1 advertised a paired
+`middlelayer.sys`, a boot payload this system no longer loads, so
+`leonos-kernel-update` refuses it instead of installing a half update. The JSON
+file is informational and intended for external tools. Older clients requiring a
+numeric suffix must first receive the updated `leonos-kernel-update` script
+through a system package update.
 
 ## Client commands
 
@@ -96,14 +99,15 @@ URLs.
   compares only the three-part `major.minor.patch` image version. A newer build
   of the same image version does not trigger an update. Check mode does not
   modify the system.
-- `leonos-kernel-update` requires root. It downloads both boot files, verifies
-  each SHA-256, then replaces `/boot/leonos/kernel.sys` and
-  `/boot/leonos/middlelayer.sys` with rollback on a failed replacement. Reboot
-  to activate the release. Use `leonos-kernel-update -f` (or `--force`) to
-  repeat the replacement even when the local and remote image versions match;
-  the same checksum and rollback protections still apply.
+- `leonos-kernel-update` requires root. It downloads `kernel.sys`, verifies its
+  SHA-256, then replaces `/boot/leonos/kernel.sys`, moving aside any stale
+  `/boot/leonos/middlelayer.sys` left by an older release. Rollback on a failed
+  commit restores both files. Reboot to activate the release. Use
+  `leonos-kernel-update -f` (or `--force`) to repeat the replacement even when
+  the local and remote image versions match; the same format, checksum and
+  rollback protections still apply.
 - `leonos-check-update` requires root because it refreshes APK indexes. It only
-  checks the kernel/middle-layer pair and installed `leonos-*` APK packages; it
+  checks the kernel release and installed `leonos-*` APK packages; it
   does not install updates. APK availability is determined by `apk` itself.
 
 Initial setup on an installed system is:

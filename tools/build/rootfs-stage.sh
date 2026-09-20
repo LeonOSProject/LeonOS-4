@@ -56,8 +56,6 @@ file "$out/system/lib/libleonos.so.2" usr/lib/leonos/libleonos.so.2 0755 leonos-
 for package in musl mimalloc; do tree "$out/sysroot/musl/share/licenses/$package" "usr/share/licenses/$package" "$package"; done
 printf '/lib:/usr/local/lib:/usr/lib:/usr/lib/leonos\n' > "$work/data/ld.path"
 file "$work/data/ld.path" etc/ld-musl-x86_64.path 0644 musl
-printf 'name=osmlayer\nabi=2\nroot=/\nfs=ext2\ngui=desktop.elf\n' > "$work/data/osmlayer.manifest"
-file "$work/data/osmlayer.manifest" usr/lib/leonos/osmlayer.manifest
 file "$out/generated/system/kerneldebug.sys" usr/lib/leonos/kerneldebug.sys 0755
 for driver in "$out/generated/drivers"/*.drv; do file "$driver" "usr/lib/leonos/drivers/${driver##*/}" 0755; done
 file "$out/userland/dynlinkerror.elf" usr/lib/leonos/apps/dynlinkerror/dynlinkerror.elf 0755 leonos-apps

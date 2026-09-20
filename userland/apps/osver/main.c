@@ -153,7 +153,6 @@ static void draw_osver(struct leonos_ui_surface *ui)
     struct leonos_ui_property_item props[] = {
         {T("Kernel", "内核"), info.kernel_name, 0},
         {T("Kernel version", "内核版本"), info.kernel_version, 0},
-        {T("Middle layer", "中间层"), info.middlelayer_name, 0},
         {T("Build time", "构建时间"), info.build_time, 0},
         {T("Copyright", "版权"), info.copyright, 0},
     };
@@ -231,7 +230,6 @@ int main(void)
         copy_text(status_text, sizeof(status_text), T("Could not read system version information", "无法读取系统版本信息"));
         copy_text(info.kernel_name, sizeof(info.kernel_name), "unknown");
         copy_text(info.kernel_version, sizeof(info.kernel_version), "0.0.0-0000");
-        copy_text(info.middlelayer_name, sizeof(info.middlelayer_name), "unknown");
         copy_text(info.build_time, sizeof(info.build_time), "unknown");
         copy_text(info.copyright, sizeof(info.copyright),
                   "Copyright LeonMMcoset 2021-2026. All rights reserved.");

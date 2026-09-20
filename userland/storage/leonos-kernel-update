@@ -25,7 +25,6 @@ case "$rpr_url" in https://*) ;; *) printf '%s\n' 'Invalid RPR URL: HTTPS is req
 
 manifest=$(mktemp /tmp/leonos-kernel-release.XXXXXX) || exit 1
 kernel_tmp=
-middle_tmp=
 kernel_backup=
 middle_backup=
 lock_dir=
@@ -39,6 +38,8 @@ cleanup() {
             rm -f -- /boot/leonos/kernel.sys
             mv -- "$kernel_backup" /boot/leonos/kernel.sys || true
         fi
+        # A retired middle-layer payload comes back only with the rolled-back
+        # kernel, because that kernel was the one that required it.
         if [ -n "$middle_backup" ] && [ -f "$middle_backup" ]; then
             rm -f -- /boot/leonos/middlelayer.sys
             mv -- "$middle_backup" /boot/leonos/middlelayer.sys || true
@@ -47,7 +48,6 @@ cleanup() {
     fi
     rm -f -- "$manifest"
     [ -z "$kernel_tmp" ] || rm -f -- "$kernel_tmp" "$kernel_tmp.part"
-    [ -z "$middle_tmp" ] || rm -f -- "$middle_tmp" "$middle_tmp.part"
     if [ "$commit_done" -eq 1 ]; then
         [ -z "$kernel_backup" ] || rm -f -- "$kernel_backup"
         [ -z "$middle_backup" ] || rm -f -- "$middle_backup"
@@ -74,9 +74,10 @@ remote_image=$(field image_version) || remote_image=
 remote_release=$(field version) || { printf '%s\n' 'Kernel release has no version' >&2; exit 1; }
 kernel_file=$(field kernel_file) || exit 1
 kernel_hash=$(field kernel_sha256) || exit 1
-middle_file=$(field middlelayer_file) || exit 1
-middle_hash=$(field middlelayer_sha256) || exit 1
-[ "$format" = 1 ] || { printf 'Unsupported kernel release manifest: %s\n' "$format" >&2; exit 1; }
+[ "$format" = 2 ] || {
+    printf 'Unsupported kernel release manifest: %s (format 1 advertised a middle-layer payload)\n' "$format" >&2
+    exit 1;
+}
 printf '%s\n' "$remote_release" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || {
     printf 'Invalid remote release version: %s\n' "$remote_release" >&2; exit 1;
 }
@@ -87,10 +88,9 @@ case "$remote_image" in *[!0-9.]*|''|.*|*.) printf 'Invalid remote image version
     printf '%s\n' 'Remote image and release versions disagree' >&2
     exit 1
 }
-case "$kernel_file:$middle_file" in kernel.sys:middlelayer.sys) ;; *) printf '%s\n' 'Invalid kernel release filenames' >&2; exit 1;; esac
+case "$kernel_file" in kernel.sys) ;; *) printf '%s\n' 'Invalid kernel release filename' >&2; exit 1;; esac
 case "$kernel_hash" in *[!0-9a-f]*|'') printf '%s\n' 'Invalid kernel.sys checksum' >&2; exit 1;; esac
-case "$middle_hash" in *[!0-9a-f]*|'') printf '%s\n' 'Invalid middlelayer.sys checksum' >&2; exit 1;; esac
-[ "${#kernel_hash}" -eq 64 ] && [ "${#middle_hash}" -eq 64 ] || {
+[ "${#kernel_hash}" -eq 64 ] || {
     printf '%s\n' 'Invalid kernel release checksum length' >&2
     exit 1
 }
@@ -127,7 +127,7 @@ fi
 [ "$check_only" -eq 0 ] || exit 0
 
 boot=/boot/leonos
-[ -d "$boot" ] && [ -f "$boot/kernel.sys" ] && [ -f "$boot/middlelayer.sys" ] || {
+[ -d "$boot" ] && [ -f "$boot/kernel.sys" ] || {
     printf 'Boot payload is unavailable under %s\n' "$boot" >&2
     exit 1
 }
@@ -138,14 +138,10 @@ mkdir -- "$lock_dir" 2>/dev/null || {
     exit 1
 }
 kernel_tmp=$(mktemp "$boot/.kernel.sys.rpr.XXXXXX") || exit 1
-middle_tmp=$(mktemp "$boot/.middlelayer.sys.rpr.XXXXXX") || exit 1
 rprfetch "$rpr_url/kernel/$kernel_file" "$kernel_tmp" || exit 1
-rprfetch "$rpr_url/kernel/$middle_file" "$middle_tmp" || exit 1
 actual_kernel=$(sha256sum "$kernel_tmp" | awk '{print $1}')
-actual_middle=$(sha256sum "$middle_tmp" | awk '{print $1}')
 [ "$actual_kernel" = "$kernel_hash" ] || { printf '%s\n' 'kernel.sys checksum mismatch' >&2; exit 1; }
-[ "$actual_middle" = "$middle_hash" ] || { printf '%s\n' 'middlelayer.sys checksum mismatch' >&2; exit 1; }
-chmod 0644 "$kernel_tmp" "$middle_tmp" || exit 1
+chmod 0644 "$kernel_tmp" || exit 1
 
 kernel_backup="$boot/.kernel.sys.rpr-backup.$$"
 middle_backup="$boot/.middlelayer.sys.rpr-backup.$$"
@@ -157,11 +153,11 @@ commit_started=1
 mv -- "$boot/kernel.sys" "$kernel_backup" || exit 1
 mv -- "$kernel_tmp" "$boot/kernel.sys" || exit 1
 kernel_tmp=
-mv -- "$boot/middlelayer.sys" "$middle_backup" || exit 1
-mv -- "$middle_tmp" "$boot/middlelayer.sys" || exit 1
-middle_tmp=
+if [ -f "$boot/middlelayer.sys" ]; then
+    mv -- "$boot/middlelayer.sys" "$middle_backup" || exit 1
+fi
 sync || exit 1
 commit_done=1
-printf 'Installed kernel and middle layer %s (build %s); reboot to activate.\n' \
+printf 'Installed kernel %s (build %s); reboot to activate.\n' \
     "$remote_image" "$remote_release"
 exit 0

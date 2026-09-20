@@ -1,5 +1,10 @@
 # Build and Installer
 
+> **历史验证记录。** 本文保留旧版本的来宾回归命令和结果，文中 `build.py`、
+> `build/` 输出目录及旧配置生成器不再是维护入口。当前构建只使用根
+> `Makefile`，请先阅读 [GNU Make + C 构建系统](BUILDSYSTEM.md)，再将这里的
+> 回归场景映射到对应的 `make` 目标；不要复制本文旧命令到生产构建链。
+
 ## Accounts and optional components
 
 Fresh installations create a fixed `root` account (UID/GID 0) and a chosen
@@ -104,7 +109,6 @@ Important generated files include:
 - `<O>/include/generated/autoconf-installer.h`
 - `<O>/include/generated/build_info.h`
 - `<O>/include/generated/loader_integrity.h`
-- `<O>/include/generated/rustcfg.args`
 
 The default output directory is `out/x86_64/release`; source-tree version headers
 are not build inputs.
@@ -117,16 +121,14 @@ are not build inputs.
 - `System Configuration`
 
 The build group controls the source macro that is compiled into binaries for
-the standalone VMDK image, the source macro compiled into binaries installed
-from the installer ISO, and whether Ninja should regenerate `build.ninja`
-before builds. The default for both license gates is enabled; the default for
-Ninja regeneration is disabled.
+the standalone VMDK image and the source macro compiled into binaries installed
+from the installer ISO. The default for both license gates is enabled.
 
 The system group controls the license platform URL that is compiled into
 userland binaries. The default is `http://127.0.0.1:30301`.
 
-`tools/kconfig_sync.py` normalizes `.config`, writes `autoconf.h` with the VMDK
-`LEONOS_LICENSE_REQUIRE` policy, writes `autoconf-installer.h` with the
+The Make/Kconfig front end normalizes `.config`, writes `autoconf.h` with the
+VMDK `LEONOS_LICENSE_REQUIRE` policy, writes `autoconf-installer.h` with the
 installer-installed-system policy, and writes `CONFIG_LICENSE_SERVER_URL` into
 both headers. License binaries read that compiled macro directly; there is no
 runtime `/etc/leonos/license.conf` server override.
@@ -147,8 +149,8 @@ The common system staging tree is:
 - `build/esp`
 
 It contains the Alpine-shaped root tree (`bin/`, `sbin/`, `lib/`, `usr/`,
-`etc/leonos/`, `var/lib/leonos/`, `opt/`) plus the ESP-only loader, kernel and
-middlelayer under `leonos/`. Help documents live in
+`etc/leonos/`, `var/lib/leonos/`, `opt/`) plus the ESP-only loader and kernel
+under `leonos/`. Help documents live in
 `usr/share/doc/leonos/`; all application packages live in
 `usr/lib/leonos/apps/`.
 Vim and ncurses are enabled by default. `python3 build.py run vim` builds the
@@ -185,7 +187,7 @@ it is not a QEMU login or sudo execution test.
 
 The installer has two related payload groups:
 
-- Top-level ISO boot payload: loader, kernel, middlelayer, and installer root.
+- Top-level ISO boot payload: loader, kernel, and installer root.
 - Installed-system root payload: a copy of `build/esp` without `EFI/`,
   `grub/`, `loader.elf`, or `leonos/`, stored under `install/root` inside
   `build/install/root.fat`.
@@ -203,7 +205,6 @@ stages:
 
 - `loader.elf`
 - `leonos/kernel.sys`
-- `leonos/middlelayer.sys`
 - `install/root.fat`
 
 This keeps installer boot and installed-system boot on the same matched
@@ -219,8 +220,8 @@ needs enough physical memory for GRUB to load the complete module before the
 kernel begins, and the kernel only manages pages above the 768 MiB user window.
 In particular, a 400 MiB installer root requires at least 2 GiB
 of VM RAM; a 1 GiB VM can omit the module before the loader receives control.
-If GRUB places that module over the kernel or middlelayer's fixed ELF load
-range, the Loader relocates it into EFI LoaderData before loading either image;
+If GRUB places that module over the kernel's fixed ELF load
+range, the Loader relocates it into EFI LoaderData before loading the image;
 the relocated range is reserved and mounted directly by the kernel.
 
 ## Updating an already mounted target

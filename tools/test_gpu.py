@@ -1,4 +1,4 @@
-"""GPU public ABI boundary tests; included by build.py test svga."""
+"""GPU public ABI boundary tests for the standalone host regression suite."""
 from pathlib import Path
 import os
 import subprocess

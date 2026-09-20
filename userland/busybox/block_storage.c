@@ -402,7 +402,7 @@ int leonos_grub_installer_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
 int leonos_grub_installer_main(int argc, char **argv)
 {
     const char *esp = argc == 2 ? argv[1] : NULL;
-    static const char *const files[] = {"EFI/BOOT/BOOTX64.EFI", "loader.elf", "leonos/kernel.sys", "leonos/middlelayer.sys", NULL};
+    static const char *const files[] = {"EFI/BOOT/BOOTX64.EFI", "loader.elf", "leonos/kernel.sys", NULL};
     if (!esp) bb_show_usage();
     {
         char path[LEONOS_FS_PATH_LEN];

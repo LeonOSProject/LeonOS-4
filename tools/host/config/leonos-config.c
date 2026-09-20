@@ -3,7 +3,7 @@
  *
  * Kconfig stays the authority on what a symbol means; this tool carries no
  * second copy of the defaults. It only re-expresses the resolved .config as C
- * headers, a Make include and a rustc argument list (plan section 7).
+ * headers and a Make include (plan section 7).
  *
  * Every output is rendered in full before anything is published, so a malformed
  * line cannot leave a half-written configuration behind.
@@ -46,7 +46,6 @@ struct options {
     const char *out_header;
     const char *out_installer_header;
     const char *out_make;
-    const char *out_rustcfg;
     const char *guard;
     const char *installer_guard;
     const char *require_license;
@@ -125,7 +124,6 @@ static void usage(void)
         "  --out-header PATH            C header for the shipped-image policy\n"
         "  --out-installer-header PATH  C header for the installed-system policy\n"
         "  --make-include PATH          Make include with KCONFIG_<symbol> variables\n"
-        "  --rustcfg PATH               rustc --cfg arguments for boolean symbols\n"
         "  --guard NAME                 include guard for --out-header\n"
         "  --installer-guard NAME       include guard for --out-installer-header\n"
         "  --require-license SYMBOL     symbol driving LEONOS_LICENSE_REQUIRE\n"
@@ -163,8 +161,6 @@ static int parse_options(int argc, char **argv, struct options *options)
             options->out_installer_header = argv[++index];
         } else if (strcmp(argument, "--make-include") == 0) {
             options->out_make = argv[++index];
-        } else if (strcmp(argument, "--rustcfg") == 0) {
-            options->out_rustcfg = argv[++index];
         } else if (strcmp(argument, "--guard") == 0) {
             options->guard = argv[++index];
         } else if (strcmp(argument, "--installer-guard") == 0) {
@@ -182,7 +178,7 @@ static int parse_options(int argc, char **argv, struct options *options)
         return report("--input is required");
     }
     if (options->out_header == NULL && options->out_installer_header == NULL &&
-        options->out_make == NULL && options->out_rustcfg == NULL) {
+        options->out_make == NULL) {
         return report("at least one output option is required");
     }
     return 0;
@@ -589,36 +585,6 @@ static int render_make_include(struct byte_buffer *out,
     return 0;
 }
 
-static int render_rustcfg(struct byte_buffer *out,
-                          const struct symbol *symbols, size_t count)
-{
-    size_t index;
-    size_t position;
-
-    for (index = 0; index < count; index++) {
-        char *lowered;
-
-        if (strcmp(symbols[index].value, "y") != 0) {
-            continue;
-        }
-        lowered = duplicate(symbols[index].key, strlen(symbols[index].key));
-        if (lowered == NULL) {
-            return -1;
-        }
-        for (position = 0; lowered[position] != '\0'; position++) {
-            if (lowered[position] >= 'A' && lowered[position] <= 'Z') {
-                lowered[position] = (char)(lowered[position] - 'A' + 'a');
-            }
-        }
-        if (appendf(out, "--cfg=%s\n", lowered) != 0) {
-            free(lowered);
-            return -1;
-        }
-        free(lowered);
-    }
-    return 0;
-}
-
 static int publish(const char *path, const struct byte_buffer *out)
 {
     if (write_file_if_changed(path, out->data, out->len, 0644u) != 0) {
@@ -634,7 +600,6 @@ int main(int argc, char **argv)
     struct byte_buffer header = { NULL, 0, 0 };
     struct byte_buffer installer_header = { NULL, 0, 0 };
     struct byte_buffer make_include = { NULL, 0, 0 };
-    struct byte_buffer rustcfg = { NULL, 0, 0 };
     size_t count = 0;
     int status;
 
@@ -663,9 +628,7 @@ int main(int argc, char **argv)
                 render_header(&installer_header, options.installer_guard, symbols,
                     count, options.installer_require_license) != 0) ||
             (options.out_make != NULL &&
-                render_make_include(&make_include, symbols, count) != 0) ||
-            (options.out_rustcfg != NULL &&
-                render_rustcfg(&rustcfg, symbols, count) != 0)) {
+                render_make_include(&make_include, symbols, count) != 0)) {
             status = report("cannot render output: %s", strerror(errno));
         }
     }
@@ -679,14 +642,10 @@ int main(int argc, char **argv)
     if (status == 0 && options.out_make != NULL) {
         status = publish(options.out_make, &make_include);
     }
-    if (status == 0 && options.out_rustcfg != NULL) {
-        status = publish(options.out_rustcfg, &rustcfg);
-    }
 
     buffer_destroy(&header);
     buffer_destroy(&installer_header);
     buffer_destroy(&make_include);
-    buffer_destroy(&rustcfg);
     table_free(&table, count);
     return status;
 }

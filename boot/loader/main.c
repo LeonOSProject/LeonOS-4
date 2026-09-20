@@ -35,8 +35,7 @@
 #define PT_LOAD 1
 
 #define KERNEL_PATH "/leonos/kernel.sys"
-#define MIDDLELAYER_PATH "/leonos/middlelayer.sys"
-/* Kernel and middlelayer images can exceed one MiB once debug-safe ELF
+/* Kernel images can exceed one MiB once debug-safe ELF
  * sections are retained. Keep the EFI fallback buffer above the largest
  * shipped image while preserving the module-based fast path. */
 #define READ_BUFFER_SIZE (8u * 1024u * 1024u)
@@ -1403,9 +1402,9 @@ static int elf_load_range_overlaps(const void *image, uint64_t len,
  * @brief Moves the installer FAT module to firmware-owned pages outside all ELF destinations.
  *
  * GRUB is free to place a large Multiboot module anywhere in conventional
- * memory. The kernel and middlelayer are linked at fixed physical addresses,
+ * memory. The kernel is linked at a fixed physical address,
  * so retaining an overlapping module would silently corrupt its FAT contents
- * while the loader copies either ELF image. The kernel later replaces the
+ * while the loader copies the ELF image. The kernel later replaces the
  * original Multiboot range with this handoff range before reserving modules.
  */
 static int loader_relocate_installer_root(struct loader_module *module)
@@ -1462,8 +1461,7 @@ static int loader_relocate_installer_root(struct loader_module *module)
 
 /** @brief Relocates an installer module only when fixed ELF destinations would overwrite it. */
 static int loader_protect_installer_root(struct loader_module *installer_root,
-                                         const struct loader_module *kernel,
-                                         const struct loader_module *middlelayer)
+                                         const struct loader_module *kernel)
 {
     uint64_t start;
     uint64_t end;
@@ -1477,11 +1475,6 @@ static int loader_protect_installer_root(struct loader_module *installer_root,
     if (kernel && kernel->end > kernel->start) {
         overlaps |= elf_load_range_overlaps((const void *)(uintptr_t)kernel->start,
                                             kernel->end - kernel->start,
-                                            start, end);
-    }
-    if (middlelayer && middlelayer->end > middlelayer->start) {
-        overlaps |= elf_load_range_overlaps((const void *)(uintptr_t)middlelayer->start,
-                                            middlelayer->end - middlelayer->start,
                                             start, end);
     }
     if (!overlaps) {
@@ -1931,7 +1924,6 @@ void loader_main(uint32_t magic, uint32_t multiboot_info)
 {
     uint64_t len;
     const struct loader_module *kernel_module;
-    const struct loader_module *middlelayer_module;
     struct loader_module *installer_root_module;
 
     loader_tsc_start = loader_rdtsc();
@@ -1961,9 +1953,8 @@ void loader_main(uint32_t magic, uint32_t multiboot_info)
         loader_framebuffer_set_theme(handoff.ui_theme);
     }
     kernel_module = find_loader_module("leonos-kernel");
-    middlelayer_module = find_loader_module("leonos-middlelayer");
     if (loader_protect_installer_root(installer_root_module,
-                                      kernel_module, middlelayer_module) < 0) {
+                                      kernel_module) < 0) {
         serial_write("[loader] unable to protect installer root module\n");
         for (;;) {
             __asm__ volatile("hlt");
@@ -2030,61 +2021,6 @@ void loader_main(uint32_t magic, uint32_t multiboot_info)
     serial_write_hex(handoff.kernel.end);
     serial_write("\n");
     loader_framebuffer_draw_boot_splash(50u);
-
-    if (middlelayer_module) {
-        len = middlelayer_module->end - middlelayer_module->start;
-        serial_write("[loader] using module leonos-middlelayer bytes=");
-        serial_write_hex(len);
-        serial_write("\n");
-        if (verify_image_integrity("middlelayer.sys",
-                                   (const void *)(uintptr_t)middlelayer_module->start,
-                                   len,
-                                   LEONOS_LOADER_MIDDLELAYER_SHA256) < 0) {
-            for (;;) {
-                __asm__ volatile("hlt");
-            }
-        }
-        if (elf_load_exec((const void *)(uintptr_t)middlelayer_module->start, len,
-                          &handoff.middlelayer) < 0) {
-            serial_write("[loader] middlelayer module load failed\n");
-            for (;;) {
-                __asm__ volatile("hlt");
-            }
-        }
-    } else {
-        if (!root_dir && (!handoff.efi_system_table || efi_open_root(handoff.efi_system_table) < 0)) {
-            serial_write("[loader] unable to open EFI filesystem\n");
-            for (;;) {
-                __asm__ volatile("hlt");
-            }
-        }
-        if (efi_read_file(MIDDLELAYER_PATH, read_buffer, sizeof(read_buffer), &len) < 0 ||
-            verify_image_integrity("middlelayer.sys",
-                                   read_buffer,
-                                   len,
-                                   LEONOS_LOADER_MIDDLELAYER_SHA256) < 0 ||
-            elf_load_exec(read_buffer, len, &handoff.middlelayer) < 0) {
-            serial_write("[loader] middlelayer.sys load failed\n");
-            for (;;) {
-                __asm__ volatile("hlt");
-            }
-        }
-    }
-    if (!handoff.middlelayer.entry) {
-        serial_write("[loader] middlelayer.sys load failed\n");
-        for (;;) {
-            __asm__ volatile("hlt");
-        }
-    }
-    handoff.middlelayer.path = "/boot/leonos/middlelayer.sys";
-    serial_write("[loader] middlelayer loaded entry=");
-    serial_write_hex(handoff.middlelayer.entry);
-    serial_write(" range=");
-    serial_write_hex(handoff.middlelayer.start);
-    serial_write("-");
-    serial_write_hex(handoff.middlelayer.end);
-    serial_write("\n");
-    loader_framebuffer_draw_boot_splash(78u);
 
     if (!handoff.mmap_entry_count && !handoff.efi_mmap_entry_count) {
         (void)efi_capture_memory_map();

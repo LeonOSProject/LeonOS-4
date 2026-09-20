@@ -11,7 +11,6 @@
 #include <ntclks/mm.h>
 #include <ntclks/mouse.h>
 #include <ntclks/net.h>
-#include <ntclks/osmlayer.h>
 #include <ntclks/permissions.h>
 #include <ntclks/platform.h>
 #include <ntclks/power.h>
@@ -286,32 +285,13 @@ struct task_snapshot_user {
 static uint32_t task_effective_role(const struct task *task);
 
 /**
- * Device copy text.
- * @param dst Value supplied by the caller.
- * @param cap Maximum number of elements available in the related buffer.
- * @param src Value supplied by the caller.
- */
-static void device_copy_text(char *dst, uint32_t cap, const char *src)
-{
-    uint32_t i = 0;
-    if (!dst || cap == 0) {
-        return;
-    }
-    while (src && src[i] && i + 1 < cap) {
-        dst[i] = src[i];
-        ++i;
-    }
-    dst[i] = 0;
-}
-
-/**
- * Device append char.
+ * Path append char.
  * @param buf Value supplied by the caller.
  * @param pos Output storage updated by the function.
  * @param cap Maximum number of elements available in the related buffer.
  * @param ch Value supplied by the caller.
  */
-static void device_append_char(char *buf, uint32_t *pos, uint32_t cap, char ch)
+static void path_append_char(char *buf, uint32_t *pos, uint32_t cap, char ch)
 {
     if (buf && pos && *pos + 1 < cap) {
         buf[(*pos)++] = ch;
@@ -385,32 +365,32 @@ static int require_background_service(void)
 }
 
 /**
- * Device append text.
+ * Path append text.
  * @param buf Value supplied by the caller.
  * @param pos Output storage updated by the function.
  * @param cap Maximum number of elements available in the related buffer.
  * @param text NUL-terminated text supplied by the caller.
  */
-static void device_append_text(char *buf, uint32_t *pos, uint32_t cap, const char *text)
+static void path_append_text(char *buf, uint32_t *pos, uint32_t cap, const char *text)
 {
     while (text && *text) {
-        device_append_char(buf, pos, cap, *text++);
+        path_append_char(buf, pos, cap, *text++);
     }
 }
 
 /**
- * Device append u64.
+ * Path append u64.
  * @param buf Value supplied by the caller.
  * @param pos Output storage updated by the function.
  * @param cap Maximum number of elements available in the related buffer.
  * @param value Value supplied by the caller.
  */
-static void device_append_u64(char *buf, uint32_t *pos, uint32_t cap, uint64_t value)
+static void path_append_u64(char *buf, uint32_t *pos, uint32_t cap, uint64_t value)
 {
     char tmp[24];
     uint32_t n = 0;
     if (value == 0) {
-        device_append_char(buf, pos, cap, '0');
+        path_append_char(buf, pos, cap, '0');
         return;
     }
     while (value && n < sizeof(tmp)) {
@@ -418,204 +398,8 @@ static void device_append_u64(char *buf, uint32_t *pos, uint32_t cap, uint64_t v
         value /= 10;
     }
     while (n) {
-        device_append_char(buf, pos, cap, tmp[--n]);
+        path_append_char(buf, pos, cap, tmp[--n]);
     }
-}
-
-/**
- * Device append i32.
- * @param buf Value supplied by the caller.
- * @param pos Output storage updated by the function.
- * @param cap Maximum number of elements available in the related buffer.
- * @param value Value supplied by the caller.
- */
-static void device_append_i32(char *buf, uint32_t *pos, uint32_t cap, int32_t value)
-{
-    if (value < 0) {
-        device_append_char(buf, pos, cap, '-');
-        value = -value;
-    }
-    device_append_u64(buf, pos, cap, (uint32_t)value);
-}
-
-/**
- * Device append ipv4.
- * @param buf Value supplied by the caller.
- * @param pos Output storage updated by the function.
- * @param cap Maximum number of elements available in the related buffer.
- * @param ip Value supplied by the caller.
- */
-static void device_append_ipv4(char *buf, uint32_t *pos, uint32_t cap, uint32_t ip)
-{
-    device_append_u64(buf, pos, cap, (ip >> 24) & 0xffu);
-    device_append_char(buf, pos, cap, '.');
-    device_append_u64(buf, pos, cap, (ip >> 16) & 0xffu);
-    device_append_char(buf, pos, cap, '.');
-    device_append_u64(buf, pos, cap, (ip >> 8) & 0xffu);
-    device_append_char(buf, pos, cap, '.');
-    device_append_u64(buf, pos, cap, ip & 0xffu);
-}
-
-/**
- * Device add.
- * @param devices Caller-owned structure read or updated by the function.
- * @param capacity Maximum number of elements available in the related buffer.
- * @param count Output storage updated by the function.
- * @param device_class Value supplied by the caller.
- * @param flags Identifier or flags controlling the operation.
- * @param name NUL-terminated text supplied by the caller.
- * @param status Output storage updated by the function.
- * @param detail Value supplied by the caller.
- * @param value0 Value supplied by the caller.
- * @param value1 Value supplied by the caller.
- */
-static void device_add(struct leonos_device_info *devices, uint32_t capacity,
-                       uint32_t *count, uint32_t device_class, uint32_t flags,
-                       const char *name, const char *status, const char *detail,
-                       uint64_t value0, uint64_t value1)
-{
-    uint32_t index;
-    if (!count) {
-        return;
-    }
-    index = *count;
-    *count = index + 1;
-    if (!devices || index >= capacity) {
-        return;
-    }
-    devices[index] = (struct leonos_device_info){0};
-    devices[index].id = index;
-    devices[index].device_class = device_class;
-    devices[index].flags = flags;
-    devices[index].value0 = value0;
-    devices[index].value1 = value1;
-    device_copy_text(devices[index].name, sizeof(devices[index].name), name);
-    device_copy_text(devices[index].status, sizeof(devices[index].status), status);
-    device_copy_text(devices[index].detail, sizeof(devices[index].detail), detail);
-}
-
-/**
- * Raw device add.
- * @param raw Caller-owned structure read or updated by the function.
- * @param count Output storage updated by the function.
- * @param kind Value supplied by the caller.
- * @param flags Identifier or flags controlling the operation.
- * @param aux0 Value supplied by the caller.
- * @param aux1 Value supplied by the caller.
- * @param value0 Value supplied by the caller.
- * @param value1 Value supplied by the caller.
- */
-static void raw_device_add(struct leonos_raw_device_info *raw, uint32_t *count,
-                           uint32_t kind, uint32_t flags, uint32_t aux0, uint32_t aux1,
-                           uint64_t value0, uint64_t value1)
-{
-    uint32_t index;
-    if (!raw || !count || *count >= LEONOS_RAW_DEVICE_MAX) {
-        return;
-    }
-    index = (*count)++;
-    raw[index] = (struct leonos_raw_device_info){
-        .kind = kind,
-        .flags = flags,
-        .aux0 = aux0,
-        .aux1 = aux1,
-        .value0 = value0,
-        .value1 = value1,
-    };
-}
-
-/**
- * Device format fb.
- * @param buf Value supplied by the caller.
- * @param cap Maximum number of elements available in the related buffer.
- * @param fb Value supplied by the caller.
- */
-static void device_format_fb(char *buf, uint32_t cap, const struct framebuffer *fb)
-{
-    uint32_t pos = 0;
-    buf[0] = 0;
-    if (!fb || !fb->available) {
-        device_append_text(buf, &pos, cap, "No GOP framebuffer");
-        return;
-    }
-    device_append_u64(buf, &pos, cap, fb->width);
-    device_append_char(buf, &pos, cap, 'x');
-    device_append_u64(buf, &pos, cap, fb->height);
-    device_append_text(buf, &pos, cap, " bpp=");
-    device_append_u64(buf, &pos, cap, fb->bpp);
-    device_append_text(buf, &pos, cap, " pitch=");
-    device_append_u64(buf, &pos, cap, fb->pitch);
-}
-
-/**
- * Device format mouse.
- * @param buf Value supplied by the caller.
- * @param cap Maximum number of elements available in the related buffer.
- * @param mouse Value supplied by the caller.
- */
-static void device_format_mouse(char *buf, uint32_t cap, const struct mouse_state *mouse)
-{
-    uint32_t pos = 0;
-    buf[0] = 0;
-    if (!mouse || !mouse->present) {
-        device_append_text(buf, &pos, cap, "PS/2 mouse not detected");
-        return;
-    }
-    device_append_text(buf, &pos, cap, mouse->absolute ? "absolute " : "relative ");
-    device_append_text(buf, &pos, cap, "x=");
-    device_append_i32(buf, &pos, cap, mouse->x);
-    device_append_text(buf, &pos, cap, " y=");
-    device_append_i32(buf, &pos, cap, mouse->y);
-    device_append_text(buf, &pos, cap, " buttons=");
-    device_append_u64(buf, &pos, cap, mouse->buttons);
-}
-
-/**
- * Device format disk.
- * @param buf Value supplied by the caller.
- * @param cap Maximum number of elements available in the related buffer.
- * @param disk Value supplied by the caller.
- */
-static void device_format_disk(char *buf, uint32_t cap, const struct leonos_install_disk *disk)
-{
-    uint32_t pos = 0;
-    uint64_t mib = disk ? (disk->sector_count * (uint64_t)disk->sector_size) / (1024ULL * 1024ULL) : 0;
-    buf[0] = 0;
-    device_append_text(buf, &pos, cap,
-                       disk && disk->name[0] == 'I' ? "IDE/PATA port "
-                       : (disk && disk->name[0] == 'N' ? "NVMe namespace " : "AHCI port "));
-    device_append_u64(buf, &pos, cap, disk ? disk->port : 0);
-    device_append_text(buf, &pos, cap, ", ");
-    device_append_u64(buf, &pos, cap, mib);
-    device_append_text(buf, &pos, cap, " MiB, sector ");
-    device_append_u64(buf, &pos, cap, disk ? disk->sector_size : 0);
-}
-
-/**
- * Device format time.
- * @param buf Value supplied by the caller.
- * @param cap Maximum number of elements available in the related buffer.
- * @param time Value supplied by the caller.
- */
-static void device_format_time(char *buf, uint32_t cap, const struct leonos_time_info *time)
-{
-    uint32_t pos = 0;
-    buf[0] = 0;
-    if (!time || !time->valid) {
-        device_append_text(buf, &pos, cap, "CMOS RTC unavailable");
-        return;
-    }
-    device_append_u64(buf, &pos, cap, time->year);
-    device_append_char(buf, &pos, cap, '-');
-    device_append_u64(buf, &pos, cap, time->month);
-    device_append_char(buf, &pos, cap, '-');
-    device_append_u64(buf, &pos, cap, time->day);
-    device_append_char(buf, &pos, cap, ' ');
-    device_append_u64(buf, &pos, cap, time->hour);
-    device_append_char(buf, &pos, cap, ':');
-    device_append_u64(buf, &pos, cap, time->minute);
-    device_append_char(buf, &pos, cap, ':');
-    device_append_u64(buf, &pos, cap, time->second);
 }
 
 struct exec_params_kernel {
@@ -2877,135 +2661,6 @@ static int auth_copy_current_user(struct leonos_user_info *user, const struct ta
 }
 
 /**
- * Authz check path.
- * @param task Value supplied by the caller.
- * @param op Identifier or flags controlling the operation.
- * @param path NUL-terminated text supplied by the caller.
- * @param target_uid Value supplied by the caller.
- * @param target_role Value supplied by the caller.
- * @return The value or status produced by the operation.
- */
-static int authz_check_path(const struct task *task, uint32_t op,
-                            const char *path, uint32_t target_uid,
-                            uint32_t target_role)
-{
-    struct leonos_authz_request req;
-    int ret;
-    if (op == LEONOS_AUTHZ_READ || op == LEONOS_AUTHZ_WRITE || op == LEONOS_AUTHZ_EXEC) {
-        uint32_t access = op == LEONOS_AUTHZ_READ ? FS_ACCESS_READ :
-                          op == LEONOS_AUTHZ_WRITE ? FS_ACCESS_WRITE : FS_ACCESS_EXEC;
-        return fs_permissions_check(task, path, access, false);
-    }
-    if (op == LEONOS_AUTHZ_DELETE) return fs_permissions_parent(task, path, true);
-    if (storage_installer_root_active() &&
-        (op == LEONOS_AUTHZ_READ || op == LEONOS_AUTHZ_WRITE ||
-         op == LEONOS_AUTHZ_EXEC || op == LEONOS_AUTHZ_DELETE ||
-         op == LEONOS_AUTHZ_MANAGE || op == LEONOS_AUTHZ_INSTALL)) {
-        return 0;
-    }
-    req = (struct leonos_authz_request){0};
-    if (task) {
-        req.uid = task->uid;
-        req.role = task_effective_role(task);
-        req.session_id = task->session_id;
-        if ((task->flags & TASK_FLAG_SERVICE) &&
-            !(task->flags & TASK_FLAG_WINDOW_SERVER)) {
-            req.actor_flags |= LEONOS_AUTHZ_ACTOR_SERVICE;
-        }
-        copy_text(req.username, sizeof(req.username), task->username);
-        copy_text(req.home, sizeof(req.home), task->home);
-    }
-    req.op = op;
-    req.target_uid = target_uid;
-    req.target_role = target_role;
-    if (path) {
-        copy_text(req.path, sizeof(req.path), path);
-    }
-    ret = osmlayer_auth_op(LEONOS_AUTH_OP_AUTHORIZE, &req);
-    if (ret < 0) {
-        return ret;
-    }
-    return req.allowed ? 0 : -LEONOS_EACCES;
-}
-
-/**
- * Authz check install.
- * @param task Value supplied by the caller.
- * @return The value or status produced by the operation.
- */
-static int authz_check_install(const struct task *task)
-{
-    return authz_check_path(task, LEONOS_AUTHZ_INSTALL, 0, 0, 0);
-}
-
-/**
- * Fs acl fill actor.
- * @param req Caller-owned structure read or updated by the function.
- * @param task Value supplied by the caller.
- */
-static void fs_acl_fill_actor(struct leonos_fs_acl_request *req,
-                              const struct task *task)
-{
-    if (!req) {
-        return;
-    }
-    if (task) {
-        req->actor_uid = task->uid;
-        req->actor_role = task_effective_role(task);
-        if ((task->flags & TASK_FLAG_SERVICE) &&
-            !(task->flags & TASK_FLAG_WINDOW_SERVER)) {
-            req->actor_flags |= LEONOS_AUTHZ_ACTOR_SERVICE;
-        }
-        copy_text(req->username, sizeof(req->username), task->username);
-        copy_text(req->home, sizeof(req->home), task->home);
-    } else {
-        req->actor_role = LEONOS_AUTH_ROLE_NONE;
-    }
-}
-
-/**
- * Fs acl dispatch.
- * @param req Caller-owned structure read or updated by the function.
- * @return The value or status produced by the operation.
- */
-static int fs_acl_dispatch(struct leonos_fs_acl_request *req)
-{
-    if (!req) {
-        return -LEONOS_EINVAL;
-    }
-    return osmlayer_auth_op(LEONOS_AUTH_OP_FSPERM, req);
-}
-
-/**
- * Fs acl notify.
- * @param action Value supplied by the caller.
- * @param task Value supplied by the caller.
- * @param path NUL-terminated text supplied by the caller.
- * @param path2 Value supplied by the caller.
- */
-static void fs_acl_notify(uint32_t action, const struct task *task,
-                          const char *path, const char *path2)
-{
-    struct leonos_fs_acl_request req;
-    if (!path || !path[0]) {
-        return;
-    }
-    req = (struct leonos_fs_acl_request){0};
-    req.action = action;
-    copy_text(req.path, sizeof(req.path), path);
-    if (path2) {
-        copy_text(req.path2, sizeof(req.path2), path2);
-    }
-    fs_acl_fill_actor(&req, task);
-    /**
- * Fs acl handle ioctl.
- * @param req Caller-owned structure read or updated by the function.
- * @return The value or status produced by the operation.
- */
-    (void)fs_acl_dispatch(&req);
-}
-
-/**
  * Auth apply session login.
  * @param caller Value supplied by the caller.
  * @param user Value supplied by the caller.
@@ -3287,7 +2942,7 @@ static int startup_command_validate(struct leonos_startup_command *command,
     if (st.type != LEONOS_FS_TYPE_FILE) {
         return -LEONOS_EINVAL;
     }
-    ret = authz_check_path(task, LEONOS_AUTHZ_EXEC, resolved, 0, 0);
+    ret = fs_permissions_check(task, resolved, FS_ACCESS_EXEC, false);
     if (ret < 0) {
         return ret;
     }
@@ -5346,10 +5001,10 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         if (at && raw[0] != '/' && dirfd != LINUX_AT_FDCWD) {
             uint32_t position = 0;
             execfn[0] = 0;
-            device_append_text(execfn, &position, sizeof(execfn), "/dev/fd/");
-            device_append_u64(execfn, &position, sizeof(execfn), (uint32_t)dirfd);
-            if (raw[0]) device_append_char(execfn, &position, sizeof(execfn), '/');
-            device_append_text(execfn, &position, sizeof(execfn), raw);
+            path_append_text(execfn, &position, sizeof(execfn), "/dev/fd/");
+            path_append_u64(execfn, &position, sizeof(execfn), (uint32_t)dirfd);
+            if (raw[0]) path_append_char(execfn, &position, sizeof(execfn), '/');
+            path_append_text(execfn, &position, sizeof(execfn), raw);
         } else copy_text(execfn, sizeof(execfn), raw);
         ret = copy_exec_params_from_user(at ? a2 : a1, at ? a3 : a2, &params);
         if (ret < 0) return ret;
@@ -6112,7 +5767,7 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         if ((int64_t)a1 < 0) return -LEONOS_EINVAL;
         ret = resolve_user_path(task, a0, path, sizeof(path));
         if (ret < 0) return ret;
-        ret = authz_check_path(task, LEONOS_AUTHZ_WRITE, path, 0, 0);
+        ret = fs_permissions_check(task, path, FS_ACCESS_WRITE, false);
         if (ret < 0) return ret;
         ret = storage_truncate_file(path, a1);
         return ret < 0 ? storage_errno(ret) : 0;
@@ -6550,7 +6205,7 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         }
         ret = mutation_path_slash(path, false);
         if (ret < 0) return ret;
-        ret = authz_check_path(task, LEONOS_AUTHZ_DELETE, path, 0, 0);
+        ret = fs_permissions_parent(task, path, true);
         if (ret < 0) {
             return ret;
         }
@@ -6558,7 +6213,9 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         if (ret < 0) {
             return storage_errno(ret);
         }
-        fs_acl_notify(LEONOS_FS_ACL_ACTION_NOTE_DELETE, task, path, 0);
+        /* The member is already gone; a sidecar that could not be rewritten
+         * must not turn a successful unlink into a reported failure. */
+        (void)storage_sidecar_note_deleted(path);
         task_socket_unlink_path(path);
         return 0;
     }
@@ -6599,7 +6256,7 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
             if (!ret && source.type != LEONOS_FS_TYPE_DIR) ret = -LEONOS_ENOTDIR;
         }
         if (ret < 0) return ret;
-        ret = authz_check_path(task, LEONOS_AUTHZ_DELETE, old_path, 0, 0);
+        ret = fs_permissions_parent(task, old_path, true);
         if (ret < 0) {
             return ret;
         }
@@ -6613,7 +6270,10 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
         if (ret < 0) {
             return storage_errno(ret);
         }
-        fs_acl_notify(LEONOS_FS_ACL_ACTION_NOTE_RENAME, task, old_path, new_path);
+        /* The rename already succeeded; a record that could not be re-keyed
+         * is cleaned up by the next explicit metadata write, not reported as
+         * a failed rename. */
+        (void)storage_sidecar_note_renamed(old_path, new_path);
         task_socket_rename_path(old_path, new_path);
         return 0;
     }

@@ -22,8 +22,6 @@ class LiveRootTests(unittest.TestCase):
                 "grub/grub.cfg": b"set root=(hd0,gpt1)",
                 "loader.elf": b"loader",
                 "leonos/kernel.sys": b"kernel",
-                "leonos/middlelayer.sys": b"middlelayer",
-                "usr/lib/leonos/osmlayer.manifest": b"fs=ext2\n",
                 "usr/lib/leonos/apps/desktop/desktop.elf": b"desktop",
                 "usr/lib/leonos/apps/terminal/terminal.elf": b"terminal",
                 "bin/busybox": b"shell",
@@ -50,7 +48,6 @@ class LiveRootTests(unittest.TestCase):
             self.assertTrue((output / "usr/share/vim/vim91/defaults.vim").is_file())
             self.assertEqual((output / "usr/share/terminfo/x/xterm").read_bytes(), b"terminfo")
             self.assertTrue((output / "usr/lib/leonos/apps/terminal/terminal.elf").is_file())
-            self.assertIn("fs=ext2", (output / "usr/lib/leonos/osmlayer.manifest").read_text())
             self.assertFalse((output / "EFI").exists())
             self.assertFalse((output / "leonos").exists())
             self.assertEqual((output / "opt/python/bin/python3.14").read_bytes(), b"static Python executable")

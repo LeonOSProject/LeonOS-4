@@ -7,7 +7,6 @@
 #include <ntclks/console.h>
 #include <ntclks/power.h>
 #include <ntclks/mm.h>
-#include <ntclks/osmlayer.h>
 #include <ntclks/storage.h>
 #include <ntclks/syscall.h>
 #include <ntclks/time.h>

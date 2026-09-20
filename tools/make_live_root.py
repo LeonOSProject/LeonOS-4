@@ -16,12 +16,6 @@ def make_live_tree(tree: Path, stage: Path) -> None:
     make_root_tree(tree, stage, "en")
     layout_directories(stage)
     apply_root_symlinks(stage)
-    manifest = stage / "usr/lib/leonos/osmlayer.manifest"
-    manifest.parent.mkdir(parents=True, exist_ok=True)
-    manifest.write_text(
-        "name=osmlayer\nabi=2\nroot=/\nfs=ext2\ngui=desktop.elf\n",
-        encoding="ascii",
-    )
     share_identical_payload_files(stage)
 
 

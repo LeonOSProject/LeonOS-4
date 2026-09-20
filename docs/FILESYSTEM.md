@@ -12,7 +12,7 @@ installer rejects that combination instead of materializing directory copies.
 
 | GPT partition | Type | Contents | Runtime mount |
 | --- | --- | --- | --- |
-| 1 | EFI System Partition / FAT32 | `EFI/`, `loader.elf`, `grub/`, `leonos/kernel.sys`, `leonos/middlelayer.sys` | `/boot` normally, `/target/boot` while Installer is running |
+| 1 | EFI System Partition / FAT32 | `EFI/`, `loader.elf`, `grub/`, `leonos/kernel.sys` | `/boot` normally, `/target/boot` while Installer is running |
 | 2 | Linux filesystem / ext2 | normal rootfs: `bin/`, `sbin/`, `lib/`, `usr/`, `etc/`, `opt/`, `var/`, `home/`, `tmp/`, `run/` | `/` in a normal session, `/target` while Installer is running |
 
 UEFI GRUB and the early loader read partition 1. Once the kernel is running,
@@ -172,7 +172,7 @@ out-of-range, or CRC-invalid table before making a modification.
 ## VFS and Paths
 
 LeonOS paths use Unix absolute syntax, for example
-`/usr/lib/leonos/apps/desktop/desktop.elf`. The middlelayer resolves `.` and `..`,
+`/usr/lib/leonos/apps/desktop/desktop.elf`. The kernel resolves `.` and `..`
 and the storage layer dispatches the result through the longest matching mount
 path. Paths containing `:` are rejected; legacy disk prefixes are not
 supported. Filesystem names are case-insensitive at the

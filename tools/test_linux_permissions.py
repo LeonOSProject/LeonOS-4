@@ -13,4 +13,3 @@ with tempfile.TemporaryDirectory(prefix="leonos-permissions-") as directory:
                     "-Wl,--gc-sections", "-Iinclude", "-Iinclude/uapi", "-Ikernel/ntclks/include",
                     "tools/tests/linux_permissions_test.c", "-o", executable], cwd=ROOT, check=True)
     subprocess.run([executable], cwd=ROOT, check=True, timeout=30)
-subprocess.run(["python3", "tools/test_osmlayer_acl.py"], cwd=ROOT, check=True)

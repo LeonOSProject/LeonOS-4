@@ -419,89 +419,82 @@ void storage_init(void)
     }
 }
 
-void storage_apply_mount_policy(const struct leonos_mount_policy *policy)
+/**
+ * @brief Look up a named Multiboot module and return its byte range.
+ * @param boot Parsed boot information; may be NULL.
+ * @param name Exact module name to find.
+ * @param out_start Output start address when the module is present.
+ * @param out_length Output length in bytes when the module is present.
+ * @return True when a module with that name and a non-empty range was found.
+ */
+static bool boot_find_module_range(const struct boot_info *boot, const char *name,
+                                   uint64_t *out_start, uint64_t *out_length)
 {
-    uint32_t count = 0;
-    int root_ramdisk_status = 0;
-    if (!policy || policy->version != LEONOS_MOUNT_POLICY_VERSION) {
-        console_printf("[ntclks] storage using legacy mount policy fallback\n");
-        storage_init();
-        return;
+    if (!boot) {
+        return false;
     }
-
-    console_printf("[ntclks] storage applying middlelayer mount policy entries=%u root=/\n",
-                   policy->count);
-
-    storage_init();
-    g_devfs_enabled = 0;
-    count = policy->count;
-    if (count > LEONOS_MOUNT_MAX_ENTRIES) {
-        count = LEONOS_MOUNT_MAX_ENTRIES;
-    }
-
-    for (uint32_t i = 0; i < count; ++i) {
-        const struct leonos_mount_entry *entry = &policy->entries[i];
-        switch (entry->kind) {
-        case LEONOS_MOUNT_KIND_FAT32_BOOT:
-            console_printf("[ntclks] mount policy %s kind=ahci-esp flags=0x%x\n",
-                           entry->path,
-                           entry->flags);
-            break;
-        case LEONOS_MOUNT_KIND_EXT2_BOOT:
-            console_printf("[ntclks] mount policy %s kind=ahci-ext2 flags=0x%x\n",
-                           entry->path,
-                           entry->flags);
-            break;
-        case LEONOS_MOUNT_KIND_EXFAT_BOOT:
-            console_printf("[ntclks] mount policy %s kind=block-exfat flags=0x%x\n",
-                           entry->path,
-                           entry->flags);
-            break;
-        case LEONOS_MOUNT_KIND_FAT32_RAMDISK:
-            if (!storage_text_eq(entry->path, "/") || !entry->module_start || !entry->module_len) {
-                root_ramdisk_status = -2;
-            } else {
-                root_ramdisk_status =
-                    storage_mount_ramdisk_root((const void *)(uintptr_t)entry->module_start,
-                                               entry->module_len);
-            }
-            console_printf("[ntclks] mount policy %s kind=ramdisk source=%s ret=%d\n",
-                           entry->path,
-                           entry->source,
-                           root_ramdisk_status);
-            if (root_ramdisk_status < 0) {
-                storage_memzero(g_volumes, sizeof(g_volumes));
-                g_active_volume = &g_volumes[0];
-            } else {
-                /* Installer mode owns / and later reuses the boot slot for
-                 * the selected target ESP at /target/boot. */
-                storage_memzero(&g_volumes[STORAGE_VOLUME_BOOT],
-                                sizeof(g_volumes[STORAGE_VOLUME_BOOT]));
-                g_active_volume = &g_volumes[STORAGE_VOLUME_ROOT];
-            }
-            break;
-        case LEONOS_MOUNT_KIND_DEVFS:
-            if (storage_text_eq(entry->path, "/dev")) {
-                g_devfs_enabled = 1;
-            }
-            console_printf("[ntclks] mount policy %s kind=devfs enabled=%u\n",
-                           entry->path,
-                           g_devfs_enabled);
-            break;
-        case LEONOS_MOUNT_KIND_TARGET_ESP:
-            console_printf("[ntclks] mount policy %s kind=installer-target flags=0x%x\n",
-                           entry->path,
-                           entry->flags);
-            break;
-        case LEONOS_MOUNT_KIND_TARGET_ROOT:
-            console_printf("[ntclks] mount policy %s kind=installer-root flags=0x%x\n",
-                           entry->path,
-                           entry->flags);
-            break;
-        default:
-            break;
+    for (uint32_t i = 0;
+         i < boot->module_count && i < sizeof(boot->modules) / sizeof(boot->modules[0]);
+         ++i) {
+        const struct boot_module *module = &boot->modules[i];
+        if (storage_text_eq(module->name, name) && module->end > module->start) {
+            *out_start = module->start;
+            *out_length = module->end - module->start;
+            return true;
         }
     }
+    return false;
+}
+
+/**
+ * @brief Mount the root filesystem for this boot.
+ * @param boot Parsed Multiboot modules and kernel command line.
+ * @param ramdisk_root True for an installer or live session, whose root is the
+ *        `leonos-installer-root` module rather than a mounted partition.
+ *
+ * The physical disks are always probed first: an installer needs the disk and
+ * partition inventory even though its own root comes from RAM. When the RAM
+ * image cannot be mounted the volume table is cleared, so no stale disk root
+ * is presented to userland; the caller then retries through
+ * storage_init_installer_root(), which reports the reason.
+ */
+void storage_mount_boot_root(const struct boot_info *boot, bool ramdisk_root)
+{
+    uint64_t start = 0;
+    uint64_t length = 0;
+    storage_init();
+    if (!ramdisk_root) {
+        console_printf("[ntclks] storage boot root from probed disks root=/ fs=%s\n",
+                       storage_root_filesystem_name());
+        return;
+    }
+    if (!boot_find_module_range(boot, "leonos-installer-root", &start, &length)) {
+        /* storage_init() probes a physical root before the installer module is
+         * selected.  Do not leave that disk mounted as / when the RAM root is
+         * absent: an installer would then operate on its own boot media and
+         * may present a partially valid system instead of failing closed. */
+        storage_memzero(&g_volumes[STORAGE_VOLUME_ROOT],
+                        sizeof(g_volumes[STORAGE_VOLUME_ROOT]));
+        storage_memzero(&g_volumes[STORAGE_VOLUME_BOOT],
+                        sizeof(g_volumes[STORAGE_VOLUME_BOOT]));
+        g_active_volume = &g_volumes[STORAGE_VOLUME_ROOT];
+        g_installer_root_active = 0;
+        storage_cache_invalidate();
+        console_printf("[ntclks] storage boot root has no installer module; physical root cleared\n");
+        return;
+    }
+    if (storage_mount_ramdisk_root((const void *)(uintptr_t)start, length) < 0) {
+        storage_memzero(g_volumes, sizeof(g_volumes));
+        g_active_volume = &g_volumes[0];
+        console_printf("[ntclks] storage installer ramdisk root not mounted bytes=%llu\n",
+                       (unsigned long long)length);
+        return;
+    }
+    /* Installer mode owns / and later reuses the boot slot for the selected
+     * target ESP at /target/boot. */
+    storage_memzero(&g_volumes[STORAGE_VOLUME_BOOT], sizeof(g_volumes[STORAGE_VOLUME_BOOT]));
+    g_active_volume = &g_volumes[STORAGE_VOLUME_ROOT];
+    console_printf("[ntclks] storage boot root from installer ramdisk root=/\n");
 }
 
 int storage_mount_ramdisk_root(const void *image, uint64_t len)

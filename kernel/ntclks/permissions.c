@@ -1,5 +1,5 @@
 #include <ntclks/permissions.h>
-#include <ntclks/osmlayer.h>
+#include <ntclks/storage.h>
 #include <ntclks/syscall.h>
 #include <ntclks/syscall_internal.h>
 #include <ntclks/heap.h>
@@ -135,9 +135,9 @@ static int lookup(const char *path, struct storage_node *node)
 int fs_permissions_get(const char *path, const struct storage_node *node,
                        struct leonos_permissions *value)
 {
-    struct leonos_permissions_request req = {.action = LEONOS_PERMISSIONS_GET};
+    char target[LEONOS_FS_PATH_LEN];
     struct storage_node found;
-    int ret = copy_path(req.path, path);
+    int ret = copy_path(target, path);
     if (ret < 0) return ret;
     if (!node) {
         ret = lookup(path, &found);
@@ -166,25 +166,25 @@ int fs_permissions_get(const char *path, const struct storage_node *node,
             node->type == LEONOS_FS_TYPE_SYMLINK ? 0777 : 0444, 0, 0};
         return 0;
     }
-    ret = osmlayer_auth_op(LEONOS_AUTH_OP_POSIX_PERMISSIONS, &req);
-    if (!ret) *value = req.value;
-    return ret;
+    return storage_sidecar_permissions(target, value, false);
 }
 
 static int store(const char *path, const struct storage_node *node,
                  const struct leonos_permissions *value)
 {
-    struct leonos_permissions_request req = {.action = LEONOS_PERMISSIONS_SET, .value = *value};
-    if (node->flags & STORAGE_NODE_FLAG_PTY) return pty_inode_permissions(node, &req.value, true);
-    if (node->flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS)) return storage_inode_permissions(node, &req.value, true);
+    /* Backends may adjust the metadata they are given, so they receive a copy. */
+    struct leonos_permissions stored = *value;
+    if (node->flags & STORAGE_NODE_FLAG_PTY) return pty_inode_permissions(node, &stored, true);
+    if (node->flags & (STORAGE_NODE_FLAG_EXT2 | STORAGE_NODE_FLAG_TMPFS)) return storage_inode_permissions(node, &stored, true);
     if (metadata_path(path)) return -LEONOS_EPERM;
     if (node->flags & STORAGE_NODE_FLAG_DEV_LINK) return -LEONOS_EROFS;
     if (node->flags & (STORAGE_NODE_FLAG_DEV_NODE | STORAGE_NODE_FLAG_DEV_DIR | STORAGE_NODE_FLAG_DEV_FB0))
-        return device_metadata(node, &req.value, true);
+        return device_metadata(node, &stored, true);
     struct storage_node proc;
     if (proc_lookup(path, &proc) == 0) return -LEONOS_EROFS;
-    int ret = copy_path(req.path, path);
-    return ret < 0 ? ret : osmlayer_auth_op(LEONOS_AUTH_OP_POSIX_PERMISSIONS, &req);
+    char target[LEONOS_FS_PATH_LEN];
+    int ret = copy_path(target, path);
+    return ret < 0 ? ret : storage_sidecar_permissions(target, &stored, true);
 }
 
 static int check_node(const struct task *task, const char *path,

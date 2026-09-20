@@ -29,7 +29,10 @@ SECTIONS
         *(.bss .bss.*)
     }
 
-    ASSERT(. <= 144M, "Kernel overlaps the middlelayer load address")
+    /* The image is linked at 128M and paging.h keeps the identity hole from
+     * 128M to 192M supervisor-only; growing past it would let a user page-table
+     * write replace kernel mappings. */
+    ASSERT(. <= 192M, "Kernel overflows the supervisor identity hole")
 
     /DISCARD/ : {
         *(.eh_frame)

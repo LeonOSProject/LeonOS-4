@@ -205,31 +205,25 @@ Authentication requests use `ioctl` IDs:
 
 Task snapshots now include `uid`, `role`, `session_id`, and `username`.
 Children inherit identity and current directory from the parent task.
-Protected service tasks are marked with `LEONOS_AUTHZ_ACTOR_SERVICE` when the
-kernel asks middlelayer authorization policy. That lets the policy distinguish
-system service runtime writes from ordinary user writes without granting broad
-access to unauthenticated tasks.
+File access decisions are made in the kernel: `kernel/ntclks/permissions.c`
+compares a task's filesystem UID/GID and role against the permission value the
+storage layer reports for the path. Protected service work is gated by kernel
+task flags (`TASK_FLAG_SERVICE`, `TASK_FLAG_WINDOW_SERVER`) and by
+`LEONOS_AUTH_ROLE_ADMIN`. There is no authorization opcode set or policy
+callback in the ABI; the former `LEONOS_AUTHZ_*` request record was an internal
+RPC envelope and is not published.
 
-File authorization operations include `LEONOS_AUTHZ_READ`,
-`LEONOS_AUTHZ_WRITE`, `LEONOS_AUTHZ_EXEC`, `LEONOS_AUTHZ_DELETE`, and
-`LEONOS_AUTHZ_MANAGE`. Middlelayer handles them through the same `auth_op`
-policy callback.
+## Filesystem permission ABI
 
-## Filesystem ACL ABI
-
-Filesystem ACL types are defined in `include/leonos/fs.h`. Userland calls:
-
-- `leonos_fs_acl_get`
-- `leonos_fs_acl_set`
-- `leonos_fs_acl_take_ownership`
-- `leonos_fs_acl_repair`
-
-The libc wrappers use these ioctls:
-
-- `LEONOS_FS_IOCTL_ACL_GET`
-- `LEONOS_FS_IOCTL_ACL_SET`
-- `LEONOS_FS_IOCTL_ACL_TAKE_OWNERSHIP`
-- `LEONOS_FS_IOCTL_ACL_REPAIR`
+POSIX permissions reach userland through the Linux ABI only: `stat`, `chmod`,
+`chown` and their `*at` variants. `struct leonos_fs_acl` and the
+`leonos_fs_acl_*` helpers in `include/leonos/fs.h` are a libc-level convenience
+API implemented on top of those same calls (see `userland/libc/src/libc.c`);
+they are not ioctls and the kernel exposes no ACL ioctl. On FAT32 and exFAT the
+kernel stores the resulting mode, owner and group in the hidden `LEONACL.SYS`
+sidecar owned by `drivers/bootstrap/storage/storage_sidecar.c`; on ext2 it uses
+the native inode fields. See
+[KERNEL_USERSPACE_BOUNDARIES.md](KERNEL_USERSPACE_BOUNDARIES.md).
 
 `struct leonos_fs_acl` contains the owner uid and up to
 `LEONOS_FS_ACL_MAX_ACE` ACE rows. Supported principals are Owner, System,
@@ -245,78 +239,45 @@ update GPT metadata with aligned raw I/O followed by `BLKRRPART`, and mount
 FAT32, exFAT, or ext2 volumes with `<sys/mount.h>` `mount(2)` and `umount2(2)`.
 The SDK no longer defines LeonOS-specific disk-management ioctl records.
 
-## Middlelayer ABI v6
+## Boot handoff ABI
 
-The loader starts `kernel.sys` and `middlelayer.sys`. The middlelayer module
-returns a `struct leonos_middlelayer_api` with version
-`LEONOS_MIDDLELAYER_API_VERSION` set to `6`.
+`include/leonos/boot_handoff.h` describes exactly one thing: the record the EFI
+loader hands to `kernel.sys`. `struct leonos_boot_handoff` carries the Multiboot2
+and framebuffer facts, the memory maps, and the `loader`, `kernel` and
+`installer_root` module ranges. `LEONOS_BOOT_HANDOFF_VERSION` is `7`.
 
-Current API callbacks:
-
-- `init`: middlelayer initialization.
-- `syscall`: reserved middlelayer syscall hook.
-- `selftest`: boot-time service self-test.
-- `mount_policy`: describes runtime mounts for normal and installer boots.
-- `unicode_op`: UTF-8/UTF-16 conversion and UTF-8 text layout helpers.
-- `vfs_op`: path normalization service.
-- `device_catalog`: raw-device-to-user-device catalog service.
-- `auth_op`: account, login, password, and authorization policy service.
-
-The kernel service table passed to middlelayer is intentionally small:
-
-- `log`
-- `log_len`
-- `read_file`
-- `write_file`
-- `mkdir`
+Version 7 removed the second boot module and every table that used to cross it:
+the middlelayer module range and API pointer, the kernel service table, the
+mount-policy record, the VFS resolve record, and the raw-device catalog query.
+Those services are now ordinary kernel-internal calls compiled into
+`kernel.sys`, so no wire format is needed for them. A kernel that sees any other
+handoff version rejects it in `boot_handoff_is_current()` rather than reading a
+layout it does not understand.
 
 Kernel code owns hardware probing, interrupts, page tables, physical memory,
-scheduling, user pointer validation, storage block I/O, and exFAT/FAT32/ext2 mutation.
-Middlelayer owns higher-level policy or semantic services that can run on top
-of those kernel facts.
+scheduling, user pointer validation, storage block I/O, exFAT/FAT32/ext2
+mutation, path resolution and the final DAC decision. The storage layer in
+`drivers/bootstrap/storage/` owns on-disk metadata, including `LEONACL.SYS`.
+The full ownership map is in
+[KERNEL_USERSPACE_BOUNDARIES.md](KERNEL_USERSPACE_BOUNDARIES.md).
 
-The file services are trusted kernel-to-middlelayer calls. They are used by the
-auth service to own `/var/lib/leonos/accounts.db` and to create or repair
-`/home/<name>` home directories without exposing direct account-database
-access to ordinary user tasks.
+## Path resolution
 
-## VFS path service
+Path normalization lives in the kernel: `fs_permissions_resolve()` and
+`fs_permissions_resolve_flags()` in `kernel/ntclks/permissions.c` combine the
+task's current directory with the input, walk components and symlinks, and check
+directory search permission on the way. Whether the final symlink is followed is
+decided by the syscall the caller made (for example `O_NOFOLLOW`); more than 40
+traversals returns `ELOOP`. There is no resolution ABI and no separate
+resolution service.
 
-`LEONOS_VFS_OP_RESOLVE_PATH` accepts `struct leonos_vfs_resolve_path`:
+## Device catalog
 
-- `cwd`: current directory, for relative inputs.
-- `input`: raw path from kernel or userland.
-- `out` and `capacity`: normalized output buffer.
-- `node_kind`: coarse directory/file/device classification.
-
-The service resolves `cwd + input` into a normalized Unix path such as
-`/usr/lib/leonos/apps/desktop/desktop.elf`. It rejects any input containing `:`.
-Kernel storage code calls this first and keeps a C fallback resolver for
-bootstrapping.
-
-## Device catalog service
-
-Kernel drivers gather raw facts in `struct leonos_raw_device_info` and pass
-them to middlelayer through `struct leonos_device_catalog_query`. Middlelayer
-formats those facts into `struct leonos_device_info` records for userland.
-
-Current raw device kinds:
-
-- RTC
-- PS/2 keyboard
-- PS/2 mouse
-- Framebuffer
-- AHCI controller
-- IDE/PATA controller
-- NVMe controller
-- Disk
-- Serial COM1
-- Intel e1000 network adapter
-
-The e1000 entry is classified as `LEONOS_DEVICE_CLASS_NETWORK`. Its detail text
-reports whether the active IPv4 configuration came from DHCP or the static
-fallback, and its raw values carry the MAC address, local IPv4 address, and
-gateway for device-manager style tools.
+`userland/apps/device-agent` is the producer: it reads `/dev` through
+`leonos_readdir()`, classifies each node into `struct leonos_device_info`
+(display, input, storage, audio, serial, network, system), and answers clients
+over the devmand IPC that `userland/libc/src/devmand_client.c` wraps as
+`leonos_device_list()`. Driver records come from `/proc/leonos-drivers`.
 
 ## Machine Identity ABI
 

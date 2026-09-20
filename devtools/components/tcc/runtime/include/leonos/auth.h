@@ -9,43 +9,14 @@
 
 #define LEONOS_AUTH_USER_DISABLED 0x00000001U
 
-
-#define LEONOS_AUTH_OP_AUTHORIZE 7U
-#define LEONOS_AUTH_OP_FSPERM 8U
-
 #define LEONOS_AUTH_UPDATE_ROLE 0x00000001U
 #define LEONOS_AUTH_UPDATE_FLAGS 0x00000002U
-
-#define LEONOS_AUTHZ_READ 1U
-#define LEONOS_AUTHZ_WRITE 2U
-#define LEONOS_AUTHZ_EXEC 3U
-#define LEONOS_AUTHZ_USER_ADMIN 4U
-#define LEONOS_AUTHZ_INSTALL 5U
-#define LEONOS_AUTHZ_KILL_TASK 6U
-#define LEONOS_AUTHZ_DELETE 7U
-#define LEONOS_AUTHZ_MANAGE 8U
-
-#define LEONOS_AUTHZ_ACTOR_SERVICE 0x00000001U
 
 struct leonos_auth_status {
     uint32_t user_count;
     uint32_t has_admin;
     uint32_t reserved0;
     uint32_t reserved1;
-};
-
-struct leonos_authz_request {
-    uint32_t uid;
-    uint32_t role;
-    uint32_t session_id;
-    uint32_t op;
-    uint32_t target_uid;
-    uint32_t target_role;
-    uint32_t allowed;
-    uint32_t actor_flags;
-    char username[LEONOS_AUTH_USERNAME_LEN];
-    char home[LEONOS_AUTH_HOME_LEN];
-    char path[256];
 };
 
 /* Between 1 and 32 UTF-8 characters, with no whitespace. */

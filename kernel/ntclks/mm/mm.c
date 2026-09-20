@@ -379,7 +379,6 @@ static void reserve_boot_ranges(const struct boot_info *boot,
                       (uint64_t)(uintptr_t)handoff + sizeof(*handoff),
                       "loader-handoff");
         reserve_range(handoff->kernel.start, handoff->kernel.end, "kernel");
-        reserve_range(handoff->middlelayer.start, handoff->middlelayer.end, "middlelayer");
         reserve_range(handoff->installer_root.start, handoff->installer_root.end,
                       "installer-root");
     }

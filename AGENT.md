@@ -31,14 +31,13 @@ LeonOS 4 是面向 x86_64、UEFI 启动的操作系统项目。正常系统使�
 UEFI/GRUB
   -> boot/ loader.elf
   -> kernel/ntclks (kernel.sys, Ring 0)
-  -> middlelayer/osmlayer (middlelayer.sys)
   -> userland init.elf
   -> desktop.elf（窗口服务器）
   -> 登录 / OOBE / 服务 / 普通桌面应用
 ```
 
-安装器 ISO 是另一条启动路径：顶层 ISO 只包含启动所需的 loader、内核、
-中间层和 installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
+安装器 ISO 是另一条启动路径：顶层 ISO 只包含启动所需的 loader、内核和
+installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
 启动载荷）和 `/install/root`（ext2 运行时根载荷）。不要把“安装器运行时
 镜像内容”和“安装后系统内容”混为一谈。
 
@@ -47,9 +46,8 @@ UEFI/GRUB
 | 路径 | 职责 |
 | --- | --- |
 | `boot/` | UEFI loader、GRUB 配置、早期显示和完整性装载。 |
-| `kernel/ntclks/` | 内核：调度、内存、ELF 进程、syscall、GUI IPC、网络、驱动管理、存储桥接。 |
-| `middlelayer/osmlayer/` | Rust + C 的中间层：VFS、账户和 ACL 策略、Unicode、设备服务、挂载策略。 |
-| `drivers/` | 可加载 Ring-0 驱动模块及其打包输入。 |
+| `kernel/ntclks/` | 内核：调度、内存、ELF 进程、syscall、GUI IPC、网络、驱动管理、权限判定，以及 `lib/` 下的内核内部工具。 |
+| `drivers/` | 可加载 Ring-0 驱动模块及其打包输入；`bootstrap/storage/` 还实现文件系统与 `LEONACL.SYS` 权限元数据。 |
 | `userland/libc/` | LeonOS libc、syscall 包装、UI/字体、网络/HTTP/TLS、PTY 等公共实现。 |
 | `userland/apps/` | Ring-3 系统与桌面应用；`desktop/` 是窗口服务器，其他应用为它的客户端。 |
 | `userland/{busybox,tcc,lua,nano,file,cmd,stardustui}/` | 第三方软件的 LeonOS 端口、适配层与构建输入。 |
@@ -68,11 +66,12 @@ UEFI/GRUB
 - Ring-3 程序经 Linux 编号的 x86_64 syscall ABI 进入内核，入口目前为
   `syscall`；参数使用 `rax/rdi/rsi/rdx/r10/r8/r9`，负返回值为
   `-errno`。已实现接口才可视为可用，未知 syscall 返回 `-ENOSYS`。
-- 内核负责用户指针与长度验证、页表/进程资源、硬件和最终授权。中间层不应
-  直接信任用户指针或直接访问硬件。
-- `osmlayer_bridge` 将内核与中间层连接。账户、ACL、Unicode、部分 VFS 和
-  挂载策略跨越这一边界；修改双方结构或 callback 时必须同步版本、边界校验
-  和文档。
+- 内核负责用户指针与长度验证、页表/进程资源、硬件和最终授权。
+- 内核内部能力按职责直接落在 `kernel/ntclks/`（含 `lib/` 工具）和
+  `drivers/bootstrap/storage/`（文件系统与 `LEONACL.SYS` 权限元数据），全部编译进
+  kernel.sys；不存在跨模块 callback 表或第二个启动镜像。用户态与内核之间只有
+  syscall/ioctl ABI 和 GUI IPC。职责归属与旧数据格式的兼容策略见
+  `docs/KERNEL_USERSPACE_BOUNDARIES.md`。
 - GUI 客户端与 `desktop.elf` 通过 GUI IPC/ioctl 通信，而不是共享窗口服务器
   的私有像素内存。应用提交自己的缓冲内容；不要把窗口服务器内部 buffer
   当作公共 ABI。
@@ -184,7 +183,7 @@ UI 修改必须横向检查，而不是只改一个应用。典型关联范围�
 根 `Makefile` 是唯一受支持的生产入口。GNU Make 负责依赖图、增量判断及 jobserver；
 `mk/*.mk` 声明规则，`tools/host/` 的 C 程序只转换数据，`tools/build/` 的短 Shell 脚本
 适配上游 configure/Make 和镜像格式工具。不得另建调度器、调用旧 Python 引擎，或让生产链
-执行 Python、Meson、Ninja。现存 Rust middlelayer 不属于被替换的构建工具。
+执行 Python、Meson、Ninja。生产链只编译 C 与汇编，不要求 Rust 工具链。
 
 ```sh
 make help
@@ -205,11 +204,11 @@ make test-smoke
 ```
 
 - 默认 O 为 `out/<arch>/<profile>`，支持 `ARCH=x86_64`、`PROFILE=release|debug`。
-  修改输出目录用 O，修改目标工具用显式 CC/CXX/LD/AR/RUSTC；HOSTCC 独立。
+  修改输出目录用 O，修改目标工具用显式 CC/CXX/LD/AR；HOSTCC 独立。
 - `O/config/.config` 是当前配置，Kconfig、Kconfig.components 与 configs/components.toml
   是受跟踪输入。组件 BUILD、IMAGE、ENTRY、SDK、API 选择不得混用；required 组件不可关闭。
   修改组件元数据时保持 Kconfig.components 同步，运行组件 fixture。
-- 生成的 C/Rust 配置和版本头写入 O。生产构建不得改写源码目录、递增版本计数，或使用
+- 生成的 C 配置和版本头写入 O。生产构建不得改写源码目录、递增版本计数，或使用
   当前时钟/随机 UUID 破坏可重现性；SOURCE_DATE_EPOCH 默认来自提交时间。
 - 下载只能出现在显式 fetch；生产消费已校验缓存，不允许隐式联网。依赖锁是唯一下载身份来源。
 - 新源文件、删除源文件、编译/链接参数变化、多输出成员缺失必须正确触发重建。
@@ -235,7 +234,7 @@ make test-smoke
 | --- | --- | --- |
 | 文档/单文件说明 | 定向检查 + `git diff --check` | 内容正确、无格式/空白问题。 |
 | 构建脚本/Kconfig/组件清单 | `make test`、相关 Make 目标 | 菜单、同步和目标选择真实生效。 |
-| 内核/中间层/ABI/libc | 受影响目标编译 + 相关用户态重建 | 编译链接、头文件与调用链一致。 |
+| 内核/存储/ABI/libc | 受影响目标编译 + 相关用户态重建 | 编译链接、头文件与调用链一致。 |
 | 应用/UI/主题/字体 | 受影响应用、VMDK/ESP 构建 + QEMU | GUI 可见行为、交互和日志被证明。 |
 | VMware 专属显示/驱动 | VMware 启动与可见操作 | 不以 QEMU 成功替代 VMware 证明。 |
 | Installer 变更 | Installer ISO + 实际安装/启动路径 | installer runtime 与安装后系统均正确。 |
@@ -256,8 +255,8 @@ make test-smoke
 
 ## 8. 代码注释规范
 
-`kernel/ntclks/` 与 `middlelayer/osmlayer/` 中的每个函数定义和公共函数声明必须紧贴
-Doxygen 风格块注释。C、汇编预处理源和 Rust 统一使用 `/** ... */`，格式如下：
+`kernel/ntclks/` 中的每个函数定义和公共函数声明必须紧贴
+Doxygen 风格块注释。C 与汇编预处理源统一使用 `/** ... */`，格式如下：
 
 ```c
 /**

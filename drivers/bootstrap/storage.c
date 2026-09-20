@@ -25,6 +25,7 @@
 #include "storage/storage_mounts.c"
 #include "storage/storage_tmpfs.c"
 #include "storage/storage_permissions.c"
+#include "storage/storage_sidecar.c"
 #include "storage/storage_statfs.c"
 #include "storage/storage_installer.c"
 #include "storage/storage_disk.c"

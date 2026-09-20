@@ -1,9 +1,12 @@
 # LeonOS 4 Docs
 
 This directory tracks the architecture and operational notes that are useful
-when changing the kernel, loader, middlelayer, installer, or user ABI.
+when changing the kernel, loader, installer, or user ABI.
 
-- [ABI](ABI.md): syscall subset, device model, and middlelayer ABI.
+- [ABI](ABI.md): syscall subset and device model.
+- [Kernel / user-space boundaries](KERNEL_USERSPACE_BOUNDARIES.md): what the
+  kernel and the storage layer own after the middle layer was removed, and how
+  old `LEONACL.SYS`, handoff and RPR formats are treated.
 - [Linux ABI audit](LINUX_ABI_AUDIT_2026-09-07.md) and
   [per-syscall status](LINUX_ABI_SYSCALLS_2026-09-07.csv): remaining compatibility work.
 - [musl migration](MUSL_MIGRATION_2026-09-08.md): runtime, SDK and binary compatibility.
@@ -19,8 +22,6 @@ when changing the kernel, loader, middlelayer, installer, or user ABI.
   `kerneldebug.sys`, and the ostui diagnostic interface.
 - [Boot and Integrity](BOOT_AND_INTEGRITY.md): loader boot flow, SHA-256
   component checks, installer compatibility, and trust boundary.
-- [Middlelayer](MIDDLELAYER.md): current middlelayer services, ABI files, and
-  kernel/middlelayer responsibility split.
 - [Build and Installer](BUILD_AND_INSTALLER.md): generated build graph,
   packaging outputs, installer payload layout, and WSL validation commands.
 - [Application Registry](APP_REGISTRY.md): manifest format, discovery roots,
@@ -34,7 +35,7 @@ when changing the kernel, loader, middlelayer, installer, or user ABI.
 
 ## Tools
 
-`tools/analyze_boot_log.py` parses loader, kernel, middlelayer, ELF, dynamic
+`tools/analyze_boot_log.py` parses loader, kernel, ELF, dynamic
 linker, CPU exception, storage, and ACPI messages. It accepts a file or
 standard input and preserves one-based evidence line numbers:
 

@@ -42,17 +42,5 @@ class RuntimeResponsivenessTests(unittest.TestCase):
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
 
-    def test_metadata_reads_are_cached_until_storage_changes(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-metadata-") as tmp:
-            executable = str(Path(tmp) / "metadata")
-            subprocess.run([
-                "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
-                "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-Iinclude", "-Iinclude/uapi", "-Ikernel/ntclks/include",
-                "tools/tests/osmlayer_read_cache_test.c", "-o", executable,
-            ], cwd=ROOT, check=True)
-            subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
-
-
 if __name__ == "__main__":
     unittest.main()

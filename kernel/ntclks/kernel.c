@@ -1,7 +1,8 @@
 /*
  * LeonOS kernel bootstrap: coordinates early platform initialization.
- * Starts memory, interrupts, drivers, storage, middle layer, and scheduling.
+ * Starts memory, interrupts, drivers, storage and scheduling.
  */
+#include <leonos/boot_handoff.h>
 #include <ntclks/arch.h>
 #include <ntclks/apic.h>
 #include <ntclks/boot_splash.h>
@@ -15,7 +16,6 @@
 #include <ntclks/heap.h>
 #include <ntclks/multiboot2.h>
 #include <ntclks/net.h>
-#include <ntclks/osmlayer.h>
 #include <ntclks/platform.h>
 #include <ntclks/power.h>
 #include <ntclks/pty.h>
@@ -161,12 +161,9 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
                    system->kernel_name,
                    system->kernel_version);
     if (handoff && handoff->magic == LEONOS_BOOT_HANDOFF_MAGIC) {
-        console_printf("[ntclks] loader handoff kernel=%p-%p middlelayer=%p-%p entry=%p\n",
+        console_printf("[ntclks] loader handoff kernel=%p-%p\n",
                        (void *)(uintptr_t)handoff->kernel.start,
-                       (void *)(uintptr_t)handoff->kernel.end,
-                       (void *)(uintptr_t)handoff->middlelayer.start,
-                       (void *)(uintptr_t)handoff->middlelayer.end,
-                       (void *)(uintptr_t)handoff->middlelayer.entry);
+                       (void *)(uintptr_t)handoff->kernel.end);
     }
 
     struct boot_info boot;
@@ -253,27 +250,13 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
     idt_init();
     irq_init();
     boot_splash_update(90u);
-    osmlayer_bridge_init(&boot, handoff);
-    boot_splash_update(93u);
     {
-        struct leonos_mount_policy mount_policy;
-        int policy_ret = osmlayer_bridge_mount_policy(&boot, &mount_policy);
-        if (policy_ret == 0) {
-            storage_apply_mount_policy(&mount_policy);
-            if ((cmdline_has(&boot, "mode=installer") || cmdline_has(&boot, "mode=live")) &&
-                !storage_ready()) {
-                console_printf("[ntclks] installer mount policy did not produce a ready root, retrying handoff module\n");
-                storage_init_installer_root(&boot);
-            }
-        } else if (cmdline_has(&boot, "mode=installer") || cmdline_has(&boot, "mode=live")) {
-            console_printf("[ntclks] middlelayer mount policy unavailable ret=%d, using installer fallback\n",
-                           policy_ret);
-            storage_init();
+        bool ramdisk_root = cmdline_has(&boot, "mode=installer") ||
+                            cmdline_has(&boot, "mode=live");
+        storage_mount_boot_root(&boot, ramdisk_root);
+        if (ramdisk_root && !storage_ready()) {
+            console_printf("[ntclks] installer ramdisk root not ready, retrying handoff module\n");
             storage_init_installer_root(&boot);
-        } else {
-            console_printf("[ntclks] middlelayer mount policy unavailable ret=%d, using boot root fallback\n",
-                           policy_ret);
-            storage_init();
         }
     }
     boot_splash_update(96u);
@@ -282,7 +265,6 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
     usb_init();
     net_init();
     boot_splash_update(98u);
-    osmlayer_bridge_selftest();
     if (kernel_debug_boot_requested(handoff)) {
         console_printf("[ntclks] entering kernel debug tool before userland\n");
         (void)kernel_debug_run_module();

@@ -27,7 +27,6 @@ TARGET_RANLIB  := $(call leonos_take_override,TOOLCHAIN_RANLIB,RANLIB)
 TARGET_LD      := $(call leonos_take_override,TOOLCHAIN_LD,LD)
 TARGET_OBJCOPY := $(call leonos_take_override,TOOLCHAIN_OBJCOPY,OBJCOPY)
 TARGET_STRIP   := $(call leonos_take_override,TOOLCHAIN_STRIP,STRIP)
-TARGET_RUSTC   := $(call leonos_take_override,TOOLCHAIN_RUSTC,RUSTC)
 
 # Which of the two the value came from, for `make V=1` and the signatures.
 leonos_override_note = $(if $(filter command line,$(origin $(2))),overridden-from-command-line,$($(1)))

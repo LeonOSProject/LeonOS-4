@@ -11,7 +11,7 @@
 ## 编译源代码
 
 构建环境为 Linux/WSL，入口为 GNU Make 4.3+。项目自己的构建工具使用 C，生产构建不运行
-Python、Meson 或 Ninja；已有 Rust middlelayer 继续使用 Rust 工具链。
+Python、Meson 或 Ninja；生产链只编译 C 与汇编，不要求 Rust 工具链。
 
 Debian/Ubuntu 的典型依赖：
 
@@ -20,7 +20,6 @@ sudo apt install build-essential clang lld llvm libclang-rt-dev \
   autoconf automake libtool libtool-bin pkg-config bison flex gperf gettext libncurses-dev \
   grub-efi-amd64-bin grub-common xorriso mtools dosfstools e2fsprogs libext2fs-dev \
   fakeroot fdisk qemu-utils qemu-system-x86 ovmf zip curl xz-utils patch git
-rustup target add x86_64-unknown-none
 ```
 
 ```sh
@@ -34,7 +33,7 @@ make run
 ```
 
 `make fetch` 是唯一联网阶段，校验 `configs/dependencies.lock.json` 中的摘要。
-构建缺缓存时会报错，不会暗中下载。`make doctor` 实际检查目标编译、compiler-rt、Rust target
+构建缺缓存时会报错，不会暗中下载。`make doctor` 实际检查目标编译、compiler-rt
 及镜像工具。Clang 必须包含 x86_64 compiler-rt builtins；仅有头文件不够。
 
 常用目标：`kernel`、`userland`、`runtime`、`sdk`、`rootfs`、`apk-repo`、`image-vmdk`、
@@ -78,11 +77,10 @@ make run
 - `configs/`：组件清单、默认配置和可提交的构建 profile。
 - `devtools/`：面向应用开发的 SDK 头文件、库、链接脚本、示例和文档。
 - `docs/`：架构、ABI、构建、文件系统、安全和工具文档。
-- `drivers/`：可加载的 Ring-0 驱动及其构建输入。
-- `include/`：内核、中间层和用户态共用的公共 C 头文件；生成头文件位于 `include/generated/`。
-- `kernel/ntclks/`：LeonOS 内核，包括调度、内存、ELF、系统调用、GUI IPC、网络和存储桥接。
+- `drivers/`：可加载的 Ring-0 驱动及其构建输入；`drivers/bootstrap/storage/` 实现文件系统、启动挂载和 `LEONACL.SYS` 权限元数据。
+- `include/`：内核与用户态共用的公共 C 头文件；生成头文件位于 `include/generated/`。
+- `kernel/ntclks/`：LeonOS 内核，包括调度、内存、ELF、系统调用、GUI IPC、网络和权限判定。
 - `los2w/`：宿主机上的 LeonOS/Windows 兼容工具和模拟器代码。
-- `middlelayer/osmlayer/`：Rust + C 中间层，负责 VFS、账户与 ACL、Unicode、设备和挂载策略。
 - `system/`：镜像中 staging 的系统配置、字体、证书、壁纸、图标和其他资源。
 - `test/`：测试输入和测试资源。
 - `third_party/`：通过 Git submodule 引入的上游或分叉项目源码，具体归属见 `.gitmodules`。
@@ -95,9 +93,9 @@ make run
 
 ## 代码注释规范
 
-内核 `kernel/ntclks/` 与中间层 `middlelayer/osmlayer/` 的每个函数定义和公共函数
-声明都必须使用 Doxygen 风格注释。C、C++、汇编预处理源和 Rust 均采用以下块注释形式，
-以便 Doxygen 和 Rust 文档工具都可读取：
+内核 `kernel/ntclks/` 的每个函数定义和公共函数
+声明都必须使用 Doxygen 风格注释。C、C++ 和汇编预处理源均采用以下块注释形式，
+以便 Doxygen 读取：
 
 ```c
 /**

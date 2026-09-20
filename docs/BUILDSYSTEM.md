@@ -2,7 +2,7 @@
 
 根 Makefile 是生产入口，要求 GNU Make 4.3+ 和 Linux/WSL。运行 `make help` 查看完整公共接口。
 项目 C 工具负责格式转换与校验，Make 负责调度，不执行 Python/Meson/Ninja。
-已有 Rust middlelayer 仍需要 `x86_64-unknown-none` target。
+生产链只编译 C 与汇编，不再需要 Rust 工具链或 `x86_64-unknown-none` target。
 
 ## 开始构建
 
@@ -14,7 +14,7 @@ make defconfig
 make -j8 all
 ```
 
-依赖安装示例见 README。doctor 会实际编译/链接目标探针，检查 compiler-rt、Rust target、
+依赖安装示例见 README。doctor 会实际编译/链接目标探针，检查 compiler-rt、
 ext2fs 头文件/库和镜像工具。fetch 校验锁定摘要，是唯一联网阶段；缺缓存的生产目标直接失败。
 
 ## 输出与配置
@@ -29,7 +29,7 @@ Kconfig 与 configs/components.toml 区分 BUILD、IMAGE、ENTRY、SDK、API；r
 
 | 目标 | 输出 |
 | --- | --- |
-| kernel / loader / drivers / middlelayer | generated/system、generated/drivers、loader |
+| kernel / loader / drivers | generated/system、generated/drivers、loader |
 | runtime / userland / leonos-pam / leonos-upstream | 运行库、应用、独立上游安装树 |
 | sdk / musl-sdk | packages/LeonOS4-Developer-SDK.zip、leonos-musl-sdk.tar.gz |
 | rootfs-raw / rootfs / apk-repo | rootfs/raw、managed、manifest.json；packages/apk/repository |

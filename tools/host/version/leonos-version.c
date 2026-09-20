@@ -41,7 +41,6 @@ struct options {
 
 struct identity {
     char *kernel_name;
-    char *middlelayer_name;
     char *release_version;
 };
 
@@ -69,7 +68,7 @@ static void usage(void)
         "inputs leave an existing file's mtime untouched, so nothing downstream\n"
         "rebuilds. No counter is incremented and no wall clock is read.\n"
         "\n"
-        "  --version-file FILE  key=value file with kernel_name, middlelayer_name\n"
+        "  --version-file FILE  key=value file with kernel_name\n"
         "                       and release_version\n"
         "  --output PATH        header to publish; its directory must exist\n"
         "  --source-id ID       fixed source identifier, e.g. an abbreviated commit\n"
@@ -130,7 +129,6 @@ static char *trim(char *text)
 static void identity_free(struct identity *identity)
 {
     free(identity->kernel_name);
-    free(identity->middlelayer_name);
     free(identity->release_version);
 }
 
@@ -143,8 +141,6 @@ static int assign_identity(struct identity *identity, const char *key,
 
     if (strcmp(key, "kernel_name") == 0) {
         slot = &identity->kernel_name;
-    } else if (strcmp(key, "middlelayer_name") == 0) {
-        slot = &identity->middlelayer_name;
     } else if (strcmp(key, "release_version") == 0) {
         slot = &identity->release_version;
     } else {
@@ -206,9 +202,8 @@ static int load_identity(const char *path, struct identity *identity)
         status = report("cannot finish reading %s: %s", path, strerror(errno));
     }
     if (status == 0 && (identity->kernel_name == NULL ||
-            identity->middlelayer_name == NULL ||
             identity->release_version == NULL)) {
-        status = report("%s must define kernel_name, middlelayer_name and release_version",
+        status = report("%s must define kernel_name and release_version",
             path);
     }
     return status;
@@ -296,7 +291,7 @@ static int append_line(struct byte_buffer *out, const char *format, ...)
 int main(int argc, char **argv)
 {
     struct options options;
-    struct identity identity = { NULL, NULL, NULL };
+    struct identity identity = { NULL, NULL };
     struct byte_buffer out = { NULL, 0, 0 };
     char timestamp[32];
     char copyright[160];
@@ -373,7 +368,6 @@ int main(int argc, char **argv)
         append_line(&out, "#define LEONOS_KERNEL_VERSION_PATCH %ld\n", patch) != 0 ||
         append_line(&out, "#define LEONOS_SOURCE_ID \"%s\"\n", source_id) != 0 ||
         append_line(&out, "#define LEONOS_KERNEL_VERSION \"%s\"\n", version_string) != 0 ||
-        append_line(&out, "#define LEONOS_MIDDLELAYER_NAME \"%s\"\n", identity.middlelayer_name) != 0 ||
         append_line(&out, "#define LEONOS_BUILD_TIME \"%s\"\n", timestamp) != 0 ||
         append_line(&out, "#define LEONOS_COPYRIGHT_YEAR %d\n", year) != 0 ||
         append_line(&out, "#define LEONOS_COPYRIGHT \"%s\"\n\n", copyright) != 0 ||

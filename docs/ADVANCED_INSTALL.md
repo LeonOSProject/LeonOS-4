@@ -25,7 +25,7 @@ less /root/ADVANCED_INSTALL.txt
 
 | 分区 | 文件系统 | GPT 类型 | 建议名称 | 用途 |
 | --- | --- | --- | --- | --- |
-| 1 | FAT32 | EFI System | `LeonOS 4 ESP` | UEFI、GRUB、loader、内核和中间层 |
+| 1 | FAT32 | EFI System | `LeonOS 4 ESP` | UEFI、GRUB、loader 和内核 |
 | 2 | ext2 | Linux filesystem | `LEONOS4_ROOT` | LeonOS 4 根文件系统 |
 
 ESP 建议至少 128 MiB。根分区应使用剩余空间，并确保能容纳 `/install/root`
@@ -238,7 +238,7 @@ leonos-grub-installer /mnt/esp
 
 - `EFI/BOOT/BOOTX64.EFI`；
 - `loader.elf`；
-- `leonos/kernel.sys` 和 `leonos/middlelayer.sys`；
+- `leonos/kernel.sys`；
 - 完整的 `grub/` 配置、字体和主题。
 
 工具不会格式化或挂载 ESP，也不会写入固件 NVRAM。它安装标准 UEFI fallback

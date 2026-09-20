@@ -9,9 +9,23 @@
 #include <leonos/fs.h>
 #include <leonos/system.h>
 #include <ntclks/types.h>
-#include <leonos/permissions.h>
 #include <linux/stat.h>
 #include <linux/statfs.h>
+
+/**
+ * @brief Internal POSIX permission triple carried between the storage
+ *        backends, the ACL sidecar and the permission checker.
+ *
+ * Ring-3 code never sees this layout: userland reads and writes POSIX
+ * permissions through the Linux stat/chmod/chown ABI, which is translated at
+ * the syscall boundary.  Keeping it here stops an internal representation from
+ * being frozen as a published ABI.
+ */
+struct leonos_permissions {
+    uint32_t mode;
+    uint32_t uid;
+    uint32_t gid;
+};
 
 /* Legacy installation records are internal-only while boot storage is being
  * simplified.  They are deliberately absent from the public SDK; userland
@@ -88,6 +102,36 @@ int storage_inode_permissions(const struct storage_node *node,
 int storage_inode_stat(const struct storage_node *node, struct linux_stat_abi *value);
 int storage_inode_utimensat(const struct storage_node *node, int64_t atime, int64_t mtime,
                             bool set_atime, bool set_mtime);
+/**
+ * @brief Read or write uid/gid/mode for a member of a sidecar metadata volume.
+ * @param path Absolute, already-normalized path; ':' is not accepted.
+ * @param value Metadata; input for write, output otherwise. Must not be NULL.
+ * @param write True to store `value` for this path, false to recall it.
+ * @return Zero, -EINVAL for a malformed path, or -EIO when the directory's
+ *         sidecar file is damaged. A path with no stored record yields the
+ *         filesystem default rather than an error.
+ * @context Process context like the other storage entry points; performs file
+ *          I/O on the volume's own locking and holds no lock of its own.
+ */
+int storage_sidecar_permissions(const char *path, struct leonos_permissions *value,
+                                bool write);
+/**
+ * @brief Drop the sidecar record of a member that has just been deleted.
+ * @param path Absolute path that no longer exists.
+ * @return Zero, or a negative errno when the directory's records could not be
+ *         rewritten. A damaged sidecar is left untouched and reported as zero.
+ * @context Process context; performs file I/O.
+ */
+int storage_sidecar_note_deleted(const char *path);
+/**
+ * @brief Re-key a sidecar record after a rename within the same directory.
+ * @param path Absolute path before the rename.
+ * @param new_path Absolute path after the rename; must share `path`'s directory,
+ *                 otherwise nothing changes and zero is returned.
+ * @return Zero, or a negative errno when the records could not be rewritten.
+ * @context Process context; performs file I/O.
+ */
+int storage_sidecar_note_renamed(const char *path, const char *new_path);
 /**
  * @brief Create a socket or FIFO inode on a supporting filesystem.
  * @param path Resolved, parent-authorized absolute path.
@@ -215,9 +259,17 @@ void storage_drain_task_io(uint32_t pid);
  */
 void storage_init_installer_root(const struct boot_info *boot);
 /**
- * @brief Mount or unmount volumes according to policy.
+ * @brief Mount the root filesystem for this boot.
+ * @param boot Parsed Multiboot modules and kernel command line; the installer
+ *             RAM disk is located by module name within it.
+ * @param ramdisk_root True for an installer or live session, whose root is the
+ *                     `leonos-installer-root` module instead of a partition.
+ * @return Nothing. A failed RAM-root mount leaves no root ready; the caller
+ *         retries through storage_init_installer_root() to report why.
+ * @context Boot phase, before any task can issue storage syscalls. Probes and
+ *          writes disks through the storage subsystem's own locking.
  */
-void storage_apply_mount_policy(const struct leonos_mount_policy *policy);
+void storage_mount_boot_root(const struct boot_info *boot, bool ramdisk_root);
 /**
  * @brief Return true once the root filesystem is mounted and usable.
  */

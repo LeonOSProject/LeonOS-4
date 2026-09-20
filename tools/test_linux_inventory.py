@@ -72,7 +72,7 @@ def guest(args):
     # The current kernel deliberately disables AP scheduling. Validate actual
     # admitted CPUs and managed pages, not QEMU's configured hardware capacity.
     cpu_match=re.search(r'SMP topology CPUs=(\d+)',text)
-    memory_match=re.search(r'\[osmlayer\] init .*memory=(\d+) KiB',text)
+    memory_match=re.search(r'\[ntclks\] mm initialized usable=(\d+) KiB',text)
     assert cpu_match and memory_match, 'missing independent kernel inventory'
     enabled_cpus=int(cpu_match[1]); managed_memory=int(memory_match[1])*1024
     kernel_match=re.search(r'\[inventory\] uname release=(\S+) version=([^\n]+)',text)

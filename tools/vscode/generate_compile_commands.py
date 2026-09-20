@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate VS Code clangd/CPPTools compile commands for LeonOS regions.
 
-The production build remains build.py. This file only mirrors its freestanding
+The production build is the root Makefile. This file only mirrors its freestanding
 compiler model so VS Code can resolve generated headers, libc and kernel APIs.
 Run it from Linux or WSL.
 """
@@ -18,7 +18,7 @@ REGION_PATTERNS: dict[str, tuple[str, ...]] = {
     "kernel": (
         "kernel/ntclks/**/*.c", "kernel/ntclks/**/*.S",
         "kernel/ostui/**/*.c", "drivers/bootstrap/**/*.c",
-        "drivers/bootstrap/**/*.S", "middlelayer/osmlayer/**/*.c",
+        "drivers/bootstrap/**/*.S",
     ),
     "loader": ("boot/loader/**/*.c", "boot/loader/**/*.S"),
     "libc": (
@@ -50,8 +50,7 @@ def all_sources(root: Path, region: str) -> list[Path]:
 def include_flags(root: Path, region: str) -> list[str]:
     common = [root / "include", root / "build/include", root / "build/include/generated"]
     if region == "kernel":
-        paths = common + [root / "kernel/ntclks/include", root / "drivers/bootstrap",
-                          root / "middlelayer/osmlayer"]
+        paths = common + [root / "kernel/ntclks/include", root / "drivers/bootstrap"]
     elif region == "loader":
         paths = common
     elif region in {"libc", "userland"}:
@@ -132,7 +131,7 @@ def source_region(root: Path, source: Path, selected: str) -> str:
         return "loader"
     if source.is_relative_to(root / "userland/libc") or source.is_relative_to(root / "third_party/mbedtls"):
         return "libc"
-    if source.is_relative_to(root / "kernel") or source.is_relative_to(root / "drivers") or source.is_relative_to(root / "middlelayer"):
+    if source.is_relative_to(root / "kernel") or source.is_relative_to(root / "drivers"):
         return "kernel"
     if source.is_relative_to(root / "devtools"):
         return "devtools"
