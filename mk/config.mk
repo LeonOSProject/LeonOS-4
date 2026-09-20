@@ -63,7 +63,8 @@ $(LEONOS_CONFIG_FILE): $(KCONFIG_SEED) $(KCONFIG_ROOT) $(LEONOS_SRC)/Kconfig.com
 $(LEONOS_CONFIG_FILE): | $(O_CONFIG)
 
 # --- host build of the pinned front end ------------------------------------
-$(KCONFIG_CONF) $(KCONFIG_MCONF) &: $(LEONOS_SRC)/$(LEONOS_HOST_PUFF_SRC)
+$(KCONFIG_CONF) $(KCONFIG_MCONF) &: $(LEONOS_SRC)/$(LEONOS_HOST_PUFF_SRC) \
+	$(LEONOS_SRC)/tools/build/kconfig-frontends.sh
 	$(Q)sh $(LEONOS_SRC)/tools/build/kconfig-frontends.sh build \
 		--source $(LEONOS_SRC)/third_party/kconfig-frontends \
 		--work $(abspath $(O_HOST)/kconfig-frontends-build) \
