@@ -58,6 +58,7 @@
         "sound",
         "desktop",
         "cpu",
-        "apps"
+        "apps",
+        "rpr"
     ]
 }

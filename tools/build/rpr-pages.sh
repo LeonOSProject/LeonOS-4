@@ -18,6 +18,13 @@ for source in "$repository"/leonos-*.apk "$apps"/leonos-*.apk; do
     [ -f "$source" ] || { echo "missing RPR package $source" >&2; exit 1; }
     name=${source##*/}
     case $name in *[!a-zA-Z0-9._+-]*) echo 'unsafe RPR filename' >&2; exit 1 ;; esac
+    # apk resolves a package from its metadata as name-version.apk. A
+    # versionless archive indexes successfully but every normal client then
+    # requests a URL that does not exist.
+    printf '%s\n' "$name" | grep -Eq '^leonos-.+-[0-9][A-Za-z0-9._+-]*\.apk$' || {
+        echo "RPR package filename is missing its version: $name" >&2
+        exit 1
+    }
     [ ! -e "$work/site/apk/$name" ] || { echo "duplicate RPR package $name" >&2; exit 1; }
     cp "$source" "$work/site/apk/$name"
 done
