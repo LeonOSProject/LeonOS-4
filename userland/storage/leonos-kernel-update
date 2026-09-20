@@ -25,7 +25,9 @@ case "$rpr_url" in https://*) ;; *) printf '%s\n' 'Invalid RPR URL: HTTPS is req
 
 manifest=$(mktemp /tmp/leonos-kernel-release.XXXXXX) || exit 1
 kernel_tmp=
+loader_tmp=
 kernel_backup=
+loader_backup=
 middle_backup=
 lock_dir=
 commit_started=0
@@ -34,9 +36,16 @@ cleanup() {
     status=$?
     trap - EXIT HUP INT TERM
     if [ "$commit_started" -eq 1 ] && [ "$commit_done" -eq 0 ]; then
+        # The kernel and its loader are one release unit: the handoff layout
+        # they agree on is compiled into both, so a rolled-back kernel has to
+        # come back with the loader that was on disk before the swap.
         if [ -n "$kernel_backup" ] && [ -f "$kernel_backup" ]; then
             rm -f -- /boot/leonos/kernel.sys
             mv -- "$kernel_backup" /boot/leonos/kernel.sys || true
+        fi
+        if [ -n "$loader_backup" ] && [ -f "$loader_backup" ]; then
+            rm -f -- /boot/loader.elf
+            mv -- "$loader_backup" /boot/loader.elf || true
         fi
         # A retired middle-layer payload comes back only with the rolled-back
         # kernel, because that kernel was the one that required it.
@@ -48,8 +57,10 @@ cleanup() {
     fi
     rm -f -- "$manifest"
     [ -z "$kernel_tmp" ] || rm -f -- "$kernel_tmp" "$kernel_tmp.part"
+    [ -z "$loader_tmp" ] || rm -f -- "$loader_tmp" "$loader_tmp.part"
     if [ "$commit_done" -eq 1 ]; then
         [ -z "$kernel_backup" ] || rm -f -- "$kernel_backup"
+        [ -z "$loader_backup" ] || rm -f -- "$loader_backup"
         [ -z "$middle_backup" ] || rm -f -- "$middle_backup"
     fi
     [ -z "$lock_dir" ] || rmdir -- "$lock_dir" 2>/dev/null || true
@@ -74,6 +85,8 @@ remote_image=$(field image_version) || remote_image=
 remote_release=$(field version) || { printf '%s\n' 'Kernel release has no version' >&2; exit 1; }
 kernel_file=$(field kernel_file) || exit 1
 kernel_hash=$(field kernel_sha256) || exit 1
+loader_file=$(field loader_file) || exit 1
+loader_hash=$(field loader_sha256) || exit 1
 [ "$format" = 2 ] || {
     printf 'Unsupported kernel release manifest: %s (format 1 advertised a middle-layer payload)\n' "$format" >&2
     exit 1;
@@ -89,8 +102,10 @@ case "$remote_image" in *[!0-9.]*|''|.*|*.) printf 'Invalid remote image version
     exit 1
 }
 case "$kernel_file" in kernel.sys) ;; *) printf '%s\n' 'Invalid kernel release filename' >&2; exit 1;; esac
+case "$loader_file" in loader.elf) ;; *) printf '%s\n' 'Invalid loader release filename' >&2; exit 1;; esac
 case "$kernel_hash" in *[!0-9a-f]*|'') printf '%s\n' 'Invalid kernel.sys checksum' >&2; exit 1;; esac
-[ "${#kernel_hash}" -eq 64 ] || {
+case "$loader_hash" in *[!0-9a-f]*|'') printf '%s\n' 'Invalid loader.elf checksum' >&2; exit 1;; esac
+[ "${#kernel_hash}" -eq 64 ] && [ "${#loader_hash}" -eq 64 ] || {
     printf '%s\n' 'Invalid kernel release checksum length' >&2
     exit 1
 }
@@ -126,9 +141,14 @@ else
 fi
 [ "$check_only" -eq 0 ] || exit 0
 
-boot=/boot/leonos
+esp=/boot
+boot=$esp/leonos
 [ -d "$boot" ] && [ -f "$boot/kernel.sys" ] || {
     printf 'Boot payload is unavailable under %s\n' "$boot" >&2
+    exit 1
+}
+[ -f "$esp/loader.elf" ] || {
+    printf 'Boot loader is unavailable under %s\n' "$esp" >&2
     exit 1
 }
 lock_dir=/run/leonos-kernel-update.lock
@@ -137,27 +157,37 @@ mkdir -- "$lock_dir" 2>/dev/null || {
     lock_dir=
     exit 1
 }
+# Each download lands on the filesystem that owns the file it replaces, so the
+# commit step renames within one filesystem instead of copying across devices.
 kernel_tmp=$(mktemp "$boot/.kernel.sys.rpr.XXXXXX") || exit 1
+loader_tmp=$(mktemp "$esp/.loader.elf.rpr.XXXXXX") || exit 1
 rprfetch "$rpr_url/kernel/$kernel_file" "$kernel_tmp" || exit 1
+rprfetch "$rpr_url/kernel/$loader_file" "$loader_tmp" || exit 1
 actual_kernel=$(sha256sum "$kernel_tmp" | awk '{print $1}')
+actual_loader=$(sha256sum "$loader_tmp" | awk '{print $1}')
 [ "$actual_kernel" = "$kernel_hash" ] || { printf '%s\n' 'kernel.sys checksum mismatch' >&2; exit 1; }
-chmod 0644 "$kernel_tmp" || exit 1
+[ "$actual_loader" = "$loader_hash" ] || { printf '%s\n' 'loader.elf checksum mismatch' >&2; exit 1; }
+chmod 0644 "$kernel_tmp" "$loader_tmp" || exit 1
 
 kernel_backup="$boot/.kernel.sys.rpr-backup.$$"
+loader_backup="$esp/.loader.elf.rpr-backup.$$"
 middle_backup="$boot/.middlelayer.sys.rpr-backup.$$"
-[ ! -e "$kernel_backup" ] && [ ! -e "$middle_backup" ] || {
+[ ! -e "$kernel_backup" ] && [ ! -e "$loader_backup" ] && [ ! -e "$middle_backup" ] || {
     printf '%s\n' 'Kernel update backup path already exists' >&2
     exit 1
 }
 commit_started=1
 mv -- "$boot/kernel.sys" "$kernel_backup" || exit 1
+mv -- "$esp/loader.elf" "$loader_backup" || exit 1
 mv -- "$kernel_tmp" "$boot/kernel.sys" || exit 1
+mv -- "$loader_tmp" "$esp/loader.elf" || exit 1
 kernel_tmp=
+loader_tmp=
 if [ -f "$boot/middlelayer.sys" ]; then
     mv -- "$boot/middlelayer.sys" "$middle_backup" || exit 1
 fi
 sync || exit 1
 commit_done=1
-printf 'Installed kernel %s (build %s); reboot to activate.\n' \
+printf 'Installed kernel and loader %s (build %s); reboot to activate.\n' \
     "$remote_image" "$remote_release"
 exit 0

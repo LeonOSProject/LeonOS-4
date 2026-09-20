@@ -69,6 +69,7 @@ jobs:
           test -s out/x86_64/release/rpr-pages/apk/packages.adb
           test -s out/x86_64/release/rpr-pages/apk/leonos-rpr.rsa.pub
           test -s out/x86_64/release/rpr-pages/kernel/kernel.sys
+          test -s out/x86_64/release/rpr-pages/kernel/loader.elf
           test -s out/x86_64/release/rpr-pages/kernel/release.txt
           if grep -R -E -- 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' out/x86_64/release/rpr-pages; then
             echo 'Private key material reached the Pages directory' >&2
