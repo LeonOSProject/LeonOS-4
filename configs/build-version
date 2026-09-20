@@ -3,4 +3,4 @@
 # duplicated inside a C constant (plan section 7).
 kernel_name=ntclks
 middlelayer_name=osmlayer
-release_version=4.7.1
+release_version=4.7.2
