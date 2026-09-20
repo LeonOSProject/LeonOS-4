@@ -3,11 +3,13 @@ set -u
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 
-usage() { printf '%s\n' 'Usage: leonos-kernel-update [--check]' >&2; }
+usage() { printf '%s\n' 'Usage: leonos-kernel-update [-f|--force|--check]' >&2; }
 check_only=0
+force=0
 case "${1-}" in
     '') ;;
     --check) check_only=1 ;;
+    -f|--force) force=1 ;;
     *) usage; exit 2 ;;
 esac
 [ "$#" -le 1 ] || { usage; exit 2; }
@@ -110,13 +112,18 @@ version_is_newer() {
 version_is_newer "$local_image" "$remote_image"
 comparison=$?
 [ "$comparison" -ne 2 ] || { printf 'Invalid local image version: %s\n' "$local_image" >&2; exit 1; }
-if [ "$comparison" -ne 0 ]; then
+if [ "$force" -eq 0 ] && [ "$comparison" -ne 0 ]; then
     printf 'Kernel image is current: local=%s remote=%s (releases %s / %s)\n' \
         "$local_image" "$remote_image" "$local_release" "$remote_release"
     exit 0
 fi
-printf 'Kernel image update available: local=%s remote=%s (remote build %s)\n' \
-    "$local_image" "$remote_image" "$remote_release"
+if [ "$force" -eq 1 ]; then
+    printf 'Forcing kernel image update: local=%s remote=%s (remote build %s)\n' \
+        "$local_image" "$remote_image" "$remote_release"
+else
+    printf 'Kernel image update available: local=%s remote=%s (remote build %s)\n' \
+        "$local_image" "$remote_image" "$remote_release"
+fi
 [ "$check_only" -eq 0 ] || exit 0
 
 boot=/boot/leonos

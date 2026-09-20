@@ -99,7 +99,9 @@ URLs.
 - `leonos-kernel-update` requires root. It downloads both boot files, verifies
   each SHA-256, then replaces `/boot/leonos/kernel.sys` and
   `/boot/leonos/middlelayer.sys` with rollback on a failed replacement. Reboot
-  to activate the release.
+  to activate the release. Use `leonos-kernel-update -f` (or `--force`) to
+  repeat the replacement even when the local and remote image versions match;
+  the same checksum and rollback protections still apply.
 - `leonos-check-update` requires root because it refreshes APK indexes. It only
   checks the kernel/middle-layer pair and installed `leonos-*` APK packages; it
   does not install updates. APK availability is determined by `apk` itself.
