@@ -43,9 +43,6 @@ if [ "$action" = build ]; then
     for required in bootstrap configure.ac frontends/mconf/mconf.c; do
         [ -f "$source_dir/$required" ] || die "$source_dir is not initialised; run 'git submodule update --init --recursive'"
     done
-    if [ -x "$prefix/bin/kconfig-conf" ] && [ -x "$prefix/bin/kconfig-mconf" ]; then
-        exit 0
-    fi
     rm -rf "$work_dir"
     mkdir -p "$work_dir" "$prefix" || die 'cannot create build directories'
     ( cd "$source_dir" && tar -cf - --exclude=.git . ) | ( cd "$work_dir" && tar -xf - ) \
@@ -63,6 +60,22 @@ if [ "$action" = build ]; then
             || die 'cannot apply the gperf compatibility fix'
     elif ! grep -F -q -- "$new" "$gperf_input"; then
         die "unexpected kconfig-frontends gperf input: $gperf_input"
+    fi
+
+    # The front end writes to a source-local staging name (see the run action
+    # below), but users should be told about the configuration they requested.
+    # Keep the upstream behavior when the LeonOS-only display variable is absent.
+    confdata="$work_dir/libs/parser/confdata.c"
+    display_old='	conf_message(_("configuration written to %s"), newname);'
+    display_env='	env = getenv("LEONOS_KCONFIG_DISPLAY_CONFIG");'
+    display_new='	conf_message(_("configuration written to %s"), env && *env ? env : newname);'
+    if grep -F -q -- "$display_old" "$confdata"; then
+        awk -v old="$display_old" -v first="$display_env" -v new="$display_new" \
+            '{ if ($0 == old) { print first; print new; } else print }' \
+            "$confdata" > "$confdata.tmp" && mv "$confdata.tmp" "$confdata" \
+            || die 'cannot apply the configuration display-name fix'
+    elif ! grep -F -q -- "$display_env" "$confdata" || ! grep -F -q -- "$display_new" "$confdata"; then
+        die "unexpected kconfig-frontends conf_write implementation: $confdata"
     fi
 
     LC_ALL=C
@@ -87,7 +100,7 @@ fi
 kconfig_dir=$(CDPATH= readlink -f -- "$(dirname -- "$kconfig")" 2>/dev/null || dirname -- "$kconfig")
 cd "$kconfig_dir" || die "cannot enter $kconfig_dir"
 stage=".leonos-kconfig-stage.$$"
-cleanup_stage() { rm -f "$stage" "$stage~"; }
+cleanup_stage() { rm -f "$stage" "$stage~" "$stage.old"; }
 trap cleanup_stage EXIT INT TERM
 if [ -f "$config" ]; then
     cp "$config" "$stage" || die "cannot stage the existing configuration"
@@ -102,7 +115,8 @@ fi
 mkdir -p include/config || die 'cannot create the kconfig scratch directory'
 tmpconfig_before=$(ls .tmpconfig.* 2>/dev/null | sort)
 KCONFIG_CONFIG=$stage
-export KCONFIG_CONFIG
+LEONOS_KCONFIG_DISPLAY_CONFIG=$config
+export KCONFIG_CONFIG LEONOS_KCONFIG_DISPLAY_CONFIG
 
 case "$mode" in
     defconfig)
@@ -120,8 +134,6 @@ case "$mode" in
         # First build with no configuration initialises from the committed
         # profile, but an existing .config is never silently rewritten.
         if [ -f "$config" ]; then
-            trap - EXIT INT TERM
-            rm -f "$stage"
             exit 0
         fi
         [ -n "$seed" ] && [ -f "$seed" ] || die 'no .config and no seed to initialise from'
@@ -138,7 +150,7 @@ if cmp -s "$stage" "$config"; then
 else
     mv "$stage" "$config" || die "cannot publish the configuration to $config"
 fi
-rm -f "$stage~"
+rm -f "$stage~" "$stage.old"
 for leftover in $(ls .tmpconfig.* 2>/dev/null | sort); do
     printf '%s\n' "$tmpconfig_before" | grep -qxF -- "$leftover" || rm -f -- "$leftover"
 done

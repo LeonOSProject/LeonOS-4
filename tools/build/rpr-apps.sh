@@ -48,7 +48,8 @@ for app in helloworld doom oschinpt; do
         ;;
     esac
     find "$payload" -exec touch -h -d "@$epoch" {} +
-    set -- mkpkg --files "$payload" --output "$work/repository/leonos-$app.apk" --info "name:leonos-$app" \
+    package_file="$work/repository/leonos-$app-$package_version.apk"
+    set -- mkpkg --files "$payload" --output "$package_file" --info "name:leonos-$app" \
       --info "version:$package_version" --info arch:x86_64 --info "origin:leonos-$app" \
       --info "description:LeonOS application $app" --info license:LicenseRef-See-Bundled-Notices \
       --info 'depends:leonos-apps leonos-musl' --sign-key "$key"
@@ -60,8 +61,9 @@ for app in helloworld doom oschinpt; do
     if unshare -Ur true >/dev/null 2>&1; then unshare -Ur "$apk" "$@"
     else fakeroot "$apk" "$@"
     fi
-    printf 'leonos-%s.apk\n' "$app" >> "$work/repository/packages.list"
+    printf '%s\n' "${package_file##*/}" >> "$work/repository/packages.list"
 done
+printf '%s\n' "$version" > "$work/repository/.complete"
 if [ -d "$output.previous" ] && [ ! -e "$output" ]; then mv "$output.previous" "$output"; fi
 rm -rf "$output.previous"
 if [ -e "$output" ]; then mv "$output" "$output.previous"; fi
