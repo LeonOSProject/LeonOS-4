@@ -1,6 +1,8 @@
 name: Publish LeonOS RPR
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
