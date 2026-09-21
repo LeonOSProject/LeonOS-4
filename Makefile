@@ -158,6 +158,7 @@ include $(LEONOS_SRC)/mk/runtime.mk
 include $(LEONOS_SRC)/mk/upstream.mk
 include $(LEONOS_SRC)/mk/userland.mk
 include $(LEONOS_SRC)/mk/resources.mk
+include $(LEONOS_SRC)/mk/nls.mk
 include $(LEONOS_SRC)/mk/sdk.mk
 include $(LEONOS_SRC)/mk/rootfs.mk
 include $(LEONOS_SRC)/mk/apk.mk

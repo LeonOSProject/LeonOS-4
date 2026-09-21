@@ -195,18 +195,17 @@ void browser_bookmarks_add_current(void)
 {
     char title[BROWSER_BOOKMARK_TITLE_CAP];
     if (!current_location[0] || starts_with_ignore_case(current_location, "about:")) {
-        set_status(T("Only pages with an address can be bookmarked",
-                     "只有带地址的页面可以加入书签"));
+        set_status(T("Only pages with an address can be bookmarked"));
         return;
     }
     copy_text(title, sizeof(title), page_title);
-    if (!leonos_ui_show_input_dialog(T("Add Bookmark", "添加书签"),
-                                     T("Title:", "标题:"), title,
+    if (!leonos_ui_show_input_dialog(T("Add Bookmark"),
+                                     T("Title:"), title,
                                      sizeof(title))) {
         return;
     }
     bookmark_add(title, current_location);
-    set_status(T("Bookmark saved", "书签已保存"));
+    set_status(T("Bookmark saved"));
 }
 
 void browser_bookmarks_build_menu(struct leonos_ui_context_menu_item *items,
@@ -217,9 +216,9 @@ void browser_bookmarks_build_menu(struct leonos_ui_context_menu_item *items,
         return;
     }
     items[count++] = (struct leonos_ui_context_menu_item){
-        T("Add Current Page", "添加当前页面"), BROWSER_CMD_FAV_ADD, 0};
+        T("Add Current Page"), BROWSER_CMD_FAV_ADD, 0};
     items[count++] = (struct leonos_ui_context_menu_item){
-        T("Manage Bookmarks...", "管理书签..."), BROWSER_CMD_FAV_MANAGE, 0};
+        T("Manage Bookmarks..."), BROWSER_CMD_FAV_MANAGE, 0};
     items[count++] = (struct leonos_ui_context_menu_item){"", 0,
         LEONOS_UI_MENU_SEPARATOR};
     for (uint32_t i = 0; i < browser_bookmark_count && count < capacity; ++i) {
@@ -228,7 +227,7 @@ void browser_bookmarks_build_menu(struct leonos_ui_context_menu_item *items,
     }
     if (count == 3U && count < capacity) {
         items[count++] = (struct leonos_ui_context_menu_item){
-            T("No saved bookmarks", "没有保存的书签"), 0,
+            T("No saved bookmarks"), 0,
             LEONOS_UI_MENU_DISABLED};
     }
     if (out_count) {
@@ -270,8 +269,8 @@ int browser_show_bookmark_manager(char *out_url, uint32_t out_cap)
     if (out_url && out_cap) {
         out_url[0] = 0;
     }
-    window_id = leonos_gui_create_app_window_ex(T("Bookmarks", "书签"),
-                                                 T("Saved browser pages", "已保存的网页"),
+    window_id = leonos_gui_create_app_window_ex(T("Bookmarks"),
+                                                 T("Saved browser pages"),
                                                  W, H,
                                                  LEONOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
@@ -280,7 +279,7 @@ int browser_show_bookmark_manager(char *out_url, uint32_t out_cap)
     leonos_ui_bind(&surface, pixels, W, H, W);
     for (;;) {
         leonos_ui_rect(&surface, 0, 0, W, H, LEONOS_UI_GRAY);
-        leonos_ui_text(&surface, 18, 18, T("Bookmarks", "书签"),
+        leonos_ui_text(&surface, 18, 18, T("Bookmarks"),
                        LEONOS_UI_BLACK, LEONOS_UI_GRAY);
         leonos_ui_panel(&surface, 16, LIST_Y, W - 32, LIST_ROWS * ROW_H,
         LEONOS_UI_WHITE);
@@ -300,19 +299,19 @@ int browser_show_bookmark_manager(char *out_url, uint32_t out_cap)
         }
         if (!browser_bookmark_count) {
             leonos_ui_text(&surface, 28, LIST_Y + 10,
-                           T("No saved bookmarks", "没有保存的书签"),
+                           T("No saved bookmarks"),
                            LEONOS_UI_DARK, LEONOS_UI_WHITE);
         }
         leonos_ui_button(&surface, 16, H - 42, 72, LEONOS_UI_BUTTON_H,
-                         T("Open", "打开"), selected < 0 ? LEONOS_UI_BUTTON_DISABLED : 0);
+                         T("Open"), selected < 0 ? LEONOS_UI_BUTTON_DISABLED : 0);
         leonos_ui_button(&surface, 96, H - 42, 72, LEONOS_UI_BUTTON_H,
-                         T("Add", "添加"), 0);
+                         T("Add"), 0);
         leonos_ui_button(&surface, 176, H - 42, 72, LEONOS_UI_BUTTON_H,
-                         T("Edit", "编辑"), selected < 0 ? LEONOS_UI_BUTTON_DISABLED : 0);
+                         T("Edit"), selected < 0 ? LEONOS_UI_BUTTON_DISABLED : 0);
         leonos_ui_button(&surface, 256, H - 42, 72, LEONOS_UI_BUTTON_H,
-                         T("Delete", "删除"), selected < 0 ? LEONOS_UI_BUTTON_DISABLED : 0);
+                         T("Delete"), selected < 0 ? LEONOS_UI_BUTTON_DISABLED : 0);
         leonos_ui_button(&surface, W - 88, H - 42, 72, LEONOS_UI_BUTTON_H,
-                         T("Close", "关闭"), 0);
+                         T("Close"), 0);
         leonos_gui_present_window((uint32_t)window_id, W, H, W, pixels);
         event.window_id = (uint32_t)window_id;
         if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) <= 0) {
@@ -347,10 +346,10 @@ int browser_show_bookmark_manager(char *out_url, uint32_t out_cap)
         if (event.x >= 96 && event.x < 168) {
             char title[BROWSER_BOOKMARK_TITLE_CAP] = "New Bookmark";
             char url[BROWSER_URL_CAP] = "http://";
-            if (leonos_ui_show_input_dialog(T("Add Bookmark", "添加书签"),
-                                            T("Title:", "标题:"), title, sizeof(title)) &&
-                leonos_ui_show_input_dialog(T("Add Bookmark", "添加书签"),
-                                            T("URL:", "地址:"), url, sizeof(url)) && url[0]) {
+            if (leonos_ui_show_input_dialog(T("Add Bookmark"),
+                                            T("Title:"), title, sizeof(title)) &&
+                leonos_ui_show_input_dialog(T("Add Bookmark"),
+                                            T("URL:"), url, sizeof(url)) && url[0]) {
                 bookmark_add(title, url);
                 selected = (int32_t)browser_bookmark_count - 1;
             }
@@ -362,10 +361,10 @@ int browser_show_bookmark_manager(char *out_url, uint32_t out_cap)
             uint32_t index = (uint32_t)selected;
             copy_text(title, sizeof(title), browser_bookmarks[index].title);
             copy_text(url, sizeof(url), browser_bookmarks[index].url);
-            if (leonos_ui_show_input_dialog(T("Edit Bookmark", "编辑书签"),
-                                            T("Title:", "标题:"), title, sizeof(title)) &&
-                leonos_ui_show_input_dialog(T("Edit Bookmark", "编辑书签"),
-                                            T("URL:", "地址:"), url, sizeof(url)) && url[0]) {
+            if (leonos_ui_show_input_dialog(T("Edit Bookmark"),
+                                            T("Title:"), title, sizeof(title)) &&
+                leonos_ui_show_input_dialog(T("Edit Bookmark"),
+                                            T("URL:"), url, sizeof(url)) && url[0]) {
                 bookmark_clean(browser_bookmarks[index].title,
                                sizeof(browser_bookmarks[index].title), title);
                 bookmark_clean(browser_bookmarks[index].url,
@@ -376,7 +375,7 @@ int browser_show_bookmark_manager(char *out_url, uint32_t out_cap)
         }
         if (event.x >= 256 && event.x < 328 && selected >= 0) {
             uint32_t index = (uint32_t)selected;
-            if (leonos_ui_show_confirm_dialog(T("Delete Bookmark", "删除书签"),
+            if (leonos_ui_show_confirm_dialog(T("Delete Bookmark"),
                                               browser_bookmarks[index].title, 0)) {
                 for (uint32_t i = index + 1U; i < browser_bookmark_count; ++i) {
                     browser_bookmarks[i - 1U] = browser_bookmarks[i];
@@ -442,22 +441,22 @@ void browser_find_next(void)
             browser_find_len = needle_len;
             scroll_line = row;
             clamp_scroll();
-            set_status(T("Text found", "已找到文本"));
+            set_status(T("Text found"));
             return;
         }
     }
     browser_find_row = -1;
     browser_find_start = 0;
     browser_find_len = 0;
-    set_status(T("Text not found", "未找到文本"));
+    set_status(T("Text not found"));
 }
 
 void browser_find_prompt(void)
 {
     char query[BROWSER_FIND_CAP];
     copy_text(query, sizeof(query), browser_find_query);
-    if (!leonos_ui_show_input_dialog(T("Find in Page", "在页面中查找"),
-                                     T("Find:", "查找:"), query,
+    if (!leonos_ui_show_input_dialog(T("Find in Page"),
+                                     T("Find:"), query,
                                      sizeof(query))) {
         return;
     }

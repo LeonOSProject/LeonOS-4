@@ -1,5 +1,7 @@
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
 #include <leonos/ui.h>
@@ -30,7 +32,7 @@
 #define CELL_MINE 0x01u
 #define CELL_REVEALED 0x02u
 #define CELL_FLAGGED 0x04u
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 static uint32_t pixels[MS_W * MS_H];
 static uint8_t cells[MS_ROWS][MS_COLS];
@@ -390,17 +392,17 @@ static void draw_tile(struct leonos_ui_surface *ui, uint32_t gx, uint32_t gy)
 static void draw_game(struct leonos_ui_surface *ui)
 {
     char mines_text[32];
-    const char *status = T("Ready", "准备");
+    const char *status = T("Ready");
     int mines_left = (int)MS_MINES - (int)flagged_count;
     leonos_ui_rect(ui, 0, 0, MS_W, MS_H, LEONOS_UI_LIGHT);
-    leonos_ui_text(ui, 18, 16, T("Minesweeper", "扫雷"), LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
-    leonos_ui_button(ui, MS_W - 88, 12, 70, LEONOS_UI_BUTTON_H, T("New", "新游戏"), 0);
+    leonos_ui_text(ui, 18, 16, T("Minesweeper"), LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
+    leonos_ui_button(ui, MS_W - 88, 12, 70, LEONOS_UI_BUTTON_H, T("New Game"), 0);
     if (game_over) {
-        status = won ? T("You won", "胜利") : T("Boom", "爆炸");
+        status = won ? T("You won") : T("Boom");
     } else if (mines_placed) {
-        status = T("Playing", "游戏中");
+        status = T("Playing");
     }
-    copy_text(mines_text, sizeof(mines_text), T("Mines: ", "地雷: "));
+    copy_text(mines_text, sizeof(mines_text), T("Mines: "));
     if (mines_left < 0) {
         uint32_t p = text_len(mines_text);
         mines_text[p] = '-';
@@ -440,6 +442,9 @@ static int board_pos(int32_t px, int32_t py, int *out_x, int *out_y)
 
 int main(void)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
@@ -449,7 +454,7 @@ int main(void)
         puts("[minesweeper.elf] required BMP assets unavailable");
         return 1;
     }
-    window_id = leonos_gui_create_app_window_ex(T("Minesweeper", "扫雷"), T("LeonOS Minesweeper", "LeonOS 扫雷"),
+    window_id = leonos_gui_create_app_window_ex(T("Minesweeper"), T("LeonOS Minesweeper"),
                                                 MS_W, MS_H, LEONOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[minesweeper.elf] create window failed=%d\n", window_id);

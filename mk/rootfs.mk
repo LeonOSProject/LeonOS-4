@@ -18,6 +18,7 @@ $(O_META)/rootfs-sources.sig: FORCE $(LEONOS_SRC)/tools/build/tree-signature.sh
 	$(Q)sh $(LEONOS_SRC)/tools/build/tree-signature.sh $@ $(ROOTFS_SOURCE_DIRS)
 ROOTFS_UPSTREAM_PRODUCTS = $(foreach package,$(UPSTREAM_PACKAGES) ncurses vim,$(UPSTREAM_ROOT)/$(package)/root/.complete $(upstream_$(package)_products))
 ROOTFS_APP_PRODUCTS = $(addprefix $(USERLAND_DIR)/,$(addsuffix .elf,$(LEONOS_COMPONENT_APPS))) $(USERLAND_DIR)/dynlinkerror.elf $(BUSYBOX_ELF) $(BUSYBOX_LINKS) $(LUA_SO) $(MAGIC_SO) $(SQLITE_SO) $(FILE_MAGIC) $(PORTABLEGL_SO) $(USERLAND_DIR)/cmd.elf $(USERLAND_DIR)/less.elf $(USERLAND_DIR)/sl.elf
+$(ROOTFS_RAW_STAMP) $(ROOTFS_MANIFEST): $(NLS_MO) $(NLS_MUSL_MO) $(LEONOS_SRC)/configs/nls/LINGUAS
 LEONOS_SIG_rootfs := epoch=$(SOURCE_DATE_EPOCH)|sources=$(O_META)/rootfs-sources.sig|components=$(LEONOS_COMPONENTS_ENABLED)
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,rootfs)))
 $(ROOTFS_RAW_STAMP) $(ROOTFS_MANIFEST) &: $(LEONOS_SRC)/tools/build/rootfs-stage.sh $(LEONOS_STAGE_TOOL) $(LEONOS_LAYOUT_TOOL) $(O_META)/rootfs-sources.sig $(ROOTFS_UPSTREAM_PRODUCTS) $(ROOTFS_APP_PRODUCTS) $(RUNTIME_SO) $(KERNELDEBUG_SYS) $(DRIVER_OUTPUTS) $(COMPONENT_METADATA) $(UI_METRO_FONT) $(UI_WIN95_FONT) $(LEONOS_CONFIG_FILE) $(O_META)/rootfs.sig

@@ -1,7 +1,9 @@
 #include <leonos/auth.h>
 #include <leonos/devmgr_service.h>
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
 #include <leonos/ui.h>
@@ -14,7 +16,7 @@
 #define DRVMGR_LIST_Y 92U
 #define DRVMGR_STATUS_H 28U
 #define DRVMGR_KEY_ESCAPE 1U
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 static uint32_t pixels[DRVMGR_MAX_W * DRVMGR_MAX_H];
 static system_driver_info_t drivers[SYSTEM_DRIVER_MAX];
@@ -77,15 +79,15 @@ static const char *driver_state_name(uint32_t state)
 {
     switch (state) {
     case SYSTEM_DRIVER_STATE_LOADING:
-        return T("Loading", "加载中");
+        return T("Loading");
     case SYSTEM_DRIVER_STATE_LOADED:
-        return T("Loaded", "已加载");
+        return T("Loaded");
     case SYSTEM_DRIVER_STATE_DISABLED:
-        return T("Disabled", "已禁用");
+        return T("Disabled");
     case SYSTEM_DRIVER_STATE_FAILED:
-        return T("Failed", "失败");
+        return T("Failed");
     default:
-        return T("Unloaded", "未加载");
+        return T("Unloaded");
     }
 }
 
@@ -139,7 +141,7 @@ static void refresh_drivers(void)
         driver_count = 0;
         driver_list.selected = -1;
         leonos_ui_listview_state_set_count(&driver_list, 0);
-        set_status_code(T("Driver refresh failed", "驱动刷新失败"), ret);
+        set_status_code(T("Driver refresh failed"), ret);
         return;
     }
     driver_count = count > SYSTEM_DRIVER_MAX ? SYSTEM_DRIVER_MAX : count;
@@ -151,8 +153,8 @@ static void refresh_drivers(void)
         driver_list.selected = driver_count ? (int32_t)(driver_count - 1U) : -1;
     }
     copy_text(status_text, sizeof(status_text),
-              can_manage ? T("Administrator controls enabled", "管理员控制已启用")
-                         : T("Read-only: administrator required", "只读：需要管理员权限"));
+              can_manage ? T("Administrator controls enabled")
+                         : T("Read-only: administrator required"));
 }
 
 static const system_driver_info_t *selected_driver(void)
@@ -168,23 +170,23 @@ static void draw_drvmgr(struct leonos_ui_surface *ui)
     uint32_t list_w = view_w > 52U ? view_w - 52U : 668U;
     uint32_t rows = driver_count > driver_list.visible_rows ? driver_list.visible_rows : driver_count;
     struct leonos_ui_list_column columns[] = {
-        {T("File", "文件"), 132U},
-        {T("Driver", "驱动"), 108U},
-        {T("State", "状态"), 96U},
-        {T("ABI", "ABI"), 54U},
-        {T("Details", "详情"), list_w > 390U ? list_w - 390U : 120U},
+        {T("File"), 132U},
+        {T("Driver"), 108U},
+        {T("State"), 96U},
+        {T("ABI"), 54U},
+        {T("Details"), list_w > 390U ? list_w - 390U : 120U},
     };
     leonos_ui_rect(ui, 0, 0, view_w, view_h, LEONOS_UI_GRAY);
     leonos_ui_toolbar(ui, 8, 8, view_w > 16U ? view_w - 16U : view_w, 70U);
-    leonos_ui_toolbar_button(ui, 18, 16, 82, T("Refresh", "刷新"), 0);
-    leonos_ui_toolbar_button(ui, 108, 16, 72, T("Load", "加载"), 0);
-    leonos_ui_toolbar_button(ui, 188, 16, 72, T("Unload", "卸载"), 0);
-    leonos_ui_toolbar_button(ui, 268, 16, 96, T("Force stop", "强制卸载"), 0);
-    leonos_ui_toolbar_button(ui, 372, 16, 98, T("Disable boot", "开机禁用"), 0);
-    leonos_ui_toolbar_button(ui, 478, 16, 94, T("Enable boot", "开机启用"), 0);
+    leonos_ui_toolbar_button(ui, 18, 16, 82, T("Refresh"), 0);
+    leonos_ui_toolbar_button(ui, 108, 16, 72, T("Load"), 0);
+    leonos_ui_toolbar_button(ui, 188, 16, 72, T("Unload"), 0);
+    leonos_ui_toolbar_button(ui, 268, 16, 96, T("Force stop"), 0);
+    leonos_ui_toolbar_button(ui, 372, 16, 98, T("Disable boot"), 0);
+    leonos_ui_toolbar_button(ui, 478, 16, 94, T("Enable boot"), 0);
     leonos_ui_text(ui, 18, 48,
-                   can_manage ? T("Modules run in Ring 0. Changes take effect immediately.", "模块运行于 Ring 0，修改立即生效。")
-                              : T("You can inspect loaded modules, but cannot change them.", "可以查看模块，但不能修改它们。"),
+                   can_manage ? T("Modules run in Ring 0. Changes take effect immediately.")
+                              : T("You can inspect loaded modules, but cannot change them."),
                    LEONOS_UI_DARK, LEONOS_UI_GRAY);
 
     leonos_ui_scroll_view_frame(ui, 12, DRVMGR_LIST_Y - 4U,
@@ -208,8 +210,8 @@ static void draw_drvmgr(struct leonos_ui_surface *ui)
         cells[3] = abi;
         cells[4] = drivers[index].error[0] ? drivers[index].error
                                            : (drivers[index].flags & SYSTEM_DRIVER_FLAG_DISABLED
-                                                  ? T("Skipped at boot", "启动时跳过")
-                                                  : T("Available", "可用"));
+                                                  ? T("Skipped at boot")
+                                                  : T("Available"));
         leonos_ui_listview_row(ui, 14, DRVMGR_LIST_Y + 26U + row * DRVMGR_ROW_H,
                                list_w, columns, cells, 5U,
                                driver_list.selected == (int32_t)index ? LEONOS_UI_MENU_SELECTED : 0);
@@ -236,30 +238,33 @@ static void control_selected(uint32_t action)
     const system_driver_info_t *driver = selected_driver();
     int ret;
     if (!can_manage) {
-        copy_text(status_text, sizeof(status_text), T("Administrator permission required", "需要管理员权限"));
+        copy_text(status_text, sizeof(status_text), T("Administrator permission required"));
         return;
     }
     if (!driver) {
-        copy_text(status_text, sizeof(status_text), T("Select a driver first", "请先选择驱动"));
+        copy_text(status_text, sizeof(status_text), T("Select a driver first"));
         return;
     }
     ret = system_driver_control(action, driver->file);
     if (ret < 0) {
-        set_status_code(T("Driver operation failed", "驱动操作失败"), ret);
+        set_status_code(T("Driver operation failed"), ret);
     } else {
-        copy_text(status_text, sizeof(status_text), T("Driver operation completed", "驱动操作已完成"));
+        copy_text(status_text, sizeof(status_text), T("Driver operation completed"));
     }
     refresh_drivers();
 }
 
 int main(void)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
     puts("[drvmgr.elf] driver manager starting");
-    window_id = leonos_gui_create_app_window_ex(T("Driver Manager", "驱动管理器"),
-                                                T("Kernel driver modules", "内核驱动模块"),
+    window_id = leonos_gui_create_app_window_ex(T("Driver Manager"),
+                                                T("Kernel driver modules"),
                                                 DRVMGR_W, DRVMGR_H, 0);
     if (window_id <= 0) {
         printf("[drvmgr.elf] create window failed=%d\n", window_id);

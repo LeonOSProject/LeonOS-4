@@ -1,4 +1,15 @@
 LEONOS_FONT_TOOL := $(LEONOS_HOST_BIN)/leonos-font
+LEONOS_CJK_FONT_TOOL := $(LEONOS_HOST_BIN)/leonos-cjk-font
+$(LEONOS_CJK_FONT_TOOL): $(O_HOST)/obj/tools/host/assets/leonos-cjk-font.c.o
+	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
+
+$(O_INCLUDE)/generated/cjk_font.h: $(LEONOS_CJK_FONT_TOOL) $(LEONOS_DEPS_TOOL) $(LEONOS_SRC)/configs/dependencies.lock.json $(LEONOS_SRC)/mk/resources.mk
+	$(Q)sh $(LEONOS_SRC)/tools/build/fetch.sh --deps $(LEONOS_DEPS_TOOL) --lock $(LEONOS_SRC)/configs/dependencies.lock.json --cache $(LEONOS_CACHE) --only unifont --verify-only
+	$(Q)mkdir -p $(@D)
+	$(Q)set -eu; font=$$($(LEONOS_DEPS_TOOL) --lock $(LEONOS_SRC)/configs/dependencies.lock.json --id unifont --print directory); gzip -dc $(LEONOS_CACHE)/$$font > $@.hex; $(LEONOS_CJK_FONT_TOOL) < $@.hex > $@.tmp; mv $@.tmp $@; rm -f $@.hex
+
+$(O_OBJ)/kernel/drivers/bootstrap/framebuffer.c.o: $(O_INCLUDE)/generated/cjk_font.h
+tools: $(LEONOS_CJK_FONT_TOOL)
 LEONOS_GRUB_FONT_TOOL := $(LEONOS_HOST_BIN)/leonos-grub-font
 $(LEONOS_FONT_TOOL): $(O_HOST)/obj/tools/host/assets/leonos-font.c.o $(LEONOS_HOST_COMMON_OBJS)
 	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@

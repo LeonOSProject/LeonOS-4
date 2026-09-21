@@ -18,7 +18,6 @@ int hit_rect(uint32_t x, uint32_t y, int bx, int by, uint32_t w, uint32_t h)
 { return x >= (uint32_t)bx && y >= (uint32_t)by && x - bx < w && y - by < h; }
 int leonos_system_reboot(void) { ++reboots; errno = EPERM; return -1; }
 int leonos_system_shutdown(void) { ++shutdowns; errno = EINVAL; return -1; }
-const char *leonos_i18n(const char *en, const char *zh) { (void)zh; return en; }
 void desktop_show_message(const char *title, const char *message)
 {
     assert(strstr(title, "failed"));

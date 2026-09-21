@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import os
+import re
 import shutil
 import struct
 import sys
@@ -191,6 +192,8 @@ def make_boot_tree(staging: Path, destination: Path) -> None:
 
 def make_root_tree(staging: Path, destination: Path, language: str) -> None:
     """Stage the normal writable root without duplicating ESP-only boot files."""
+    if not re.fullmatch(r"[A-Za-z0-9._@-]+", language):
+        raise ValueError("invalid locale name")
     # symlinks=True is required: /var/run, /bin/sh and command entries are
     # real relative symlinks and must not be dereferenced into copies.
     shutil.copytree(staging, destination, symlinks=True, dirs_exist_ok=True)
@@ -202,7 +205,7 @@ def make_root_tree(staging: Path, destination: Path, language: str) -> None:
     apply_root_symlinks(destination)
     locale = destination / ETC_LEONOS / "locale.conf"
     locale.parent.mkdir(parents=True, exist_ok=True)
-    locale.write_text(f"lang={language}\n", encoding="utf-8")
+    locale.write_text(f"LANG={language}\n", encoding="utf-8")
     seed_test_accounts(destination)
 
 
@@ -215,11 +218,13 @@ def main() -> int:
     parser.add_argument("--root-fs", choices=("ext2",), default="ext2",
                         help="Runtime root filesystem (classic ext2)")
     parser.add_argument("--esp-image", default="build/images/esp.fat")
-    parser.add_argument("--default-language", choices=("en", "zh"), default="en",
-                        help="Language seed written into this VMDK root filesystem")
+    parser.add_argument("--default-lang", default="en_US.UTF-8",
+                        help="Locale name written into this VMDK root filesystem")
     parser.add_argument("--size-mib", type=int, default=512)
     parser.add_argument("--esp-size-mib", type=int, default=128)
     args = parser.parse_args()
+    if not re.fullmatch(r"[A-Za-z0-9._@-]+", args.default_lang):
+        parser.error("--default-lang requires a locale name")
 
     raw = ROOT / args.raw
     out = ROOT / args.out
@@ -263,7 +268,7 @@ def main() -> int:
                 boot_tree = temp / "esp"
                 root_tree = temp / "root"
                 make_boot_tree(esp_tree, boot_tree)
-                make_root_tree(esp_tree, root_tree, args.default_language)
+                make_root_tree(esp_tree, root_tree, args.default_lang)
                 write_root_fstab(root_tree, partition_uuids[1], partition_uuids[0])
 
                 run(["truncate", "-s", str(esp_sectors * SECTOR_SIZE), str(esp_temp)])

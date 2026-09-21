@@ -4,7 +4,9 @@
 #include <leonos/auth.h>
 #include <leonos/fs.h>
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
 #include <leonos/ui.h>
@@ -17,14 +19,13 @@
 #define SERVICEMGR_STATE_MAX 1024U
 #define SERVICEMGR_ROW_Y 60U
 #define SERVICEMGR_ROW_H 52U
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
+#define N_(s) (s)
 
 struct service_row {
     const char *key;
-    const char *name_en;
-    const char *name_zh;
-    const char *detail_en;
-    const char *detail_zh;
+    const char *name;
+    const char *detail;
     uint8_t enabled;
     uint8_t locked;
     char state[16];
@@ -40,11 +41,11 @@ static char status_text[180] = "Ready";
 static unsigned long last_state_refresh_ms;
 
 static struct service_row service_rows[SERVICEMGR_ROWS] = {
-    {"leonos-desktop", "Desktop", "桌面", "OpenRC graphical session", "OpenRC 图形会话", 1, 0, "unknown", "", 0},
-    {"leonos-dhcp", "DHCP", "DHCP", "BusyBox udhcpc", "BusyBox udhcpc", 1, 0, "unknown", "", 0},
-    {"leonos-session", "User startup", "用户启动项", "Session IPC", "会话 IPC", 1, 0, "unknown", "", 0},
-    {"leonos-device", "Devices", "设备", "LeonOS device protocol", "LeonOS 设备协议", 1, 0, "unknown", "", 0},
-    {"leonos-ntp", "Time sync", "网络校时", "BusyBox ntpd", "BusyBox ntpd", 1, 0, "unknown", "", 0},
+    {"leonos-desktop", N_("Desktop"), N_("OpenRC graphical session"), 1, 0, "unknown", "", 0},
+    {"leonos-dhcp", N_("DHCP"), N_("BusyBox udhcpc"), 1, 0, "unknown", "", 0},
+    {"leonos-session", N_("User startup"), N_("Session IPC"), 1, 0, "unknown", "", 0},
+    {"leonos-device", N_("Devices"), N_("LeonOS device protocol"), 1, 0, "unknown", "", 0},
+    {"leonos-ntp", N_("Time sync"), N_("BusyBox ntpd"), 1, 0, "unknown", "", 0},
 };
 
 static void copy_text(char *dst, uint32_t cap, const char *src)
@@ -146,10 +147,10 @@ static void save_config(void)
         rc_action = service_rows[i].enabled ? "enable" : "disable";
         rc_child = leonos_openrc_spawn(service_rows[i].key, rc_action);
         if (rc_child < 0) { rc_child = 0; copy_text(status_text, sizeof(status_text), "OpenRC worker failed"); }
-        else copy_text(status_text, sizeof(status_text), T("Updating runlevel...", "正在更新运行级别…"));
+        else copy_text(status_text, sizeof(status_text), T("Updating runlevel..."));
         return;
     }
-    copy_text(status_text, sizeof(status_text), T("Default runlevel updated", "默认运行级别已更新"));
+    copy_text(status_text, sizeof(status_text), T("Default runlevel updated"));
 }
 
 static void load_state(uint8_t quiet)
@@ -158,7 +159,7 @@ static void load_state(uint8_t quiet)
     rc_row = 0; rc_kind = 1; rc_action = "status";
     rc_child = leonos_openrc_spawn(service_rows[0].key, "status");
     if (rc_child < 0) { rc_child = 0; copy_text(status_text, sizeof(status_text), "OpenRC worker failed"); }
-    else if (!quiet) copy_text(status_text, sizeof(status_text), T("Refreshing OpenRC...", "正在查询 OpenRC…"));
+    else if (!quiet) copy_text(status_text, sizeof(status_text), T("Refreshing OpenRC..."));
 }
 
 static void write_command(const char *action, uint32_t row)
@@ -199,18 +200,18 @@ static int poll_openrc(void)
 static const char *localized_state(const char *state)
 {
     if (text_eq(state, "running")) {
-        return T("Running", "运行中");
+        return T("Running");
     }
     if (text_eq(state, "stopped")) {
-        return T("Stopped", "已停止");
+        return T("Stopped");
     }
     if (text_eq(state, "failed")) {
-        return T("Failed", "失败");
+        return T("Failed");
     }
     if (text_eq(state, "starting")) {
-        return T("Starting", "启动中");
+        return T("Starting");
     }
-    return T("Unknown", "未知");
+    return T("Unknown");
 }
 
 static void draw_servicemgr(struct leonos_ui_surface *ui)
@@ -218,15 +219,13 @@ static void draw_servicemgr(struct leonos_ui_surface *ui)
     leonos_ui_rect(ui, 0, 0, SERVICEMGR_W, SERVICEMGR_H, LEONOS_UI_GRAY);
     leonos_ui_text(ui, 24, 16,
                    can_manage
-                       ? T("View service runtime state and control startup services.",
-                           "查看服务运行状态并控制启动服务。")
-                       : T("Runtime state is visible. Administrator rights are required to control services.",
-                           "可以查看运行状态，控制服务需要管理员权限。"),
+                       ? T("View service runtime state and control startup services.")
+                       : T("Runtime state is visible. Administrator rights are required to control services."),
                    LEONOS_UI_DARK, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 36, 42, T("Service", "服务"), LEONOS_UI_DARK, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 300, 42, T("State", "状态"), LEONOS_UI_DARK, LEONOS_UI_GRAY);
+    leonos_ui_text(ui, 36, 42, T("Service"), LEONOS_UI_DARK, LEONOS_UI_GRAY);
+    leonos_ui_text(ui, 300, 42, T("State"), LEONOS_UI_DARK, LEONOS_UI_GRAY);
     leonos_ui_text(ui, 408, 42, "PID", LEONOS_UI_DARK, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 462, 42, T("Detail", "详情"), LEONOS_UI_DARK, LEONOS_UI_GRAY);
+    leonos_ui_text(ui, 462, 42, T("Detail"), LEONOS_UI_DARK, LEONOS_UI_GRAY);
 
     for (uint32_t i = 0; i < SERVICEMGR_ROWS; ++i) {
         char pid_text[16];
@@ -243,10 +242,10 @@ static void draw_servicemgr(struct leonos_ui_surface *ui)
         copy_text(pid_text, sizeof(pid_text), "—");
         leonos_ui_panel(ui, 24, y, SERVICEMGR_W - 48U, 44U, row_bg);
         leonos_ui_checkbox(ui, 36, y + 12U,
-                           T(service_rows[i].name_en, service_rows[i].name_zh),
+                           T(service_rows[i].name),
                            service_rows[i].enabled, flags);
         leonos_ui_text_clipped(ui, 156, y + 14U, 126,
-                               T(service_rows[i].detail_en, service_rows[i].detail_zh),
+                               T(service_rows[i].detail),
                                LEONOS_UI_DARK, row_bg);
         leonos_ui_text_clipped(ui, 300, y + 14U, 92,
                                localized_state(service_rows[i].state),
@@ -261,24 +260,24 @@ static void draw_servicemgr(struct leonos_ui_surface *ui)
                                LEONOS_UI_BLACK, row_bg);
     }
     leonos_ui_button(ui, 24, SERVICEMGR_H - 66U, 92U, LEONOS_UI_BUTTON_H,
-                     T("Refresh", "刷新"), 0);
+                     T("Refresh"), 0);
     leonos_ui_button(ui, 126, SERVICEMGR_H - 66U, 92U, LEONOS_UI_BUTTON_H,
-                     T("Save", "保存"),
+                     T("Save"),
                      can_manage ? 0 : LEONOS_UI_BUTTON_DISABLED);
     leonos_ui_button(ui, 240, SERVICEMGR_H - 66U, 92U, LEONOS_UI_BUTTON_H,
-                     T("Start", "启动"),
+                     T("Start"),
                      can_manage && selected_row >= 0 &&
                              !service_rows[selected_row].locked
                          ? 0
                          : LEONOS_UI_BUTTON_DISABLED);
     leonos_ui_button(ui, 342, SERVICEMGR_H - 66U, 92U, LEONOS_UI_BUTTON_H,
-                     T("Stop", "停止"),
+                     T("Stop"),
                      can_manage && selected_row >= 0 &&
                              !service_rows[selected_row].locked
                          ? 0
                          : LEONOS_UI_BUTTON_DISABLED);
     leonos_ui_button(ui, 444, SERVICEMGR_H - 66U, 104U, LEONOS_UI_BUTTON_H,
-                     T("Restart", "重启"),
+                     T("Restart"),
                      can_manage && selected_row >= 0 &&
                              !service_rows[selected_row].locked
                          ? 0
@@ -313,7 +312,7 @@ static void handle_click(int32_t x, int32_t y)
             selected_row = (int32_t)i;
             service_rows[i].enabled = service_rows[i].enabled ? 0 : 1;
             copy_text(status_text, sizeof(status_text),
-                      T("Service setting changed", "服务设置已更改"));
+                      T("Service setting changed"));
             return;
         }
     }
@@ -340,6 +339,9 @@ static void handle_click(int32_t x, int32_t y)
 
 int main(void)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
@@ -347,8 +349,8 @@ int main(void)
     refresh_user();
     load_config();
     load_state(1);
-    window_id = leonos_gui_create_app_window_ex(T("Service Manager", "服务管理器"),
-                                                T("Services", "服务"),
+    window_id = leonos_gui_create_app_window_ex(T("Service Manager"),
+                                                T("Services"),
                                                 SERVICEMGR_W, SERVICEMGR_H,
                                                 LEONOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {

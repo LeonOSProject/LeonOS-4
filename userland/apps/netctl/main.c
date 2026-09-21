@@ -1,6 +1,8 @@
 #include <leonos/fs.h>
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/net_service.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
@@ -28,7 +30,7 @@
 #define CONN_Y 398U
 #define CONN_W (NETCTL_W - 68U)
 #define CONN_ROWS_Y (CONN_Y + LEONOS_FONT_H + 8U)
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 static uint32_t pixels[NETCTL_W * NETCTL_H];
 static net_service_config_t config;
@@ -164,11 +166,11 @@ static const char *dns_mode_name(uint32_t mode)
 {
     switch (mode) {
     case NET_SERVICE_DNS_MODE_DHCP:
-        return T("DHCP DNS", "DHCP DNS");
+        return T("DHCP DNS");
     case NET_SERVICE_DNS_MODE_CUSTOM:
-        return T("Custom DNS", "自定义 DNS");
+        return T("Custom DNS");
     default:
-        return T("Cloudflare DNS", "Cloudflare DNS");
+        return T("Cloudflare DNS");
     }
 }
 
@@ -211,47 +213,47 @@ static const char *status_name(uint32_t status)
 {
     switch (status) {
     case NET_SERVICE_STATUS_OK:
-        return T("OK", "成功");
+        return T("Succeeded");
     case NET_SERVICE_STATUS_NO_DEVICE:
-        return T("No e1000 adapter", "没有 e1000 网卡");
+        return T("No e1000 adapter");
     case NET_SERVICE_STATUS_ARP_TIMEOUT:
-        return T("ARP timeout", "ARP 超时");
+        return T("ARP timeout");
     case NET_SERVICE_STATUS_BAD_ARGUMENT:
-        return T("Bad argument", "参数无效");
+        return T("Bad argument");
     case NET_SERVICE_STATUS_TX_FAILED:
-        return T("Transmit failed", "发送失败");
+        return T("Transmit failed");
     case NET_SERVICE_STATUS_DHCP_TIMEOUT:
-        return T("DHCP timeout", "DHCP 超时");
+        return T("DHCP timeout");
     case NET_SERVICE_STATUS_DHCP_FAILED:
-        return T("DHCP failed", "DHCP 失败");
+        return T("DHCP failed");
     case NET_SERVICE_STATUS_DNS_TIMEOUT:
-        return T("DNS timeout", "DNS 超时");
+        return T("DNS timeout");
     case NET_SERVICE_STATUS_DNS_FAILED:
-        return T("DNS failed", "DNS 失败");
+        return T("DNS failed");
     case NET_SERVICE_STATUS_DNS_NO_ANSWER:
-        return T("No A record", "没有 A 记录");
+        return T("No A record");
     case NET_SERVICE_STATUS_TCP_TIMEOUT:
-        return T("TCP timeout", "TCP 超时");
+        return T("TCP timeout");
     case NET_SERVICE_STATUS_TCP_RESET:
-        return T("TCP reset", "TCP 复位");
+        return T("TCP reset");
     case NET_SERVICE_STATUS_TCP_FAILED:
-        return T("TCP failed", "TCP 失败");
+        return T("TCP failed");
     case NET_SERVICE_STATUS_HTTP_FAILED:
-        return T("HTTP failed", "HTTP 失败");
+        return T("HTTP failed");
     case NET_SERVICE_STATUS_HTTP_TOO_LARGE:
-        return T("Response too large", "响应过大");
+        return T("Response too large");
     case NET_SERVICE_STATUS_SOCKET_LIMIT:
-        return T("Socket limit reached", "Socket 数量已满");
+        return T("Socket limit reached");
     case NET_SERVICE_STATUS_SOCKET_BAD_HANDLE:
-        return T("Bad socket", "Socket 无效");
+        return T("Bad socket");
     case NET_SERVICE_STATUS_SOCKET_NOT_CONNECTED:
-        return T("Socket not connected", "Socket 未连接");
+        return T("Socket not connected");
     case NET_SERVICE_STATUS_SOCKET_CLOSED:
-        return T("Socket closed", "Socket 已关闭");
+        return T("Socket closed");
     case NET_SERVICE_STATUS_PROTOCOL_UNSUPPORTED:
-        return T("Protocol unsupported", "协议不支持");
+        return T("Protocol unsupported");
     default:
-        return T("Unknown status", "未知状态");
+        return T("Unknown status");
     }
 }
 
@@ -277,9 +279,9 @@ static const char *source_name(uint32_t source)
     case NET_SERVICE_CONFIG_SOURCE_DHCP:
         return "DHCP";
     case NET_SERVICE_CONFIG_SOURCE_STATIC:
-        return T("Static fallback", "静态回退");
+        return T("Static fallback");
     default:
-        return T("None", "无");
+        return T("None");
     }
 }
 
@@ -304,7 +306,7 @@ static int refresh_dns_policy(void)
     net_service_dns_policy_t policy;
     int ret = net_service_get_dns_policy(&policy);
     if (ret < 0) {
-        set_status_ret(T("DNS policy query failed", "读取 DNS 策略失败"), ret);
+        set_status_ret(T("DNS policy query failed"), ret);
         return ret;
     }
     if (policy.status != NET_SERVICE_STATUS_OK) {
@@ -321,13 +323,13 @@ static void refresh_config(void)
     int ret = net_service_config(&config);
     if (ret < 0) {
         config = (net_service_config_t){0};
-        set_status_ret(T("Config query failed", "读取配置失败"), ret);
+        set_status_ret(T("Config query failed"), ret);
         return;
     }
     if (refresh_dns_policy() < 0) {
         return;
     }
-    copy_text(status_text, sizeof(status_text), T("Network configuration refreshed", "网络配置已刷新"));
+    copy_text(status_text, sizeof(status_text), T("Network configuration refreshed"));
     refresh_connections();
 }
 
@@ -337,7 +339,7 @@ static void refresh_connections(void)
                                      &connection_count);
     if (ret < 0) {
         connection_count = 0;
-        set_status_ret(T("Connection query failed", "读取连接失败"), ret);
+        set_status_ret(T("Connection query failed"), ret);
         return;
     }
     leonos_ui_listview_state_set_count(&connections_view, connection_count);
@@ -349,16 +351,16 @@ static void renew_dhcp(void)
     if (geteuid() != 0) {
         char *args[] = {"/usr/lib/leonos/apps/netctl/netctl.elf", "--renew-dhcp", NULL};
         if (leonos_sudo_run(NULL, NULL, args, &dhcp_child) < 0) {
-            set_status_ret(T("Authorization failed", "授权失败"), -1);
+            set_status_ret(T("Authorization failed"), -1);
             return;
         }
-        copy_text(status_text, sizeof(status_text), T("Authorizing DHCP update...", "正在授权更新 DHCP..."));
+        copy_text(status_text, sizeof(status_text), T("Authorizing DHCP update..."));
         return;
     }
     net_service_dhcp_t dhcp;
     int ret = net_service_dhcp_renew(4000, &dhcp);
     if (ret < 0) {
-        set_status_ret(T("DHCP request failed", "DHCP 请求失败"), ret);
+        set_status_ret(T("DHCP request failed"), ret);
         return;
     }
     config = dhcp.config;
@@ -392,24 +394,24 @@ static int poll_dhcp_command(void)
     if (leonos_sudo_wait(dhcp_child, &status) < 0) {
         if (errno == EAGAIN || errno == EINTR) return 0;
         dhcp_child = 0;
-        set_status_ret(T("DHCP worker failed", "DHCP 更新进程失败"), -1);
+        set_status_ret(T("DHCP worker failed"), -1);
         return 1;
     }
     dhcp_child = 0;
     if (!WIFEXITED(status)) {
-        copy_text(status_text, sizeof(status_text), T("DHCP update interrupted", "DHCP 更新被中断"));
+        copy_text(status_text, sizeof(status_text), T("DHCP update interrupted"));
         return 1;
     }
     int code = WEXITSTATUS(status);
     if (code == 0) refresh_config();
     else if (code >= 128) {
         errno = code - 128;
-        set_status_ret(T("DHCP request failed", "DHCP 请求失败"), -1);
+        set_status_ret(T("DHCP request failed"), -1);
     } else if (code >= 64) {
         copy_text(status_text, sizeof(status_text), status_name((uint32_t)code - 64));
     } else {
         copy_text(status_text, sizeof(status_text),
-                  T("Authorization denied or cancelled", "授权被拒绝或已取消"));
+                  T("Authorization denied or cancelled"));
     }
     return 1;
 }
@@ -498,20 +500,18 @@ static void apply_dns_policy(uint32_t mode)
     if (mode == NET_SERVICE_DNS_MODE_CUSTOM &&
         !parse_ipv4(dns_input, &custom_dns_ip)) {
         copy_text(status_text, sizeof(status_text),
-                  T("Enter a valid custom IPv4 DNS address.",
-                    "请输入有效的自定义 IPv4 DNS 地址。"));
+                  T("Enter a valid custom IPv4 DNS address."));
         return;
     }
     if (net_service_get_dns_policy(&previous) < 0 ||
         previous.status != NET_SERVICE_STATUS_OK) {
         copy_text(status_text, sizeof(status_text),
-                  T("Unable to read the current DNS policy.",
-                    "无法读取当前 DNS 策略。"));
+                  T("Unable to read the current DNS policy."));
         return;
     }
     ret = net_service_set_dns_policy(mode, custom_dns_ip, &policy);
     if (ret < 0) {
-        set_status_ret(T("DNS policy change failed", "DNS 策略更改失败"), ret);
+        set_status_ret(T("DNS policy change failed"), ret);
         return;
     }
     if (policy.status != NET_SERVICE_STATUS_OK) {
@@ -532,12 +532,10 @@ static void apply_dns_policy(uint32_t mode)
             dns_mode = restored.mode;
             dns_custom_ip = restored.custom_dns_ip;
             copy_text(status_text, sizeof(status_text),
-                      T("DNS save failed; previous policy restored.",
-                        "DNS 保存失败；已恢复之前的策略。"));
+                      T("DNS save failed; previous policy restored."));
         } else {
             copy_text(status_text, sizeof(status_text),
-                      T("DNS save failed; runtime policy may differ.",
-                        "DNS 保存失败；运行时策略可能已变化。"));
+                      T("DNS save failed; runtime policy may differ."));
         }
         return;
     }
@@ -545,7 +543,7 @@ static void apply_dns_policy(uint32_t mode)
                        ? custom_dns_ip
                        : NET_SERVICE_CLOUDFLARE_DNS_IP);
     copy_text(status_text, sizeof(status_text),
-              T("DNS policy applied and saved", "DNS 策略已应用并保存"));
+              T("DNS policy applied and saved"));
 }
 
 static void resolve_domain(void)
@@ -554,7 +552,7 @@ static void resolve_domain(void)
     int ret = net_service_dns_resolve(domain_input, 4000, &dns);
     uint32_t pos = 0;
     if (ret < 0) {
-        set_status_ret(T("DNS ioctl failed", "DNS ioctl 失败"), ret);
+        set_status_ret(T("DNS ioctl failed"), ret);
         return;
     }
     dns_text[0] = 0;
@@ -571,7 +569,7 @@ static void resolve_domain(void)
         }
     } else {
         append_text(dns_text, &pos, sizeof(dns_text), status_name(dns.status));
-        append_text(dns_text, &pos, sizeof(dns_text), T(" resolving ", "，解析 "));
+        append_text(dns_text, &pos, sizeof(dns_text), T(" resolving "));
         append_text(dns_text, &pos, sizeof(dns_text), domain_input);
     }
     copy_text(status_text, sizeof(status_text), status_name(dns.status));
@@ -615,53 +613,53 @@ static void draw_netctl(struct leonos_ui_surface *ui)
     append_text(lease, &pos, sizeof(lease), "s");
 
     leonos_ui_rect(ui, 0, 0, NETCTL_W, NETCTL_H, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 24, 16, T("Intel e1000 Network", "Intel e1000 网络"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    leonos_ui_text(ui, 24, 16, T("Intel e1000 Network"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
 
-    draw_row(ui, 50, T("State:", "状态:"),
+    draw_row(ui, 50, T("State:"),
              ((config.flags & NET_SERVICE_CONFIG_FLAG_ACTIVE) &&
               (config.flags & NET_SERVICE_CONFIG_FLAG_DHCP) &&
               config.source == NET_SERVICE_CONFIG_SOURCE_DHCP)
-                 ? T("Active", "活动")
+                 ? T("Active")
                  : ((config.flags & NET_SERVICE_CONFIG_FLAG_ACTIVE)
-                        ? T("No DHCP lease", "没有 DHCP 租约")
-                        : T("Unavailable", "不可用")));
-    draw_row(ui, 74, T("MAC:", "MAC:"), mac);
-    draw_row(ui, 98, T("Config:", "配置:"), source_name(config.source));
-    draw_row(ui, 122, T("IPv4:", "IPv4:"), ip);
-    draw_row(ui, 146, T("Mask:", "掩码:"), mask);
-    draw_row(ui, 170, T("Gateway:", "网关:"), gateway);
-    draw_row(ui, 194, T("DNS:", "DNS:"), dns);
-    draw_row(ui, 218, T("Lease:", "租约:"), lease);
-    draw_row(ui, 242, T("DNS mode:", "DNS 模式:"), dns_mode_text);
+                        ? T("No DHCP lease")
+                        : T("Unavailable")));
+    draw_row(ui, 74, T("MAC:"), mac);
+    draw_row(ui, 98, T("Config:"), source_name(config.source));
+    draw_row(ui, 122, T("IPv4:"), ip);
+    draw_row(ui, 146, T("Mask:"), mask);
+    draw_row(ui, 170, T("Gateway:"), gateway);
+    draw_row(ui, 194, T("DNS:"), dns);
+    draw_row(ui, 218, T("Lease:"), lease);
+    draw_row(ui, 242, T("DNS mode:"), dns_mode_text);
 
     leonos_ui_button(ui, 24, 270, 110, LEONOS_UI_BUTTON_H,
-                     T("Cloudflare", "Cloudflare"),
+                     T("Cloudflare"),
                      dns_mode == NET_SERVICE_DNS_MODE_CLOUDFLARE
                          ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_button(ui, 144, 270, 96, LEONOS_UI_BUTTON_H, T("DHCP", "DHCP"),
+    leonos_ui_button(ui, 144, 270, 96, LEONOS_UI_BUTTON_H, T("DHCP"),
                      dns_mode == NET_SERVICE_DNS_MODE_DHCP
                          ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_button(ui, 250, 270, 92, LEONOS_UI_BUTTON_H, T("Custom", "自定义"),
+    leonos_ui_button(ui, 250, 270, 92, LEONOS_UI_BUTTON_H, T("Custom"),
                      dns_mode == NET_SERVICE_DNS_MODE_CUSTOM
                          ? LEONOS_UI_BUTTON_PRESSED : 0);
     leonos_ui_edit_state_draw(ui, 352, 270, 154, &dns_edit, 0);
-    leonos_ui_button(ui, 516, 270, 104, LEONOS_UI_BUTTON_H, T("Apply", "应用"), 0);
+    leonos_ui_button(ui, 516, 270, 104, LEONOS_UI_BUTTON_H, T("Apply"), 0);
 
-    leonos_ui_button(ui, 24, 312, 88, LEONOS_UI_BUTTON_H, T("Refresh", "刷新"), 0);
-    leonos_ui_button(ui, 124, 312, 118, LEONOS_UI_BUTTON_H, T("Renew DHCP", "更新 DHCP"), 0);
-    leonos_ui_text(ui, 254, 316, T("Host:", "域名:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+    leonos_ui_button(ui, 24, 312, 88, LEONOS_UI_BUTTON_H, T("Refresh"), 0);
+    leonos_ui_button(ui, 124, 312, 118, LEONOS_UI_BUTTON_H, T("Renew DHCP"), 0);
+    leonos_ui_text(ui, 254, 316, T("Domain:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_edit_state_draw(ui, 298, 312, 220, &domain_edit, 0);
-    leonos_ui_button(ui, 532, 312, 86, LEONOS_UI_BUTTON_H, T("Resolve", "解析"), 0);
+    leonos_ui_button(ui, 532, 312, 86, LEONOS_UI_BUTTON_H, T("Resolve"), 0);
     leonos_ui_text_clipped(ui, 24, 348, NETCTL_W - 48, dns_text,
                            LEONOS_UI_BLACK, LEONOS_UI_WHITE);
 
     leonos_ui_groupbox(ui, 24, 376, NETCTL_W - 48, 154,
-                       T("TCP Connections", "TCP 连接"));
+                       T("TCP Connections"));
     leonos_ui_listview_header(ui, CONN_X, CONN_Y, CONN_W,
                               conn_cols, 6);
     if (connection_count == 0) {
         leonos_ui_text(ui, CONN_X + 8, CONN_ROWS_Y + 8,
-                       T("No TCP client sockets.", "没有 TCP 客户端 socket。"),
+                       T("No TCP client sockets."),
                        LEONOS_UI_DARK, LEONOS_UI_WHITE);
     } else {
         for (uint32_t row = 0; row < CONN_VISIBLE_ROWS; ++row) {
@@ -721,6 +719,9 @@ static int hit_rect(int32_t px, int32_t py, int32_t x, int32_t y,
 
 int main(int argc, char **argv)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
@@ -729,8 +730,8 @@ int main(int argc, char **argv)
     if (argc != 1) return 2;
 
     puts("[netctl.elf] network controller starting");
-    window_id = leonos_gui_create_app_window_ex(T("Network Controller", "网络控制器"),
-                                                T("DHCP and DNS", "DHCP 和 DNS"),
+    window_id = leonos_gui_create_app_window_ex(T("Network Controller"),
+                                                T("DHCP and DNS"),
                                                 NETCTL_W, NETCTL_H,
                                                 LEONOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {

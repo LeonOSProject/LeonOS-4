@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <leonos/layout.h>
+#include "locale_conf.h"
 
 #define LEONOS_ENV_GLOBAL_PATH LEONOS_PATH_ENVIRONMENT_CONF
 #define LEONOS_ENV_USER_SUFFIX "/.environment"
@@ -288,6 +289,41 @@ static int env_user_path(char *path, uint32_t capacity,
     return 1;
 }
 
+static void env_apply_locale(struct environment_list *list)
+{
+    char text[512];
+    struct leonos_locale_setting settings[LEONOS_LOCALE_MAX];
+    size_t length = 0;
+    int count, i;
+    int fd = open(LEONOS_PATH_LOCALE_CONF, O_RDONLY);
+    long got;
+    if (fd < 0)
+        return;
+    while (length < sizeof(text)) {
+        got = read(fd, text + length, sizeof(text) - length);
+        if (got < 0 && errno == EINTR)
+            continue;
+        if (got < 0) {
+            close(fd);
+            return;
+        }
+        if (got == 0)
+            break;
+        length += (size_t)got;
+    }
+    close(fd);
+    /* A truncated final assignment must never become a different locale. */
+    if (length == sizeof(text)) {
+        while (length && text[length - 1U] != '\n')
+            length--;
+    }
+    count = leonos_locale_parse(text, length, settings, LEONOS_LOCALE_MAX);
+    for (i = 0; i < count; i++) {
+        if (!env_list_has(list, settings[i].name))
+            (void)env_list_set(list, settings[i].name, settings[i].value);
+    }
+}
+
 static int env_load_layers(struct environment_list *list,
                            char *const overrides[])
 {
@@ -297,6 +333,7 @@ static int env_load_layers(struct environment_list *list,
     if (!list) {
         return -1;
     }
+    env_apply_locale(list);
     result = env_load_file(list, LEONOS_ENV_GLOBAL_PATH);
     if (result < 0) {
         return result;
@@ -327,6 +364,14 @@ static int env_load_layers(struct environment_list *list,
         for (uint32_t i = 0; overrides[i]; ++i) {
             (void)env_list_set_item(list, overrides[i]);
         }
+    }
+    /* A user's persistent environment is the source of truth for newly
+     * launched applications. Reapply it after the parent's inherited vector
+     * so a language change is not masked by the long-lived desktop process. */
+    if (leonos_auth_current(&user) == 0 && env_user_path(user_path,
+                                                          sizeof(user_path),
+                                                          &user)) {
+        (void)env_load_file(list, user_path);
     }
     return 0;
 }

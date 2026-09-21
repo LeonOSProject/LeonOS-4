@@ -3,10 +3,10 @@
 int handle_menu_click(int32_t x, int32_t y)
 {
     struct leonos_ui_menubar_item menu_items[] = {
-        {T("File", "文件"), FILEMAN_MENU_FILE, 54, 0},
-        {T("View", "查看"), FILEMAN_MENU_VIEW, 54, 0},
-        {T("Edit", "编辑"), FILEMAN_MENU_EDIT, 54, 0},
-        {T("Recycle", "回收站"), FILEMAN_MENU_RECYCLE, 70, 0},
+        {T("File"), FILEMAN_MENU_FILE, 54, 0},
+        {T("View"), FILEMAN_MENU_VIEW, 54, 0},
+        {T("Edit"), FILEMAN_MENU_EDIT, 54, 0},
+        {T("Recycle"), FILEMAN_MENU_RECYCLE, 70, 0},
     };
     uint32_t action = 0;
     if (leonos_ui_menubar_hit(x, y, 0, 0, menu_items,
@@ -39,10 +39,10 @@ int handle_menu_click(int32_t x, int32_t y)
     }
     if (menu_open == FILEMAN_MENU_VIEW) {
         struct leonos_ui_context_menu_item items[] = {
-            {T("Refresh", "刷新"), FILEMAN_ACTION_REFRESH, 0},
-            {T("Root", "根目录"), FILEMAN_ACTION_ROOT, 0},
-            {T("Settings...", "设置..."), FILEMAN_ACTION_SETTINGS, 0},
-            {T("About", "关于"), FILEMAN_ACTION_ABOUT, 0},
+            {T("Refresh"), FILEMAN_ACTION_REFRESH, 0},
+            {T("Root"), FILEMAN_ACTION_ROOT, 0},
+            {T("Settings..."), FILEMAN_ACTION_SETTINGS, 0},
+            {T("About"), FILEMAN_ACTION_ABOUT, 0},
         };
         struct leonos_ui_rect r;
         leonos_ui_menubar_item_rect(0, 0, menu_items,
@@ -59,7 +59,7 @@ int handle_menu_click(int32_t x, int32_t y)
             } else if (action == FILEMAN_ACTION_SETTINGS) {
                 fileman_open_settings();
             } else if (action == FILEMAN_ACTION_ABOUT) {
-                leonos_ui_show_message_box(T("File Manager", "文件资源管理器"), T("Browse files and launch apps.", "浏览文件并启动应用。"), "OK");
+                leonos_ui_show_message_box(T("File Manager"), T("Browse files and launch apps."), "OK");
             }
             return 1;
         }

@@ -1,5 +1,7 @@
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/launch.h>
 #include <leonos/syscall.h>
 #include <leonos/ui.h>
@@ -7,7 +9,7 @@
 
 #include "ui_internal.h"
 
-#define UI_T(en, zh) leonos_i18n((en), (zh))
+#define UI_T(s) gettext(s)
 
 void leonos_ui_dialog(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
                       uint32_t w, uint32_t h, const char *title)
@@ -496,7 +498,7 @@ int leonos_ui_show_password_dialog(const char *title, const char *label,
                          i + 1 < capacity && value[i]; ++i) {
         original[i] = value[i];
     }
-    window_id = leonos_gui_create_app_window_ex(title ? title : UI_T("Password", "密码"),
+    window_id = leonos_gui_create_app_window_ex(title ? title : UI_T("Password"),
                                                  label ? label : "",
                                                  W, H,
                                                  LEONOS_GUI_WINDOW_NO_RESIZE);
@@ -523,9 +525,9 @@ int leonos_ui_show_password_dialog(const char *title, const char *label,
         leonos_ui_edit_state_draw(&surface, 16, 46, W - 32, &shown,
                                   LEONOS_UI_EDIT_SECURE);
         leonos_ui_button(&surface, W - 168, H - 38, 72, LEONOS_UI_BUTTON_H,
-                         UI_T("OK", "确定"), 0);
+                         UI_T("OK"), 0);
         leonos_ui_button(&surface, W - 88, H - 38, 72, LEONOS_UI_BUTTON_H,
-                         UI_T("Cancel", "取消"), 0);
+                         UI_T("Cancel"), 0);
         leonos_gui_present_window((uint32_t)window_id, W, H, W, pixels);
         event.window_id = (uint32_t)window_id;
         if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
@@ -710,7 +712,7 @@ static uint32_t ui_file_dialog_build_filters(
         filters[count].extension = filter_ext;
         ++count;
     }
-    filters[count].item.label = UI_T("All files (*.*)", "所有文件 (*.*)");
+    filters[count].item.label = UI_T("All files (*.*)");
     filters[count].item.id = 2;
     filters[count].item.flags = 0;
     filters[count].extension = 0;
@@ -974,7 +976,7 @@ static int ui_file_dialog_activate(const char *title, int save_mode,
     if (!save_mode) {
         if (list_state->selected < 0 || (uint32_t)list_state->selected >= *entry_count) {
             ui_file_dialog_status(status, status_cap,
-                                  UI_T("Select a file in ", "请在以下位置选择文件："), dir_path);
+                                  UI_T("Select a file in "), dir_path);
             return 0;
         }
         if (entries[list_state->selected].dir_entry.type == LEONOS_FS_TYPE_DIR) {
@@ -986,20 +988,20 @@ static int ui_file_dialog_activate(const char *title, int save_mode,
                                               entry_count, filter_ext);
             if (ret < 0) {
                 ui_file_dialog_status(status, status_cap,
-                                      UI_T("Open dir failed ", "打开目录失败："), dir_path);
+                                      UI_T("Open dir failed "), dir_path);
                 return 0;
             }
             leonos_ui_listview_state_set_count(list_state, *entry_count);
             list_state->selected = *entry_count ? 0 : -1;
             list_state->scroll = 0;
             ui_file_dialog_status(status, status_cap,
-                                  UI_T("Opened ", "已打开："), dir_path);
+                                  UI_T("Opened "), dir_path);
             return 0;
         }
         ui_build_child_path(full_path, sizeof(full_path), dir_path, filename);
         if (leonos_stat_legacy(full_path, &st) < 0 || st.type != LEONOS_FS_TYPE_FILE) {
             ui_file_dialog_status(status, status_cap,
-                                  UI_T("File not found ", "找不到文件："), full_path);
+                                  UI_T("File not found "), full_path);
             return 0;
         }
         ui_copy_text(filename, file_cap, full_path);
@@ -1007,12 +1009,12 @@ static int ui_file_dialog_activate(const char *title, int save_mode,
     }
     if (!filename[0]) {
         ui_file_dialog_status(status, status_cap,
-                              UI_T("Enter a file name in ", "请在以下位置输入文件名："), dir_path);
+                              UI_T("Enter a file name in "), dir_path);
         return 0;
     }
     if (!ui_path_extension_matches(filename, filter_ext)) {
         ui_file_dialog_status(status, status_cap,
-                              UI_T("File type must match ", "文件类型必须匹配："),
+                              UI_T("File type must match "),
                               filter_ext ? filter_ext : "");
         return 0;
     }
@@ -1022,12 +1024,11 @@ static int ui_file_dialog_activate(const char *title, int save_mode,
         ui_build_child_path(full_path, sizeof(full_path), dir_path, filename);
     }
     if (leonos_stat_legacy(full_path, &st) == 0 && st.type == LEONOS_FS_TYPE_FILE) {
-        if (!leonos_ui_show_confirm_dialog(title ? title : UI_T("Save As", "另存为"),
-                                           UI_T("This file already exists. Replace it?",
-                                                "文件已存在。是否替换？"),
+        if (!leonos_ui_show_confirm_dialog(title ? title : UI_T("Save As"),
+                                           UI_T("This file already exists. Replace it?"),
                                            0)) {
             ui_file_dialog_status(status, status_cap,
-                                  UI_T("Overwrite canceled for ", "已取消覆盖："), full_path);
+                                  UI_T("Overwrite canceled for "), full_path);
             return 0;
         }
     }
@@ -1072,7 +1073,7 @@ static void ui_file_dialog_draw(struct leonos_ui_surface *surface,
 {
     uint32_t input_count = options ? options->input_count : 0;
     struct leonos_ui_dropdown_item filter_items[2];
-    const char *look_in_label = UI_T("Look in:", "查找范围：");
+    const char *look_in_label = UI_T("Look in:");
     uint32_t path_edit_x = UI_FILE_DIALOG_MARGIN + leonos_ui_text_width(look_in_label) + 8U;
     uint32_t path_edit_w = UI_FILE_DIALOG_NAV_BUTTON_X > path_edit_x + 8U
                                ? UI_FILE_DIALOG_NAV_BUTTON_X - path_edit_x - 8U
@@ -1090,7 +1091,7 @@ static void ui_file_dialog_draw(struct leonos_ui_surface *surface,
                    LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_edit(surface, path_edit_x, 14, path_edit_w, dir_path, ui_strlen(dir_path),
                    0, LEONOS_UI_EDIT_READONLY);
-    leonos_ui_text(surface, 16, 44, UI_T("Files:", "文件："),
+    leonos_ui_text(surface, 16, 44, UI_T("Files:"),
                    LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_scroll_view_frame(surface, UI_FILE_DIALOG_LIST_X, UI_FILE_DIALOG_LIST_Y,
                                 UI_FILE_DIALOG_LIST_FRAME_W, UI_FILE_DIALOG_LIST_H);
@@ -1112,19 +1113,19 @@ static void ui_file_dialog_draw(struct leonos_ui_surface *surface,
                          entry_count <= list_state->visible_rows ? LEONOS_UI_SCROLLBAR_DISABLED : 0);
     leonos_ui_button(surface, UI_FILE_DIALOG_NAV_BUTTON_X, UI_FILE_DIALOG_UP_Y,
                      UI_FILE_DIALOG_NAV_BUTTON_W, LEONOS_UI_BUTTON_H,
-                     UI_T("Up", "上一级"), 0);
+                     UI_T("Up"), 0);
     leonos_ui_button(surface, UI_FILE_DIALOG_NAV_BUTTON_X, UI_FILE_DIALOG_ROOT_Y,
                      UI_FILE_DIALOG_NAV_BUTTON_W, LEONOS_UI_BUTTON_H,
-                     UI_T("Root", "根目录"), 0);
+                     UI_T("Root"), 0);
     leonos_ui_text(surface, 16, UI_FILE_DIALOG_NAME_LABEL_Y,
-                   save_mode ? UI_T("File name:", "文件名：")
-                             : UI_T("Selection:", "选择："),
+                   save_mode ? UI_T("File name:")
+                             : UI_T("Selection:"),
                    LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_edit_state_draw(surface, UI_FILE_DIALOG_NAME_EDIT_X,
                               UI_FILE_DIALOG_NAME_EDIT_Y,
                               UI_FILE_DIALOG_NAME_EDIT_W, name_edit, 0);
     leonos_ui_text(surface, 16, UI_FILE_DIALOG_TYPE_LABEL_Y,
-                   UI_T("Files of type:", "文件类型："),
+                   UI_T("Files of type:"),
                    LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_combobox(surface, UI_FILE_DIALOG_TYPE_EDIT_X, UI_FILE_DIALOG_TYPE_EDIT_Y,
                        UI_FILE_DIALOG_TYPE_EDIT_W,
@@ -1153,10 +1154,10 @@ static void ui_file_dialog_draw(struct leonos_ui_surface *surface,
     leonos_ui_statusbar(surface, status_y, UI_FILE_DIALOG_STATUS_H, status);
     leonos_ui_button(surface, UI_FILE_DIALOG_W - 180, button_y,
                      UI_FILE_DIALOG_BUTTON_W, LEONOS_UI_BUTTON_H,
-                     save_mode ? UI_T("Save", "保存") : UI_T("Open", "打开"), 0);
+                     save_mode ? UI_T("Save") : UI_T("Open"), 0);
     leonos_ui_button(surface, UI_FILE_DIALOG_W - 94, button_y,
                      UI_FILE_DIALOG_BUTTON_W, LEONOS_UI_BUTTON_H,
-                     UI_T("Cancel", "取消"), 0);
+                     UI_T("Cancel"), 0);
     if (filter_dropdown_open) {
         leonos_ui_dropdown(surface, UI_FILE_DIALOG_TYPE_EDIT_X,
                            UI_FILE_DIALOG_TYPE_EDIT_Y + LEONOS_UI_BUTTON_H,
@@ -1228,8 +1229,8 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
     }
     window_id = leonos_gui_create_app_window_ex(
                                                 title ? title : (save_mode
-                                                                    ? UI_T("Save As", "另存为")
-                                                                    : UI_T("Open", "打开")),
+                                                                    ? UI_T("Save As")
+                                                                    : UI_T("Open")),
                                                 dir_path, UI_FILE_DIALOG_W, dialog_h,
                                                 LEONOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
@@ -1247,10 +1248,10 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                                            &entry_count, active_filter_ext);
     if (load_ret < 0) {
         ui_file_dialog_status(status, sizeof(status),
-                              UI_T("Open dir failed ", "打开目录失败："), dir_path);
+                              UI_T("Open dir failed "), dir_path);
     } else {
         ui_file_dialog_status(status, sizeof(status),
-                              UI_T("Ready in ", "准备就绪："), dir_path);
+                              UI_T("Ready in "), dir_path);
     }
     leonos_ui_listview_state_set_count(&list_state, entry_count);
     list_state.selected = entry_count ? 0 : -1;
@@ -1424,11 +1425,11 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                                                                    active_filter_ext);
                             if (load_ret < 0) {
                                 ui_file_dialog_status(status, sizeof(status),
-                                                       UI_T("Open dir failed ", "打开目录失败："),
+                                                       UI_T("Open dir failed "),
                                                        dir_path);
                             } else {
                                 ui_file_dialog_status(status, sizeof(status),
-                                                       UI_T("Opened ", "已打开："), dir_path);
+                                                       UI_T("Opened "), dir_path);
                             }
                             leonos_ui_listview_state_set_count(&list_state, entry_count);
                             list_state.selected = entry_count ? 0 : -1;
@@ -1543,10 +1544,10 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                                                            &entry_count, active_filter_ext);
                     if (load_ret < 0) {
                         ui_file_dialog_status(status, sizeof(status),
-                                               UI_T("Open dir failed ", "打开目录失败："), dir_path);
+                                               UI_T("Open dir failed "), dir_path);
                     } else {
                         ui_file_dialog_status(status, sizeof(status),
-                                               UI_T("Opened ", "已打开："), dir_path);
+                                               UI_T("Opened "), dir_path);
                     }
                     leonos_ui_listview_state_set_count(&list_state, entry_count);
                     list_state.selected = entry_count ? 0 : -1;
@@ -1565,10 +1566,10 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                                                            &entry_count, active_filter_ext);
                     if (load_ret < 0) {
                         ui_file_dialog_status(status, sizeof(status),
-                                               UI_T("Open dir failed ", "打开目录失败："), dir_path);
+                                               UI_T("Open dir failed "), dir_path);
                     } else {
                         ui_file_dialog_status(status, sizeof(status),
-                                               UI_T("Opened ", "已打开："), dir_path);
+                                               UI_T("Opened "), dir_path);
                     }
                     leonos_ui_listview_state_set_count(&list_state, entry_count);
                     list_state.selected = entry_count ? 0 : -1;
@@ -1674,7 +1675,7 @@ int leonos_ui_show_open_dialog_with_options(
     const char *filter_label, const char *filter_ext,
     const struct leonos_ui_file_dialog_options *options)
 {
-    return ui_show_file_dialog_common(title ? title : UI_T("Open", "打开"), 0,
+    return ui_show_file_dialog_common(title ? title : UI_T("Open"), 0,
                                       path, capacity, filter_label, filter_ext,
                                       options);
 }
@@ -1731,7 +1732,7 @@ static const char *ui_open_with_app_label(const struct leonos_launch_assoc_app *
         return app->name;
     }
     if (!program_path || !program_path[0]) {
-        return UI_T("None", "无");
+        return UI_T("None");
     }
     ui_copy_text(buffer, capacity, program_path);
     return buffer;
@@ -1755,33 +1756,31 @@ static void ui_open_with_draw(struct leonos_ui_surface *surface,
     leonos_ui_rect(surface, 0, 0, UI_OPEN_WITH_W, UI_OPEN_WITH_H, LEONOS_UI_GRAY);
     leonos_ui_text_clipped(surface, 16, 20, UI_OPEN_WITH_W - 32,
                            set_default_mode
-                               ? UI_T("Choose a default program for this file type:",
-                                      "选择此文件类型的默认程序:")
-                               : UI_T("Choose a program to open this file:",
-                                      "选择用于打开此文件的程序:"),
+                               ? UI_T("Choose a default program for this file type:")
+                               : UI_T("Choose a program to open this file:"),
                            LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_text(surface, 16, 44, UI_T("File:", "文件:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    leonos_ui_text(surface, 16, 44, UI_T("File:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_edit(surface, 58, 40, UI_OPEN_WITH_W - 74, path ? path : "",
                    ui_strlen(path), 0, LEONOS_UI_EDIT_READONLY);
-    leonos_ui_text(surface, 16, 68, UI_T("Extension:", "扩展名:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    leonos_ui_text(surface, 16, 68, UI_T("Extension:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_edit(surface, 82, 64, 84,
-                   extension && extension[0] ? extension : UI_T("(none)", "(无)"),
-                   ui_strlen(extension && extension[0] ? extension : UI_T("(none)", "(无)")),
+                   extension && extension[0] ? extension : UI_T("(none)"),
+                   ui_strlen(extension && extension[0] ? extension : UI_T("(none)")),
                    0, LEONOS_UI_EDIT_READONLY);
-    leonos_ui_text(surface, 180, 68, UI_T("Default:", "默认:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    leonos_ui_text(surface, 180, 68, UI_T("Default:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_edit(surface, 244, 64, UI_OPEN_WITH_W - 260,
-                   default_label ? default_label : UI_T("None", "无"),
-                   ui_strlen(default_label ? default_label : UI_T("None", "无")),
+                   default_label ? default_label : UI_T("None"),
+                   ui_strlen(default_label ? default_label : UI_T("None")),
                    0, LEONOS_UI_EDIT_READONLY);
     if (set_default_mode) {
-        leonos_ui_checkbox(surface, 16, 94, UI_T("Update default program", "更新默认程序"), 1,
+        leonos_ui_checkbox(surface, 16, 94, UI_T("Update default program"), 1,
                            LEONOS_UI_BUTTON_DISABLED);
     } else {
-        leonos_ui_checkbox(surface, 16, 94, UI_T("Always use this app", "始终使用此应用"),
+        leonos_ui_checkbox(surface, 16, 94, UI_T("Always use this app"),
                            can_remember ? (int)remember : 0,
                            can_remember ? 0 : LEONOS_UI_BUTTON_DISABLED);
     }
-    leonos_ui_text(surface, 16, 120, UI_T("Programs:", "程序:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    leonos_ui_text(surface, 16, 120, UI_T("Programs:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_inset(surface, UI_OPEN_WITH_LIST_X, UI_OPEN_WITH_LIST_Y,
                     UI_OPEN_WITH_LIST_W, list_h, LEONOS_UI_WHITE);
     for (uint32_t row = 0; row < list_state->visible_rows; ++row) {
@@ -1817,9 +1816,9 @@ static void ui_open_with_draw(struct leonos_ui_surface *surface,
                              : 0);
     leonos_ui_button(surface, UI_OPEN_WITH_W - 194, UI_OPEN_WITH_BUTTON_Y,
                      96, LEONOS_UI_BUTTON_H,
-                     set_default_mode ? UI_T("Set Default", "设为默认") : UI_T("Open", "打开"), 0);
+                     set_default_mode ? UI_T("Set Default") : UI_T("Open"), 0);
     leonos_ui_button(surface, UI_OPEN_WITH_W - 88, UI_OPEN_WITH_BUTTON_Y,
-                     72, LEONOS_UI_BUTTON_H, UI_T("Cancel", "取消"), 0);
+                     72, LEONOS_UI_BUTTON_H, UI_T("Cancel"), 0);
 }
 
 int leonos_ui_show_open_with_dialog(const char *title, const char *path,
@@ -1878,7 +1877,7 @@ int leonos_ui_show_open_with_dialog(const char *title, const char *path,
     list_state.selected = selected;
     list_state.focused = 1;
 
-    window_id = leonos_gui_create_app_window_ex(title ? title : UI_T("Open With", "打开方式"),
+    window_id = leonos_gui_create_app_window_ex(title ? title : UI_T("Open With"),
                                                 path,
                                                 UI_OPEN_WITH_W, UI_OPEN_WITH_H,
                                                 LEONOS_GUI_WINDOW_NO_RESIZE);
@@ -1889,7 +1888,7 @@ int leonos_ui_show_open_with_dialog(const char *title, const char *path,
                    UI_OPEN_WITH_W);
     for (;;) {
         uint32_t activated = 0;
-        ui_open_with_draw(&surface, title ? title : UI_T("Open With", "打开方式"), path,
+        ui_open_with_draw(&surface, title ? title : UI_T("Open With"), path,
                           extension, default_label, apps, app_count,
                           &list_state, remember_value, can_remember,
                           set_default_mode);
@@ -2024,17 +2023,17 @@ int leonos_ui_show_save_dialog_with_options(
     const char *filter_label, const char *filter_ext,
     const struct leonos_ui_file_dialog_options *options)
 {
-    return ui_show_file_dialog_common(title ? title : UI_T("Save As", "另存为"), 1,
+    return ui_show_file_dialog_common(title ? title : UI_T("Save As"), 1,
                                       value, capacity, filter_label, filter_ext,
                                       options);
 }
 
 int leonos_ui_show_save_dialog(const char *title, char *value, uint32_t capacity)
 {
-    return leonos_ui_show_save_dialog_ex(title ? title : UI_T("Save As", "另存为"),
+    return leonos_ui_show_save_dialog_ex(title ? title : UI_T("Save As"),
                                          value,
                                          capacity,
-                                         UI_T("All files (*.*)", "所有文件 (*.*)"),
+                                         UI_T("All files (*.*)"),
                                          0);
 }
 

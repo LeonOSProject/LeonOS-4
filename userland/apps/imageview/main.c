@@ -1,5 +1,7 @@
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/png.h>
 #include <leonos/stdio.h>
 #include <leonos/ui.h>
@@ -32,7 +34,7 @@
 #define IMAGEVIEW_1X_X 312U
 #define IMAGEVIEW_2X_X 368U
 #define IMAGEVIEW_PATH_X 436U
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 enum zoom_mode {
     ZOOM_FIT = 0,
@@ -347,7 +349,7 @@ static void rebuild_detail(void)
     detail_text[0] = 0;
     if (!image_pixels) {
         copy_text(detail_text, sizeof(detail_text),
-                  T("No image loaded.", "未加载图片。"));
+                  T("No image loaded."));
         return;
     }
     append_u32(detail_text, &pos, sizeof(detail_text), image_w);
@@ -375,16 +377,14 @@ static int load_image_path(const char *path)
 
     if (!path || !path[0] || !is_supported_image_path(path)) {
         copy_text(status_text, sizeof(status_text),
-                  T("Unsupported image format. Use BMP, DIB, or PNG.",
-                    "不支持的图片格式，请使用 BMP、DIB 或 PNG。"));
+                  T("Unsupported image format. Use BMP, DIB, or PNG."));
         return -1;
     }
     if (ends_with_ignore_case(path, ".png")) {
         ret = leonos_png_decode_file(path, &decoded, &decoded_w, &decoded_h);
         if (ret < 0) {
             copy_text(status_text, sizeof(status_text),
-                      T("Could not decode PNG (maximum 1024x1024).",
-                        "无法解码 PNG（最大 1024x1024）。"));
+                      T("Could not decode PNG (maximum 1024x1024)."));
             return ret;
         }
         free_image();
@@ -395,22 +395,21 @@ static int load_image_path(const char *path)
         ret = read_file_all(path, &data, &len);
         if (ret < 0) {
             copy_text(status_text, sizeof(status_text),
-                      T("Could not read image.", "无法读取图片。"));
+                      T("Could not read image."));
             return ret;
         }
         ret = decode_bmp(data, len);
         free(data);
         if (ret < 0) {
             copy_text(status_text, sizeof(status_text),
-                      T("Unsupported BMP. Use uncompressed 24/32-bit BMP.",
-                        "不支持的 BMP，请使用未压缩 24/32 位 BMP。"));
+                      T("Unsupported BMP. Use uncompressed 24/32-bit BMP."));
             return ret;
         }
     }
     copy_text(current_path, sizeof(current_path), path);
     rebuild_siblings();
     rebuild_detail();
-    copy_text(status_text, sizeof(status_text), T("Image loaded", "图片已打开"));
+    copy_text(status_text, sizeof(status_text), T("Image loaded"));
     return 0;
 }
 
@@ -461,8 +460,7 @@ static void draw_scaled_image(struct leonos_ui_surface *ui)
     leonos_ui_inset(ui, x0, y0, w0, h0, LEONOS_UI_WHITE);
     if (!image_pixels || !image_w || !image_h) {
         leonos_ui_text_clipped(ui, x0 + 18U, y0 + 18U, w0 > 36U ? w0 - 36U : w0,
-                                T("Use Open, File Manager, Run, or the command line to open a BMP or PNG file.",
-                                  "请使用打开、文件资源管理器、运行或命令行打开 BMP 或 PNG 文件。"),
+                                T("Use Open, File Manager, Run, or the command line to open a BMP or PNG file."),
                                 LEONOS_UI_DARK, LEONOS_UI_WHITE);
         return;
     }
@@ -509,12 +507,12 @@ static void present(int window_id, struct leonos_ui_surface *ui)
     leonos_ui_toolbar(ui, 0, IMAGEVIEW_TOOLBAR_Y, view_w, IMAGEVIEW_TOOLBAR_H);
     leonos_ui_button(ui, IMAGEVIEW_OPEN_X, IMAGEVIEW_TOOLBAR_Y + 6U,
                      IMAGEVIEW_OPEN_W,
-                     LEONOS_UI_BUTTON_H, T("Open", "打开"), 0);
+                     LEONOS_UI_BUTTON_H, T("Open"), 0);
     leonos_ui_button(ui, IMAGEVIEW_PREVIOUS_X, IMAGEVIEW_TOOLBAR_Y + 6U, 72,
-                     LEONOS_UI_BUTTON_H, T("Previous", "上一张"),
+                     LEONOS_UI_BUTTON_H, T("Previous"),
                      sibling_count > 1U ? 0 : LEONOS_UI_BUTTON_DISABLED);
     leonos_ui_button(ui, IMAGEVIEW_NEXT_X, IMAGEVIEW_TOOLBAR_Y + 6U, 72,
-                     LEONOS_UI_BUTTON_H, T("Next", "下一张"),
+                     LEONOS_UI_BUTTON_H, T("Next Image"),
                      sibling_count > 1U ? 0 : LEONOS_UI_BUTTON_DISABLED);
     leonos_ui_button(ui, IMAGEVIEW_FIT_X, IMAGEVIEW_TOOLBAR_Y + 6U, 56,
                      LEONOS_UI_BUTTON_H, "Fit",
@@ -528,7 +526,7 @@ static void present(int window_id, struct leonos_ui_surface *ui)
     if (view_w > IMAGEVIEW_PATH_X + 8U) {
         leonos_ui_text_clipped(ui, IMAGEVIEW_PATH_X, IMAGEVIEW_TOOLBAR_Y + 12U,
                                view_w - IMAGEVIEW_PATH_X - 8U,
-                               current_path[0] ? current_path : T("No file", "没有文件"),
+                               current_path[0] ? current_path : T("No file"),
                                LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     }
     draw_scaled_image(ui);
@@ -568,8 +566,8 @@ static void open_image_via_dialog(void)
 {
     char path[PATH_MAX];
     path[0] = 0;
-    if (leonos_ui_show_open_dialog(T("Open image", "打开图片"), path, sizeof(path),
-                                   T("Images (*.bmp; *.dib; *.png)", "图片 (*.bmp; *.dib; *.png)"),
+    if (leonos_ui_show_open_dialog(T("Open image"), path, sizeof(path),
+                                   T("Images (*.bmp; *.dib; *.png)"),
                                    ".bmp;.dib;.png") > 0 && path[0]) {
         (void)load_image_path(path);
     }
@@ -604,6 +602,9 @@ static void handle_click(int32_t x, int32_t y)
 
 int main(int argc, char **argv, char **envp)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
@@ -612,10 +613,10 @@ int main(int argc, char **argv, char **envp)
         (void)load_image_path(argv[1]);
     } else {
         copy_text(detail_text, sizeof(detail_text),
-                  T("No image loaded.", "未加载图片。"));
+                  T("No image loaded."));
     }
-    window_id = leonos_gui_create_app_window_ex(T("Image Viewer", "图片查看器"),
-                                                T("BMP and PNG image viewer", "BMP 和 PNG 图片查看器"),
+    window_id = leonos_gui_create_app_window_ex(T("Image Viewer"),
+                                                T("BMP and PNG image viewer"),
                                                 view_w, view_h, 0);
     if (window_id <= 0) {
         printf("[imageview.elf] create window failed=%d\n", window_id);

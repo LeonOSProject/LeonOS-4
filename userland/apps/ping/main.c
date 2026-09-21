@@ -1,5 +1,7 @@
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/net_service.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
@@ -9,7 +11,7 @@
 #define PING_W 500
 #define PING_H 238
 #define PING_INPUT_LEN 32
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 static uint32_t pixels[PING_W * PING_H];
 static char input_ip[PING_INPUT_LEN] = "10.0.2.2";
@@ -131,23 +133,23 @@ static const char *status_name(uint32_t status)
 {
     switch (status) {
     case NET_SERVICE_STATUS_OK:
-        return T("OK", "成功");
+        return T("Succeeded");
     case NET_SERVICE_STATUS_NO_DEVICE:
-        return T("No e1000 adapter is active", "没有活动的 e1000 网卡");
+        return T("No e1000 adapter is active");
     case NET_SERVICE_STATUS_ARP_TIMEOUT:
-        return T("ARP timeout", "ARP 超时");
+        return T("ARP timeout");
     case NET_SERVICE_STATUS_ECHO_TIMEOUT:
-        return T("Request timed out", "请求超时");
+        return T("Request timed out");
     case NET_SERVICE_STATUS_BAD_ARGUMENT:
-        return T("Bad target address", "目标地址无效");
+        return T("Bad target address");
     case NET_SERVICE_STATUS_TX_FAILED:
-        return T("Transmit failed", "发送失败");
+        return T("Transmit failed");
     case NET_SERVICE_STATUS_DHCP_TIMEOUT:
-        return T("DHCP timeout", "DHCP 超时");
+        return T("DHCP timeout");
     case NET_SERVICE_STATUS_DHCP_FAILED:
-        return T("DHCP failed", "DHCP 失败");
+        return T("DHCP failed");
     default:
-        return T("Unknown network status", "未知网络状态");
+        return T("Unknown network status");
     }
 }
 
@@ -168,7 +170,7 @@ static void refresh_detail(void)
     char dns[24];
     uint32_t pos = 0;
     if (net_service_config(&cfg) < 0) {
-        copy_text(detail_text, sizeof(detail_text), T("Could not read network configuration.", "无法读取网络配置。"));
+        copy_text(detail_text, sizeof(detail_text), T("Could not read network configuration."));
         return;
     }
     format_ipv4(ip, sizeof(ip), cfg.local_ip);
@@ -193,31 +195,31 @@ static void run_ping(void)
     uint32_t pos;
     int ret;
     if (parse_ipv4(input_ip, &ip) < 0) {
-        copy_text(status_text, sizeof(status_text), T("Invalid IPv4 address", "IPv4 地址无效"));
-        copy_text(result_text, sizeof(result_text), T("Use dotted decimal form, for example 10.0.2.2.", "请输入类似 10.0.2.2 的 IPv4 地址。"));
+        copy_text(status_text, sizeof(status_text), T("Invalid IPv4 address"));
+        copy_text(result_text, sizeof(result_text), T("Use dotted decimal form, for example 10.0.2.2."));
         return;
     }
     format_ipv4(ip_text, sizeof(ip_text), ip);
-    copy_text(status_text, sizeof(status_text), T("Sending ICMP Echo request...", "正在发送 ICMP Echo 请求..."));
+    copy_text(status_text, sizeof(status_text), T("Sending ICMP Echo request..."));
     result = (net_service_ping_t){0};
     ret = net_service_ping(ip, NET_SERVICE_DEFAULT_TIMEOUT_MS, &result);
     if (ret < 0) {
-        set_status_ret(T("Network ioctl failed", "网络 ioctl 失败"), ret);
-        copy_text(result_text, sizeof(result_text), T("The kernel rejected the ping request.", "内核拒绝了 ping 请求。"));
+        set_status_ret(T("Network ioctl failed"), ret);
+        copy_text(result_text, sizeof(result_text), T("The kernel rejected the ping request."));
         return;
     }
     pos = 0;
     result_text[0] = 0;
     if (result.status == NET_SERVICE_STATUS_OK) {
-        append_text(result_text, &pos, sizeof(result_text), T("Reply from ", "来自 "));
+        append_text(result_text, &pos, sizeof(result_text), T("Reply from "));
         append_text(result_text, &pos, sizeof(result_text), ip_text);
         append_text(result_text, &pos, sizeof(result_text), ": bytes=16 time=");
         append_u32(result_text, &pos, sizeof(result_text), result.rtt_ms);
         append_text(result_text, &pos, sizeof(result_text), "ms");
-        copy_text(status_text, sizeof(status_text), T("Ping completed", "Ping 完成"));
+        copy_text(status_text, sizeof(status_text), T("Ping completed"));
     } else {
         append_text(result_text, &pos, sizeof(result_text), status_name(result.status));
-        append_text(result_text, &pos, sizeof(result_text), T(" while pinging ", "，目标 "));
+        append_text(result_text, &pos, sizeof(result_text), T(" while pinging "));
         append_text(result_text, &pos, sizeof(result_text), ip_text);
         copy_text(status_text, sizeof(status_text), status_name(result.status));
     }
@@ -226,15 +228,15 @@ static void run_ping(void)
 static void draw_ping(struct leonos_ui_surface *ui)
 {
     leonos_ui_rect(ui, 0, 0, PING_W, PING_H, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 20, 18, T("Target IPv4:", "目标 IPv4:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    leonos_ui_text(ui, 20, 18, T("Target IPv4:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_edit_state_draw(ui, 116, 14, 236, &input_edit, 0);
-    leonos_ui_button(ui, 370, 14, 92, LEONOS_UI_BUTTON_H, T("Ping", "Ping"), 0);
-    leonos_ui_text(ui, 20, 58, T("Network:", "网络:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+    leonos_ui_button(ui, 370, 14, 92, LEONOS_UI_BUTTON_H, T("Ping"), 0);
+    leonos_ui_text(ui, 20, 58, T("Network:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_text_clipped(ui, 96, 58, PING_W - 120, detail_text, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 20, 94, T("Result:", "结果:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+    leonos_ui_text(ui, 20, 94, T("Result:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_text_clipped(ui, 96, 94, PING_W - 120, result_text, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 20, 126, T("Mode:", "模式:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 96, 126, T("ARP + IPv4 + ICMP Echo over Intel e1000", "Intel e1000 上的 ARP + IPv4 + ICMP Echo"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+    leonos_ui_text(ui, 20, 126, T("Mode:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+    leonos_ui_text(ui, 96, 126, T("ARP + IPv4 + ICMP Echo over Intel e1000"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_statusbar(ui, PING_H - 28, 28, status_text);
 }
 
@@ -247,6 +249,9 @@ static int hit_rect(int32_t px, int32_t py, int32_t x, int32_t y,
 
 int main(int argc, char **argv, char **envp)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
@@ -256,8 +261,8 @@ int main(int argc, char **argv, char **envp)
     if (argc > 1 && argv && argv[1] && argv[1][0]) {
         copy_text(input_ip, sizeof(input_ip), argv[1]);
     }
-    window_id = leonos_gui_create_app_window_ex(T("Ping", "Ping"),
-                                                T("ICMP Echo test", "ICMP Echo 测试"),
+    window_id = leonos_gui_create_app_window_ex(T("Ping"),
+                                                T("ICMP Echo test"),
                                                 PING_W, PING_H,
                                                 LEONOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {

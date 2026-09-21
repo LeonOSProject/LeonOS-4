@@ -4,7 +4,7 @@ set -eu
 [ "$#" = 5 ] || exit 2
 src=$1 input=$2 output=$3 mode=$4 language=$5
 case $mode in live|disk) ;; *) exit 2 ;; esac
-case $language in en|zh) ;; *) exit 2 ;; esac
+case $language in *[!A-Za-z0-9._@-]*|'') echo 'standalone-root: invalid locale name' >&2; exit 2;; esac
 mkdir -p "$(dirname "$output")"
 work=$(mktemp -d "$output.new.XXXXXX")
 trap 'rm -rf "$work"' EXIT HUP INT TERM
@@ -30,7 +30,7 @@ for name in root home/test; do
 done
 printf 'leonos-standalone-test-v1\n' > "$work/etc/leonos/test-image"
 printf 'test-image=1\n' > "$work/etc/leonos/installed"
-printf 'lang=%s\n' "$language" > "$work/etc/leonos/locale.conf"
+printf 'LANG=%s\nMUSL_LOCPATH=/usr/share/musl/locales\n' "$language" > "$work/etc/leonos/locale.conf"
 if [ "$mode" = disk ]; then
     cat > "$work/etc/fstab" <<'FSTAB'
 # Stable GPT partition identities owned by tools/build/disk.sh.

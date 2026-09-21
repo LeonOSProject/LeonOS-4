@@ -1,6 +1,8 @@
 #include <leonos/gui.h>
 #include <leonos/http.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/net_service.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
@@ -29,7 +31,7 @@
 #define RESPONSE_W (HTTPGET_W - 48)
 #define RESPONSE_H 356
 #define HTTPGET_RESPONSE_MAX (LEONOS_HTTP_HEADER_MAX + LEONOS_HTTP_BODY_MAX + 4U)
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 static uint32_t pixels[HTTPGET_W * HTTPGET_H];
 static char host_input[NET_SERVICE_HOSTNAME_LEN] = "example.com";
@@ -125,49 +127,49 @@ static const char *status_name(uint32_t status)
 {
     switch (status) {
     case NET_SERVICE_STATUS_OK:
-        return T("OK", "成功");
+        return T("Succeeded");
     case NET_SERVICE_STATUS_NO_DEVICE:
-        return T("No e1000 adapter", "没有 e1000 网卡");
+        return T("No e1000 adapter");
     case NET_SERVICE_STATUS_ARP_TIMEOUT:
-        return T("ARP timeout", "ARP 超时");
+        return T("ARP timeout");
     case NET_SERVICE_STATUS_BAD_ARGUMENT:
-        return T("Bad argument", "参数无效");
+        return T("Bad argument");
     case NET_SERVICE_STATUS_TX_FAILED:
-        return T("Transmit failed", "发送失败");
+        return T("Transmit failed");
     case NET_SERVICE_STATUS_DHCP_TIMEOUT:
-        return T("DHCP timeout", "DHCP 超时");
+        return T("DHCP timeout");
     case NET_SERVICE_STATUS_DHCP_FAILED:
-        return T("DHCP failed", "DHCP 失败");
+        return T("DHCP failed");
     case NET_SERVICE_STATUS_DNS_TIMEOUT:
-        return T("DNS timeout", "DNS 超时");
+        return T("DNS timeout");
     case NET_SERVICE_STATUS_DNS_FAILED:
-        return T("DNS failed", "DNS 失败");
+        return T("DNS failed");
     case NET_SERVICE_STATUS_DNS_NO_ANSWER:
-        return T("No A record", "没有 A 记录");
+        return T("No A record");
     case NET_SERVICE_STATUS_TCP_TIMEOUT:
-        return T("TCP timeout", "TCP 超时");
+        return T("TCP timeout");
     case NET_SERVICE_STATUS_TCP_RESET:
-        return T("TCP reset", "TCP 复位");
+        return T("TCP reset");
     case NET_SERVICE_STATUS_TCP_FAILED:
-        return T("TCP failed", "TCP 失败");
+        return T("TCP failed");
     case NET_SERVICE_STATUS_HTTP_FAILED:
-        return T("HTTP failed", "HTTP 失败");
+        return T("HTTP failed");
     case NET_SERVICE_STATUS_HTTP_TOO_LARGE:
-        return T("Response too large", "响应过大");
+        return T("Response too large");
     case NET_SERVICE_STATUS_SOCKET_LIMIT:
-        return T("Socket limit reached", "Socket 数量已满");
+        return T("Socket limit reached");
     case NET_SERVICE_STATUS_SOCKET_BAD_HANDLE:
-        return T("Bad socket", "Socket 无效");
+        return T("Bad socket");
     case NET_SERVICE_STATUS_SOCKET_NOT_CONNECTED:
-        return T("Socket not connected", "Socket 未连接");
+        return T("Socket not connected");
     case NET_SERVICE_STATUS_SOCKET_CLOSED:
-        return T("Socket closed", "Socket 已关闭");
+        return T("Socket closed");
     case NET_SERVICE_STATUS_PROTOCOL_UNSUPPORTED:
-        return T("Protocol unsupported", "协议不支持");
+        return T("Protocol unsupported");
     case NET_SERVICE_STATUS_TLS_FAILED:
-        return T("TLS verification failed", "TLS 验证失败");
+        return T("TLS verification failed");
     default:
-        return T("Unknown status", "未知状态");
+        return T("Unknown status");
     }
 }
 
@@ -233,26 +235,26 @@ static void run_http_get(void)
     response_area.cursor = 0;
     response_area.scroll_line = 0;
     if (!port) {
-        copy_text(status_text, sizeof(status_text), T("Port must be 1-65535", "端口必须是 1-65535"));
+        copy_text(status_text, sizeof(status_text), T("Port must be 1-65535"));
         copy_text(summary_text, sizeof(summary_text), status_text);
         return;
     }
     if (!build_http_url_text(url, sizeof(url), host_input, path_input, port,
                              secure_request)) {
         copy_text(status_text, sizeof(status_text),
-                  T("URL is too large", "URL 过大"));
+                  T("URL is too large"));
         copy_text(summary_text, sizeof(summary_text), status_text);
         return;
     }
     copy_text(status_text, sizeof(status_text),
-              secure_request ? T("Sending HTTPS GET...", "正在发送 HTTPS GET...")
-                             : T("Sending HTTP GET...", "正在发送 HTTP GET..."));
+              secure_request ? T("Sending HTTPS GET...")
+                             : T("Sending HTTP GET..."));
     ret = leonos_http_get(url, LEONOS_HTTP_DEFAULT_TIMEOUT_MS,
                           response_body, sizeof(response_body),
                           response_headers, sizeof(response_headers),
                           &response);
     if (ret < 0) {
-        set_status_ret(T("HTTP client failed", "HTTP 客户端失败"), ret);
+        set_status_ret(T("HTTP client failed"), ret);
         copy_text(summary_text, sizeof(summary_text), status_text);
         return;
     }
@@ -287,17 +289,17 @@ static void run_http_get(void)
 static void draw_httpget(struct leonos_ui_surface *ui)
 {
     leonos_ui_rect(ui, 0, 0, HTTPGET_W, HTTPGET_H, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 24, 14, T("HTTP/HTTPS GET over TCP", "通过 TCP 发送 HTTP/HTTPS GET"),
+    leonos_ui_text(ui, 24, 14, T("HTTP/HTTPS GET over TCP"),
                    LEONOS_UI_BLACK, LEONOS_UI_GRAY);
 
-    leonos_ui_text(ui, 24, 42, T("Host:", "主机:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+    leonos_ui_text(ui, 24, 42, T("Host:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_edit_state_draw(ui, HOST_X, HOST_Y, HOST_W, &host_edit, 0);
-    leonos_ui_text(ui, 348, 42, T("Path:", "路径:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+    leonos_ui_text(ui, 348, 42, T("Path:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_edit_state_draw(ui, PATH_X, PATH_Y, PATH_W, &path_edit, 0);
-    leonos_ui_text(ui, 24, 76, T("Port:", "端口:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+    leonos_ui_text(ui, 24, 76, T("Port:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_edit_state_draw(ui, PORT_X, PORT_Y, PORT_W, &port_edit, 0);
     leonos_ui_button(ui, GET_X, GET_Y, GET_W, LEONOS_UI_BUTTON_H,
-                     T("GET", "GET"), 0);
+                     T("GET"), 0);
     leonos_ui_checkbox(ui, HTTPS_X, HTTPS_Y, "HTTPS", secure_request, 0);
     leonos_ui_text_clipped(ui, 372, 76, HTTPGET_W - 396, summary_text,
                            LEONOS_UI_BLACK, LEONOS_UI_WHITE);
@@ -352,6 +354,9 @@ static void present(int window_id, struct leonos_ui_surface *ui)
 
 int main(int argc, char **argv, char **envp)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
@@ -364,8 +369,8 @@ int main(int argc, char **argv, char **envp)
     if (argc > 2 && argv && argv[2] && argv[2][0]) {
         copy_text(path_input, sizeof(path_input), argv[2]);
     }
-    window_id = leonos_gui_create_app_window_ex(T("HTTP GET", "HTTP GET"),
-                                                T("TCP and HTTP test", "TCP 和 HTTP 测试"),
+    window_id = leonos_gui_create_app_window_ex(T("HTTP GET"),
+                                                T("TCP and HTTP test"),
                                                 HTTPGET_W, HTTPGET_H,
                                                 LEONOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {

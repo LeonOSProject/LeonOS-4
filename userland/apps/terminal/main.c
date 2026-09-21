@@ -1,7 +1,9 @@
 #include <leonos/gui.h>
 #include <leonos/environment.h>
 #include <leonos/launch.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
@@ -35,7 +37,7 @@
 #define TERMINAL_CELL_CONTINUATION 0xffffffffU
 #define TERMINAL_KEY_T 20U
 #define TERMINAL_KEY_W 17U
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 enum terminal_escape_state {
     TERMINAL_TEXT,
@@ -1566,6 +1568,9 @@ static int terminal_handle_mouse(int32_t x, int32_t y, uint8_t buttons,
 
 int main(int argc, char **argv, char **envp)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     char *shell_argv[4];
@@ -1607,7 +1612,7 @@ int main(int argc, char **argv, char **envp)
         return 1;
     }
     command_envp = command_env_owned;
-    window_id = leonos_gui_create_app_window_ex(T("Terminal", "终端"),
+    window_id = leonos_gui_create_app_window_ex(T("Terminal"),
                                                 "", TERMINAL_DEFAULT_W,
                                                 TERMINAL_DEFAULT_H, 0);
     if (window_id <= 0) {

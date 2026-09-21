@@ -21,6 +21,7 @@ from make_image import (
     MICROSOFT_BASIC_DATA_GUID,
     SECTOR_SIZE,
     write_gpt,
+    make_root_tree,
 )
 from populate_exfat import ExfatVolume
 
@@ -37,6 +38,23 @@ def assert_header_crc(test: unittest.TestCase, image: bytes, lba: int) -> None:
     stored_crc = struct.unpack_from("<I", header, 16)[0]
     struct.pack_into("<I", header, 16, 0)
     test.assertEqual(stored_crc, zlib.crc32(header) & 0xFFFFFFFF)
+
+
+class LocaleSeedTests(unittest.TestCase):
+    def test_root_locale_seed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="leonos-locale-test-") as directory:
+            root = Path(directory)
+            staging = root / "staging"
+            (staging / "etc/skel").mkdir(parents=True)
+            (staging / "etc/sudoers").write_text("%wheel ALL=(ALL:ALL) ALL\n")
+            for locale in ("zh_CN.UTF-8", "en_US.UTF-8"):
+                destination = root / locale
+                make_root_tree(staging, destination, locale)
+                self.assertEqual((destination / "etc/leonos/locale.conf").read_text(),
+                                 f"LANG={locale}\n")
+            with self.assertRaises(ValueError):
+                make_root_tree(staging, root / "invalid", "../bad")
+            self.assertFalse((root / "invalid").exists())
 
 
 class GptWriterTests(unittest.TestCase):

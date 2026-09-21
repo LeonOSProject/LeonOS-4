@@ -1,10 +1,12 @@
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/gui.h>
 #include <leonos/stdio.h>
 #include <leonos/ui.h>
 
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 #define GUI_TEST_INITIAL_W 640U
 #define GUI_TEST_INITIAL_H 420U
@@ -53,37 +55,37 @@ static const char *cursor_name(uint32_t style)
 {
     switch (style) {
     case LEONOS_GUI_CURSOR_ARROW:
-        return T("Arrow", "箭头");
+        return T("Arrow");
     case LEONOS_GUI_CURSOR_HAND:
-        return T("Hand", "手形");
+        return T("Hand");
     case LEONOS_GUI_CURSOR_TEXT:
-        return T("Text", "文本");
+        return T("Text");
     case LEONOS_GUI_CURSOR_WAIT:
-        return T("Wait", "等待");
+        return T("Wait");
     case LEONOS_GUI_CURSOR_CROSSHAIR:
-        return T("Crosshair", "十字");
+        return T("Crosshair");
     case LEONOS_GUI_CURSOR_MOVE:
-        return T("Move", "移动");
+        return T("Move");
     case LEONOS_GUI_CURSOR_NO:
-        return T("Not allowed", "禁止");
+        return T("Not allowed");
     case LEONOS_GUI_CURSOR_HELP:
-        return T("Help", "帮助");
+        return T("Help");
     case LEONOS_GUI_CURSOR_PROGRESS:
-        return T("Progress", "进度");
+        return T("Progress");
     case LEONOS_GUI_CURSOR_SIZE_NS:
-        return T("Resize vertical", "垂直调整大小");
+        return T("Resize vertical");
     case LEONOS_GUI_CURSOR_SIZE_WE:
-        return T("Resize horizontal", "水平调整大小");
+        return T("Resize horizontal");
     case LEONOS_GUI_CURSOR_SIZE_NWSE:
-        return T("Resize diagonal", "对角调整大小");
+        return T("Resize diagonal");
     case LEONOS_GUI_CURSOR_SIZE_NESW:
-        return T("Resize diagonal", "对角调整大小");
+        return T("Resize diagonal");
     case LEONOS_GUI_CURSOR_UP:
-        return T("Up arrow", "向上箭头");
+        return T("Up arrow");
     case LEONOS_GUI_CURSOR_APP_STARTING:
-        return T("App starting", "应用启动");
+        return T("App starting");
     default:
-        return T("Arrow", "箭头");
+        return T("Arrow");
     }
 }
 
@@ -93,7 +95,7 @@ static void reset_desktop_state(uint32_t window_id)
     (void)leonos_gui_set_window_taskbar_visible(window_id, 1);
     (void)leonos_gui_set_taskbar_visible(window_id, 1);
     (void)leonos_gui_set_cursor_auto((uint32_t)window_id);
-    (void)leonos_gui_set_window_title(window_id, T("GUI API Tester", "GUI API 测试"));
+    (void)leonos_gui_set_window_title(window_id, T("GUI API Tester"));
 }
 
 static void draw_test_window(struct leonos_ui_surface *ui, uint32_t width,
@@ -115,15 +117,15 @@ static void draw_test_window(struct leonos_ui_surface *ui, uint32_t width,
     (void)height;
     leonos_ui_rect(ui, 0, 0, width, height, LEONOS_UI_WHITE);
     leonos_ui_toolbar(ui, 0, 0, width, 42U);
-    leonos_ui_text(ui, 20, 13, T("LeonOS GUI API Tester", "LeonOS GUI API 测试器"),
+    leonos_ui_text(ui, 20, 13, T("LeonOS GUI API Tester"),
                    LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_text_clipped(ui, 24, 62, width > 48U ? width - 48U : width,
                            status, LEONOS_UI_DARK, LEONOS_UI_WHITE);
 
     pos = 0;
     detail[0] = 0;
-    while (T("Cursor style: ", "光标样式: ")[pos] && pos + 1U < sizeof(detail)) {
-        detail[pos] = T("Cursor style: ", "光标样式: ")[pos];
+    while (T("Cursor style: ")[pos] && pos + 1U < sizeof(detail)) {
+        detail[pos] = T("Cursor style: ")[pos];
         ++pos;
     }
     {
@@ -138,34 +140,37 @@ static void draw_test_window(struct leonos_ui_surface *ui, uint32_t width,
                            detail, LEONOS_UI_DARK, LEONOS_UI_WHITE);
 
     leonos_ui_button(ui, left, rows[0], button_w, GUI_TEST_BUTTON_H,
-                     title_index ? T("Set alternate title", "设置备用标题")
-                                 : T("Set test title", "设置测试标题"), 0);
+                     title_index ? T("Set alternate title")
+                                 : T("Set test title"), 0);
     leonos_ui_button(ui, right, rows[0], button_w, GUI_TEST_BUTTON_H,
-                     borderless ? T("Restore borders", "恢复边框")
-                                : T("Toggle borderless", "切换无边框"), 0);
+                     borderless ? T("Restore borders")
+                                : T("Toggle borderless"), 0);
     leonos_ui_button(ui, left, rows[1], button_w, GUI_TEST_BUTTON_H,
-                     taskbar_list_visible ? T("Hide window from taskbar", "从任务栏隐藏窗口")
-                                          : T("Show window in taskbar", "在任务栏显示窗口"), 0);
+                     taskbar_list_visible ? T("Hide window from taskbar")
+                                          : T("Show window in taskbar"), 0);
     leonos_ui_button(ui, right, rows[1], button_w, GUI_TEST_BUTTON_H,
-                     desktop_taskbar_visible ? T("Hide desktop taskbar", "隐藏桌面任务栏")
-                                             : T("Show desktop taskbar", "显示桌面任务栏"), 0);
+                     desktop_taskbar_visible ? T("Hide desktop taskbar")
+                                             : T("Show desktop taskbar"), 0);
     leonos_ui_button(ui, left, rows[2], button_w, GUI_TEST_BUTTON_H,
-                     T("Move mouse to 320, 240", "移动鼠标到 320, 240"), 0);
+                     T("Move mouse to 320, 240"), 0);
     leonos_ui_button(ui, right, rows[2], button_w, GUI_TEST_BUTTON_H,
-                     T("Next cursor style", "下一个光标样式"), 0);
+                     T("Next cursor style"), 0);
     leonos_ui_button(ui, left, rows[3], button_w, GUI_TEST_BUTTON_H,
-                     T("Reset all", "重置全部"), 0);
+                     T("Reset all"), 0);
     leonos_ui_button(ui, right, rows[3], button_w, GUI_TEST_BUTTON_H,
-                     T("Close", "关闭"), 0);
+                     T("Close"), 0);
 }
 
 int main(void)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_gui_app_event event;
     struct leonos_ui_surface ui;
     const char *titles[] = {
-        T("GUI API Tester", "GUI API 测试"),
-        T("GUI API title update passed", "GUI API 标题更新成功"),
+        T("GUI API Tester"),
+        T("GUI API title update passed"),
     };
     char status[96] = "Ready";
     uint32_t view_w = GUI_TEST_INITIAL_W;
@@ -176,8 +181,8 @@ int main(void)
     uint8_t taskbar_list_visible = 1;
     uint8_t desktop_taskbar_visible = 1;
     int window_id = leonos_gui_create_app_window_ex(
-        T("GUI API Tester", "GUI API 测试"),
-        T("GUI API Tester", "GUI API 测试"),
+        T("GUI API Tester"),
+        T("GUI API Tester"),
         GUI_TEST_INITIAL_W, GUI_TEST_INITIAL_H, 0);
 
     if (window_id <= 0) {

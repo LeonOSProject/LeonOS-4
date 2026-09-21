@@ -1,5 +1,8 @@
 #include <leonos/boot_handoff.h>
 #include <leonos/psf_font.h>
+#include <leonos/utf8_stream.h>
+
+static struct leonos_utf8_stream console_utf8;
 #include <ntclks/console.h>
 #include <ntclks/framebuffer.h>
 #include <ntclks/time.h>
@@ -265,7 +268,7 @@ static void fb_console_newline(void)
     }
 }
 
-static void fb_console_putc(char ch)
+static void fb_console_scalar(uint32_t ch)
 {
     if (!fb_console_enabled || !framebuffer_get()->available || !fb_cols || !fb_rows) {
         return;
@@ -288,19 +291,20 @@ static void fb_console_putc(char ch)
         return;
     }
     if (ch == '\t') {
-        uint32_t next = (fb_col + 8u) & ~7u;
-        while (fb_col < next) {
-            fb_console_putc(' ');
+        uint32_t spaces = 8u - (fb_col & 7u);
+        while (spaces--) {
+            fb_console_scalar(' ');
         }
         return;
     }
-    if ((unsigned char)ch < 0x20u) {
+    if (ch < 0x20u) {
         return;
     }
-    if ((unsigned char)ch == 0x7fu) {
+    if (ch == 0x7fu) {
         return;
     }
-    if (fb_col >= fb_cols) {
+    uint32_t cells = framebuffer_codepoint_width(ch);
+    if (fb_col + cells > fb_cols) {
         fb_console_newline();
     }
     {
@@ -309,16 +313,26 @@ static void fb_console_putc(char ch)
         uint32_t x = fb_x + fb_col * LEONOS_FONT_W;
         uint32_t y = fb_y + fb_row * LEONOS_FONT_H;
         framebuffer_rect(x, y, LEONOS_FONT_W, LEONOS_FONT_H, bg);
-        framebuffer_text(x, y, (char[]){ch, 0}, fg, bg);
+        framebuffer_codepoint(x, y, ch, fg, bg);
         if (fb_console_bold && x + 1u < framebuffer_get()->width) {
-            framebuffer_text(x + 1u, y, (char[]){ch, 0}, fg, bg);
+            framebuffer_codepoint(x + 1u, y, ch, fg, bg);
         }
         if (fb_console_underline) {
             framebuffer_rect(x, y + LEONOS_FONT_H - 2u, LEONOS_FONT_W, 1u,
                              fb_console_underline_color_set ? fb_console_underline_color : fg);
         }
     }
-    ++fb_col;
+    fb_col += cells;
+}
+
+/** @brief Decode one output byte, retaining incomplete UTF-8 across writes. */
+static void fb_console_putc(char ch)
+{
+    uint32_t cp;
+    int result = leonos_utf8_feed(&console_utf8, (unsigned char)ch, &cp);
+    if (result) fb_console_scalar(cp);
+    if (result < 0 && leonos_utf8_feed(&console_utf8, (unsigned char)ch, &cp))
+        fb_console_scalar(cp);
 }
 
 static uint32_t fb_ansi_param(uint32_t index, uint32_t fallback)

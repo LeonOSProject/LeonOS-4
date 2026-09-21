@@ -1,5 +1,7 @@
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/png.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
@@ -12,7 +14,7 @@
 #define OSVER_H 460
 #define OSVER_LOGO_PATH LEONOS_PATH_LOGO_PNG
 #define OSVER_LOGO_BOX 196U
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 static uint32_t pixels[OSVER_W * OSVER_H];
 static struct leonos_system_info info;
@@ -73,17 +75,16 @@ static void osver_kernel_debug_click(uint32_t x, uint32_t y)
         (flags & LEONOS_KERNEL_DEBUG_STATE_ENABLED) == 0U) {
         if (leonos_kernel_debug_set_enabled(1) == 0) {
             copy_text(status_text, sizeof(status_text),
-                      T("Kernel debug mode enabled", "内核调试模式已启用"));
+                      T("Kernel debug mode enabled"));
             (void)leonos_ui_show_message_box(
-                T("Kernel debug mode", "内核调试模式"),
-                T("Kernel debug mode enabled. Use Start > Power to reboot into it.",
-                  "内核调试模式已启用。请从开始菜单的电源页面重启进入。"),
-                T("OK", "确定"));
+                T("Kernel debug mode"),
+                T("Kernel debug mode enabled. Use Start > Power to reboot into it."),
+                T("OK"));
         } else {
             (void)leonos_ui_show_message_box(
-                T("Kernel debug mode", "内核调试模式"),
-                T("Could not persist kernel debug mode.", "无法保存内核调试模式状态。"),
-                T("OK", "确定"));
+                T("Kernel debug mode"),
+                T("Could not persist kernel debug mode."),
+                T("OK"));
         }
     }
 }
@@ -113,7 +114,7 @@ static void draw_logo(struct leonos_ui_surface *ui, uint32_t x, uint32_t y,
         leonos_ui_rect(ui, x, y, w, h, LEONOS_UI_WHITE);
         leonos_ui_text_resized_clipped(ui, x + 12, y + h / 2U - 8U,
                                        w > 24U ? w - 24U : w,
-                                       T("Logo unavailable", "Logo 不可用"),
+                                       T("Logo unavailable"),
                                        LEONOS_UI_DARK, LEONOS_UI_WHITE,
                                        LEONOS_FONT_W, LEONOS_FONT_H);
         return;
@@ -151,10 +152,10 @@ static void draw_logo(struct leonos_ui_surface *ui, uint32_t x, uint32_t y,
 static void draw_osver(struct leonos_ui_surface *ui)
 {
     struct leonos_ui_property_item props[] = {
-        {T("Kernel", "内核"), info.kernel_name, 0},
-        {T("Kernel version", "内核版本"), info.kernel_version, 0},
-        {T("Build time", "构建时间"), info.build_time, 0},
-        {T("Copyright", "版权"), info.copyright, 0},
+        {T("Kernel"), info.kernel_name, 0},
+        {T("Kernel version"), info.kernel_version, 0},
+        {T("Build time"), info.build_time, 0},
+        {T("Copyright"), info.copyright, 0},
     };
     const uint32_t hero_x = 16U;
     const uint32_t hero_y = 88U;
@@ -169,12 +170,12 @@ static void draw_osver(struct leonos_ui_surface *ui)
     leonos_ui_text_resized_clipped(ui, 28U, 12U, 300U, "LeonOS 4",
                                    LEONOS_UI_BLACK, LEONOS_UI_GRAY, 12U, 24U);
     leonos_ui_text(ui, 29U, 43U,
-                   T("About this operating system", "关于此操作系统"),
+                   T("About this operating system"),
                    LEONOS_UI_DARK, LEONOS_UI_GRAY);
 
     leonos_ui_panel(ui, hero_x, hero_y, hero_w, content_h, LEONOS_UI_LIGHT);
     leonos_ui_text(ui, hero_x + 16U, hero_y + 14U,
-                   T("LeonOS 4", "LeonOS 4"), LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
+                   T("LeonOS 4"), LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
     leonos_ui_rect(ui, hero_x + 16U, hero_y + 38U, hero_w - 32U, 1U,
                    LEONOS_UI_WHITE);
     leonos_ui_panel(ui, hero_x + 27U, hero_y + 50U, OSVER_LOGO_BOX,
@@ -185,33 +186,34 @@ static void draw_osver(struct leonos_ui_surface *ui)
                                    hero_w - 32U, "LeonOS 4", LEONOS_UI_BLACK,
                                    LEONOS_UI_LIGHT, 10U, 20U);
     leonos_ui_text(ui, hero_x + 16U, hero_y + 287U,
-                   T("A compact desktop OS", "简洁的桌面操作系统"),
+                   T("A compact desktop OS"),
                    LEONOS_UI_DARK, LEONOS_UI_LIGHT);
 
     leonos_ui_panel(ui, info_x, hero_y, info_w, content_h, LEONOS_UI_LIGHT);
     leonos_ui_rect(ui, info_x + 1U, hero_y + 1U, info_w - 2U, 54U,
                    LEONOS_UI_WHITE);
     leonos_ui_text(ui, info_x + 16U, hero_y + 10U,
-                   T("System information", "系统信息"), LEONOS_UI_BLACK,
+                   T("System information"), LEONOS_UI_BLACK,
                    LEONOS_UI_WHITE);
     leonos_ui_text(ui, info_x + 16U, hero_y + 31U,
-                   T("Build and runtime components", "构建和运行时组件"),
+                   T("Build and runtime components"),
                    LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_property_grid(ui, info_x + 12U, hero_y + 68U, info_w - 24U,
                             props, sizeof(props) / sizeof(props[0]), 122U, 28U);
     leonos_ui_text(ui, info_x + 16U, hero_y + 260U,
-                   T("This window reports the version embedded in the running kernel.",
-                     "此窗口显示当前运行内核中嵌入的版本信息。"),
+                   T("This window reports the version embedded in the running kernel."),
                    LEONOS_UI_DARK, LEONOS_UI_LIGHT);
     leonos_ui_text(ui, info_x + 16U, hero_y + 282U,
-                   T("LeonOS is free software for learning and experimentation.",
-                     "LeonOS 是用于学习和实验的自由软件。"),
+                   T("LeonOS is free software for learning and experimentation."),
                    LEONOS_UI_DARK, LEONOS_UI_LIGHT);
     leonos_ui_statusbar(ui, OSVER_H - 28, 28, status_text);
 }
 
 int main(void)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
@@ -222,12 +224,11 @@ int main(void)
                                  &logo_height);
     if (!logo_pixels) {
         copy_text(status_text, sizeof(status_text),
-                  T("System information (logo unavailable)",
-                    "系统版本信息（Logo 不可用）"));
+                  T("System information (logo unavailable)"));
     }
     ret = leonos_system_info(&info);
     if (ret < 0) {
-        copy_text(status_text, sizeof(status_text), T("Could not read system version information", "无法读取系统版本信息"));
+        copy_text(status_text, sizeof(status_text), T("Could not read system version information"));
         copy_text(info.kernel_name, sizeof(info.kernel_name), "unknown");
         copy_text(info.kernel_version, sizeof(info.kernel_version), "0.0.0-0000");
         copy_text(info.build_time, sizeof(info.build_time), "unknown");
@@ -236,17 +237,17 @@ int main(void)
     }
 
     if (!status_text[0]) {
-        copy_text(status_text, sizeof(status_text), T("System version information", "系统版本信息"));
+        copy_text(status_text, sizeof(status_text), T("System version information"));
     }
     {
         uint32_t debug_flags = 0;
         if (leonos_kernel_debug_get_state(&debug_flags) == 0 &&
             (debug_flags & LEONOS_KERNEL_DEBUG_STATE_ENABLED) != 0U) {
             copy_text(status_text, sizeof(status_text),
-                      T("Kernel debug mode enabled", "内核调试模式已启用"));
+                      T("Kernel debug mode enabled"));
         }
     }
-    window_id = leonos_gui_create_app_window_ex(T("About LeonOS", "关于 LeonOS"), T("System version", "系统版本"),
+    window_id = leonos_gui_create_app_window_ex(T("About LeonOS"), T("System version"),
                                                 OSVER_W, OSVER_H, LEONOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[osver.elf] create window failed=%d\n", window_id);

@@ -1,9 +1,11 @@
 #include "litehtml_core.h"
 
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/stdio.h>
 
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 #define CORE_CSS_RULE_MAX 48U
 #define CORE_CSS_SELECTOR_MAX 32U
 #define CORE_CSS_BLOCK_MAX 2048U
@@ -1879,7 +1881,7 @@ void litehtml_core_render_html(struct litehtml_core_view *view,
     ctx.css_rule_count = 0;
     if (view->page_title && view->page_title_cap && !view->page_title[0]) {
         core_copy_text(view->page_title, view->page_title_cap,
-                       T("Untitled", "无标题"));
+                       T("Untitled Page"));
     }
     while (source && source[i]) {
         if (source[i] == '<') {

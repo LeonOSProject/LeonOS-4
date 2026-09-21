@@ -7,7 +7,6 @@
 #include <leonos/fs.h>
 #include <leonos/gui.h>
 #include <leonos/http.h>
-#include <leonos/i18n.h>
 #include <leonos/inputm.h>
 #include <leonos/net.h>
 #include <leonos/mouse.h>
@@ -1753,63 +1752,4 @@ int leonos_readdir(int fd, struct leonos_dir_entry *entry)
         return 0;
     }
     return got == (long)sizeof(*entry) ? 1 : -1;
-}
-
-static int locale_cached = -1;
-static int locale_lang = LEONOS_LANG_EN;
-
-int leonos_i18n_language(void)
-{
-    char buf[64];
-    int fd;
-    long got;
-    if (locale_cached >= 0) {
-        return locale_lang;
-    }
-    locale_cached = 1;
-    locale_lang = LEONOS_LANG_EN;
-    fd = open(LEONOS_LOCALE_CONFIG_PATH, LEONOS_O_RDONLY, 0);
-    if (fd < 0) {
-        return locale_lang;
-    }
-    got = read(fd, buf, sizeof(buf) - 1);
-    close(fd);
-    if (got <= 0) {
-        return locale_lang;
-    }
-    buf[got] = 0;
-    for (long i = 0; i < got; ++i) {
-        if ((buf[i] == 'l' || buf[i] == 'L') &&
-            i + 6 < got &&
-            buf[i + 1] == 'a' && buf[i + 2] == 'n' && buf[i + 3] == 'g' &&
-            buf[i + 4] == '=' && buf[i + 5] == 'z' && buf[i + 6] == 'h') {
-            locale_lang = LEONOS_LANG_ZH;
-            break;
-        }
-    }
-    return locale_lang;
-}
-
-const char *leonos_i18n(const char *en, const char *zh)
-{
-    return leonos_i18n_language() == LEONOS_LANG_ZH && zh ? zh : en;
-}
-
-int leonos_i18n_set_language(int lang)
-{
-    const char *text = lang == LEONOS_LANG_ZH ? "lang=zh\n" : "lang=en\n";
-    int fd = open(LEONOS_LOCALE_CONFIG_PATH,
-                  LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
-    long wrote;
-    if (fd < 0) {
-        return fd;
-    }
-    wrote = write(fd, text, strlen(text));
-    close(fd);
-    if (wrote < 0) {
-        return (int)wrote;
-    }
-    locale_lang = lang == LEONOS_LANG_ZH ? LEONOS_LANG_ZH : LEONOS_LANG_EN;
-    locale_cached = 1;
-    return 0;
 }

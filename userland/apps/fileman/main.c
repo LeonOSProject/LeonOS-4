@@ -2,13 +2,16 @@
 
 int main(int argc, char **argv, char **envp)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_gui_app_event event;
     int window_id;
     (void)envp;
 
     puts("[fileman.elf] file manager starting");
     printf("[fileman.elf] pid=%d creating GUI window\n", getpid());
-    window_id = leonos_gui_create_app_window_ex(T("File Manager", "文件资源管理器"), T("LeonOS file browser", "LeonOS 文件浏览器"),
+    window_id = leonos_gui_create_app_window_ex(T("File Manager"), T("LeonOS file browser"),
                                                 FILEMAN_W, FILEMAN_H, 0);
     if (window_id <= 0) {
         printf("[fileman.elf] create window failed=%d\n", window_id);

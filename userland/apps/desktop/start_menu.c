@@ -1,5 +1,6 @@
 #include <leonos/pam_session.h>
 #include "desktop.h"
+#include "../localized_doc.h"
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -285,7 +286,7 @@ static void copy_hlp_filename_label(char *dst, uint32_t cap, const char *name)
     }
     dst[out] = 0;
     if (!dst[0]) {
-        copy_text(dst, cap, leonos_i18n("Help", "帮助"));
+        copy_text(dst, cap, T("Help"));
     } else if (dst[0] >= 'a' && dst[0] <= 'z') {
         dst[0] = (char)(dst[0] - 'a' + 'A');
     }
@@ -333,9 +334,6 @@ static void copy_line_value(char *dst, uint32_t cap, const char *line)
 static int read_hlp_menu_title(const char *path, char *dst, uint32_t cap)
 {
     char buf[2049];
-    char fallback[48];
-    const char *wanted = leonos_i18n_language() == LEONOS_LANG_ZH ? "title.zh" : "title.en";
-    const char *other = leonos_i18n_language() == LEONOS_LANG_ZH ? "title.en" : "title.zh";
     int fd = open(path, O_RDONLY);
     long got;
     uint32_t pos = 0;
@@ -348,7 +346,6 @@ static int read_hlp_menu_title(const char *path, char *dst, uint32_t cap)
         return -1;
     }
     buf[(uint32_t)got] = 0;
-    fallback[0] = 0;
     while (pos < (uint32_t)got) {
         char *line = buf + pos;
         while (pos < (uint32_t)got && buf[pos] != '\n' && buf[pos] != '\r') {
@@ -360,21 +357,14 @@ static int read_hlp_menu_title(const char *path, char *dst, uint32_t cap)
         while (pos < (uint32_t)got && (buf[pos] == '\n' || buf[pos] == '\r')) {
             ++pos;
         }
-        if (line_key_matches(line, wanted)) {
+        if (line_key_matches(line, "title")) {
             copy_line_value(dst, cap, line);
             return dst[0] ? 0 : -1;
-        }
-        if (!fallback[0] && line_key_matches(line, other)) {
-            copy_line_value(fallback, sizeof(fallback), line);
         }
         if (line[0] == '%' && line[1] == '%' && line[2] == 'D' &&
             line[3] == 'O' && line[4] == 'C') {
             break;
         }
-    }
-    if (fallback[0]) {
-        copy_text(dst, cap, fallback);
-        return 0;
     }
     return -1;
 }
@@ -423,6 +413,12 @@ static void start_menu_collect_docs(void)
     append_text(start_menu_doc_paths[start_menu_doc_count], &pos,
                 sizeof(start_menu_doc_paths[start_menu_doc_count]),
                 start_menu_doc_entry->d_name);
+    {
+        char localized[sizeof(start_menu_doc_paths[0])];
+        localized_doc_path(localized, sizeof(localized), start_menu_doc_paths[start_menu_doc_count]);
+        copy_text(start_menu_doc_paths[start_menu_doc_count],
+                  sizeof(start_menu_doc_paths[0]), localized);
+    }
     if (read_hlp_menu_title(start_menu_doc_paths[start_menu_doc_count],
                             start_menu_doc_labels[start_menu_doc_count],
                             sizeof(start_menu_doc_labels[start_menu_doc_count])) < 0) {
@@ -772,7 +768,7 @@ static const char *start_menu_shortcut_path(uint32_t index)
 static void start_menu_draw_header(const struct start_panel_layout *panel)
 {
     struct leonos_user_info user = {0};
-    const char *session = leonos_i18n("Desktop session", "桌面会话");
+    const char *session = T("Desktop session");
     uint32_t header_w = panel->w > 2U ? panel->w - 2U : panel->w;
     leonos_ui_rect(&ui, panel->x + 1U, panel->y + 1U, header_w,
                    START_PANEL_HEADER_H, LEONOS_UI_ACTIVE_TITLE);
@@ -793,9 +789,9 @@ static void start_menu_draw_tabs(const struct start_panel_layout *panel,
     uint32_t width = panel->w > START_PANEL_MARGIN * 2U ? panel->w - START_PANEL_MARGIN * 2U : 0U;
     uint32_t tab_w = width / 3U;
     const char *labels[3] = {
-        leonos_i18n("Home", "主页"),
-        leonos_i18n("All apps", "所有应用"),
-        leonos_i18n("Documents", "文档"),
+        T("Home"),
+        T("All apps"),
+        T("Documents"),
     };
     for (uint32_t i = 0; i < 3U; ++i) {
         uint32_t item_w = i == 2U ? width - tab_w * 2U : tab_w;
@@ -815,7 +811,7 @@ static void start_menu_draw_search(const struct start_panel_layout *panel,
     if (!start_menu_query[0]) {
         leonos_ui_text_clipped(&ui, x + 7U, content->search_y + 5U,
                                width > 14U ? width - 14U : 0U,
-                               leonos_i18n("Search apps and documents", "搜索应用和文档"),
+                               T("Search apps and documents"),
                                LEONOS_UI_DARK, LEONOS_UI_WHITE);
     }
 }
@@ -844,7 +840,7 @@ static void start_menu_draw_home(const struct start_panel_layout *panel,
     uint32_t minimized = start_menu_minimized_count();
     uint32_t shown = 0;
     leonos_ui_text(&ui, content_x, content->body_y,
-                   leonos_i18n("Quick access", "快速访问"), LEONOS_UI_DARK, LEONOS_UI_GRAY);
+                   T("Quick access"), LEONOS_UI_DARK, LEONOS_UI_GRAY);
     for (uint32_t index = 0; index < 5U; ++index) {
         uint32_t row = index / START_SHORTCUT_COLUMNS;
         uint32_t col = index % START_SHORTCUT_COLUMNS;
@@ -858,16 +854,16 @@ static void start_menu_draw_home(const struct start_panel_layout *panel,
     }
     leonos_ui_button(&ui, content_x, home.browse_y,
                      content_w > START_SHORTCUT_GAP ? (content_w - START_SHORTCUT_GAP) / 2U : 0U,
-                     START_MENU_ITEM_H, leonos_i18n("All applications", "所有应用"), 0);
+                     START_MENU_ITEM_H, T("All applications"), 0);
     leonos_ui_button(&ui, content_x + (content_w + START_SHORTCUT_GAP) / 2U, home.browse_y,
                      content_w > START_SHORTCUT_GAP ? (content_w - START_SHORTCUT_GAP) / 2U : 0U,
-                     START_MENU_ITEM_H, leonos_i18n("Documents", "文档"), 0);
+                     START_MENU_ITEM_H, T("Documents"), 0);
     if (!home.window_rows) {
         return;
     }
     leonos_ui_text(&ui, content_x, home.windows_title_y,
-                   minimized ? leonos_i18n("Minimized windows", "最小化窗口")
-                             : leonos_i18n("No minimized windows", "没有最小化窗口"),
+                   minimized ? T("Minimized windows")
+                             : T("No minimized windows"),
                    LEONOS_UI_DARK, LEONOS_UI_GRAY);
     for (uint32_t i = 0; i < minimized && shown < home.window_rows; ++i) {
         int id = start_menu_minimized_window(i);
@@ -878,7 +874,7 @@ static void start_menu_draw_home(const struct start_panel_layout *panel,
         draw_app_icon(windows[id].icon_path, (int)content_x + 6, (int)y + 5);
         leonos_ui_menu_item(&ui, content_x + 29U, y,
                             content_w > 35U ? content_w - 35U : 0U,
-                            windows[id].title ? windows[id].title : leonos_i18n("Window", "窗口"), 0);
+                            windows[id].title ? windows[id].title : T("Window"), 0);
         ++shown;
     }
 }
@@ -886,12 +882,12 @@ static void start_menu_draw_home(const struct start_panel_layout *panel,
 static const char *start_menu_list_title(uint8_t view)
 {
     if (view == START_MENU_VIEW_SEARCH) {
-        return leonos_i18n("Search results", "搜索结果");
+        return T("Search results");
     }
     if (view == START_MENU_VIEW_DOCUMENTS) {
-        return leonos_i18n("Documents", "文档");
+        return T("Documents");
     }
-    return leonos_i18n("All applications", "所有应用");
+    return T("All applications");
 }
 
 static void start_menu_clamp_list(uint8_t view, uint32_t rows)
@@ -957,13 +953,13 @@ static void start_menu_draw_results(const struct start_panel_layout *panel,
     leonos_ui_text(&ui, list.x, content->body_y, start_menu_list_title(view),
                    LEONOS_UI_DARK, LEONOS_UI_GRAY);
     if (!count) {
-        const char *empty_text = leonos_i18n("Nothing found", "没有找到内容");
+        const char *empty_text = T("Nothing found");
         if ((view == START_MENU_VIEW_APPS || view == START_MENU_VIEW_SEARCH) &&
             !start_menu_apps_loaded) {
-            empty_text = leonos_i18n("Loading applications...", "正在加载应用程序...");
+            empty_text = T("Loading applications...");
         } else if ((view == START_MENU_VIEW_DOCUMENTS || view == START_MENU_VIEW_SEARCH) &&
                    !start_menu_docs_loaded) {
-            empty_text = leonos_i18n("Loading documents...", "正在加载文档...");
+            empty_text = T("Loading documents...");
         }
         leonos_ui_menu_item(&ui, list.x + 5U, list.y,
                             list.w > 10U ? list.w - 10U : 0U,
@@ -1005,21 +1001,21 @@ static void start_menu_draw_power(const struct start_panel_layout *panel,
     uint32_t x = panel->x + START_PANEL_MARGIN;
     uint32_t width = panel->w > START_PANEL_MARGIN * 2U ? panel->w - START_PANEL_MARGIN * 2U : 0U;
     uint32_t y = content->body_y + START_LIST_TITLE_H;
-    leonos_ui_text(&ui, x, content->body_y, leonos_i18n("Power", "电源"),
+    leonos_ui_text(&ui, x, content->body_y, T("Power"),
                    LEONOS_UI_DARK, LEONOS_UI_GRAY);
     leonos_ui_button(&ui, x, y, width, START_MENU_ITEM_H,
-                     leonos_i18n("Restart", "重启"), 0);
+                     T("Restart"), 0);
     y += START_MENU_ITEM_H + START_PANEL_GAP;
     if (start_menu_kernel_debug_enabled()) {
         leonos_ui_button(&ui, x, y, width, START_MENU_ITEM_H,
-                         leonos_i18n("Restart into kernel debugger", "重启并进入内核调试工具"), 0);
+                         T("Restart into kernel debugger"), 0);
         y += START_MENU_ITEM_H + START_PANEL_GAP;
     }
     leonos_ui_button(&ui, x, y, width, START_MENU_ITEM_H,
-                     leonos_i18n("Shut down", "关机"), 0);
+                     T("Shut down"), 0);
     y += START_MENU_ITEM_H + START_PANEL_GAP;
     leonos_ui_button(&ui, x, y, width, START_MENU_ITEM_H,
-                     leonos_i18n("Back", "返回"), 0);
+                     T("Back"), 0);
 }
 
 static void start_menu_draw_footer(const struct start_panel_layout *panel,
@@ -1031,15 +1027,15 @@ static void start_menu_draw_footer(const struct start_panel_layout *panel,
     uint32_t session_w = width > power_w + START_PANEL_GAP ? width - power_w - START_PANEL_GAP : 0U;
     if (desktop_session_logged_in()) {
         leonos_ui_button(&ui, x, content->footer_y, session_w, START_PANEL_FOOTER_H,
-                         leonos_i18n("Sign out", "注销"), 0);
+                         T("Sign out"), 0);
     } else {
         leonos_ui_button(&ui, x, content->footer_y, session_w, START_PANEL_FOOTER_H,
-                         leonos_i18n("Session", "会话"), LEONOS_UI_BUTTON_DISABLED);
+                         T("Session"), LEONOS_UI_BUTTON_DISABLED);
     }
     leonos_ui_button(&ui, x + session_w + START_PANEL_GAP, content->footer_y,
                      power_w, START_PANEL_FOOTER_H,
-                     start_menu_view == START_MENU_VIEW_POWER ? leonos_i18n("Back", "返回")
-                                                               : leonos_i18n("Power", "电源"),
+                     start_menu_view == START_MENU_VIEW_POWER ? T("Back")
+                                                               : T("Power"),
                      start_menu_view == START_MENU_VIEW_POWER ? LEONOS_UI_BUTTON_ACTIVE : 0);
 }
 
@@ -1407,9 +1403,8 @@ static void start_menu_handle_power_click(uint32_t x, uint32_t y,
                 if (leonos_kernel_debug_arm_next_boot() == 0) {
                     desktop_lifecycle_begin(POWER_CONFIRM_REBOOT);
                 } else {
-                    desktop_show_message(leonos_i18n("Kernel debugger", "内核调试工具"),
-                                         leonos_i18n("Could not arm the next debug boot.",
-                                                     "无法设置下一次调试启动。"));
+                    desktop_show_message(T("Kernel debugger"),
+                                         T("Could not arm the next debug boot."));
                 }
                 return;
             }

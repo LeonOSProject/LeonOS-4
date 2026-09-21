@@ -67,26 +67,26 @@ uint32_t fileman_selected_count(void)
 void fileman_toggle_selected(void)
 {
     if (!selected_entry_valid() || file_list.selected >= 64) {
-        set_status(T("Select an item", "请选择一个项目"));
+        set_status(T("Select an item"));
         return;
     }
     selected_mask ^= 1ULL << (uint32_t)file_list.selected;
     set_status(fileman_entry_marked((uint32_t)file_list.selected)
-                   ? T("Item marked", "已标记项目")
-                   : T("Item unmarked", "已取消标记项目"));
+                   ? T("Item marked")
+                   : T("Item unmarked"));
 }
 
 void fileman_select_all(void)
 {
     selected_mask = entry_count >= 64U ? UINT64_MAX :
                     (entry_count ? (1ULL << entry_count) - 1ULL : 0);
-    set_status(T("All items marked", "已标记所有项目"));
+    set_status(T("All items marked"));
 }
 
 void fileman_clear_selection(void)
 {
     selected_mask = 0;
-    set_status(T("Marks cleared", "已清除标记"));
+    set_status(T("Marks cleared"));
 }
 
 int fileman_is_recycle_dir(void)
@@ -207,15 +207,14 @@ void fileman_apply_settings(void)
 {
     int ret = fileman_settings_save(fileman_settings_show_hidden);
     if (ret < 0) {
-        set_status_error(T("Could not save file manager settings ",
-                           "无法保存文件资源管理器设置 "), ret);
+        set_status_error(T("Could not save file manager settings "), ret);
         return;
     }
     fileman_show_hidden = fileman_settings_show_hidden;
     fileman_settings_open = 0;
     fileman_tree_reset();
     (void)reload_dir();
-    set_status(T("File Manager settings saved", "文件资源管理器设置已保存"));
+    set_status(T("File Manager settings saved"));
 }
 
 void fileman_settings_dialog_rect(struct leonos_ui_rect *out)
@@ -355,7 +354,7 @@ int permission_error(int value)
 void set_status_error(const char *prefix, int value)
 {
     if (permission_error(value)) {
-        set_status(T("Permission denied", "权限被拒绝"));
+        set_status(T("Permission denied"));
     } else {
         set_status_code(prefix, value);
     }
@@ -465,40 +464,40 @@ void build_context_menu_items(struct leonos_ui_context_menu_item *items,
         return;
     }
     items[0] = (struct leonos_ui_context_menu_item){
-        T("Open", "打开"), FILEMAN_ACTION_OPEN, has_item ? 0 : LEONOS_UI_MENU_DISABLED};
+        T("Open"), FILEMAN_ACTION_OPEN, has_item ? 0 : LEONOS_UI_MENU_DISABLED};
     items[1] = (struct leonos_ui_context_menu_item){
-        T("Open With...", "打开方式..."), FILEMAN_ACTION_OPEN_WITH, has_file ? 0 : LEONOS_UI_MENU_DISABLED};
+        T("Open With..."), FILEMAN_ACTION_OPEN_WITH, has_file ? 0 : LEONOS_UI_MENU_DISABLED};
     items[2] = (struct leonos_ui_context_menu_item){
-        T("Copy", "复制"), FILEMAN_ACTION_COPY, has_mutable ? 0 : LEONOS_UI_MENU_DISABLED};
+        T("Copy"), FILEMAN_ACTION_COPY, has_mutable ? 0 : LEONOS_UI_MENU_DISABLED};
     items[3] = (struct leonos_ui_context_menu_item){
-        T("Cut", "剪切"), FILEMAN_ACTION_CUT, has_mutable ? 0 : LEONOS_UI_MENU_DISABLED};
+        T("Cut"), FILEMAN_ACTION_CUT, has_mutable ? 0 : LEONOS_UI_MENU_DISABLED};
     items[4] = (struct leonos_ui_context_menu_item){
-        T("Paste", "粘贴"), FILEMAN_ACTION_PASTE,
+        T("Paste"), FILEMAN_ACTION_PASTE,
         fileman_clipboard_available() ? 0 : LEONOS_UI_MENU_DISABLED};
     items[5] = (struct leonos_ui_context_menu_item){
         fileman_entry_marked((uint32_t)(file_list.selected < 0 ? 0 : file_list.selected))
-            ? T("Unmark", "取消标记") : T("Mark for Batch", "标记为批量操作"),
+            ? T("Unmark") : T("Mark for Batch"),
         FILEMAN_ACTION_TOGGLE_MARK, has_item ? 0 : LEONOS_UI_MENU_DISABLED};
     items[6] = (struct leonos_ui_context_menu_item){"", 0, LEONOS_UI_MENU_SEPARATOR};
     items[7] = (struct leonos_ui_context_menu_item){
-        T("Rename", "重命名"), FILEMAN_ACTION_RENAME,
+        T("Rename"), FILEMAN_ACTION_RENAME,
         has_mutable && fileman_selected_count() <= 1U ? 0 : LEONOS_UI_MENU_DISABLED};
     items[8] = (struct leonos_ui_context_menu_item){
-        T("Move to Recycle Bin", "移到回收站"), FILEMAN_ACTION_RECYCLE,
+        T("Move to Recycle Bin"), FILEMAN_ACTION_RECYCLE,
         has_mutable ? 0 : LEONOS_UI_MENU_DISABLED};
     items[9] = (struct leonos_ui_context_menu_item){
-        T("Delete Permanently", "永久删除"), FILEMAN_ACTION_DELETE_PERMANENT,
+        T("Delete Permanently"), FILEMAN_ACTION_DELETE_PERMANENT,
         has_mutable ? 0 : LEONOS_UI_MENU_DISABLED};
     items[10] = (struct leonos_ui_context_menu_item){
-        T("Details", "详细信息"), FILEMAN_ACTION_DETAILS,
+        T("Details"), FILEMAN_ACTION_DETAILS,
         has_item ? 0 : LEONOS_UI_MENU_DISABLED};
     items[11] = (struct leonos_ui_context_menu_item){
-        T("Refresh", "刷新"), FILEMAN_ACTION_REFRESH, 0};
+        T("Refresh"), FILEMAN_ACTION_REFRESH, 0};
     items[12] = (struct leonos_ui_context_menu_item){"", 0, LEONOS_UI_MENU_SEPARATOR};
     items[13] = (struct leonos_ui_context_menu_item){
         has_file && ends_with(entries[file_list.selected].name, ".tar")
-            ? T("Extract tar", "解压tar")
-            : T("Compress to .tar", "压缩为tar"),
+            ? T("Extract tar")
+            : T("Compress to .tar"),
         has_file && ends_with(entries[file_list.selected].name, ".tar")
             ? FILEMAN_ACTION_EXTRACT_TAR
             : FILEMAN_ACTION_COMPRESS_TAR,
@@ -513,21 +512,21 @@ void build_file_menu_items(struct leonos_ui_context_menu_item *items, uint32_t c
     if (!items || count < FILEMAN_FILE_MENU_COUNT) {
         return;
     }
-    items[0] = (struct leonos_ui_context_menu_item){T("Open", "打开"), FILEMAN_ACTION_OPEN,
+    items[0] = (struct leonos_ui_context_menu_item){T("Open"), FILEMAN_ACTION_OPEN,
                                                      has_item ? 0 : LEONOS_UI_MENU_DISABLED};
-    items[1] = (struct leonos_ui_context_menu_item){T("Open With...", "打开方式..."), FILEMAN_ACTION_OPEN_WITH,
+    items[1] = (struct leonos_ui_context_menu_item){T("Open With..."), FILEMAN_ACTION_OPEN_WITH,
                                                      has_file ? 0 : LEONOS_UI_MENU_DISABLED};
-    items[2] = (struct leonos_ui_context_menu_item){T("Default Program...", "默认程序..."), FILEMAN_ACTION_DEFAULT_PROGRAM,
+    items[2] = (struct leonos_ui_context_menu_item){T("Default Program..."), FILEMAN_ACTION_DEFAULT_PROGRAM,
                                                      has_file ? 0 : LEONOS_UI_MENU_DISABLED};
-    items[3] = (struct leonos_ui_context_menu_item){T("Create Shortcut", "创建快捷方式"), FILEMAN_ACTION_CREATE_SHORTCUT,
+    items[3] = (struct leonos_ui_context_menu_item){T("Create Shortcut"), FILEMAN_ACTION_CREATE_SHORTCUT,
                                                      has_file ? 0 : LEONOS_UI_MENU_DISABLED};
-    items[4] = (struct leonos_ui_context_menu_item){T("Details", "详细信息"), FILEMAN_ACTION_DETAILS,
+    items[4] = (struct leonos_ui_context_menu_item){T("Details"), FILEMAN_ACTION_DETAILS,
                                                      has_item ? 0 : LEONOS_UI_MENU_DISABLED};
     items[5] = (struct leonos_ui_context_menu_item){"", 0, LEONOS_UI_MENU_SEPARATOR};
-    items[6] = (struct leonos_ui_context_menu_item){T("Rename", "重命名"), FILEMAN_ACTION_RENAME,
+    items[6] = (struct leonos_ui_context_menu_item){T("Rename"), FILEMAN_ACTION_RENAME,
                                                      has_mutable && fileman_selected_count() <= 1U ? 0 : LEONOS_UI_MENU_DISABLED};
-    items[7] = (struct leonos_ui_context_menu_item){T("New Folder", "新建文件夹"), FILEMAN_ACTION_NEW_FOLDER, 0};
-    items[8] = (struct leonos_ui_context_menu_item){T("Refresh", "刷新"), FILEMAN_ACTION_REFRESH, 0};
+    items[7] = (struct leonos_ui_context_menu_item){T("New Folder"), FILEMAN_ACTION_NEW_FOLDER, 0};
+    items[8] = (struct leonos_ui_context_menu_item){T("Refresh"), FILEMAN_ACTION_REFRESH, 0};
 }
 
 void build_edit_menu_items(struct leonos_ui_context_menu_item *items, uint32_t count)
@@ -536,20 +535,20 @@ void build_edit_menu_items(struct leonos_ui_context_menu_item *items, uint32_t c
     if (!items || count < FILEMAN_EDIT_MENU_COUNT) {
         return;
     }
-    items[0] = (struct leonos_ui_context_menu_item){T("Copy", "复制"), FILEMAN_ACTION_COPY,
+    items[0] = (struct leonos_ui_context_menu_item){T("Copy"), FILEMAN_ACTION_COPY,
                                                      has_mutable ? 0 : LEONOS_UI_MENU_DISABLED};
-    items[1] = (struct leonos_ui_context_menu_item){T("Cut", "剪切"), FILEMAN_ACTION_CUT,
+    items[1] = (struct leonos_ui_context_menu_item){T("Cut"), FILEMAN_ACTION_CUT,
                                                      has_mutable ? 0 : LEONOS_UI_MENU_DISABLED};
-    items[2] = (struct leonos_ui_context_menu_item){T("Paste", "粘贴"), FILEMAN_ACTION_PASTE,
+    items[2] = (struct leonos_ui_context_menu_item){T("Paste"), FILEMAN_ACTION_PASTE,
                                                      fileman_clipboard_available() ? 0 : LEONOS_UI_MENU_DISABLED};
     items[3] = (struct leonos_ui_context_menu_item){"", 0, LEONOS_UI_MENU_SEPARATOR};
     items[4] = (struct leonos_ui_context_menu_item){
         fileman_entry_marked((uint32_t)(file_list.selected < 0 ? 0 : file_list.selected))
-            ? T("Unmark", "取消标记") : T("Mark for Batch", "标记为批量操作"),
+            ? T("Unmark") : T("Mark for Batch"),
         FILEMAN_ACTION_TOGGLE_MARK, selected_entry_valid() ? 0 : LEONOS_UI_MENU_DISABLED};
-    items[5] = (struct leonos_ui_context_menu_item){T("Mark All", "标记全部"), FILEMAN_ACTION_SELECT_ALL,
+    items[5] = (struct leonos_ui_context_menu_item){T("Mark All"), FILEMAN_ACTION_SELECT_ALL,
                                                      entry_count ? 0 : LEONOS_UI_MENU_DISABLED};
-    items[6] = (struct leonos_ui_context_menu_item){T("Clear Marks", "清除标记"), FILEMAN_ACTION_CLEAR_SELECTION,
+    items[6] = (struct leonos_ui_context_menu_item){T("Clear Marks"), FILEMAN_ACTION_CLEAR_SELECTION,
                                                      fileman_selected_count() ? 0 : LEONOS_UI_MENU_DISABLED};
 }
 
@@ -561,13 +560,13 @@ void build_recycle_menu_items(struct leonos_ui_context_menu_item *items, uint32_
     if (!items || count < FILEMAN_RECYCLE_MENU_COUNT) {
         return;
     }
-    items[0] = (struct leonos_ui_context_menu_item){T("Move to Recycle Bin", "移到回收站"), FILEMAN_ACTION_RECYCLE,
+    items[0] = (struct leonos_ui_context_menu_item){T("Move to Recycle Bin"), FILEMAN_ACTION_RECYCLE,
                                                      !recycle && has_mutable ? 0 : LEONOS_UI_MENU_DISABLED};
-    items[1] = (struct leonos_ui_context_menu_item){T("Restore", "还原"), FILEMAN_ACTION_RESTORE,
+    items[1] = (struct leonos_ui_context_menu_item){T("Restore"), FILEMAN_ACTION_RESTORE,
                                                      recycle && has_item ? 0 : LEONOS_UI_MENU_DISABLED};
-    items[2] = (struct leonos_ui_context_menu_item){T("Delete Permanently", "永久删除"), FILEMAN_ACTION_DELETE_PERMANENT,
+    items[2] = (struct leonos_ui_context_menu_item){T("Delete Permanently"), FILEMAN_ACTION_DELETE_PERMANENT,
                                                      has_mutable ? 0 : LEONOS_UI_MENU_DISABLED};
-    items[3] = (struct leonos_ui_context_menu_item){T("Empty Recycle Bin", "清空回收站"), FILEMAN_ACTION_EMPTY_RECYCLE,
+    items[3] = (struct leonos_ui_context_menu_item){T("Empty Recycle Bin"), FILEMAN_ACTION_EMPTY_RECYCLE,
                                                      recycle && entry_count ? 0 : LEONOS_UI_MENU_DISABLED};
 }
 
@@ -576,11 +575,11 @@ void format_contains_text(char *buf, uint32_t cap, const struct folder_size_info
     uint32_t pos = 0;
     buf[0] = 0;
     append_dec(buf, &pos, cap, info ? info->files : 0);
-    append_text(buf, &pos, cap, T(" files, ", " 个文件, "));
+    append_text(buf, &pos, cap, T(" files, "));
     append_dec(buf, &pos, cap, info ? info->folders : 0);
-    append_text(buf, &pos, cap, T(" folders", " 个文件夹"));
+    append_text(buf, &pos, cap, T(" folders"));
     if (info && info->partial) {
-        append_text(buf, &pos, cap, T(" (partial)", " (部分)"));
+        append_text(buf, &pos, cap, T(" (partial)"));
     }
 }
 
@@ -643,9 +642,9 @@ static void draw_permissions_page(struct leonos_ui_surface *ui,
     snprintf(text, sizeof(text), "UID: %lu    GID: %lu",
              (unsigned long)st->st_uid, (unsigned long)st->st_gid);
     leonos_ui_text(ui, 24, 54, text, LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    snprintf(text, sizeof(text), "%s %03o", T("Mode:", "权限:"), (unsigned)(st->st_mode & 07777));
+    snprintf(text, sizeof(text), "%s %03o", T("Permissions:"), (unsigned)(st->st_mode & 07777));
     leonos_ui_text(ui, 24, 80, text, LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    const char *labels[] = {T("Owner", "所有者"), T("Group", "所属组"), T("Other", "其他用户")};
+    const char *labels[] = {T("Owner"), T("Group"), T("Other Users")};
     const char *bits[] = {"R", "W", "X"};
     for (unsigned col = 0; col < 3; ++col)
         leonos_ui_text(ui, 184 + col * 48, 110, bits[col], LEONOS_UI_BLACK, LEONOS_UI_GRAY);
@@ -658,11 +657,11 @@ static void draw_permissions_page(struct leonos_ui_surface *ui,
     leonos_ui_text_clipped(ui, 24, 258, FILEMAN_DETAILS_W - 48, message ? message : "",
                            LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_button(ui, 24, FILEMAN_DETAILS_H - 38, 144, LEONOS_UI_BUTTON_H,
-                     T("Owner / Group", "所有者 / 组"), 0);
+                     T("Owner / Group"), 0);
     leonos_ui_button(ui, 180, FILEMAN_DETAILS_H - 38, 88, LEONOS_UI_BUTTON_H,
-                     T("Mode", "权限数值"), 0);
+                     T("Mode Value"), 0);
     leonos_ui_button(ui, 368, FILEMAN_DETAILS_H - 38, 82, LEONOS_UI_BUTTON_H,
-                     T("Save", "保存"), 0);
+                     T("Save"), 0);
 }
 
 static int permissions_hit(struct stat *st, int32_t x, int32_t y)
@@ -692,7 +691,7 @@ void show_details_selected(void)
     int acl_loaded;
     int window_id;
     if (!selected_entry_valid()) {
-        set_status(T("Select an item", "请选择一个项目"));
+        set_status(T("Select an item"));
         return;
     }
     build_child_path(path, sizeof(path), entries[file_list.selected].name);
@@ -713,10 +712,10 @@ void show_details_selected(void)
     acl_loaded = stat(path, &permissions);
     if (acl_loaded < 0) {
         set_status_error("Permission load failed ", errno);
-        copy_text(acl_message, sizeof(acl_message), T("Could not load permissions", "无法加载权限"));
+        copy_text(acl_message, sizeof(acl_message), T("Could not load permissions"));
     }
 
-    window_id = leonos_gui_create_app_window_ex(T("Properties", "属性"), path,
+    window_id = leonos_gui_create_app_window_ex(T("Properties"), path,
                                                 FILEMAN_DETAILS_W, FILEMAN_DETAILS_H,
                                                 LEONOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
@@ -728,17 +727,17 @@ void show_details_selected(void)
     leonos_ui_tab_state_init(&details_tabs, active_tab);
     for (;;) {
         struct leonos_ui_tab_item tabs[] = {
-            {T("General", "常规"), 0, 0},
-            {T("Security", "安全"), 1, 0},
+            {T("General"), 0, 0},
+            {T("Security"), 1, 0},
         };
         struct leonos_ui_property_item props[5];
         uint32_t prop_count = 4;
-        props[0] = (struct leonos_ui_property_item){T("Name:", "名称:"), entries[file_list.selected].name, 0};
-        props[1] = (struct leonos_ui_property_item){T("Type:", "类型:"), entry_type_name(&entries[file_list.selected]), 0};
-        props[2] = (struct leonos_ui_property_item){T("Path:", "路径:"), path, 0};
-        props[3] = (struct leonos_ui_property_item){T("Size:", "大小:"), size_line, 0};
+        props[0] = (struct leonos_ui_property_item){T("Name:"), entries[file_list.selected].name, 0};
+        props[1] = (struct leonos_ui_property_item){T("Type:"), entry_type_name(&entries[file_list.selected]), 0};
+        props[2] = (struct leonos_ui_property_item){T("Path:"), path, 0};
+        props[3] = (struct leonos_ui_property_item){T("Size:"), size_line, 0};
         if (st.type == LEONOS_FS_TYPE_DIR) {
-            props[prop_count++] = (struct leonos_ui_property_item){T("Contains:", "包含:"), contains_line, 0};
+            props[prop_count++] = (struct leonos_ui_property_item){T("Contains:"), contains_line, 0};
         }
         leonos_ui_rect(&ui, 0, 0, FILEMAN_DETAILS_W, FILEMAN_DETAILS_H, LEONOS_UI_GRAY);
         details_tabs.selected_id = active_tab;
@@ -751,13 +750,12 @@ void show_details_selected(void)
         } else if (acl_loaded == 0) {
             draw_permissions_page(&ui, &permissions, acl_message);
         } else {
-            leonos_ui_text(&ui, 28, 56, T("Permission information is unavailable.",
-                                          "权限信息不可用。"),
+            leonos_ui_text(&ui, 28, 56, T("Permission information is unavailable."),
                            LEONOS_UI_BLACK, LEONOS_UI_GRAY);
             leonos_ui_text_clipped(&ui, 28, 84, FILEMAN_DETAILS_W - 56,
                                    acl_message, LEONOS_UI_BLACK, LEONOS_UI_GRAY);
             leonos_ui_button(&ui, 152, FILEMAN_DETAILS_H - 38, 88, LEONOS_UI_BUTTON_H,
-                             T("Reload", "重新读取"), 0);
+                             T("Reload"), 0);
         }
         leonos_ui_button(&ui, FILEMAN_DETAILS_W - 90, FILEMAN_DETAILS_H - 38,
                          72, LEONOS_UI_BUTTON_H, "OK", 0);
@@ -788,7 +786,7 @@ void show_details_selected(void)
                 if (active_tab == 1) {
                     if (acl_loaded == 0 && permissions_hit(&permissions, event.x, event.y)) {
                         copy_text(acl_message, sizeof(acl_message),
-                                  T("Unsaved changes", "有未保存的更改"));
+                                  T("Unsaved changes"));
                         continue;
                     }
                     if (acl_loaded == 0 && hit_rect_i(event.x, event.y, 24, FILEMAN_DETAILS_H - 38,
@@ -796,7 +794,7 @@ void show_details_selected(void)
                         char value[48], *end;
                         snprintf(value, sizeof(value), "%lu:%lu", (unsigned long)permissions.st_uid,
                                  (unsigned long)permissions.st_gid);
-                        if (leonos_ui_show_input_dialog(T("Ownership", "所有权"), "UID:GID", value, sizeof(value))) {
+                        if (leonos_ui_show_input_dialog(T("Ownership"), "UID:GID", value, sizeof(value))) {
                             errno = 0;
                             unsigned long uid = strtoul(value, &end, 10);
                             if (end != value && *end == ':' && uid < UINT32_MAX && !errno) {
@@ -805,11 +803,11 @@ void show_details_selected(void)
                                 if (end != group && !*end && gid < UINT32_MAX && !errno) {
                                     permissions.st_uid = (uid_t)uid;
                                     permissions.st_gid = (gid_t)gid;
-                                    copy_text(acl_message, sizeof(acl_message), T("Unsaved changes", "有未保存的更改"));
+                                    copy_text(acl_message, sizeof(acl_message), T("Unsaved changes"));
                                     continue;
                                 }
                             }
-                            copy_text(acl_message, sizeof(acl_message), T("Invalid UID or GID", "UID 或 GID 无效"));
+                            copy_text(acl_message, sizeof(acl_message), T("Invalid UID or GID"));
                         }
                         continue;
                     }
@@ -817,13 +815,13 @@ void show_details_selected(void)
                                    88, (int32_t)LEONOS_UI_BUTTON_H)) {
                         char value[16], *end;
                         snprintf(value, sizeof(value), "%03o", (unsigned)(permissions.st_mode & 07777));
-                        if (leonos_ui_show_input_dialog(T("Permissions", "权限"), T("Mode", "权限数值"), value, sizeof(value))) {
+                        if (leonos_ui_show_input_dialog(T("Permissions"), T("Mode Value"), value, sizeof(value))) {
                             errno = 0;
                             unsigned long mode = strtoul(value, &end, 8);
                             if (end != value && !*end && mode <= 07777 && !errno) {
                                 permissions.st_mode = (permissions.st_mode & ~07777) | (mode_t)mode;
-                                copy_text(acl_message, sizeof(acl_message), T("Unsaved changes", "有未保存的更改"));
-                            } else copy_text(acl_message, sizeof(acl_message), T("Invalid mode", "权限数值无效"));
+                                copy_text(acl_message, sizeof(acl_message), T("Unsaved changes"));
+                            } else copy_text(acl_message, sizeof(acl_message), T("Invalid mode"));
                         }
                         continue;
                     }
@@ -843,8 +841,8 @@ void show_details_selected(void)
                         int error = errno;
                         acl_loaded = stat(path, &permissions);
                         if (!ret && acl_loaded < 0) error = errno;
-                        if (!ret && !acl_loaded) copy_text(acl_message, sizeof(acl_message), T("Permissions saved", "权限已保存"));
-                        else snprintf(acl_message, sizeof(acl_message), "%s: %s", T("Save failed", "保存失败"), strerror(error));
+                        if (!ret && !acl_loaded) copy_text(acl_message, sizeof(acl_message), T("Permissions saved"));
+                        else snprintf(acl_message, sizeof(acl_message), "%s: %s", T("Save failed"), strerror(error));
                         continue;
                     }
                 }
@@ -868,7 +866,7 @@ void show_open_with_for_path(const char *path, uint8_t set_default_only)
     extension[0] = 0;
     menu_open = FILEMAN_MENU_NONE;
     context_menu_set_active(0);
-    ret = leonos_ui_show_open_with_dialog(set_default_only ? T("Default Program", "默认程序") : T("Open With", "打开方式"),
+    ret = leonos_ui_show_open_with_dialog(set_default_only ? T("Default Program") : T("Open With"),
                                           path, program, sizeof(program),
                                           &remember, flags);
     if (ret < 0) {
@@ -876,7 +874,7 @@ void show_open_with_for_path(const char *path, uint8_t set_default_only)
         return;
     }
     if (ret == 0) {
-        set_status(T("Open With canceled", "已取消打开方式"));
+        set_status(T("Open With canceled"));
         return;
     }
     if (set_default_only || remember) {
@@ -924,11 +922,11 @@ void show_open_with_selected(void)
 {
     char path[LEONOS_FS_PATH_LEN];
     if (file_list.selected < 0 || (uint32_t)file_list.selected >= entry_count) {
-        set_status(T("Select a file", "请选择一个文件"));
+        set_status(T("Select a file"));
         return;
     }
     if (entries[file_list.selected].type != LEONOS_FS_TYPE_FILE) {
-        set_status(T("Open With is for files", "打开方式仅用于文件"));
+        set_status(T("Open With is for files"));
         return;
     }
     build_child_path(path, sizeof(path), entries[file_list.selected].name);
@@ -939,11 +937,11 @@ void show_default_program_for_selected(void)
 {
     char path[LEONOS_FS_PATH_LEN];
     if (file_list.selected < 0 || (uint32_t)file_list.selected >= entry_count) {
-        set_status(T("Select a file", "请选择一个文件"));
+        set_status(T("Select a file"));
         return;
     }
     if (entries[file_list.selected].type != LEONOS_FS_TYPE_FILE) {
-        set_status(T("Default program is for files", "默认程序仅用于文件"));
+        set_status(T("Default program is for files"));
         return;
     }
     build_child_path(path, sizeof(path), entries[file_list.selected].name);
@@ -1049,7 +1047,7 @@ int reload_dir(void)
                                   &count) == 0) {
             /* The administrator verified; the broker enumerated the directory
              * because this process cannot. */
-            present_directory(count, T("Elevated - items ", "已提权 - 项目 "),
+            present_directory(count, T("Elevated - items "),
                               " in ");
             return 0;
         }
@@ -1083,7 +1081,7 @@ int reload_dir(void)
         ++count;
     }
     close(fd);
-    present_directory(count, T("Items ", "项目 "), " in ");
+    present_directory(count, T("Items "), " in ");
     return 0;
 }
 

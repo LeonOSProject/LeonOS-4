@@ -1,6 +1,9 @@
 #include <leonos/fs.h>
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include "../localized_doc.h"
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
@@ -40,13 +43,7 @@
 #define OSHLP_KEY_UP 72U
 #define OSHLP_KEY_DOWN 80U
 
-#define T(en, zh) leonos_i18n((en), (zh))
-
-enum oshlp_lang {
-    OSHLP_LANG_EN = 0,
-    OSHLP_LANG_ZH = 1,
-    OSHLP_LANG_COUNT = 2,
-};
+#define T(s) gettext(s)
 
 enum oshlp_line_kind {
     OSHLP_LINE_NORMAL = 0,
@@ -73,11 +70,11 @@ struct hlp_body {
 
 struct hlp_doc {
     char id[OSHLP_DOC_ID_MAX];
-    char path[OSHLP_LANG_COUNT][OSHLP_PATH_MAX];
-    char title[OSHLP_LANG_COUNT][OSHLP_TITLE_MAX];
+    char path[OSHLP_PATH_MAX];
+    char title[OSHLP_TITLE_MAX];
     char author[OSHLP_META_MAX];
     char version[32];
-    struct hlp_body body[OSHLP_LANG_COUNT];
+    struct hlp_body body;
 };
 
 struct tree_node {
@@ -105,14 +102,12 @@ static uint32_t view_h = OSHLP_INITIAL_H;
 static char source[OSHLP_SOURCE_MAX + 1U];
 static uint32_t source_len;
 static char hlp_path[LEONOS_FS_PATH_LEN];
-static char file_title[OSHLP_LANG_COUNT][OSHLP_TITLE_MAX];
+static char file_title[OSHLP_TITLE_MAX];
 static char file_author[OSHLP_META_MAX];
 static char file_version[32];
 static struct hlp_doc docs[OSHLP_DOC_MAX];
 static uint32_t doc_count;
 static uint32_t active_doc;
-static uint8_t current_lang;
-static uint8_t lang_dropdown_open;
 static char status_text[160];
 static struct tree_node tree_nodes[OSHLP_TREE_MAX];
 static struct leonos_ui_tree_item tree_items[OSHLP_TREE_MAX];
@@ -212,56 +207,16 @@ static void set_status(const char *text)
     copy_text(status_text, sizeof(status_text), text ? text : "");
 }
 
-static uint32_t lang_index(void)
-{
-    return current_lang == OSHLP_LANG_ZH ? OSHLP_LANG_ZH : OSHLP_LANG_EN;
-}
-
-static const char *localized_pair(char pair[OSHLP_LANG_COUNT][OSHLP_TITLE_MAX])
-{
-    uint32_t lang = lang_index();
-    uint32_t other = lang == OSHLP_LANG_ZH ? OSHLP_LANG_EN : OSHLP_LANG_ZH;
-    if (pair[lang][0]) {
-        return pair[lang];
-    }
-    if (pair[other][0]) {
-        return pair[other];
-    }
-    return "";
-}
-
 static const char *doc_title(const struct hlp_doc *doc)
 {
-    if (!doc) {
-        return T("Document", "文档");
-    }
-    {
-        uint32_t lang = lang_index();
-        uint32_t other = lang == OSHLP_LANG_ZH ? OSHLP_LANG_EN : OSHLP_LANG_ZH;
-        if (doc->title[lang][0]) {
-            return doc->title[lang];
-        }
-        if (doc->title[other][0]) {
-            return doc->title[other];
-        }
-    }
-    return doc->id[0] ? doc->id : T("Document", "文档");
+    if (!doc) return T("Document");
+    return doc->title[0] ? doc->title : (doc->id[0] ? doc->id : T("Document"));
 }
 
 static const char *doc_path_label(const struct hlp_doc *doc)
 {
-    uint32_t lang = lang_index();
-    uint32_t other = lang == OSHLP_LANG_ZH ? OSHLP_LANG_EN : OSHLP_LANG_ZH;
-    if (!doc) {
-        return "";
-    }
-    if (doc->path[lang][0]) {
-        return doc->path[lang];
-    }
-    if (doc->path[other][0]) {
-        return doc->path[other];
-    }
-    return doc_title(doc);
+    if (!doc) return "";
+    return doc->path[0] ? doc->path : doc_title(doc);
 }
 
 static int slice_starts_with(uint32_t start, uint32_t len, const char *prefix)
@@ -343,20 +298,6 @@ static int valid_doc_id_slice(uint32_t start, uint32_t len)
     return 1;
 }
 
-static int parse_lang_slice(uint32_t start, uint32_t len, uint32_t *out_lang)
-{
-    trim_slice(&start, &len);
-    if (len == 2 && source[start] == 'e' && source[start + 1U] == 'n') {
-        *out_lang = OSHLP_LANG_EN;
-        return 1;
-    }
-    if (len == 2 && source[start] == 'z' && source[start + 1U] == 'h') {
-        *out_lang = OSHLP_LANG_ZH;
-        return 1;
-    }
-    return 0;
-}
-
 static void parse_meta_line(uint32_t start, uint32_t len, int32_t current_doc)
 {
     uint32_t colon = start;
@@ -375,17 +316,11 @@ static void parse_meta_line(uint32_t start, uint32_t len, int32_t current_doc)
     value_len = start + len - value_start;
     if (current_doc >= 0) {
         struct hlp_doc *doc = &docs[(uint32_t)current_doc];
-        if (key_eq(key_start, key_len, "title.en")) {
-            copy_source_slice(doc->title[OSHLP_LANG_EN], sizeof(doc->title[0]),
+        if (key_eq(key_start, key_len, "title")) {
+            copy_source_slice(doc->title, sizeof(doc->title),
                               value_start, value_len);
-        } else if (key_eq(key_start, key_len, "title.zh")) {
-            copy_source_slice(doc->title[OSHLP_LANG_ZH], sizeof(doc->title[0]),
-                              value_start, value_len);
-        } else if (key_eq(key_start, key_len, "path.en")) {
-            copy_source_slice(doc->path[OSHLP_LANG_EN], sizeof(doc->path[0]),
-                              value_start, value_len);
-        } else if (key_eq(key_start, key_len, "path.zh")) {
-            copy_source_slice(doc->path[OSHLP_LANG_ZH], sizeof(doc->path[0]),
+        } else if (key_eq(key_start, key_len, "path")) {
+            copy_source_slice(doc->path, sizeof(doc->path),
                               value_start, value_len);
         } else if (key_eq(key_start, key_len, "author")) {
             copy_source_slice(doc->author, sizeof(doc->author), value_start, value_len);
@@ -394,11 +329,8 @@ static void parse_meta_line(uint32_t start, uint32_t len, int32_t current_doc)
         }
         return;
     }
-    if (key_eq(key_start, key_len, "title.en")) {
-        copy_source_slice(file_title[OSHLP_LANG_EN], sizeof(file_title[0]),
-                          value_start, value_len);
-    } else if (key_eq(key_start, key_len, "title.zh")) {
-        copy_source_slice(file_title[OSHLP_LANG_ZH], sizeof(file_title[0]),
+    if (key_eq(key_start, key_len, "title")) {
+        copy_source_slice(file_title, sizeof(file_title),
                           value_start, value_len);
     } else if (key_eq(key_start, key_len, "author")) {
         copy_source_slice(file_author, sizeof(file_author), value_start, value_len);
@@ -407,14 +339,14 @@ static void parse_meta_line(uint32_t start, uint32_t len, int32_t current_doc)
     }
 }
 
-static void close_body(int32_t current_doc, int32_t current_lang,
+static void close_body(int32_t current_doc, int32_t in_body,
                        uint32_t marker_start)
 {
-    if (current_doc < 0 || current_lang < 0) {
+    if (current_doc < 0 || !in_body) {
         return;
     }
     {
-        struct hlp_body *body = &docs[(uint32_t)current_doc].body[(uint32_t)current_lang];
+        struct hlp_body *body = &docs[(uint32_t)current_doc].body;
         if (body->start <= marker_start) {
             body->len = marker_start - body->start;
             while (body->len && is_space_char(source[body->start + body->len - 1U])) {
@@ -428,7 +360,7 @@ static int parse_hlp(void)
 {
     uint32_t pos = 0;
     int32_t current_doc = -1;
-    int32_t current_lang = -1;
+    int32_t in_body = 0;
     memset(docs, 0, sizeof(docs));
     memset(file_title, 0, sizeof(file_title));
     file_author[0] = 0;
@@ -440,8 +372,8 @@ static int parse_hlp(void)
         uint32_t next_pos;
         next_line(pos, &line_start, &line_len, &next_pos);
         if (slice_starts_with(line_start, line_len, "%%")) {
-            close_body(current_doc, current_lang, line_start);
-            current_lang = -1;
+            close_body(current_doc, in_body, line_start);
+            in_body = 0;
             if (slice_starts_with(line_start, line_len, "%%HLP")) {
                 current_doc = -1;
             } else if (slice_starts_with(line_start, line_len, "%%DOC")) {
@@ -454,28 +386,23 @@ static int parse_hlp(void)
                 copy_source_slice(docs[doc_count].id, sizeof(docs[doc_count].id),
                                   id_start, id_len);
                 ++doc_count;
-            } else if (slice_starts_with(line_start, line_len, "%%LANG")) {
-                uint32_t lang_start = line_start + 7U;
-                uint32_t lang_len = line_len > 7U ? line_len - 7U : 0;
-                uint32_t lang = 0;
-                if (current_doc < 0 || !parse_lang_slice(lang_start, lang_len, &lang)) {
-                    return -1;
-                }
-                current_lang = (int32_t)lang;
-                docs[(uint32_t)current_doc].body[lang].start = next_pos;
-                docs[(uint32_t)current_doc].body[lang].len = 0;
+            } else if (slice_starts_with(line_start, line_len, "%%BODY")) {
+                if (current_doc < 0) return -1;
+                in_body = 1;
+                docs[(uint32_t)current_doc].body.start = next_pos;
+                docs[(uint32_t)current_doc].body.len = 0;
             } else if (slice_starts_with(line_start, line_len, "%%ENDDOC")) {
                 current_doc = -1;
             }
-        } else if (current_lang < 0) {
+        } else if (!in_body) {
             parse_meta_line(line_start, line_len, current_doc);
         }
         pos = next_pos;
     }
-    close_body(current_doc, current_lang, source_len);
+    close_body(current_doc, in_body, source_len);
     for (uint32_t i = 0; i < doc_count; ++i) {
-        if (!docs[i].title[OSHLP_LANG_EN][0] && !docs[i].title[OSHLP_LANG_ZH][0]) {
-            copy_text(docs[i].title[OSHLP_LANG_EN], sizeof(docs[i].title[0]), docs[i].id);
+        if (!docs[i].title[0]) {
+            copy_text(docs[i].title, sizeof(docs[i].title), docs[i].id);
         }
     }
     return doc_count ? 0 : -1;
@@ -1028,8 +955,8 @@ static void render_markdown_body(uint32_t start, uint32_t len)
 static void render_error_page(const char *title, const char *detail)
 {
     render_count = 0;
-    render_add_line(OSHLP_LINE_H1, 0, title ? title : T("Help error", "帮助错误"));
-    render_add_line(OSHLP_LINE_NORMAL, 0, detail ? detail : T("Could not open help file.", "无法打开帮助文件。"));
+    render_add_line(OSHLP_LINE_H1, 0, title ? title : T("Help error"));
+    render_add_line(OSHLP_LINE_NORMAL, 0, detail ? detail : T("Could not open help file."));
     scroll_y = 0;
     scroll_x = 0;
 }
@@ -1037,8 +964,6 @@ static void render_error_page(const char *title, const char *detail)
 static void render_current_doc(void)
 {
     struct hlp_doc *doc;
-    uint32_t lang;
-    uint32_t other;
     struct hlp_body *body;
     char meta[192];
     uint32_t pos = 0;
@@ -1046,25 +971,23 @@ static void render_current_doc(void)
     scroll_y = 0;
     scroll_x = 0;
     if (!doc_count || active_doc >= doc_count) {
-        render_error_page(T("No document", "没有文档"), T("This help file has no pages.", "此帮助文件没有页面。"));
+        render_error_page(T("No document"), T("This help file has no pages."));
         return;
     }
     doc = &docs[active_doc];
-    lang = lang_index();
-    other = lang == OSHLP_LANG_ZH ? OSHLP_LANG_EN : OSHLP_LANG_ZH;
-    body = doc->body[lang].len ? &doc->body[lang] : &doc->body[other];
+    body = &doc->body;
     render_add_line(OSHLP_LINE_H1, 0, doc_title(doc));
     if (doc->author[0] || doc->version[0]) {
         meta[0] = 0;
         if (doc->author[0]) {
-            append_text(meta, &pos, sizeof(meta), lang == OSHLP_LANG_ZH ? "作者: " : "Author: ");
+            append_text(meta, &pos, sizeof(meta), T("Author: "));
             append_text(meta, &pos, sizeof(meta), doc->author);
         }
         if (doc->version[0]) {
             if (pos) {
                 append_text(meta, &pos, sizeof(meta), "  ");
             }
-            append_text(meta, &pos, sizeof(meta), lang == OSHLP_LANG_ZH ? "版本: " : "Version: ");
+            append_text(meta, &pos, sizeof(meta), T("Version: "));
             append_text(meta, &pos, sizeof(meta), doc->version);
         }
         render_add_line(OSHLP_LINE_MUTED, 0, meta);
@@ -1072,7 +995,7 @@ static void render_current_doc(void)
     render_add_line(OSHLP_LINE_NORMAL, 0, "");
     if (!body->len) {
         render_add_line(OSHLP_LINE_NORMAL, 0,
-                        lang == OSHLP_LANG_ZH ? "当前语言没有正文内容。" : "No body is available for this language.");
+                        T("This document has no body."));
     } else {
         render_markdown_body(body->start, body->len);
     }
@@ -1278,18 +1201,18 @@ static uint32_t find_doc_by_id(const char *id)
 static int load_help_file(const char *path, const char *doc_id)
 {
     int ret;
-    copy_text(hlp_path, sizeof(hlp_path), path && path[0] ? path : OSHLP_DEFAULT_PATH);
+    localized_doc_path(hlp_path, sizeof(hlp_path), path && path[0] ? path : OSHLP_DEFAULT_PATH);
     ret = read_hlp_file(hlp_path);
     if (ret < 0) {
-        render_error_page(T("Could not open help", "无法打开帮助"),
-                          T("The .hlp file could not be read.", "无法读取 .hlp 文件。"));
-        set_status(T("Open failed", "打开失败"));
+        render_error_page(T("Could not open help"),
+                          T("The .hlp file could not be read."));
+        set_status(T("Open failed"));
         return ret;
     }
     if (parse_hlp() < 0) {
-        render_error_page(T("Invalid help file", "无效的帮助文件"),
-                          T("The .hlp file format is invalid or too large.", "此 .hlp 文件格式无效或过大。"));
-        set_status(T("Parse failed", "解析失败"));
+        render_error_page(T("Invalid help file"),
+                          T("The .hlp file format is invalid or too large."));
+        set_status(T("Parse failed"));
         return -1;
     }
     active_doc = find_doc_by_id(doc_id);
@@ -1297,7 +1220,7 @@ static int load_help_file(const char *path, const char *doc_id)
     history_seed(active_doc);
     rebuild_tree();
     render_current_doc();
-    set_status(T("Ready", "就绪"));
+    set_status(T("Ready"));
     return 0;
 }
 
@@ -1722,13 +1645,8 @@ static void draw_render_line(const struct render_line *line,
 
 static void present_help(void)
 {
-    uint32_t lang_x = view_w > 156U ? view_w - 156U : 360U;
-    const char *title = localized_pair(file_title);
+    const char *title = file_title;
     const char *display_title = title[0] ? title : path_basename(hlp_path);
-    struct leonos_ui_dropdown_item lang_items[2] = {
-        {"English", OSHLP_LANG_EN, 0},
-        {"中文", OSHLP_LANG_ZH, 0},
-    };
     uint32_t tree_rows = tree_visible_rows();
     uint32_t tree_draw = tree_count > tree_scroll ? min_u32(tree_count - tree_scroll, tree_rows) : 0;
     uint32_t content_w;
@@ -1744,15 +1662,12 @@ static void present_help(void)
     leonos_ui_bind(&ui, pixels, view_w, view_h, OSHLP_MAX_W);
     leonos_ui_rect(&ui, 0, 0, view_w, view_h, LEONOS_UI_WHITE);
     leonos_ui_rect(&ui, 0, 0, view_w, OSHLP_TOOL_H, LEONOS_UI_GRAY);
-    leonos_ui_button(&ui, 8, 9, 64, LEONOS_UI_BUTTON_H, T("Back", "后退"),
+    leonos_ui_button(&ui, 8, 9, 64, LEONOS_UI_BUTTON_H, T("Back"),
                      history_index > 0 ? 0 : LEONOS_UI_BUTTON_DISABLED);
-    leonos_ui_button(&ui, 78, 9, 76, LEONOS_UI_BUTTON_H, T("Forward", "前进"),
+    leonos_ui_button(&ui, 78, 9, 76, LEONOS_UI_BUTTON_H, T("Forward"),
                      history_index + 1U < history_count ? 0 : LEONOS_UI_BUTTON_DISABLED);
-    leonos_ui_text_clipped(&ui, 166, 14, lang_x > 174U ? lang_x - 174U : 100U,
+    leonos_ui_text_clipped(&ui, 166, 14, view_w > 174U ? view_w - 174U : 100U,
                            display_title, LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_combobox(&ui, lang_x, 8, 140,
-                       current_lang == OSHLP_LANG_ZH ? "中文" : "English",
-                       lang_dropdown_open, 0);
     leonos_ui_panel(&ui, 8, content_top(), OSHLP_TREE_W - 16U,
                     content_bottom() > content_top() ? content_bottom() - content_top() : 40U,
                     LEONOS_UI_WHITE);
@@ -1761,7 +1676,7 @@ static void present_help(void)
                        &tree_items[tree_scroll], tree_draw, OSHLP_TREE_ROW_H);
     } else {
         leonos_ui_text_clipped(&ui, 18, content_top() + 14U, OSHLP_TREE_W - 36U,
-                               T("No pages", "没有页面"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                               T("No pages"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
     }
     leonos_ui_vscrollbar(&ui, OSHLP_TREE_W - 18U, content_top() + 4U, 12,
                          content_bottom() > content_top() + 8U
@@ -1796,23 +1711,7 @@ static void present_help(void)
                              scroll_x, content_w, doc_w(), 0);
     }
     leonos_ui_statusbar(&ui, view_h - OSHLP_STATUS_H, OSHLP_STATUS_H, status_text);
-    if (lang_dropdown_open) {
-        leonos_ui_dropdown(&ui, lang_x, 34, 140, lang_items, 2, current_lang,
-                           26U, 1000U);
-    }
     (void)leonos_gui_present_window((uint32_t)window_id, view_w, view_h, OSHLP_MAX_W, pixels);
-}
-
-static void handle_language_change(uint32_t lang)
-{
-    if (lang != OSHLP_LANG_EN && lang != OSHLP_LANG_ZH) {
-        return;
-    }
-    current_lang = (uint8_t)lang;
-    lang_dropdown_open = 0;
-    rebuild_tree();
-    render_current_doc();
-    set_status(T("Language changed", "语言已更改"));
 }
 
 static int hit_rect_i(int32_t px, int32_t py, uint32_t x, uint32_t y,
@@ -1824,11 +1723,6 @@ static int hit_rect_i(int32_t px, int32_t py, uint32_t x, uint32_t y,
 
 static void handle_mouse_button(const struct leonos_gui_app_event *event)
 {
-    uint32_t lang_x = view_w > 156U ? view_w - 156U : 360U;
-    struct leonos_ui_dropdown_item lang_items[2] = {
-        {"English", OSHLP_LANG_EN, 0},
-        {"中文", OSHLP_LANG_ZH, 0},
-    };
     uint32_t id = 0;
     uint32_t content_w;
     uint32_t total_h;
@@ -1836,12 +1730,6 @@ static void handle_mouse_button(const struct leonos_gui_app_event *event)
     uint32_t doc_scroll_x;
     uint32_t tree_scroll_x = OSHLP_TREE_W - 18U;
     if (!event || !event->pressed || !(event->buttons & 1U)) {
-        return;
-    }
-    if (lang_dropdown_open &&
-        leonos_ui_dropdown_hit(event->x, event->y, lang_x, 34, 140,
-                               lang_items, 2, 26U, 1000U, &id)) {
-        handle_language_change(id);
         return;
     }
     if (hit_rect_i(event->x, event->y, 8, 9, 64, LEONOS_UI_BUTTON_H)) {
@@ -1852,11 +1740,6 @@ static void handle_mouse_button(const struct leonos_gui_app_event *event)
         history_forward();
         return;
     }
-    if (hit_rect_i(event->x, event->y, lang_x, 8, 140, LEONOS_UI_BUTTON_H)) {
-        lang_dropdown_open = lang_dropdown_open ? 0U : 1U;
-        return;
-    }
-    lang_dropdown_open = 0;
     content_w = render_content_w();
     total_h = render_total_h();
     doc_view_height = doc_view_h_for_content(content_w);
@@ -1959,21 +1842,23 @@ static void handle_key(const struct leonos_gui_app_event *event)
 
 int main(int argc, char **argv, char **envp)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_gui_app_event event;
     const char *path = OSHLP_DEFAULT_PATH;
     const char *doc_id = 0;
     (void)envp;
     puts("[oshlp.elf] help viewer starting");
-    current_lang = leonos_i18n_language() == LEONOS_LANG_ZH ? OSHLP_LANG_ZH : OSHLP_LANG_EN;
     if (argc > 1 && argv && argv[1] && argv[1][0]) {
         path = argv[1];
     }
     if (argc > 2 && argv && argv[2] && argv[2][0]) {
         doc_id = argv[2];
     }
-    copy_text(status_text, sizeof(status_text), T("Loading", "正在加载"));
-    window_id = leonos_gui_create_app_window_ex(T("LeonOS Help", "LeonOS 帮助"),
-                                                T("Help Viewer", "帮助查看器"),
+    copy_text(status_text, sizeof(status_text), T("Loading"));
+    window_id = leonos_gui_create_app_window_ex(T("LeonOS Help"),
+                                                T("Help Viewer"),
                                                 view_w, view_h, 0);
     if (window_id <= 0) {
         printf("[oshlp.elf] create window failed=%d\n", window_id);

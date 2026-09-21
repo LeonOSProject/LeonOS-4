@@ -52,7 +52,6 @@ int leonos_sudo_wait(uint32_t pid, int *status)
 }
 unsigned long leonos_uptime_ms(void)
 { struct timespec now; assert(clock_gettime(CLOCK_MONOTONIC, &now) == 0); return now.tv_sec * 1000UL + now.tv_nsec / 1000000UL; }
-const char *leonos_i18n(const char *en, const char *zh) { (void)zh; return en; }
 uint32_t leonos_ui_color(uint32_t role) { return role; }
 void leonos_ui_bind(struct leonos_ui_surface *s, uint32_t *p, uint32_t w, uint32_t h, uint32_t stride)
 { (void)s; (void)p; (void)w; (void)h; (void)stride; }

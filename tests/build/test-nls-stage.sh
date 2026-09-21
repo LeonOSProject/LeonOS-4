@@ -1,0 +1,21 @@
+#!/bin/sh
+# The catalog must be claimed per language: declaring usr/share/locale as a
+# whole would silently retake ownership of the upstream catalogs in it.
+set -eu
+src=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
+
+grep -q 'LC_MESSAGES/leonos.mo' "$src/tools/build/rootfs-stage.sh"
+grep -q 'leonos-nls' "$src/tools/build/rootfs-stage.sh"
+grep -q 'configs/nls/LINGUAS' "$src/tools/build/rootfs-stage.sh"
+
+group=$(sed -n '/"leonos-nls"/,/^[[:space:]]*}[[:space:]]*$/p' \
+    "$src/configs/apk-ownership.json")
+[ -n "$group" ] || { printf 'FAIL - leonos-nls group missing\n'; exit 1; }
+echo "$group" | grep -q '"destination": "leonos"'
+echo "$group" | grep -q '"usr/share/locale/zh_CN"'
+if echo "$group" | grep -q '"usr/share/locale"'; then
+    printf 'FAIL - group claims the whole locale tree\n'
+    exit 1
+fi
+
+printf 'nls stage: ownership granularity and plan wiring passed\n'

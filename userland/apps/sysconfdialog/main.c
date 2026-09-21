@@ -1,7 +1,9 @@
 #include <leonos/auth.h>
 #include <leonos/fs.h>
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/startup.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
@@ -10,7 +12,7 @@
 
 #define DIALOG_W 560U
 #define DIALOG_H 300U
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 static uint32_t pixels[DIALOG_W * DIALOG_H];
 
@@ -42,7 +44,7 @@ static void format_args(char *text, uint32_t cap,
     uint32_t pos = 0;
     text[0] = 0;
     if (!command->argc) {
-        append_text(text, &pos, cap, T("None", "无"));
+        append_text(text, &pos, cap, T("None"));
         return;
     }
     for (uint32_t i = 0; i < command->argc; ++i) {
@@ -61,17 +63,16 @@ static void draw_dialog(struct leonos_ui_surface *ui,
     leonos_ui_rect(ui, 0, 0, DIALOG_W, DIALOG_H, LEONOS_UI_GRAY);
     leonos_ui_panel(ui, 16, 16, DIALOG_W - 32U, DIALOG_H - 32U, LEONOS_UI_WHITE);
     leonos_ui_text(ui, 32, 36,
-                   T("Allow startup application?", "允许开机启动应用？"),
+                   T("Allow startup application?"),
                    LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_text_clipped(ui, 32, 68, DIALOG_W - 64U,
-                           T("Allow this app to start a process when you sign in?",
-                             "允许此应用在你登录时自动启动一个进程？"),
+                           T("Allow this app to start a process when you sign in?"),
                            LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 32, 106, T("Requesting application", "申请应用"),
+    leonos_ui_text(ui, 32, 106, T("Requesting application"),
                    LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_text_clipped(ui, 32, 126, DIALOG_W - 64U, request->requester_path,
                            LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 32, 158, T("Startup command", "启动命令"),
+    leonos_ui_text(ui, 32, 158, T("Startup command"),
                    LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_text_clipped(ui, 32, 178, DIALOG_W - 64U, request->command.path,
                            LEONOS_UI_BLACK, LEONOS_UI_WHITE);
@@ -79,16 +80,19 @@ static void draw_dialog(struct leonos_ui_surface *ui,
     leonos_ui_text_clipped(ui, 32, 202, DIALOG_W - 64U, args,
                            LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_checkbox(ui, 32, 224,
-                       T("Do not ask again if I deny this request", "拒绝后不再询问"),
+                       T("Do not ask again if I deny this request"),
                        remember, 0);
     leonos_ui_button(ui, DIALOG_W - 196U, DIALOG_H - 52U, 76U,
-                     LEONOS_UI_BUTTON_H, T("Deny", "拒绝"), 0);
+                     LEONOS_UI_BUTTON_H, T("Deny"), 0);
     leonos_ui_button(ui, DIALOG_W - 108U, DIALOG_H - 52U, 76U,
-                     LEONOS_UI_BUTTON_H, T("Allow", "允许"), 0);
+                     LEONOS_UI_BUTTON_H, T("Allow"), 0);
 }
 
 int main(int argc, char *argv[])
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_startup_dialog_request request;
     struct leonos_gui_app_event event;
     struct leonos_ui_surface ui;
@@ -100,8 +104,8 @@ int main(int argc, char *argv[])
     if (leonos_startup_dialog_get(&request) < 0) {
         return 1;
     }
-    window_id = leonos_gui_create_app_window_ex(T("Startup Application", "启动应用"),
-                                                T("Startup permission", "启动权限"),
+    window_id = leonos_gui_create_app_window_ex(T("Startup Application"),
+                                                T("Startup permission"),
                                                 DIALOG_W, DIALOG_H,
                                                 LEONOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {

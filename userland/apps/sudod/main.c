@@ -8,7 +8,10 @@
 #include <leonos/sudo.h>
 #include <leonos/auth.h>
 #include <leonos/ui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#define T(s) gettext(s)
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/fs.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
@@ -281,9 +284,9 @@ static int askpass(const char *prompt)
 {
     char password[LEONOS_AUTH_PASSWORD_LEN] = {0};
     if (!prompt || !strcmp(prompt, "Password:") || !strcmp(prompt, "Password: "))
-        prompt = leonos_i18n("Password:", "\u5bc6\u7801\uff1a");
+        prompt = T("Password:");
     int result = leonos_ui_show_password_dialog(
-        leonos_i18n("Authentication", "\u8eab\u4efd\u9a8c\u8bc1"), prompt, password, sizeof(password));
+        T("Authentication"), prompt, password, sizeof(password));
     fprintf(stderr, "[askpass] dialog result=%d\n", result);
     if (result == 1) {
         size_t size = strlen(password);
@@ -305,6 +308,9 @@ static int askpass(const char *prompt)
 
 int main(int argc, char **argv)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct sudod_request request;
     struct sudod_path dir;
     const char *confirm;

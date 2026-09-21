@@ -544,27 +544,27 @@ static int desktop_permission_error(int value)
 static const char *desktop_launch_error_text(int code)
 {
     if (desktop_permission_error(code)) {
-        return leonos_i18n("Permission denied", "权限被拒绝");
+        return T("Permission denied");
     }
     switch (code) {
     case LAUNCH_RESULT_EMPTY:
-        return leonos_i18n("No item selected.", "未选择项目。");
+        return T("No item selected.");
     case LAUNCH_RESULT_TOO_MANY_ARGS:
-        return leonos_i18n("Too many launch arguments.", "启动参数过多。");
+        return T("Too many launch arguments.");
     case LAUNCH_RESULT_UNCLOSED_QUOTE:
-        return leonos_i18n("Launch command has an unfinished quote.", "启动命令存在未闭合引号。");
+        return T("Launch command has an unfinished quote.");
     case LAUNCH_RESULT_NOT_FOUND:
-        return leonos_i18n("Program or path not found.", "程序或路径不存在。");
+        return T("Program or path not found.");
     case LAUNCH_RESULT_NO_ASSOCIATION:
-        return leonos_i18n("No file association for this item.", "此项目没有默认打开方式。");
+        return T("No file association for this item.");
     case LAUNCH_RESULT_INVALID_SHORTCUT:
-        return leonos_i18n("Invalid shortcut.", "快捷方式无效。");
+        return T("Invalid shortcut.");
     case LAUNCH_RESULT_SHORTCUT_LOOP:
-        return leonos_i18n("Shortcut loop detected.", "检测到快捷方式循环。");
+        return T("Shortcut loop detected.");
     case LAUNCH_RESULT_EXISTS:
-        return leonos_i18n("Shortcut already exists.", "快捷方式已存在。");
+        return T("Shortcut already exists.");
     case LAUNCH_RESULT_ALREADY_RUNNING:
-        return leonos_i18n("Desktop is already running.", "桌面已在运行。");
+        return T("Desktop is already running.");
     default:
         return 0;
     }
@@ -580,7 +580,7 @@ static void desktop_show_error_code(const char *title, const char *prefix, int c
         return;
     }
     buf[0] = 0;
-    append_text(buf, &pos, sizeof(buf), prefix ? prefix : leonos_i18n("Operation failed", "操作失败"));
+    append_text(buf, &pos, sizeof(buf), prefix ? prefix : T("Operation failed"));
     append_text(buf, &pos, sizeof(buf), " ret=");
     desktop_append_signed(buf, &pos, sizeof(buf), code);
     desktop_show_message(title, buf);
@@ -598,12 +598,12 @@ static void desktop_context_menu_set_active(uint8_t active)
 static void desktop_build_context_menu_items(struct leonos_ui_context_menu_item *items)
 {
     items[0] = (struct leonos_ui_context_menu_item){
-        leonos_i18n("Refresh", "刷新"), DESKTOP_CONTEXT_ACTION_REFRESH, 0};
+        T("Refresh"), DESKTOP_CONTEXT_ACTION_REFRESH, 0};
     items[1] = (struct leonos_ui_context_menu_item){
-        leonos_i18n("Open Desktop Folder", "打开桌面文件夹"),
+        T("Open Desktop Folder"),
         DESKTOP_CONTEXT_ACTION_OPEN_FOLDER, 0};
     items[2] = (struct leonos_ui_context_menu_item){
-        leonos_i18n("Create Shortcut", "创建快捷方式"),
+        T("Create Shortcut"),
         DESKTOP_CONTEXT_ACTION_CREATE_SHORTCUT, 0};
 }
 
@@ -629,16 +629,16 @@ static void desktop_open_path(const char *path)
     int pid;
     char *argv[2];
     if (!path || !path[0]) {
-        desktop_show_message(leonos_i18n("Desktop", "桌面"),
-                             leonos_i18n("No item selected.", "未选择项目。"));
+        desktop_show_message(T("Desktop"),
+                             T("No item selected."));
         return;
     }
     argv[0] = (char *)path;
     argv[1] = 0;
     pid = leonos_launch_argv(argv);
     if (pid < 0) {
-        desktop_show_error_code(leonos_i18n("Open Failed", "打开失败"),
-                                leonos_i18n("Open failed", "打开失败"), pid);
+        desktop_show_error_code(T("Open Failed"),
+                                T("Open failed"), pid);
     }
 }
 
@@ -649,8 +649,8 @@ static void desktop_open_folder(void)
         ret = desktop_refresh_items();
     }
     if (ret < 0 || !desktop_folder_path[0]) {
-        desktop_show_error_code(leonos_i18n("Desktop", "桌面"),
-                                leonos_i18n("Cannot open Desktop folder", "无法打开桌面文件夹"),
+        desktop_show_error_code(T("Desktop"),
+                                T("Cannot open Desktop folder"),
                                 ret < 0 ? ret : -LEONOS_EACCES);
         return;
     }
@@ -686,16 +686,16 @@ static void desktop_create_shortcut_from_input(void)
     int ret;
     if (!desktop_shortcut_target[0]) {
         desktop_shortcut_input_active = 0;
-        desktop_show_message(leonos_i18n("Create Shortcut", "创建快捷方式"),
-                             leonos_i18n("Target path is empty.", "目标路径为空。"));
+        desktop_show_message(T("Create Shortcut"),
+                             T("Target path is empty."));
         return;
     }
     if (!desktop_folder_path[0]) {
         ret = desktop_refresh_items();
         if (ret < 0 || !desktop_folder_path[0]) {
             desktop_shortcut_input_active = 0;
-            desktop_show_error_code(leonos_i18n("Create Shortcut", "创建快捷方式"),
-                                    leonos_i18n("Cannot open Desktop folder", "无法打开桌面文件夹"),
+            desktop_show_error_code(T("Create Shortcut"),
+                                    T("Cannot open Desktop folder"),
                                     ret < 0 ? ret : -LEONOS_EACCES);
             return;
         }
@@ -705,8 +705,8 @@ static void desktop_create_shortcut_from_input(void)
                                                shortcut_path, sizeof(shortcut_path));
     if (ret < 0) {
         desktop_shortcut_input_active = 0;
-        desktop_show_error_code(leonos_i18n("Create Shortcut", "创建快捷方式"),
-                                leonos_i18n("Create shortcut failed", "创建快捷方式失败"),
+        desktop_show_error_code(T("Create Shortcut"),
+                                T("Create shortcut failed"),
                                 ret);
         return;
     }
@@ -722,8 +722,8 @@ static void desktop_run_context_action(uint32_t action)
     if (action == DESKTOP_CONTEXT_ACTION_REFRESH) {
         ret = desktop_refresh_items();
         if (ret < 0) {
-            desktop_show_error_code(leonos_i18n("Desktop", "桌面"),
-                                    leonos_i18n("Refresh failed", "刷新失败"), ret);
+            desktop_show_error_code(T("Desktop"),
+                                    T("Refresh failed"), ret);
         }
         full_redraw_pending = 1;
     } else if (action == DESKTOP_CONTEXT_ACTION_OPEN_FOLDER) {
@@ -912,7 +912,7 @@ void draw_desktop_context_menu(void)
 void desktop_show_message(const char *title, const char *message)
 {
     copy_text(desktop_message_title, sizeof(desktop_message_title),
-              title ? title : leonos_i18n("Desktop", "桌面"));
+              title ? title : T("Desktop"));
     copy_text(desktop_message_text, sizeof(desktop_message_text),
               message ? message : "");
     desktop_message_active = 1;
@@ -998,9 +998,9 @@ void draw_desktop_shortcut_input(void)
                 DESKTOP_SHORTCUT_INPUT_W, DESKTOP_SHORTCUT_INPUT_H, 0x00404040);
     leonos_ui_dialog(&ui, x, y, DESKTOP_SHORTCUT_INPUT_W,
                      DESKTOP_SHORTCUT_INPUT_H,
-                     leonos_i18n("Create Shortcut", "创建快捷方式"));
+                     T("Create Shortcut"));
     leonos_ui_text(&ui, x + 20, y + 48,
-                   leonos_i18n("Target path:", "目标路径:"),
+                   T("Target path:"),
                    LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_edit(&ui, x + 20, y + 72, input_w,
                    desktop_shortcut_target, text_len, scroll,
@@ -1008,11 +1008,11 @@ void draw_desktop_shortcut_input(void)
     leonos_ui_button(&ui, x + DESKTOP_SHORTCUT_INPUT_W - 168,
                      y + DESKTOP_SHORTCUT_INPUT_H - 38,
                      72, LEONOS_UI_BUTTON_H,
-                     leonos_i18n("OK", "确定"), 0);
+                     T("OK"), 0);
     leonos_ui_button(&ui, x + DESKTOP_SHORTCUT_INPUT_W - 88,
                      y + DESKTOP_SHORTCUT_INPUT_H - 38,
                      72, LEONOS_UI_BUTTON_H,
-                     leonos_i18n("Cancel", "取消"), 0);
+                     T("Cancel"), 0);
 }
 
 int desktop_handle_shortcut_input_click(uint32_t x, uint32_t y)

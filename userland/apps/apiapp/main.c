@@ -7,7 +7,9 @@
 #include <leonos/fs.h>
 #include <leonos/gui.h>
 #include <leonos/http.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/launch.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
@@ -20,7 +22,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 #define WIZARD_W 480U
 #define WIZARD_H 360U
@@ -333,7 +335,7 @@ static void draw_download_page(struct leonos_ui_surface *ui,
                                         state->total)
                            : 0U;
     leonos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 32, 24, T("Downloading Application", "正在下载应用"),
+    leonos_ui_text(ui, 32, 24, T("Downloading Application"),
                    LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_text(ui, 32, 64, state->status, LEONOS_UI_DARK, LEONOS_UI_WHITE);
     if (state->total) {
@@ -343,21 +345,21 @@ static void draw_download_page(struct leonos_ui_surface *ui,
                                (uint32_t)(leonos_uptime_ms() % 1000UL));
     }
     leonos_ui_text(ui, 32, 144,
-                   T("Downloaded", "已下载"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                   T("Downloaded"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
     {
         char detail[96];
         uint32_t pos = 0;
         detail[0] = 0;
         append_u32(detail, &pos, sizeof(detail), state->received);
-        append_text(detail, &pos, sizeof(detail), T(" bytes", " 字节"));
+        append_text(detail, &pos, sizeof(detail), T(" bytes"));
         if (state->total) {
-            append_text(detail, &pos, sizeof(detail), T(" of ", " / "));
+            append_text(detail, &pos, sizeof(detail), T(" of "));
             append_u32(detail, &pos, sizeof(detail), state->total);
         }
         leonos_ui_text(ui, 32, 168, detail, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     }
     leonos_ui_button(ui, WIZARD_W - 120U, WIZARD_H - 52U, 88U,
-                      LEONOS_UI_BUTTON_H, T("Cancel", "取消"), 0);
+                      LEONOS_UI_BUTTON_H, T("Cancel"), 0);
 }
 
 static void draw_install_progress_page(struct leonos_ui_surface *ui,
@@ -370,7 +372,7 @@ static void draw_install_progress_page(struct leonos_ui_surface *ui,
     char detail[96];
     uint32_t pos = 0;
     leonos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 32, 24, T("Installing Application", "正在安装应用"),
+    leonos_ui_text(ui, 32, 24, T("Installing Application"),
                    LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_text(ui, 32, 64, state->status, LEONOS_UI_DARK, LEONOS_UI_WHITE);
     if (state->total) {
@@ -381,15 +383,14 @@ static void draw_install_progress_page(struct leonos_ui_surface *ui,
     }
     detail[0] = 0;
     append_u32(detail, &pos, sizeof(detail), state->received);
-    append_text(detail, &pos, sizeof(detail), T(" bytes processed", " 字节已处理"));
+    append_text(detail, &pos, sizeof(detail), T(" bytes processed"));
     if (state->total) {
-        append_text(detail, &pos, sizeof(detail), T(" of ", " / "));
+        append_text(detail, &pos, sizeof(detail), T(" of "));
         append_u32(detail, &pos, sizeof(detail), state->total);
     }
     leonos_ui_text(ui, 32, 144, detail, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_text(ui, 32, 184,
-                   T("Please keep this window open until installation completes.",
-                     "请保持此窗口打开，直到安装完成。"),
+                   T("Please keep this window open until installation completes."),
                    LEONOS_UI_DARK, LEONOS_UI_WHITE);
 }
 
@@ -533,7 +534,7 @@ static int install_api_with_progress(int window_id, const char *api_path,
     install_log_path("api path: ", api_path);
     install_log_path("install path: ", install_path);
     copy_text(state.status, sizeof(state.status),
-              T("Authorizing installation...", "正在授权安装..."));
+              T("Authorizing installation..."));
     leonos_ui_bind(&ui, wizard_pixels, WIZARD_W, WIZARD_H, WIZARD_W);
     argv[0] = APIAPP_PATH;
     argv[1] = "--install-worker";
@@ -561,7 +562,7 @@ static int install_api_with_progress(int window_id, const char *api_path,
             state.received = progress.processed;
             state.total = progress.total;
             received = 0;
-            copy_text(state.status, sizeof(state.status), T("Installing...", "正在安装..."));
+            copy_text(state.status, sizeof(state.status), T("Installing..."));
         }
         if (leonos_sudo_wait(child, &worker_status) == 0) {
             int complete = WIFEXITED(worker_status) && WEXITSTATUS(worker_status) == 0;
@@ -620,14 +621,14 @@ static int download_api(const char *url, char *api_path, uint32_t capacity)
     }
     unlink(state.status_path);
     state.window_id = leonos_gui_create_app_window_ex(
-        T("API Installer", "API 安装程序"),
-        T("Downloading application", "正在下载应用"),
+        T("API Installer"),
+        T("Downloading application"),
         WIZARD_W, WIZARD_H, LEONOS_GUI_WINDOW_NO_RESIZE);
     if (state.window_id <= 0) {
         return 0;
     }
     copy_text(state.status, sizeof(state.status),
-              T("Preparing download...", "正在准备下载..."));
+              T("Preparing download..."));
     leonos_ui_bind(&ui, wizard_pixels, WIZARD_W, WIZARD_H, WIZARD_W);
     draw_download_page(&ui, &state);
     leonos_gui_present_window((uint32_t)state.window_id, WIZARD_W, WIZARD_H,
@@ -641,7 +642,7 @@ static int download_api(const char *url, char *api_path, uint32_t capacity)
     state.worker_pid = leonos_spawn_argv(APIAPP_PATH, argv);
     if (state.worker_pid < 0) {
         copy_text(state.status, sizeof(state.status),
-                  T("Could not start download", "无法启动下载"));
+                  T("Could not start download"));
         (void)wait_for_download_close(&state, &ui);
         leonos_gui_destroy_app_window((uint32_t)state.window_id);
         return 0;
@@ -656,15 +657,15 @@ static int download_api(const char *url, char *api_path, uint32_t capacity)
             state.total = total;
             if (status_state == 'R') {
                 copy_text(state.status, sizeof(state.status),
-                          total ? T("Downloading...", "正在下载...")
-                                : T("Connecting...", "正在连接..."));
+                          total ? T("Downloading...")
+                                : T("Connecting..."));
             } else if (status_state == 'D') {
                 download_complete = 1;
                 copy_text(state.status, sizeof(state.status),
-                          T("Finalizing download...", "正在完成下载..."));
+                          T("Finalizing download..."));
             } else if (status_state == 'F') {
                 copy_text(state.status, sizeof(state.status),
-                          T("Download failed", "下载失败"));
+                          T("Download failed"));
             }
         }
         if (download_worker_exited(state.worker_pid)) {
@@ -700,8 +701,8 @@ static int download_api(const char *url, char *api_path, uint32_t capacity)
     }
     cleanup_download(&state);
     copy_text(state.status, sizeof(state.status),
-              state.cancelled ? T("Download cancelled", "下载已取消")
-                              : T("Download failed", "下载失败"));
+              state.cancelled ? T("Download cancelled")
+                              : T("Download failed"));
     (void)wait_for_download_close(&state, &ui);
     leonos_gui_destroy_app_window((uint32_t)state.window_id);
     return 0;
@@ -711,32 +712,32 @@ static void draw_welcome_page(struct leonos_ui_surface *ui,
                               const struct leonos_api_info *info)
 {
     leonos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 32, 24, T("Application Installer", "应用安装程序"),
+    leonos_ui_text(ui, 32, 24, T("Application Installer"),
                    LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_text(ui, 32, 64,
-                   T("Ready to install:", "准备安装："),
+                   T("Ready to install:"),
                    LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_text_clipped(ui, 32, 88, WIZARD_W - 64U, info->name,
                            LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     if (info->version[0]) {
         leonos_ui_text(ui, 32, 112,
-                       T("Version:", "版本："),
+                       T("Version:"),
                        LEONOS_UI_DARK, LEONOS_UI_WHITE);
         leonos_ui_text(ui, 120, 112, info->version,
                        LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     }
     leonos_ui_text(ui, 32, 144,
-                   T("Install location:", "安装位置："),
+                   T("Install location:"),
                    LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_text_clipped(ui, 32, 168, WIZARD_W - 64U,
                            info->default_path,
                            LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_button(ui, WIZARD_W - 120U, WIZARD_H - 52U, 88U,
                      LEONOS_UI_BUTTON_H,
-                     T("Next >", "下一步 >"), 0);
+                     T("Next >"), 0);
     leonos_ui_button(ui, WIZARD_W - 216U, WIZARD_H - 52U, 88U,
                      LEONOS_UI_BUTTON_H,
-                     T("Cancel", "取消"), 0);
+                     T("Cancel"), 0);
 }
 
 static void draw_install_page(struct leonos_ui_surface *ui,
@@ -744,25 +745,25 @@ static void draw_install_page(struct leonos_ui_surface *ui,
 {
     leonos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, LEONOS_UI_WHITE);
     leonos_ui_text(ui, 32, 24,
-                   T("Install Options", "安装选项"),
+                   T("Install Options"),
                    LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_text(ui, 32, 64,
-                   T("Install path:", "安装路径："),
+                   T("Install path:"),
                    LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_text_clipped(ui, 32, 88, WIZARD_W - 64U, state->install_path,
                            LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_checkbox(ui, 32, 132,
-                       T("Create desktop shortcut", "创建桌面快捷方式"),
+                       T("Create desktop shortcut"),
                        (int)state->create_shortcut, 0);
     leonos_ui_button(ui, WIZARD_W - 120U, WIZARD_H - 52U, 88U,
                      LEONOS_UI_BUTTON_H,
-                     T("Install", "安装"), 0);
+                     T("Install"), 0);
     leonos_ui_button(ui, WIZARD_W - 216U, WIZARD_H - 52U, 88U,
                      LEONOS_UI_BUTTON_H,
-                     T("Cancel", "取消"), 0);
+                     T("Cancel"), 0);
     leonos_ui_button(ui, WIZARD_W - 312U, WIZARD_H - 52U, 88U,
                      LEONOS_UI_BUTTON_H,
-                     T("< Back", "< 上一步"), 0);
+                     T("< Back"), 0);
 }
 
 static void draw_finish_page(struct leonos_ui_surface *ui, int success,
@@ -771,26 +772,26 @@ static void draw_finish_page(struct leonos_ui_surface *ui, int success,
     leonos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, LEONOS_UI_WHITE);
     if (success) {
         leonos_ui_text(ui, 32, 24,
-                       T("Installation Complete", "安装完成"),
+                       T("Installation Complete"),
                        LEONOS_UI_BLACK, LEONOS_UI_WHITE);
         leonos_ui_text(ui, 32, 64,
-                       T("Successfully installed:", "成功安装："),
+                       T("Successfully installed:"),
                        LEONOS_UI_DARK, LEONOS_UI_WHITE);
         leonos_ui_text_clipped(ui, 32, 88, WIZARD_W - 64U, name,
                                LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     } else {
         leonos_ui_text(ui, 32, 24,
-                       T("Installation Failed", "安装失败"),
+                       T("Installation Failed"),
                        LEONOS_UI_BLACK, LEONOS_UI_WHITE);
         leonos_ui_text(ui, 32, 64,
-                       T("Could not install:", "无法安装："),
+                       T("Could not install:"),
                        LEONOS_UI_DARK, LEONOS_UI_WHITE);
         leonos_ui_text_clipped(ui, 32, 88, WIZARD_W - 64U, name,
                                LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     }
     leonos_ui_button(ui, WIZARD_W - 120U, WIZARD_H - 52U, 88U,
                      LEONOS_UI_BUTTON_H,
-                     T("Close", "关闭"), 0);
+                     T("Close"), 0);
 }
 
 static int run_wizard(const char *api_path)
@@ -819,8 +820,8 @@ static int run_wizard(const char *api_path)
     state.create_shortcut = state.info.desktop_shortcut;
 
     window_id = leonos_gui_create_app_window_ex(
-        T("API Installer", "API 安装程序"),
-        T("API Installer", "API 安装程序"),
+        T("API Installer"),
+        T("API Installer"),
         WIZARD_W, WIZARD_H, LEONOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         return 1;
@@ -906,6 +907,9 @@ static int run_wizard(const char *api_path)
 
 int main(int argc, char *argv[])
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     char downloaded_path[LEONOS_API_PATH_MAX];
     if (argc == 5 && argv && argv[1] && argv[2] && argv[3] && argv[4] &&
         strcmp(argv[1], "--download-worker") == 0) {

@@ -14,7 +14,7 @@ int fileman_prompt_elevation(const char *path)
     uint32_t count;
     if (leonos_fileop(LEONOS_FILEOP_LIST, path, NULL, NULL, NULL, entries,
                        FILEMAN_MAX_ENTRIES, &count) < 0) {
-        set_status(T("Operation denied or canceled", "操作被拒绝或已取消"));
+        set_status(T("Operation denied or canceled"));
         return -1;
     }
     copy_text(fileman_elevated_path, sizeof(fileman_elevated_path), path);

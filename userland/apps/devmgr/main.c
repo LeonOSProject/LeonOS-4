@@ -1,6 +1,8 @@
 #include <leonos/devmgr_service.h>
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
@@ -19,7 +21,7 @@
 #define DEVMGR_LIST_HEADER_Y 58
 #define DEVMGR_LIST_ROW_Y 86
 #define DEVMGR_KEY_ESCAPE 1U
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 static uint32_t pixels[DEVMGR_MAX_W * DEVMGR_MAX_H];
 static system_device_info_t devices[SYSTEM_DEVICE_MAX];
@@ -80,21 +82,21 @@ static const char *device_class_name(uint32_t cls)
 {
     switch (cls) {
     case SYSTEM_DEVICE_CLASS_SYSTEM:
-        return T("System", "系统");
+        return T("System");
     case SYSTEM_DEVICE_CLASS_INPUT:
-        return T("Input", "输入");
+        return T("Input");
     case SYSTEM_DEVICE_CLASS_DISPLAY:
-        return T("Display", "显示");
+        return T("Display");
     case SYSTEM_DEVICE_CLASS_STORAGE:
-        return T("Storage", "存储");
+        return T("Storage");
     case SYSTEM_DEVICE_CLASS_SERIAL:
-        return T("Serial", "串口");
+        return T("Serial");
     case SYSTEM_DEVICE_CLASS_NETWORK:
-        return T("Network", "网络");
+        return T("Network");
     case SYSTEM_DEVICE_CLASS_AUDIO:
-        return T("Audio", "音频");
+        return T("Audio");
     default:
-        return T("Other", "其它");
+        return T("Other");
     }
 }
 
@@ -103,22 +105,22 @@ static void format_flags(char *buf, uint32_t cap, uint32_t flags)
     uint32_t pos = 0;
     buf[0] = 0;
     if (flags & SYSTEM_DEVICE_FLAG_PRESENT) {
-        append_text(buf, &pos, cap, T("Present", "存在"));
+        append_text(buf, &pos, cap, T("Present"));
     }
     if (flags & SYSTEM_DEVICE_FLAG_ACTIVE) {
         if (pos) {
             append_text(buf, &pos, cap, ", ");
         }
-        append_text(buf, &pos, cap, T("Active", "活动"));
+        append_text(buf, &pos, cap, T("Active"));
     }
     if (flags & SYSTEM_DEVICE_FLAG_BOOT) {
         if (pos) {
             append_text(buf, &pos, cap, ", ");
         }
-        append_text(buf, &pos, cap, T("Boot", "启动"));
+        append_text(buf, &pos, cap, T("Boot"));
     }
     if (!pos) {
-        append_text(buf, &pos, cap, T("None", "无"));
+        append_text(buf, &pos, cap, T("None"));
     }
 }
 
@@ -130,7 +132,7 @@ static void refresh_devices(void)
         device_count = 0;
         device_list.selected = -1;
         leonos_ui_listview_state_set_count(&device_list, 0);
-        set_status_code(T("Device refresh failed", "设备刷新失败"), ret);
+        set_status_code(T("Device refresh failed"), ret);
         return;
     }
     device_count = count > SYSTEM_DEVICE_MAX ? SYSTEM_DEVICE_MAX : count;
@@ -148,7 +150,7 @@ static void refresh_devices(void)
     {
         uint32_t pos = 0;
         status_text[0] = 0;
-        append_text(status_text, &pos, sizeof(status_text), T("Devices refreshed: ", "设备已刷新: "));
+        append_text(status_text, &pos, sizeof(status_text), T("Devices refreshed: "));
         append_u64(status_text, &pos, sizeof(status_text), device_count);
     }
 }
@@ -200,11 +202,11 @@ static void draw_devmgr(struct leonos_ui_surface *ui)
     uint32_t scroll_h = list_scroll_h();
     uint32_t list_w = view_w > 52 ? view_w - 52 : 668;
     struct leonos_ui_list_column cols[] = {
-        {T("Class", "类别"), 86},
-        {T("Device", "设备"), 138},
-        {T("Status", "状态"), 98},
-        {T("Flags", "标志"), 128},
-        {T("Details", "详情"), list_w > 86 + 138 + 98 + 128
+        {T("Class"), 86},
+        {T("Device"), 138},
+        {T("Status"), 98},
+        {T("Flags"), 128},
+        {T("Details"), list_w > 86 + 138 + 98 + 128
                                   ? list_w - 86 - 138 - 98 - 128
                                   : 120},
     };
@@ -213,8 +215,8 @@ static void draw_devmgr(struct leonos_ui_surface *ui)
     const system_device_info_t *selected;
     leonos_ui_rect(ui, 0, 0, view_w, view_h, LEONOS_UI_GRAY);
     leonos_ui_toolbar(ui, 8, DEVMGR_TOOLBAR_Y, view_w > 16 ? view_w - 16 : view_w, 36);
-    leonos_ui_toolbar_button(ui, 18, DEVMGR_BUTTON_Y, 88, T("Refresh", "刷新"), 0);
-    leonos_ui_text(ui, 120, DEVMGR_BUTTON_Y + 6, T("Hardware detected by the kernel", "内核检测到的硬件设备"),
+    leonos_ui_toolbar_button(ui, 18, DEVMGR_BUTTON_Y, 88, T("Refresh"), 0);
+    leonos_ui_text(ui, 120, DEVMGR_BUTTON_Y + 6, T("Hardware detected by the kernel"),
                    LEONOS_UI_DARK, LEONOS_UI_GRAY);
 
     leonos_ui_scroll_view_frame(ui, 12, DEVMGR_LIST_FRAME_Y, view_w > 24 ? view_w - 24 : view_w, frame_h);
@@ -245,16 +247,16 @@ static void draw_devmgr(struct leonos_ui_surface *ui)
     selected = selected_device();
     if (selected) {
         struct leonos_ui_property_item props[] = {
-            {T("Device:", "设备:"), selected->name, 0},
-            {T("Status:", "状态:"), selected->status, 0},
-            {T("Details:", "详情:"), selected->detail, 0},
+            {T("Device:"), selected->name, 0},
+            {T("Status:"), selected->status, 0},
+            {T("Details:"), selected->detail, 0},
         };
         leonos_ui_property_grid(ui, 20, panel_y + 10,
                                 view_w > 40 ? view_w - 40 : view_w,
                                 props, sizeof(props) / sizeof(props[0]),
                                 86, 22);
     } else {
-        leonos_ui_text(ui, 20, panel_y + 30, T("No device selected", "未选择设备"),
+        leonos_ui_text(ui, 20, panel_y + 30, T("No device selected"),
                        LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     }
     leonos_ui_statusbar(ui, view_h - DEVMGR_STATUS_H, DEVMGR_STATUS_H, status_text);
@@ -267,12 +269,15 @@ static int hit_rect_i(int32_t x, int32_t y, int32_t rx, int32_t ry, int32_t rw, 
 
 int main(void)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
     puts("[devmgr.elf] device manager starting");
-    window_id = leonos_gui_create_app_window_ex(T("Device Manager", "设备管理器"),
-                                                T("Kernel device list", "内核设备列表"),
+    window_id = leonos_gui_create_app_window_ex(T("Device Manager"),
+                                                T("Kernel device list"),
                                                 DEVMGR_W, DEVMGR_H, 0);
     if (window_id <= 0) {
         printf("[devmgr.elf] create window failed=%d\n", window_id);

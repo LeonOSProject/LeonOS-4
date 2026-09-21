@@ -151,49 +151,49 @@ const char *net_status_name(uint32_t status)
 {
     switch (status) {
     case NET_SERVICE_STATUS_OK:
-        return T("OK", "成功");
+        return T("Succeeded");
     case NET_SERVICE_STATUS_NO_DEVICE:
-        return T("No e1000 adapter", "没有 e1000 网卡");
+        return T("No e1000 adapter");
     case NET_SERVICE_STATUS_ARP_TIMEOUT:
-        return T("ARP timeout", "ARP 超时");
+        return T("ARP timeout");
     case NET_SERVICE_STATUS_BAD_ARGUMENT:
-        return T("Bad argument", "参数无效");
+        return T("Bad argument");
     case NET_SERVICE_STATUS_TX_FAILED:
-        return T("Transmit failed", "发送失败");
+        return T("Transmit failed");
     case NET_SERVICE_STATUS_DHCP_TIMEOUT:
-        return T("DHCP timeout", "DHCP 超时");
+        return T("DHCP timeout");
     case NET_SERVICE_STATUS_DHCP_FAILED:
-        return T("DHCP failed", "DHCP 失败");
+        return T("DHCP failed");
     case NET_SERVICE_STATUS_DNS_TIMEOUT:
-        return T("DNS timeout", "DNS 超时");
+        return T("DNS timeout");
     case NET_SERVICE_STATUS_DNS_FAILED:
-        return T("DNS failed", "DNS 失败");
+        return T("DNS failed");
     case NET_SERVICE_STATUS_DNS_NO_ANSWER:
-        return T("No A record", "没有 A 记录");
+        return T("No A record");
     case NET_SERVICE_STATUS_TCP_TIMEOUT:
-        return T("TCP timeout", "TCP 超时");
+        return T("TCP timeout");
     case NET_SERVICE_STATUS_TCP_RESET:
-        return T("TCP reset", "TCP 复位");
+        return T("TCP reset");
     case NET_SERVICE_STATUS_TCP_FAILED:
-        return T("TCP failed", "TCP 失败");
+        return T("TCP failed");
     case NET_SERVICE_STATUS_HTTP_FAILED:
-        return T("HTTP failed", "HTTP 失败");
+        return T("HTTP failed");
     case NET_SERVICE_STATUS_HTTP_TOO_LARGE:
-        return T("Response too large", "响应过大");
+        return T("Response too large");
     case NET_SERVICE_STATUS_SOCKET_LIMIT:
-        return T("Socket limit reached", "Socket 数量已满");
+        return T("Socket limit reached");
     case NET_SERVICE_STATUS_SOCKET_BAD_HANDLE:
-        return T("Bad socket", "Socket 无效");
+        return T("Bad socket");
     case NET_SERVICE_STATUS_SOCKET_NOT_CONNECTED:
-        return T("Socket not connected", "Socket 未连接");
+        return T("Socket not connected");
     case NET_SERVICE_STATUS_SOCKET_CLOSED:
-        return T("Socket closed", "Socket 已关闭");
+        return T("Socket closed");
     case NET_SERVICE_STATUS_PROTOCOL_UNSUPPORTED:
-        return T("Protocol unsupported", "协议不支持");
+        return T("Protocol unsupported");
     case NET_SERVICE_STATUS_TLS_FAILED:
-        return T("TLS verification failed", "TLS 验证失败");
+        return T("TLS verification failed");
     default:
-        return T("Unknown network status", "未知网络状态");
+        return T("Unknown network status");
     }
 }
 

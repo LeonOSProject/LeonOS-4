@@ -1,5 +1,7 @@
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/png.h>
 #include <leonos/stdio.h>
 #include <leonos/ui.h>
@@ -24,7 +26,7 @@
 #define TOOLBAR_H 44U
 #define STATUS_H 26U
 #define CANVAS_MARGIN 10U
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 enum paint_tool {
     TOOL_PENCIL = 0,
@@ -260,7 +262,7 @@ static int load_image(const char *path)
     }
     if (ret < 0 || !pixels || width == 0 || height == 0) {
         free(pixels);
-        set_status(T("Could not open image", "无法打开图片"));
+        set_status(T("Could not open image"));
         return -1;
     }
     free_canvas();
@@ -269,7 +271,7 @@ static int load_image(const char *path)
     canvas_h = height;
     copy_text(current_path, sizeof(current_path), path);
     dirty = 0;
-    set_status(T("Image opened", "图片已打开"));
+    set_status(T("Image opened"));
     return 0;
 }
 
@@ -358,12 +360,12 @@ static int save_image(const char *path)
     if (!path || !path[0] || !canvas) return -1;
     ret = ends_ci(path, ".png") ? save_png(path) : save_bmp(path);
     if (ret < 0) {
-        set_status(T("Could not save image", "无法保存图片"));
+        set_status(T("Could not save image"));
         return ret;
     }
     copy_text(current_path, sizeof(current_path), path);
     dirty = 0;
-    set_status(T("Image saved", "图片已保存"));
+    set_status(T("Image saved"));
     return 0;
 }
 
@@ -433,8 +435,8 @@ static void paint_line(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1)
 static void open_dialog(void)
 {
     char path[PAINT_PATH_CAP] = {0};
-    if (leonos_ui_show_open_dialog(T("Open image", "打开图片"), path, sizeof(path),
-                                   T("Images (*.bmp; *.dib; *.png)", "图片 (*.bmp; *.dib; *.png)"),
+    if (leonos_ui_show_open_dialog(T("Open image"), path, sizeof(path),
+                                   T("Images (*.bmp; *.dib; *.png)"),
                                    ".bmp;.dib;.png") > 0) {
         (void)load_image(path);
     }
@@ -444,8 +446,8 @@ static void save_as_dialog(void)
 {
     char path[PAINT_PATH_CAP];
     copy_text(path, sizeof(path), current_path[0] ? current_path : "/untitled.bmp");
-    if (leonos_ui_show_save_dialog_ex(T("Save image", "保存图片"), path, sizeof(path),
-                                      T("Bitmap or PNG (*.bmp; *.png)", "位图或 PNG (*.bmp; *.png)"),
+    if (leonos_ui_show_save_dialog_ex(T("Save image"), path, sizeof(path),
+                                      T("Bitmap or PNG (*.bmp; *.png)"),
                                       ".bmp;.png") > 0) {
         (void)save_image(path);
     }
@@ -462,12 +464,12 @@ static void save_current(void)
 
 static void new_image(void)
 {
-    if (dirty && !leonos_ui_show_confirm_dialog(T("Discard changes?", "放弃更改？"),
-                                                 T("The current drawing has not been saved.", "当前绘画尚未保存。"), 0)) return;
+    if (dirty && !leonos_ui_show_confirm_dialog(T("Discard changes?"),
+                                                 T("The current drawing has not been saved."), 0)) return;
     if (new_canvas(800U, 520U) < 0) {
-        set_status(T("Could not create canvas", "无法创建画布"));
+        set_status(T("Could not create canvas"));
     } else {
-        set_status(T("New canvas", "新建画布"));
+        set_status(T("New canvas"));
     }
 }
 
@@ -481,14 +483,14 @@ static void draw(struct leonos_ui_surface *ui, uint32_t window_id)
     leonos_ui_bind(ui, screen_pixels, view_w, view_h, screen_stride);
     leonos_ui_rect(ui, 0, 0, view_w, view_h, LEONOS_UI_GRAY);
     leonos_ui_toolbar(ui, 0, 0, view_w, TOOLBAR_H);
-    leonos_ui_button(ui, 8, 10, 52, LEONOS_UI_BUTTON_H, T("New", "新建"), 0);
-    leonos_ui_button(ui, 66, 10, 58, LEONOS_UI_BUTTON_H, T("Open", "打开"), 0);
-    leonos_ui_button(ui, 128, 10, 58, LEONOS_UI_BUTTON_H, T("Save", "保存"), dirty ? LEONOS_UI_BUTTON_ACTIVE : 0);
-    leonos_ui_button(ui, 190, 10, 76, LEONOS_UI_BUTTON_H, T("Save as", "另存为"), 0);
-    leonos_ui_button(ui, 274, 10, 58, LEONOS_UI_BUTTON_H, T("Pencil", "铅笔"), tool == TOOL_PENCIL ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_button(ui, 336, 10, 58, LEONOS_UI_BUTTON_H, T("Brush", "画笔"), tool == TOOL_BRUSH ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_button(ui, 398, 10, 58, LEONOS_UI_BUTTON_H, T("Eraser", "橡皮"), tool == TOOL_ERASER ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_text(ui, 466, 16, T("Size", "粗细"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    leonos_ui_button(ui, 8, 10, 52, LEONOS_UI_BUTTON_H, T("New"), 0);
+    leonos_ui_button(ui, 66, 10, 58, LEONOS_UI_BUTTON_H, T("Open"), 0);
+    leonos_ui_button(ui, 128, 10, 58, LEONOS_UI_BUTTON_H, T("Save"), dirty ? LEONOS_UI_BUTTON_ACTIVE : 0);
+    leonos_ui_button(ui, 190, 10, 76, LEONOS_UI_BUTTON_H, T("Save as"), 0);
+    leonos_ui_button(ui, 274, 10, 58, LEONOS_UI_BUTTON_H, T("Pencil"), tool == TOOL_PENCIL ? LEONOS_UI_BUTTON_PRESSED : 0);
+    leonos_ui_button(ui, 336, 10, 58, LEONOS_UI_BUTTON_H, T("Brush"), tool == TOOL_BRUSH ? LEONOS_UI_BUTTON_PRESSED : 0);
+    leonos_ui_button(ui, 398, 10, 58, LEONOS_UI_BUTTON_H, T("Eraser"), tool == TOOL_ERASER ? LEONOS_UI_BUTTON_PRESSED : 0);
+    leonos_ui_text(ui, 466, 16, T("Brush Size"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     for (uint32_t i = 0; i < 3; ++i) {
         uint32_t sizes[3] = {2U, 6U, 14U};
         uint32_t x = 505U + i * 24U;
@@ -552,16 +554,19 @@ static void handle_toolbar(int32_t x, int32_t y)
 
 int main(int argc, char **argv, char **envp)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     uint32_t last_x = 0, last_y = 0;
     int window_id;
     (void)envp;
     if (new_canvas(800U, 520U) < 0) return 1;
-    set_status(T("Ready", "就绪"));
+    set_status(T("Ready"));
     if (argc > 1 && argv && argv[1] && argv[1][0]) (void)load_image(argv[1]);
-    window_id = leonos_gui_create_app_window_ex(T("Paint", "画图"),
-                                                T("LeonOS Paint", "LeonOS 画图"),
+    window_id = leonos_gui_create_app_window_ex(T("Paint"),
+                                                T("LeonOS Paint"),
                                                 view_w, view_h, 0);
     if (window_id <= 0) { free_canvas(); free(screen_pixels); return 1; }
     draw(&ui, (uint32_t)window_id);
@@ -575,8 +580,8 @@ int main(int argc, char **argv, char **envp)
             (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN && event.pressed && event.keycode == LEONOS_KEY_ESCAPE)) {
             if (dirty) {
                 int save = leonos_ui_show_confirm_dialog(
-                    T("Save changes?", "保存更改？"),
-                    T("Save the current drawing before closing?", "关闭前保存当前绘画？"), 1);
+                    T("Save changes?"),
+                    T("Save the current drawing before closing?"), 1);
                 if (save > 0) {
                     save_current();
                     if (dirty) {

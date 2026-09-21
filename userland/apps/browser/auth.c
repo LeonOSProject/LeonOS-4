@@ -97,14 +97,12 @@ int browser_auth_retry_from_challenge(const char *url, const char *headers)
     }
     username[0] = 0;
     password[0] = 0;
-    if (!leonos_ui_show_input_dialog(T("HTTP Authentication", "HTTP 身份验证"),
-                                     T("Username for this HTTP host:",
-                                       "此 HTTP 主机的用户名:"),
+    if (!leonos_ui_show_input_dialog(T("HTTP Authentication"),
+                                     T("Username for this HTTP host:"),
                                      username, sizeof(username)) ||
         !username[0] ||
-        !leonos_ui_show_password_dialog(T("HTTP Authentication", "HTTP 身份验证"),
-                                        T("Password (kept only for this browser session):",
-                                          "密码（只保存在本次浏览器会话中）:"),
+        !leonos_ui_show_password_dialog(T("HTTP Authentication"),
+                                        T("Password (kept only for this browser session):"),
                                         password, sizeof(password))) {
         return 0;
     }

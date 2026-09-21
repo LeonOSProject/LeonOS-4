@@ -17,6 +17,49 @@ static char text_buffer[512] =
     "文件名测试会创建 /测试目录/你好.txt\n";
 static struct leonos_ui_text_area_state text_state;
 
+static void tty_write_text(const char *text)
+{
+    if (text) {
+        (void)write(1, text, strlen(text));
+    }
+}
+
+static void tty_write_chunked(const char *text)
+{
+    size_t length;
+    size_t split;
+
+    if (!text) {
+        return;
+    }
+    length = strlen(text);
+    split = length > 5 ? 5 : length;
+    (void)write(1, text, split);
+    sleep_ms(20);
+    (void)write(1, text + split, length - split);
+}
+
+static int run_tty_test(void)
+{
+    tty_write_text("\033[2J\033[H");
+    tty_write_text("LeonOS CJK PTY/TTY test\r\n");
+    tty_write_text("1. UTF-8 分段写入: ");
+    tty_write_chunked("中文 / 한국어 / 日本語 / 繁體中文");
+    tty_write_text("\r\n");
+    tty_write_text("2. 双宽对齐: |ASCII    |\r\n");
+    tty_write_text("               |中文中文|\r\n");
+    tty_write_text("               |한글日本|\r\n");
+    tty_write_text("3. 标点与符号: ，。！？；：《》【】（）「」￥€\r\n");
+    tty_write_text("4. 光标擦除: 保留这一行，下一行将被擦除\r\n");
+    tty_write_text("   临时中文行: 临时文字\033[2K\r");
+    tty_write_text("   已擦除并重写: 擦除成功\r\n");
+    tty_write_text("5. 退格场景: 中\b\b文  (观察双宽字符退格)\r\n");
+    tty_write_text("6. UTF-8 完整性: ");
+    tty_write_chunked("零一二三四五六七八九");
+    tty_write_text("\r\n\r\nCJK PTY/TTY test complete.\r\n");
+    return 0;
+}
+
 static void append_char(char *dst, uint32_t *pos, uint32_t cap, char ch)
 {
     if (!dst || !pos || *pos + 1 >= cap) {
@@ -119,11 +162,15 @@ static void draw(struct leonos_ui_surface *ui)
     leonos_ui_statusbar(ui, CJKTEST_H - 28, 28, status_line);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
+
+    if (argc > 1 && argv[1] && strcmp(argv[1], "--tty") == 0) {
+        return run_tty_test();
+    }
 
     puts("[cjktest.elf] CJK display test starting");
     run_file_test();
