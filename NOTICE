@@ -52,7 +52,6 @@ Runtime, libraries, and applications
   see COPYING. These authentication dependencies use verified release archives
   listed in configs/auth-upstream.json; full notices are copied into the
   isolated staging root's /usr/share/licenses/<package>/ directory.
-* GNU nano 9.2: GPL-3.0-or-later. See third_party/nano/COPYING.
 * Vim 9.1.1590: Vim License. See third_party/vim/LICENSE.
 * ncurses 6.6: MIT-style license. See third_party/ncurses/COPYING.
 * Dyne musl 2.2.0 native toolchain: GCC 15.1.0 and GNU binutils 2.44

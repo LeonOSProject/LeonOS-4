@@ -350,25 +350,6 @@ config LEON_COMPONENT_APP_GUITEST_SDK
     default n
     depends on LEON_COMPONENT_APP_GUITEST_BUILD
 
-config LEON_COMPONENT_APP_NANO_BUILD
-    bool "Build nano editor"
-    default y
-
-config LEON_COMPONENT_APP_NANO_IMAGE
-    bool "Include nano editor in system images"
-    default y
-    depends on LEON_COMPONENT_APP_NANO_BUILD
-
-config LEON_COMPONENT_APP_NANO_ENTRY
-    bool "Generate a desktop entry for nano editor"
-    default y
-    depends on LEON_COMPONENT_APP_NANO_BUILD
-
-config LEON_COMPONENT_APP_NANO_SDK
-    bool "Include nano editor in the developer SDK"
-    default n
-    depends on LEON_COMPONENT_APP_NANO_BUILD
-
 config LEON_COMPONENT_TOOL_VIM_BUILD
     bool "Build Vim"
     default y

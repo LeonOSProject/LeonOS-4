@@ -396,19 +396,6 @@
       "sdk": false,
       "symbol": "APP_MP3PLAY"
     },
-    "nano": {
-      "api": false,
-      "api_requires": [],
-      "build": true,
-      "depends": [],
-      "entry": true,
-      "id": "nano",
-      "image": true,
-      "kind": "program-app",
-      "required": false,
-      "sdk": false,
-      "symbol": "APP_NANO"
-    },
     "netctl": {
       "api": false,
       "api_requires": [],

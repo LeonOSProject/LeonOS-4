@@ -351,15 +351,6 @@
       ]
     },
     {
-      "id": "nano",
-      "kind": "submodule",
-      "commit": "8e6360d1663998c62ddd0cf934923d1f18004e3e",
-      "directory": "third_party/nano",
-      "script": "tools/build/upstream-app.sh",
-      "target": "nano",
-      "license": "third_party/nano/COPYING"
-    },
-    {
       "id": "ncurses",
       "kind": "submodule",
       "commit": "0096bd402c4a9c8f39bd7ed266e1b8920327e4d8",

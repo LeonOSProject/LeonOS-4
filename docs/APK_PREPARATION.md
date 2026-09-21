@@ -27,10 +27,10 @@ Upstream BusyBox `add-shell` and `remove-shell` register shell packages in
 `/etc/shells` during their original installation/removal scripts.
 This coarse package split can be refined in a future signed package migration.
 
-The actual nano payload and CA bundle now have their own `nano` and
-`ca-certificates-bundle` packages. Their local versions still identify LeonOS
-builds. Ordinary signed Alpine upgrades can replace these complete payloads
-without overwriting files owned by the editors or trust packages.
+Nano is no longer bundled or built by LeonOS; install the upstream package
+with `apk add nano` when needed. The CA bundle has its own
+`ca-certificates-bundle` package. Its local version identifies a LeonOS build;
+signed Alpine upgrades can replace it without overwriting the trust package.
 
 Actual ELF DT_NEEDED and SONAME/real library filenames determine local runtime
 dependencies and library providers. The real musl loader also has the

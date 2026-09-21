@@ -65,7 +65,7 @@ def main() -> int:
     gcc_smoke = False
     desktop_app: str | None = None
     login_password: str | None = None
-    editor = "nano"
+    editor = "vim"
     fastfetch_smoke = False
     fastfetch_single = False
     hyfetch_smoke = False
@@ -360,7 +360,7 @@ def main() -> int:
         # display the statically linked recovery window for the next launch.
         send_keys(sock, text_keys("rm /usr/lib/leonos/libleonos.so.1") + ("ret",))
         time.sleep(2.0)
-        send_keys(sock, text_keys("nano") + ("ret",))
+        send_keys(sock, text_keys("pleditor") + ("ret",))
         time.sleep(5.0)
         hmp(sock, "screendump build/images/dynlinkerror-qmp-smoke.ppm", 0.4)
         send(sock, {"execute": "quit"}, 0.2)

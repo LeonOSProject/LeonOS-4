@@ -16,5 +16,5 @@ job process. Each foreground command or pipeline receives a dedicated process
 group while it owns the PTY; background jobs keep their own group without
 detaching the terminal session. `SIGSTOP` and `SIGCONT` pause and resume child
 tasks. External
-commands resolve to the enabled BusyBox applets and to `nano`, `pleditor`,
+commands resolve to the enabled BusyBox applets and to `pleditor`,
 `tcc`, `lua`, `file`, `fastfetch`, and `sl` when staged.
