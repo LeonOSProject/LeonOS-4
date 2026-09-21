@@ -96,12 +96,6 @@
       "alpine_candidates": ["ncurses", "ncurses-terminfo"],
       "reason": "Resolve terminal data/tools split and libraries from repository metadata; preserve leonos TERM support."
     },
-    "nano": {
-      "destination": "alpine-after-validation",
-      "components": ["nano"],
-      "alpine_candidates": ["nano"],
-      "reason": "A real standalone nano package lets apk replace its complete payload with upstream nano."
-    },
     "ca-certificates-bundle": {
       "destination": "alpine-after-validation",
       "components": [],

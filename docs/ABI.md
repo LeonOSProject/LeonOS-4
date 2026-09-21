@@ -54,7 +54,7 @@ supports whole or partial unmapping.
 
 ## Shared POSIX porting surface
 
-`libleonos.so.2` provides the ANSI curses subset used by nano and `sl`.
+`libleonos.so.2` provides the ANSI curses subset used by `sl`.
 Applications include `<curses.h>` or `<ncurses.h>` from the SDK. This is a
 LeonOS terminal API, not binary compatibility with host ncurses.
 

@@ -217,7 +217,7 @@ def copy_entry(source, destination):
 
 
 def package_name(group):
-    return group if group.startswith("leonos-") or group in ("nano", "ca-certificates-bundle") else "leonos-" + group
+    return group if group.startswith("leonos-") or group in ("ca-certificates-bundle",) else "leonos-" + group
 
 
 def musl_development_payload(tree, destination):

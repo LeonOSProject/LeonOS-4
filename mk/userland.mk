@@ -14,7 +14,7 @@ include $(LEONOS_COMPONENT_MK)
 endif
 endif
 
-USERLAND_EXTERNAL_APPS := nano fastfetch pleditor stardusthello stardustlayout stardustshowcase
+USERLAND_EXTERNAL_APPS := fastfetch pleditor stardusthello stardustlayout stardustshowcase
 USERLAND_APPS := $(filter-out $(USERLAND_EXTERNAL_APPS),$(LEONOS_COMPONENT_APPS))
 USERLAND_DIR := $(O)/userland
 USERLAND_FLAGS := $(RUNTIME_FLAGS) -fPIE -nostdinc -isystem $(if $(LEONOS_PASSIVE),deferred,$(shell $(TARGET_CC) -print-resource-dir 2>/dev/null))/include -D_POSIX_C_SOURCE=200809L

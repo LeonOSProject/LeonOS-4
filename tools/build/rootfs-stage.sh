@@ -104,7 +104,7 @@ for package in ncurses vim; do
         if [ "$package" = ncurses ]; then tree "$out/upstream/ncurses/root/usr/share/terminfo" etc/terminfo ncurses; fi
     fi
 done
-for app in nano fastfetch file less sl; do
+for app in fastfetch file less sl; do
     if enabled "$app"; then file "$out/userland/$app.elf" "usr/bin/$app" 0755 "$app" override; fi
 done
 for app in lua cmd; do
@@ -124,7 +124,7 @@ if enabled fastfetch; then
     file "$src/userland/fastfetch/leonos-ascii.txt" usr/share/fastfetch/leonos-ascii.txt 0644 fastfetch
     file "$src/userland/fastfetch/hyfetch.json" etc/skel/.config/hyfetch.json 0644 fastfetch
 fi
-for spec in 'busybox third_party/busybox/LICENSE' 'nano third_party/nano/COPYING' 'file third_party/file/COPYING' 'lua userland/lua/LICENSE' 'cmd third_party/cmd/LICENSE' 'less third_party/less/LICENSE' 'sl third_party/sl/LICENSE' 'pleditor third_party/pl_editor/LICENSE' 'vim third_party/vim/LICENSE'; do
+for spec in 'busybox third_party/busybox/LICENSE' 'file third_party/file/COPYING' 'lua userland/lua/LICENSE' 'cmd third_party/cmd/LICENSE' 'less third_party/less/LICENSE' 'sl third_party/sl/LICENSE' 'pleditor third_party/pl_editor/LICENSE' 'vim third_party/vim/LICENSE'; do
     set -- $spec
     if enabled "$1"; then file "$src/$2" "usr/share/licenses/$1/${2##*/}" 0644 "$1" override; fi
 done

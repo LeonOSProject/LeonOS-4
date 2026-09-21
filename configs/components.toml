@@ -633,19 +633,6 @@ sdk = false
 api = false
 
 [[components]]
-id = "nano"
-symbol = "APP_NANO"
-label = "nano editor"
-category = "Developer applications"
-kind = "program-app"
-default = true
-required = false
-stage = true
-entry = true
-sdk = false
-api = false
-
-[[components]]
 id = "vim"
 symbol = "TOOL_VIM"
 label = "Vim"

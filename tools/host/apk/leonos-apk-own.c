@@ -168,7 +168,6 @@ static int load_rules(struct state *state, const char *policy_path, json_value *
             {"leonos-fastfetch", "usr/bin/fastfetch"}, {"leonos-fastfetch", "usr/share/licenses/fastfetch"},
             {"leonos-fastfetch", "etc/fastfetch"}, {"leonos-fastfetch", "usr/share/fastfetch/leonos-ascii.txt"},
             {"leonos-fastfetch", "etc/skel/.config/hyfetch.json"},
-            {"nano", "usr/bin/nano"}, {"nano", "usr/share/licenses/nano"},
             {"leonos-apps", "usr/share/licenses/pleditor"},
             {"busybox", "bin/busybox"}, {"busybox", "bin/sh"}, {"busybox", "usr/share/licenses/busybox"},
             {"leonos-apps", "opt/cmd"}, {"leonos-apps", "usr/bin/cmd"}, {"leonos-apps", "usr/share/licenses/cmd"},

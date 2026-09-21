@@ -72,7 +72,6 @@ SQLITE_SO := $(UPSTREAM_APP_DIR)/sqlite.so.3
 SQLITE_HEADER := $(UPSTREAM_APP_DIR)/sqlite3.h
 upstream_app_lua_outputs := lua.elf liblua.so.5 liblua.a
 upstream_app_sl_outputs := sl.elf
-upstream_app_nano_outputs := nano.elf
 upstream_app_less_outputs := less.elf
 upstream_app_file_outputs := file.elf libmagic.so.1 libmagic.a magic.h
 upstream_app_sqlite_outputs := sqlite.so.3 libsqlite3.a sqlite3.h
@@ -88,8 +87,8 @@ $$(addprefix $$(UPSTREAM_APP_DIR)/,$$(sort $$(upstream_app_$(1)_outputs))) &: $$
 .PHONY: upstream-app-$(1)
 upstream-app-$(1): $$(addprefix $$(UPSTREAM_APP_DIR)/,$$(sort $$(upstream_app_$(1)_outputs)))
 endef
-$(foreach package,lua sl nano less file sqlite,$(eval $(call LEONOS_UPSTREAM_APP,$(package))))
-leonos-upstream: $(addprefix upstream-app-,lua sl nano less file sqlite)
+$(foreach package,lua sl less file sqlite,$(eval $(call LEONOS_UPSTREAM_APP,$(package))))
+leonos-upstream: $(addprefix upstream-app-,lua sl less file sqlite)
 
 BUSYBOX_ELF := $(UPSTREAM_APP_DIR)/busybox.elf
 BUSYBOX_LINKS := $(UPSTREAM_APP_DIR)/busybox.links

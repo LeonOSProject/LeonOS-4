@@ -154,7 +154,7 @@ version=$(printf '%s' "$version" | sed "s/-r[0-9]*$/.${content_number}-r0/")
 
 package_name()
 {
-    case $1 in leonos-*|nano|ca-certificates-bundle) printf '%s\n' "$1";; *) printf 'leonos-%s\n' "$1";; esac
+    case $1 in leonos-*|ca-certificates-bundle) printf '%s\n' "$1";; *) printf 'leonos-%s\n' "$1";; esac
 }
 
 # Copy exactly the classified payload. Quoting and tab-delimited reads preserve

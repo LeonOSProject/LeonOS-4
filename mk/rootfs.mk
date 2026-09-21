@@ -12,7 +12,7 @@ APK_RAW_ROOT := $(ROOTFS_RAW)
 APK_RAW_STAMP := $(ROOTFS_RAW_STAMP)
 ROOTFS_SOURCE_DIRS := $(LEONOS_SRC)/system $(LEONOS_SRC)/resources/build-art $(LEONOS_SRC)/userland/storage $(LEONOS_SRC)/userland/apps
 ROOTFS_SOURCE_DIRS += $(LEONOS_SRC)/userland/fastfetch $(LEONOS_SRC)/userland/lua $(LEONOS_SRC)/logo.png $(LEONOS_SRC)/test/test.mp3 $(LEONOS_SRC)/docs/APK_PREPARATION.md $(LEONOS_SRC)/configs/apk-ownership.json $(LEONOS_SRC)/third_party/stardustui/docs/zh-cn/example
-ROOTFS_SOURCE_DIRS += $(wildcard $(addprefix $(LEONOS_SRC)/third_party/,busybox/LICENSE nano/COPYING file/COPYING cmd/LICENSE less/LICENSE sl/LICENSE pl_editor/LICENSE vim/LICENSE portablegl/LICENSE))
+ROOTFS_SOURCE_DIRS += $(wildcard $(addprefix $(LEONOS_SRC)/third_party/,busybox/LICENSE file/COPYING cmd/LICENSE less/LICENSE sl/LICENSE pl_editor/LICENSE vim/LICENSE portablegl/LICENSE))
 ROOTFS_SOURCE_DIRS += $(LEONOS_SRC)/tools/build/rpr-config.sh
 $(O_META)/rootfs-sources.sig: FORCE $(LEONOS_SRC)/tools/build/tree-signature.sh
 	$(Q)sh $(LEONOS_SRC)/tools/build/tree-signature.sh $@ $(ROOTFS_SOURCE_DIRS)

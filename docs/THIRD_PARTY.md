@@ -48,7 +48,6 @@ commits are the revisions recorded by the LeonOS checkout.
 | `third_party/litehtml` | `https://github.com/litehtml/litehtml.git` | `b9e89f0b9494ff9a5f008800af35503efabddf59` |
 | `third_party/lua` | `https://github.com/lua/lua.git` | `6e22fedb74cf0c9b6656e9fce8b7331db847c605` |
 | `third_party/mbedtls` | `https://github.com/Mbed-TLS/mbedtls.git` | `5a764e5555c64337ed17444410269ff21cb617b1` |
-| `third_party/nano` | `https://git.savannah.gnu.org/git/nano.git` | `8e6360d1663998c62ddd0cf934923d1f18004e3e` |
 | `third_party/vim` | `https://github.com/vim/vim.git` | `af9a7a04f18693eee4400dd134135527f4e8cd5f` |
 | `third_party/ncurses` | `https://github.com/ThomasDickey/ncurses-snapshots.git` | `0096bd402c4a9c8f39bd7ed266e1b8920327e4d8` |
 | `third_party/musl` | `https://git.musl-libc.org/git/musl` | `9fa28ece75d8a2191de7c5bb53bed224c5947417` |
@@ -243,22 +242,6 @@ interface. Licenses ship as `/usr/lib/leonos/apps/vim/LICENSE` and
 `/usr/share/licenses/ncurses/COPYING`, with `THIRD_PARTY/NCURSES-COPYING` in the
 developer SDK. `build.py run test-terminal-packages` runs the actual binaries
 and library on Linux; guest validation is documented separately.
-
-## GNU nano
-
-- Path: `third_party/nano`
-- Upstream: `https://git.savannah.gnu.org/git/nano.git`
-- Version: `9.2`
-- Pinned commit: `8e6360d1663998c62ddd0cf934923d1f18004e3e` (`v9.2`)
-- License: GPL-3.0-or-later; the complete upstream `COPYING` is staged at
-  `/usr/lib/leonos/apps/nano/COPYING` beside the executable.
-
-LeonOS builds Nano at `/usr/lib/leonos/apps/nano/nano.elf` with a narrow ANSI curses
-compatibility layer over the GUI terminal PTY. This initial port intentionally
-uses Nano's single-buffer tiny profile: the core editor path is present, while
-external spellers/formatters, rc files, syntax coloring, help pages, mouse
-input and multi-buffer support remain off. Interactive editing and persistence
-still require manual GUI-terminal validation on each supported VM platform.
 
 ## GNU less
 

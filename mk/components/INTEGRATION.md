@@ -17,7 +17,7 @@ depend on `$(LEONOS_COMPONENT_TOOL)` and `$(LEONOS_GEARS_TOOL)`.
 - Graphics exports: `PORTABLEGL_SO`, `PORTABLEGL_ARCHIVE`, `GLXGEARS_SOURCE`,
   `STARDUSTUI_ARCHIVE`. Stardust examples are owned by this fragment too.
 - Remaining external app outputs from upstream_migration:
-  `O/userland/{nano,fastfetch,pleditor}.elf`. No fallback or silent skip exists.
+  `O/userland/{fastfetch,pleditor}.elf`. No fallback or silent skip exists.
 - Other enabled tool/library targets must be attached by their upstream fragment.
 - `userland-prune` removes only manifest-disabled component ELF outputs, and
   leaves arbitrary files and other components intact.

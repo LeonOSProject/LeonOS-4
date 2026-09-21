@@ -113,17 +113,6 @@ sl)
  compile -D_DEFAULT_SOURCE -fPIE -c "$source/sl.c" -o "$work/objects/sl.o"
  executable "$work/objects/sl.o"
  ;;
-nano)
- flags="$flags -D_DEFAULT_SOURCE -DHAVE_CONFIG_H -I$port/include -I$source/src"
- count=$(grep -Ec 'regexec\(&search_regexp, haystack, (1|10), regmatches, REG_STARTEND\)' "$source/src/utils.c")
- [ "$count" = 3 ] || { echo 'nano regex adapter source mismatch' >&2; exit 1; }
- { printf '#include "%s/regex_range.h"\n' "$port"; sed -E 's/regexec\(&search_regexp, haystack, (1|10), regmatches, REG_STARTEND\)/leonos_nano_regex_suffix(\&search_regexp, haystack, \1, regmatches)/g' "$source/src/utils.c"; } > "$work/generated/utils.c"
- for name in browser chars color cut files global help history move nano prompt rcfile search text utils winio; do
-  path=$source/src/$name.c; [ "$name" != utils ] || path=$work/generated/utils.c
-  compile -fPIE -c "$path" -o "$work/objects/$name.o"
- done
- executable "$work"/objects/*.o
- ;;
 less)
  flags="$flags -D_DEFAULT_SOURCE -I$port/include"
  names='main screen brac ch charset cmdbuf command cvt decode edit evar filename forwback ifile input jump line linenum lmsg lsystem mark optfunc option opttbl os output pattern position prompt search signal tags ttyin version xbuf'
