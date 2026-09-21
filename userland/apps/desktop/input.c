@@ -241,7 +241,7 @@ void open_app_window_from_msg(const struct leonos_gui_window_msg *msg)
             uint32_t old_body_w = window_body_width(w);
             uint32_t old_body_h = window_body_height(w);
             copy_text(app_titles[existing], sizeof(app_titles[existing]),
-                      msg->title[0] ? msg->title : leonos_i18n("Application", "应用程序"));
+                      msg->title[0] ? msg->title : T("Application"));
             w->title = app_titles[existing];
             w->flags = msg->flags;
             clamp_window(w);
@@ -375,9 +375,9 @@ void open_app_window_from_msg(const struct leonos_gui_window_msg *msg)
     }
 
     copy_text(app_titles[slot], sizeof(app_titles[slot]),
-              msg->title[0] ? msg->title : leonos_i18n("Application", "应用程序"));
+              msg->title[0] ? msg->title : T("Application"));
     copy_text(app_texts[slot], sizeof(app_texts[slot]),
-              msg->text[0] ? msg->text : leonos_i18n("Application window", "应用程序窗口"));
+              msg->text[0] ? msg->text : T("Application window"));
     uint32_t fullscreen = (msg->flags & LEONOS_GUI_WINDOW_FULLSCREEN) != 0;
     uint32_t borderless = (msg->flags & LEONOS_GUI_WINDOW_BORDERLESS) != 0;
     uint32_t width = fullscreen || borderless ? msg->width : msg->width + 16;
@@ -633,7 +633,7 @@ static void desktop_power_begin(uint8_t action)
     if (power_worker_action) return;
     pid_t pid = fork();
     if (pid < 0) {
-        desktop_show_message(leonos_i18n("Power request failed", "电源请求失败"), strerror(errno));
+        desktop_show_message(T("Power request failed"), strerror(errno));
         return;
     }
     if (!pid) {
@@ -668,8 +668,8 @@ static void desktop_power_update(void)
     power_worker_action = POWER_CONFIRM_NONE;
     fprintf(stderr, "[desktop.elf] power request failed: %s\n", strerror(error));
     desktop_show_message(action == POWER_CONFIRM_REBOOT
-        ? leonos_i18n("Restart failed", "重启失败")
-        : leonos_i18n("Shutdown failed", "关机失败"), strerror(error));
+        ? T("Restart failed")
+        : T("Shutdown failed"), strerror(error));
 }
 
 void desktop_reboot(void)

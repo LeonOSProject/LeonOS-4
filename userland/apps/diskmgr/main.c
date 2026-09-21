@@ -3,7 +3,9 @@
 #include <errno.h>
 #include <leonos/fs.h>
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
@@ -29,7 +31,7 @@
 #define DISKMGR_ACTION_FORMAT 1U
 #define DISKMGR_ACTION_DELETE 2U
 #define DISKMGR_ACTION_CREATE 3U
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 static uint32_t pixels[DISKMGR_MAX_W * DISKMGR_MAX_H];
 static struct leonos_block_disk_info disks[LEONOS_BLOCK_MAX_DISKS];
@@ -183,14 +185,14 @@ static void format_disk_flags(char *buf, uint32_t cap, uint32_t flags)
         buf[0] = 0;
     }
     if (flags & 1u) {
-        append_text(buf, &pos, cap, T("Boot disk", "启动磁盘"));
+        append_text(buf, &pos, cap, T("Boot disk"));
     }
     if (flags & 2u) {
         append_separator(buf, &pos, cap);
-        append_text(buf, &pos, cap, T("Target mounted", "目标已挂载"));
+        append_text(buf, &pos, cap, T("Target mounted"));
     }
     if (!pos) {
-        append_text(buf, &pos, cap, T("Ready", "就绪"));
+        append_text(buf, &pos, cap, T("Ready"));
     }
 }
 
@@ -208,7 +210,7 @@ static const char *filesystem_label(uint32_t filesystem)
     if (filesystem == LEONOS_BLOCK_FILESYSTEM_ISO9660) {
         return "ISO 9660";
     }
-    return T("Unknown", "未知");
+    return T("Unknown");
 }
 
 static void format_partition_flags(char *buf, uint32_t cap, uint32_t flags,
@@ -223,23 +225,23 @@ static void format_partition_flags(char *buf, uint32_t cap, uint32_t flags,
     }
     if (flags & 2u) {
         append_separator(buf, &pos, cap);
-        append_text(buf, &pos, cap, T("Boot disk", "启动磁盘"));
+        append_text(buf, &pos, cap, T("Boot disk"));
     }
     if (flags & 4u) {
         append_separator(buf, &pos, cap);
-        append_text(buf, &pos, cap, T("Mounted target", "已挂载目标"));
+        append_text(buf, &pos, cap, T("Mounted target"));
     }
     if (flags & 16u) {
         append_separator(buf, &pos, cap);
-        append_text(buf, &pos, cap, T("Mounted ", "已挂载 "));
+        append_text(buf, &pos, cap, T("Mounted "));
         append_text(buf, &pos, cap, mount_path);
     }
     if (flags & 8u) {
         append_separator(buf, &pos, cap);
-        append_text(buf, &pos, cap, T("Protected", "受保护"));
+        append_text(buf, &pos, cap, T("Protected"));
     }
     if (!pos) {
-        append_text(buf, &pos, cap, T("Data", "数据"));
+        append_text(buf, &pos, cap, T("Data"));
     }
 }
 
@@ -384,7 +386,7 @@ static void refresh_partitions(void)
     ret = leonos_block_list_partitions(disks[disk_index].path, partitions,
                                        LEONOS_BLOCK_MAX_PARTITIONS, &count);
     if (ret < 0) {
-        set_ret_status(T("Partition refresh failed", "分区刷新失败"), ret);
+        set_ret_status(T("Partition refresh failed"), ret);
         leonos_ui_listview_state_set_count(&partition_list, 0);
         return;
     }
@@ -418,7 +420,7 @@ static void refresh_disks(void)
         partition_count = 0;
         partition_list.selected = -1;
         update_layout();
-        set_ret_status(T("Disk refresh failed", "磁盘刷新失败"), ret);
+        set_ret_status(T("Disk refresh failed"), ret);
         return;
     }
     disk_count = count > LEONOS_BLOCK_MAX_DISKS ? LEONOS_BLOCK_MAX_DISKS : count;
@@ -438,7 +440,7 @@ static void refresh_disks(void)
     }
     update_layout();
     refresh_partitions();
-    copy_text(status_text, sizeof(status_text), T("Disk list refreshed", "磁盘列表已刷新"));
+    copy_text(status_text, sizeof(status_text), T("Disk list refreshed"));
 }
 
 static void reset_action(void)
@@ -488,11 +490,11 @@ static void open_action(uint32_t mode)
     if ((mode == DISKMGR_ACTION_CREATE && !selected_disk_mutable()) ||
         (mode != DISKMGR_ACTION_CREATE && !selected_partition_mutable())) {
         copy_text(status_text, sizeof(status_text),
-                  T("Select an unprotected non-boot disk partition", "请选择未受保护的非启动磁盘分区"));
+                  T("Select an unprotected non-boot disk partition"));
         return;
     }
     if (!leonos_admin_elevate()) {
-        copy_text(status_text, sizeof(status_text), T("Administrator approval is required", "需要管理员授权"));
+        copy_text(status_text, sizeof(status_text), T("Administrator approval is required"));
         return;
     }
     reset_action();
@@ -513,7 +515,7 @@ static void open_action(uint32_t mode)
     }
     confirm_edit.focused = mode != DISKMGR_ACTION_CREATE;
     copy_text(status_text, sizeof(status_text),
-              T("Type the confirmation word and click Apply twice", "输入确认词后点击两次应用"));
+              T("Type the confirmation word and click Apply twice"));
 }
 
 static void run_action(void)
@@ -523,61 +525,61 @@ static void run_action(void)
     int ret;
     if (!text_eq(confirm_text, action_token())) {
         action_armed = 0;
-        copy_text(status_text, sizeof(status_text), T("Confirmation word does not match", "确认词不匹配"));
+        copy_text(status_text, sizeof(status_text), T("Confirmation word does not match"));
         return;
     }
     if (!action_armed) {
         action_armed = 1;
-        copy_text(status_text, sizeof(status_text), T("Click Apply again to continue", "再次点击应用以继续"));
+        copy_text(status_text, sizeof(status_text), T("Click Apply again to continue"));
         return;
     }
     if (disk_index < 0 || (action_mode != DISKMGR_ACTION_CREATE && part_index < 0)) {
         reset_action();
-        copy_text(status_text, sizeof(status_text), T("Selection changed; operation cancelled", "选择已变更；操作已取消"));
+        copy_text(status_text, sizeof(status_text), T("Selection changed; operation cancelled"));
         return;
     }
     if (action_mode == DISKMGR_ACTION_FORMAT) {
         ret = leonos_block_format(partitions[part_index].path, selected_filesystem, NULL);
         if (ret < 0) {
-            set_ret_status(T("Partition format failed", "分区格式化失败"), ret);
+            set_ret_status(T("Partition format failed"), ret);
             action_armed = 0;
             return;
         }
         reset_action();
         refresh_disks();
-        copy_text(status_text, sizeof(status_text), T("Partition formatted", "分区格式化完成"));
+        copy_text(status_text, sizeof(status_text), T("Partition formatted"));
         return;
     }
     if (action_mode == DISKMGR_ACTION_DELETE) {
         ret = leonos_block_gpt_delete(disks[disk_index].path, partitions[part_index].index);
         if (ret < 0) {
-            set_ret_status(T("Partition deletion failed", "删除分区失败"), ret);
+            set_ret_status(T("Partition deletion failed"), ret);
             action_armed = 0;
             return;
         }
         reset_action();
         refresh_disks();
-        copy_text(status_text, sizeof(status_text), T("Partition entry deleted", "分区条目已删除"));
+        copy_text(status_text, sizeof(status_text), T("Partition entry deleted"));
         return;
     }
     {
         uint32_t size_mib;
         if (parse_size_mib(create_size_text, &size_mib) < 0) {
             action_armed = 0;
-            copy_text(status_text, sizeof(status_text), T("Enter a valid size in MiB", "请输入有效的 MiB 大小"));
+            copy_text(status_text, sizeof(status_text), T("Enter a valid size in MiB"));
             return;
         }
         ret = leonos_block_gpt_create(disks[disk_index].path, selected_filesystem,
                                       size_mib, create_label_text, NULL);
         if (ret < 0) {
-            set_ret_status(T("Partition creation failed", "创建分区失败"), ret);
+            set_ret_status(T("Partition creation failed"), ret);
             action_armed = 0;
             return;
         }
     }
     reset_action();
     refresh_disks();
-    copy_text(status_text, sizeof(status_text), T("Partition created and formatted", "分区已创建并格式化"));
+    copy_text(status_text, sizeof(status_text), T("Partition created and formatted"));
 }
 
 static void mount_selected_partition(void)
@@ -588,28 +590,27 @@ static void mount_selected_partition(void)
     uint32_t pos = 0;
     if (disk_index < 0 || part_index < 0 || !selected_partition_mountable()) {
         copy_text(status_text, sizeof(status_text),
-                  T("Select an unmounted exFAT, FAT32, or ext2 data partition",
-                    "请选择未挂载的 exFAT、FAT32 或 ext2 数据分区"));
+                  T("Select an unmounted exFAT, FAT32, or ext2 data partition"));
         return;
     }
     if (!leonos_admin_elevate()) {
         copy_text(status_text, sizeof(status_text),
-                  T("Administrator approval is required", "需要管理员授权"));
+                  T("Administrator approval is required"));
         return;
     }
     format_mount_path(mount_path, sizeof(mount_path), disks[disk_index].id,
                       partitions[part_index].index + 1u);
     if (mkdir(mount_path, 0755) < 0 && errno != EEXIST) {
-        set_ret_status(T("Mount-point creation failed", "挂载点创建失败"), -errno);
+        set_ret_status(T("Mount-point creation failed"), -errno);
         return;
     }
     if (mount(partitions[part_index].path, mount_path, NULL, 0, NULL) < 0) {
-        set_ret_status(T("Partition mount failed", "分区挂载失败"), -errno);
+        set_ret_status(T("Partition mount failed"), -errno);
         return;
     }
     refresh_disks();
     status_text[0] = 0;
-    append_text(status_text, &pos, sizeof(status_text), T("Mounted as ", "已挂载为 "));
+    append_text(status_text, &pos, sizeof(status_text), T("Mounted as "));
     append_text(status_text, &pos, sizeof(status_text), mount_path);
 }
 
@@ -621,12 +622,12 @@ static void unmount_selected_partition(void)
     char mount_path[LEONOS_FS_PATH_LEN];
     if (disk_index < 0 || part_index < 0 || !selected_partition_unmountable()) {
         copy_text(status_text, sizeof(status_text),
-                  T("Select a mounted data partition", "请选择已挂载的数据分区"));
+                  T("Select a mounted data partition"));
         return;
     }
     if (!leonos_admin_elevate()) {
         copy_text(status_text, sizeof(status_text),
-                  T("Administrator approval is required", "需要管理员授权"));
+                  T("Administrator approval is required"));
         return;
     }
     format_mount_path(mount_path, sizeof(mount_path), disks[disk_index].id,
@@ -635,34 +636,33 @@ static void unmount_selected_partition(void)
         ret = -errno;
         if (errno == EBUSY) {
             copy_text(status_text, sizeof(status_text),
-                      T("Unmount blocked: close files and leave the mount first",
-                        "卸载被阻止：请先关闭文件并离开该挂载点"));
+                      T("Unmount blocked: close files and leave the mount first"));
         } else {
-            set_ret_status(T("Partition unmount failed", "分区卸载失败"), ret);
+            set_ret_status(T("Partition unmount failed"), ret);
         }
         return;
     }
     refresh_disks();
-    copy_text(status_text, sizeof(status_text), T("Partition unmounted", "分区已卸载"));
+    copy_text(status_text, sizeof(status_text), T("Partition unmounted"));
 }
 
 static void draw_disk_details(struct leonos_ui_surface *ui)
 {
     int index = selected_disk_index();
     uint32_t x = detail_x();
-    leonos_ui_groupbox(ui, x, 18, DISKMGR_DETAIL_W, 138, T("Selected disk", "选中磁盘"));
+    leonos_ui_groupbox(ui, x, 18, DISKMGR_DETAIL_W, 138, T("Selected disk"));
     if (index >= 0) {
         struct leonos_ui_property_item props[] = {
             {"ID:", disk_id_text[index], 0},
-            {T("Name:", "名称:"), disks[index].name, 0},
-            {T("Port:", "端口:"), disk_port_text[index], 0},
-            {T("Capacity:", "容量:"), disk_size_text[index], 0},
-            {T("Status:", "状态:"), disk_flags_text[index], 0},
+            {T("Name:"), disks[index].name, 0},
+            {T("Port:"), disk_port_text[index], 0},
+            {T("Capacity:"), disk_size_text[index], 0},
+            {T("Status:"), disk_flags_text[index], 0},
         };
         leonos_ui_property_grid(ui, x + 10, 40, DISKMGR_DETAIL_W - 20u, props,
                                 sizeof(props) / sizeof(props[0]), 72, 21);
     } else {
-        leonos_ui_text(ui, x + 14, 46, T("No disk selected.", "未选择磁盘。"),
+        leonos_ui_text(ui, x + 14, 46, T("No disk selected."),
                        LEONOS_UI_DARK, LEONOS_UI_WHITE);
     }
 }
@@ -679,32 +679,31 @@ static void draw_action_panel(struct leonos_ui_surface *ui)
     uint32_t confirm_x = action_mode == DISKMGR_ACTION_CREATE ? 606u : 332u;
     uint32_t edit_x = confirm_x + 70u;
     leonos_ui_groupbox(ui, 16, y, view_w > 32u ? view_w - 32u : 1u, height,
-                       action_mode == DISKMGR_ACTION_FORMAT ? T("Format partition", "格式化分区") :
-                       action_mode == DISKMGR_ACTION_DELETE ? T("Delete partition", "删除分区") :
-                       T("Create partition", "创建分区"));
+                       action_mode == DISKMGR_ACTION_FORMAT ? T("Format partition") :
+                       action_mode == DISKMGR_ACTION_DELETE ? T("Delete partition") :
+                       T("Create partition"));
     if (action_mode == DISKMGR_ACTION_DELETE) {
         leonos_ui_text_clipped(ui, 30, y + 22, view_w > 60u ? view_w - 60u : 1u,
-                               T("This removes the GPT entry. Existing data is not securely erased.",
-                                 "这会移除 GPT 条目，原有数据不会被安全擦除。"),
+                               T("This removes the GPT entry. Existing data is not securely erased."),
                                LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     } else {
-        leonos_ui_text(ui, 30, y + 22, T("File system:", "文件系统:"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+        leonos_ui_text(ui, 30, y + 22, T("File system:"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
         leonos_ui_combobox(ui, 118, y + 16, 136, filesystem_label(selected_filesystem),
                             filesystem_dropdown_open, 0);
         if (action_mode == DISKMGR_ACTION_CREATE) {
-            leonos_ui_text(ui, 274, y + 22, T("Size MiB:", "大小 MiB:"),
+            leonos_ui_text(ui, 274, y + 22, T("Size MiB:"),
                            LEONOS_UI_BLACK, LEONOS_UI_WHITE);
             leonos_ui_edit_state_draw(ui, 346, y + 16, 92, &create_size_edit, 0);
-            leonos_ui_text(ui, 454, y + 22, T("Label:", "卷标:"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+            leonos_ui_text(ui, 454, y + 22, T("Label:"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
             leonos_ui_edit_state_draw(ui, 508, y + 16, 82, &create_label_edit, 0);
         }
     }
-    leonos_ui_text(ui, confirm_x, y + 22, T("Confirm:", "确认:"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+    leonos_ui_text(ui, confirm_x, y + 22, T("Confirm:"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_edit_state_draw(ui, edit_x, y + 16, 112, &confirm_edit, 0);
     leonos_ui_button(ui, 30, y + 60, 122, LEONOS_UI_BUTTON_H,
-                     action_armed ? T("Apply again", "再次应用") : T("Apply", "应用"),
+                     action_armed ? T("Apply again") : T("Apply"),
                      text_eq(confirm_text, action_token()) ? 0 : LEONOS_UI_BUTTON_DISABLED);
-    leonos_ui_button(ui, 162, y + 60, 82, LEONOS_UI_BUTTON_H, T("Cancel", "取消"), 0);
+    leonos_ui_button(ui, 162, y + 60, 82, LEONOS_UI_BUTTON_H, T("Cancel"), 0);
     if (filesystem_dropdown_open) {
         leonos_ui_dropdown(ui, 118, y + 40, 136, filesystem_items,
                            sizeof(filesystem_items) / sizeof(filesystem_items[0]),
@@ -716,18 +715,18 @@ static void draw_diskmgr(struct leonos_ui_surface *ui)
 {
     const struct leonos_ui_list_column disk_columns[] = {
         {"ID", 38},
-        {T("Name", "名称"), 126},
-        {T("Port", "端口"), 48},
-        {T("Capacity", "容量"), 94},
-        {T("Status", "状态"), 0},
+        {T("Name"), 126},
+        {T("Port"), 48},
+        {T("Capacity"), 94},
+        {T("Status"), 0},
     };
     const struct leonos_ui_list_column partition_columns[] = {
         {"#", 42},
-        {T("Name", "名称"), 178},
-        {T("File system", "文件系统"), 94},
-        {T("Size", "大小"), 110},
+        {T("Name"), 178},
+        {T("File system"), 94},
+        {T("Size"), 110},
         {"LBA", 164},
-        {T("Status", "状态"), 0},
+        {T("Status"), 0},
     };
     uint32_t disk_w = disk_list_width();
     uint32_t part_w = view_w > 32u ? view_w - 32u : 1u;
@@ -737,7 +736,7 @@ static void draw_diskmgr(struct leonos_ui_surface *ui)
     uint32_t pos = 0;
     update_layout();
     leonos_ui_rect(ui, 0, 0, view_w, view_h, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 16, 14, T("Disks", "磁盘"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    leonos_ui_text(ui, 16, 14, T("Disks"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_listview_header(ui, 16, DISKMGR_DISK_HEADER_Y, disk_w, disk_columns,
                               sizeof(disk_columns) / sizeof(disk_columns[0]));
     for (uint32_t row = 0; row < disk_list.visible_rows; ++row) {
@@ -763,7 +762,7 @@ static void draw_diskmgr(struct leonos_ui_surface *ui)
                          disk_count <= disk_list.visible_rows ? LEONOS_UI_SCROLLBAR_DISABLED : 0);
     draw_disk_details(ui);
 
-    leonos_ui_text(ui, 16, DISKMGR_PART_TITLE_Y, T("Partitions", "分区"),
+    leonos_ui_text(ui, 16, DISKMGR_PART_TITLE_Y, T("Partitions"),
                    LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_listview_header(ui, 16, DISKMGR_PART_HEADER_Y, part_w, partition_columns,
                               sizeof(partition_columns) / sizeof(partition_columns[0]));
@@ -789,26 +788,26 @@ static void draw_diskmgr(struct leonos_ui_surface *ui)
                          partition_list.scroll, partition_count, partition_list.visible_rows,
                          partition_count <= partition_list.visible_rows ? LEONOS_UI_SCROLLBAR_DISABLED : 0);
 
-    leonos_ui_button(ui, 16, controls_y, 86, LEONOS_UI_BUTTON_H, T("Refresh", "刷新"), 0);
+    leonos_ui_button(ui, 16, controls_y, 86, LEONOS_UI_BUTTON_H, T("Refresh"), 0);
     leonos_ui_button(ui, 112, controls_y, 112, LEONOS_UI_BUTTON_H,
-                     T("New partition", "新建分区"),
+                     T("New partition"),
                      selected_disk_mutable() ? 0 : LEONOS_UI_BUTTON_DISABLED);
     leonos_ui_button(ui, 234, controls_y, 118, LEONOS_UI_BUTTON_H,
-                     T("Format partition", "格式化分区"),
+                     T("Format partition"),
                      selected_partition_mutable() ? 0 : LEONOS_UI_BUTTON_DISABLED);
     leonos_ui_button(ui, 362, controls_y, 118, LEONOS_UI_BUTTON_H,
-                     T("Delete partition", "删除分区"),
+                     T("Delete partition"),
                      selected_partition_mutable() ? 0 : LEONOS_UI_BUTTON_DISABLED);
     leonos_ui_button(ui, 490, controls_y, 88, LEONOS_UI_BUTTON_H,
-                     T("Mount", "挂载"),
+                     T("Mount"),
                      selected_partition_mountable() ? 0 : LEONOS_UI_BUTTON_DISABLED);
     leonos_ui_button(ui, 588, controls_y, 104, LEONOS_UI_BUTTON_H,
-                     T("Unmount", "卸载"),
+                     T("Unmount"),
                      selected_partition_unmountable() ? 0 : LEONOS_UI_BUTTON_DISABLED);
     summary[0] = 0;
-    append_text(summary, &pos, sizeof(summary), T("Disks: ", "磁盘: "));
+    append_text(summary, &pos, sizeof(summary), T("Disks: "));
     append_u64(summary, &pos, sizeof(summary), disk_count);
-    append_text(summary, &pos, sizeof(summary), T("   Partitions: ", "   分区: "));
+    append_text(summary, &pos, sizeof(summary), T("   Partitions: "));
     append_u64(summary, &pos, sizeof(summary), partition_count);
     leonos_ui_text_clipped(ui, 706, controls_y + 6,
                            view_w > 722u ? view_w - 722u : 1u,
@@ -819,14 +818,12 @@ static void draw_diskmgr(struct leonos_ui_surface *ui)
     } else {
         uint32_t y = action_panel_y();
         leonos_ui_groupbox(ui, 16, y, view_w > 32u ? view_w - 32u : 1u, action_panel_height(),
-                           T("Partition safety", "分区安全"));
+                           T("Partition safety"));
         leonos_ui_text_clipped(ui, 30, y + 22, view_w > 60u ? view_w - 60u : 1u,
-                               T("Mount exFAT, FAT32, or ext2 data partitions at stable /mnt paths.",
-                                 "可将 exFAT、FAT32 或 ext2 数据分区挂载到稳定的 /mnt 路径。"),
+                               T("Mount exFAT, FAT32, or ext2 data partitions at stable /mnt paths."),
                                LEONOS_UI_BLACK, LEONOS_UI_WHITE);
         leonos_ui_text_clipped(ui, 30, y + 46, view_w > 60u ? view_w - 60u : 1u,
-                               T("Unmount requires administrator approval and no task may use the mount.",
-                                 "卸载需要管理员授权，且不能有进程正在使用该挂载点。"),
+                               T("Unmount requires administrator approval and no task may use the mount."),
                                LEONOS_UI_DARK, LEONOS_UI_WHITE);
     }
     leonos_ui_statusbar(ui, view_h - DISKMGR_STATUS_H, DISKMGR_STATUS_H, status_text);
@@ -949,7 +946,7 @@ static int handle_mouse(uint32_t window_id, struct leonos_ui_surface *ui,
     if (action_mode != DISKMGR_ACTION_NONE &&
         hit_rect_i(event->x, event->y, 162, panel_y + 60u, 82, LEONOS_UI_BUTTON_H)) {
         reset_action();
-        copy_text(status_text, sizeof(status_text), T("Operation cancelled", "操作已取消"));
+        copy_text(status_text, sizeof(status_text), T("Operation cancelled"));
         present_diskmgr(window_id, ui);
         return 1;
     }
@@ -1013,7 +1010,7 @@ static int handle_key(uint32_t window_id, struct leonos_ui_surface *ui,
     if (event->pressed && event->keycode == DISKMGR_KEY_ESCAPE) {
         if (action_mode != DISKMGR_ACTION_NONE) {
             reset_action();
-            copy_text(status_text, sizeof(status_text), T("Operation cancelled", "操作已取消"));
+            copy_text(status_text, sizeof(status_text), T("Operation cancelled"));
             present_diskmgr(window_id, ui);
             return 1;
         }
@@ -1055,12 +1052,15 @@ static int handle_key(uint32_t window_id, struct leonos_ui_surface *ui,
 
 int main(void)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
     puts("[diskmgr.elf] disk manager starting");
-    window_id = leonos_gui_create_app_window_ex(T("Disk Manager", "磁盘管理器"),
-                                                T("Manage GPT partitions", "管理 GPT 分区"),
+    window_id = leonos_gui_create_app_window_ex(T("Disk Manager"),
+                                                T("Manage GPT partitions"),
                                                 DISKMGR_W, DISKMGR_H, 0);
     if (window_id <= 0) {
         printf("[diskmgr.elf] create window failed=%d\n", window_id);

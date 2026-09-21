@@ -10,16 +10,6 @@ static uid_t test_geteuid(void) { return caller_uid; }
 
 static int renewals, authorizations, worker_pending, worker_status, service_error;
 static uint32_t service_status;
-const char *leonos_i18n(const char *english, const char *chinese)
-{ (void)chinese; return english; }
-int net_service_dhcp_renew(uint32_t timeout, net_service_dhcp_t *result)
-{
-    assert(timeout == 4000);
-    ++renewals;
-    if (service_error) { errno = service_error; return -1; }
-    *result = (net_service_dhcp_t){.status = service_status};
-    return 0;
-}
 int net_service_config(net_service_config_t *result)
 { *result = (net_service_config_t){.local_ip = 0xc0a8a581}; return 0; }
 int net_service_get_dns_policy(net_service_dns_policy_t *result)

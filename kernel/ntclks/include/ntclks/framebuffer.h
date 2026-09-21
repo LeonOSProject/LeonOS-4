@@ -108,6 +108,10 @@ void framebuffer_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t c
  * @brief Draw text at (x,y) using fg as the foreground and bg as the background color.
  */
 void framebuffer_text(uint32_t x, uint32_t y, const char *text, uint32_t fg, uint32_t bg);
+/** @brief Return bitmap width in terminal columns for scalar cp. */
+uint32_t framebuffer_codepoint_width(uint32_t cp);
+/** @brief Draw scalar cp at x/y with foreground fg and background bg. */
+void framebuffer_codepoint(uint32_t x, uint32_t y, uint32_t cp, uint32_t fg, uint32_t bg);
 /**
  * @brief Copy a w x h pixel buffer (stride words per row) to (x,y).
  */

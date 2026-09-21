@@ -4,7 +4,9 @@
 #include <leonos/auth.h>
 #include <leonos/fs.h>
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/launch.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
@@ -42,7 +44,7 @@
 #define FILEMAN_FOLDER_SIZE_MAX_ITEMS 2048
 #define FILEMAN_SETTINGS_DIALOG_W 340
 #define FILEMAN_SETTINGS_DIALOG_H 166
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 enum {
     FILEMAN_MENU_NONE = 0,

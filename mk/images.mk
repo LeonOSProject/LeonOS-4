@@ -25,7 +25,7 @@ LIVE_ROOT_STAGE := $(O_STAGE)/live-root
 DISK_ROOT_STAGE := $(O_STAGE)/disk-root
 define LEONOS_STANDALONE_STAGE
 $(O_STAGE)/$(1)-root.complete: $(APK_MANAGED_ROOT)/.apk-complete $(LEONOS_SRC)/tools/build/standalone-root.sh $(wildcard $(LEONOS_SRC)/system/test-accounts/*) $(LEONOS_CONFIG_FILE)
-	$$(Q)sh $$(LEONOS_SRC)/tools/build/standalone-root.sh $$(LEONOS_SRC) $$(APK_MANAGED_ROOT) $$(O_STAGE)/$(1)-root $(1) $(if $(filter disk,$(1)),$(if $(filter y,$(CONFIG_VMDK_DEFAULT_LANGUAGE_ZH)),zh,en),en)
+	$$(Q)sh $$(LEONOS_SRC)/tools/build/standalone-root.sh $$(LEONOS_SRC) $$(APK_MANAGED_ROOT) $$(O_STAGE)/$(1)-root $(1) '$$(KCONFIG_CONFIG_VMDK_DEFAULT_LANG)'
 	$$(Q)touch $$@
 	$$(Q)sh $$(LEONOS_SRC)/tools/build/stage-inventory.sh write $$(O_STAGE)/$(1)-root $$(O_META)/$(1)-root.files
 endef

@@ -104,9 +104,8 @@ static int choose_target_path(const char *dir, const char *name,
     if (leonos_stat_legacy(dst, &st) < 0) {
         return 0;
     }
-    if (leonos_ui_show_confirm_dialog(T("File Conflict", "文件冲突"),
-                                      T("The destination exists. Replace it? Choose No to save with another name.",
-                                        "目标已存在。要替换它吗？选择“否”将使用其他名称保存。"),
+    if (leonos_ui_show_confirm_dialog(T("File Conflict"),
+                                      T("The destination exists. Replace it? Choose No to save with another name."),
                                       0)) {
         return 1;
     }
@@ -209,7 +208,7 @@ static int copy_file(const char *src, const char *dst, uint64_t total,
         if (total) {
             uint32_t progress = base_percent +
                 (uint32_t)((*done * span_percent) / total);
-            operation_set(progress, T("Copying files...", "正在复制文件..."));
+            operation_set(progress, T("Copying files..."));
         }
     }
     close(in);
@@ -295,9 +294,9 @@ void copy_selected_entries(uint8_t cut)
     }
     clipboard_count = count;
     clipboard_cut = cut;
-    set_status(count ? (cut ? T("Items cut. Open a folder and paste.", "项目已剪切。打开一个文件夹后粘贴。")
-                            : T("Items copied. Open a folder and paste.", "项目已复制。打开一个文件夹后粘贴。"))
-                     : T("Select an item", "请选择一个项目"));
+    set_status(count ? (cut ? T("Items cut. Open a folder and paste.")
+                            : T("Items copied. Open a folder and paste."))
+                     : T("Select an item"));
 }
 
 void paste_clipboard(void)
@@ -308,14 +307,14 @@ void paste_clipboard(void)
     uint32_t failed = 0;
     uint8_t was_cut = clipboard_cut;
     if (!clipboard_count) {
-        set_status(T("Clipboard is empty", "剪贴板为空"));
+        set_status(T("Clipboard is empty"));
         return;
     }
     for (uint32_t i = 0; i < clipboard_count; ++i) {
         total += path_bytes(clipboard_paths[i]);
     }
-    operation_set(0, was_cut ? T("Moving files...", "正在移动文件...")
-                             : T("Copying files...", "正在复制文件..."));
+    operation_set(0, was_cut ? T("Moving files...")
+                             : T("Copying files..."));
     for (uint32_t i = 0; i < clipboard_count; ++i) {
         char target[LEONOS_FS_PATH_LEN];
         char source_parent[LEONOS_FS_PATH_LEN];
@@ -368,8 +367,8 @@ void paste_clipboard(void)
         }
         operation_set(total ? (uint32_t)((done * 100ULL) / total)
                             : ((i + 1U) * 100U) / clipboard_count,
-                      was_cut ? T("Moving files...", "正在移动文件...")
-                              : T("Copying files...", "正在复制文件..."));
+                      was_cut ? T("Moving files...")
+                              : T("Copying files..."));
     }
     if (was_cut && !failed) {
         clipboard_count = 0;
@@ -382,13 +381,13 @@ void paste_clipboard(void)
         uint32_t pos = 0;
         status[0] = 0;
         append_dec(status, &pos, sizeof(status), completed);
-        append_text(status, &pos, sizeof(status), T(" item(s) completed; ", " 个项目完成；"));
+        append_text(status, &pos, sizeof(status), T(" item(s) completed; "));
         append_dec(status, &pos, sizeof(status), failed);
-        append_text(status, &pos, sizeof(status), T(" failed", " 个失败"));
+        append_text(status, &pos, sizeof(status), T(" failed"));
         operation_finish(status);
     } else {
-        operation_finish(was_cut ? T("Move complete", "移动完成")
-                                 : T("Copy complete", "复制完成"));
+        operation_finish(was_cut ? T("Move complete")
+                                 : T("Copy complete"));
     }
 }
 
@@ -509,15 +508,15 @@ void recycle_selected_entries(void)
     char recycle[LEONOS_FS_PATH_LEN];
     uint32_t moved = 0;
     if (fileman_is_recycle_dir()) {
-        set_status(T("Items are already in the Recycle Bin", "项目已经在回收站中"));
+        set_status(T("Items are already in the Recycle Bin"));
         return;
     }
     if (build_recycle_dir(recycle, sizeof(recycle)) < 0) {
-        set_status(T("Recycle Bin is unavailable", "回收站不可用"));
+        set_status(T("Recycle Bin is unavailable"));
         return;
     }
     recycle_map_load(recycle);
-    operation_set(0, T("Moving items to Recycle Bin...", "正在将项目移到回收站..."));
+    operation_set(0, T("Moving items to Recycle Bin..."));
     for (uint32_t i = 0; i < entry_count; ++i) {
         char src[LEONOS_FS_PATH_LEN];
         char dst[LEONOS_FS_PATH_LEN];
@@ -535,13 +534,13 @@ void recycle_selected_entries(void)
             ++moved;
         }
         operation_set((i + 1U) * 100U / (entry_count ? entry_count : 1U),
-                      T("Moving items to Recycle Bin...", "正在将项目移到回收站..."));
+                      T("Moving items to Recycle Bin..."));
     }
     recycle_map_save(recycle);
     reload_dir();
     selected_mask = 0;
-    operation_finish(moved ? T("Moved to Recycle Bin", "已移到回收站")
-                           : T("No items moved", "没有移动项目"));
+    operation_finish(moved ? T("Moved to Recycle Bin")
+                           : T("No items moved"));
 }
 
 void restore_selected_entry(void)
@@ -550,33 +549,33 @@ void restore_selected_entry(void)
     char src[LEONOS_FS_PATH_LEN];
     char origin[LEONOS_FS_PATH_LEN];
     if (!fileman_is_recycle_dir() || !selected_entry_valid()) {
-        set_status(T("Select an item in Recycle Bin", "请在回收站中选择一个项目"));
+        set_status(T("Select an item in Recycle Bin"));
         return;
     }
     build_recycle_dir(recycle, sizeof(recycle));
     recycle_map_load(recycle);
     if (!recycle_map_origin(entries[file_list.selected].name, origin, sizeof(origin))) {
-        set_status(T("Original location is unavailable", "原始位置不可用"));
+        set_status(T("Original location is unavailable"));
         return;
     }
     build_child_path(src, sizeof(src), entries[file_list.selected].name);
     if (leonos_stat_legacy(origin, &(struct leonos_stat){0}) == 0 &&
-        !leonos_ui_show_confirm_dialog(T("Restore Conflict", "还原冲突"),
-                                       T("Original path exists. Replace it?", "原始路径已存在。要替换它吗？"), 0)) {
+        !leonos_ui_show_confirm_dialog(T("Restore Conflict"),
+                                       T("Original path exists. Replace it?"), 0)) {
         return;
     }
     if (leonos_stat_legacy(origin, &(struct leonos_stat){0}) == 0 && remove_tree(origin, 0) < 0) {
-        set_status(T("Could not replace original item", "无法替换原始项目"));
+        set_status(T("Could not replace original item"));
         return;
     }
     if (rename(src, origin) < 0) {
-        set_status(T("Restore failed", "还原失败"));
+        set_status(T("Restore failed"));
         return;
     }
     recycle_map_remove(entries[file_list.selected].name);
     recycle_map_save(recycle);
     reload_dir();
-    operation_finish(T("Item restored", "项目已还原"));
+    operation_finish(T("Item restored"));
 }
 
 void empty_recycle_bin(void)
@@ -585,11 +584,11 @@ void empty_recycle_bin(void)
     if (!fileman_is_recycle_dir()) {
         return;
     }
-    if (!leonos_ui_show_confirm_dialog(T("Empty Recycle Bin", "清空回收站"),
-                                       T("Delete all Recycle Bin items permanently?", "要永久删除回收站中的所有项目吗？"), 0)) {
+    if (!leonos_ui_show_confirm_dialog(T("Empty Recycle Bin"),
+                                       T("Delete all Recycle Bin items permanently?"), 0)) {
         return;
     }
-    operation_set(0, T("Emptying Recycle Bin...", "正在清空回收站..."));
+    operation_set(0, T("Emptying Recycle Bin..."));
     for (uint32_t i = 0; i < entry_count; ++i) {
         char path[LEONOS_FS_PATH_LEN];
         if (text_eq(entries[i].name, FILEMAN_RECYCLE_MAP)) {
@@ -600,13 +599,13 @@ void empty_recycle_bin(void)
             ++removed;
         }
         operation_set((i + 1U) * 100U / (entry_count ? entry_count : 1U),
-                      T("Emptying Recycle Bin...", "正在清空回收站..."));
+                      T("Emptying Recycle Bin..."));
     }
     recycle_map[0] = 0;
     recycle_map_save(current_path);
     reload_dir();
-    operation_finish(removed ? T("Recycle Bin emptied", "回收站已清空")
-                             : T("Recycle Bin is empty", "回收站为空"));
+    operation_finish(removed ? T("Recycle Bin emptied")
+                             : T("Recycle Bin is empty"));
 }
 
 void permanent_delete_selected_entries(void)
@@ -614,14 +613,14 @@ void permanent_delete_selected_entries(void)
     uint32_t removed = 0;
     uint32_t failed = 0;
     if (!selected_entry_valid()) {
-        set_status(T("Select an item", "请选择一个项目"));
+        set_status(T("Select an item"));
         return;
     }
-    if (!leonos_ui_show_confirm_dialog(T("Delete Permanently", "永久删除"),
-                                       T("Selected items cannot be restored. Continue?", "选中的项目将无法恢复。要继续吗？"), 0)) {
+    if (!leonos_ui_show_confirm_dialog(T("Delete Permanently"),
+                                       T("Selected items cannot be restored. Continue?"), 0)) {
         return;
     }
-    operation_set(0, T("Deleting items...", "正在删除项目..."));
+    operation_set(0, T("Deleting items..."));
     for (uint32_t i = 0; i < entry_count; ++i) {
         char path[LEONOS_FS_PATH_LEN];
         int selected = fileman_entry_marked(i) ||
@@ -636,14 +635,14 @@ void permanent_delete_selected_entries(void)
             ++failed;
         }
         operation_set((i + 1U) * 100U / (entry_count ? entry_count : 1U),
-                      T("Deleting items...", "正在删除项目..."));
+                      T("Deleting items..."));
     }
     reload_dir();
     selected_mask = 0;
     if (failed) {
-        operation_finish(T("Some items could not be deleted", "部分项目无法删除"));
+        operation_finish(T("Some items could not be deleted"));
     } else {
-        operation_finish(removed ? T("Items deleted permanently", "项目已永久删除")
-                                 : T("No items deleted", "没有删除项目"));
+        operation_finish(removed ? T("Items deleted permanently")
+                                 : T("No items deleted"));
     }
 }

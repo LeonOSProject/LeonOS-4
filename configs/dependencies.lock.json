@@ -2,6 +2,28 @@
   "schema_version": 1,
   "dependencies": [
     {
+      "id": "unifont",
+      "kind": "binary",
+      "version": "16.0.04",
+      "url": "https://unifoundry.com/pub/unifont/unifont-16.0.04/font-builds/unifont_all-16.0.04.hex.gz",
+      "sha256": "20e8b505f602488697979eefc69857f7f6106bceab702f5ac559f4f84e0e7494",
+      "directory": "unifont_all-16.0.04.hex.gz",
+      "script": "mk/resources.mk",
+      "target": "kernel",
+      "license": "resources/licenses/unifont-LICENSE"
+    },
+    {
+      "id": "musl-locales",
+      "kind": "tarball",
+      "version": "0e7923a2ba3752991923cac03b10dc12958a3e63",
+      "url": "https://gitlab.postmarketos.org/postmarketOS/musl-locales/-/archive/0e7923a2ba3752991923cac03b10dc12958a3e63/musl-locales-0e7923a2ba3752991923cac03b10dc12958a3e63.tar.gz",
+      "sha256": "29420e2f751295ab50d0fa7b919477a7577636539911a78396292a07df6e7388",
+      "directory": "musl-locales-0e7923a2ba3752991923cac03b10dc12958a3e63",
+      "script": "tools/build/musl-locales.sh",
+      "target": "musl-locales",
+      "license_in_source": "LICENSE"
+    },
+    {
       "id": "alpine-busybox-openrc",
       "kind": "apk",
       "version": "1.37.0-r31",

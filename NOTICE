@@ -88,11 +88,6 @@ Data, dictionaries, and visual resources
 * rime-pinyin-simp dictionary: Apache-2.0. See
   third_party/rime-pinyin-simp/LICENSE and ATTRIBUTION.txt. Both files are
   bundled in the optional leonos-oschinpt APK.
-* Noto Sans Mono: SIL Open Font License 1.1. Used to generate
-  system/fonts/metro-latin.lbf.
-* Droid Sans Fallback: Apache-2.0. Used by the CJK font generation chain.
-* Noto Sans CJK: SIL Open Font License 1.1. Used by the CJK font generation
-  chain and system/fonts/cjk16.lbf.
 * Microsoft font files in system/fonts (Deng.ttf, times.ttf, and simsun.ttc)
   are subject to the applicable Microsoft license terms. They are not covered
   by the LeonOS root license; verify redistribution rights before publishing

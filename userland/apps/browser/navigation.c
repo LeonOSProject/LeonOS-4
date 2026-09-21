@@ -74,7 +74,7 @@ void set_page_source(const char *title, const char *source,
     char window_title[47];
     uint32_t title_pos = 0;
     browser_form_clear_focus();
-    copy_text(page_title, sizeof(page_title), title && title[0] ? title : T("Untitled", "无标题"));
+    copy_text(page_title, sizeof(page_title), title && title[0] ? title : T("Untitled Page"));
     copy_text(page_source, sizeof(page_source), source ? source : "");
     page_is_html = is_html;
     source_truncated = 0;
@@ -184,7 +184,7 @@ void load_about(void)
     copy_text(current_location, sizeof(current_location), "about:leonos");
     copy_text(address_input, sizeof(address_input), current_location);
     leonos_ui_edit_state_sync(&address_edit);
-    set_page_source("LeonOS Browser", about_html, 1, T("Ready", "就绪"));
+    set_page_source("LeonOS Browser", about_html, 1, T("Ready"));
 }
 
 static void browser_copy_bytes(char *dst, uint32_t cap,
@@ -494,9 +494,8 @@ void load_http_form_post(const char *url, const char *body)
     char status[BROWSER_STATUS_CAP];
     browser_form_clear_focus();
     if (!parse_http_url(url, &parsed)) {
-        render_message_page(T("Invalid URL", "无效地址"),
-                            T("The form action could not be parsed as HTTP.",
-                              "无法把表单提交地址解析为 HTTP。"),
+        render_message_page(T("Invalid URL"),
+                            T("The form action could not be parsed as HTTP."),
                             browser_safe_detail(url));
         return;
     }
@@ -505,7 +504,7 @@ void load_http_form_post(const char *url, const char *body)
     copy_text(current_location, sizeof(current_location), normalized);
     copy_text(address_input, sizeof(address_input), normalized);
     leonos_ui_edit_state_sync(&address_edit);
-    set_status(T("Submitting form...", "正在提交表单..."));
+    set_status(T("Submitting form..."));
     present_browser();
     for (;;) {
         page_source[0] = 0;
@@ -526,12 +525,12 @@ void load_http_form_post(const char *url, const char *body)
         if (retries > BROWSER_HTTP_MAX_RETRIES) {
             break;
         }
-        set_status(T("Retrying form submission...", "正在重新提交表单..."));
+        set_status(T("Retrying form submission..."));
     }
     if (ret < 0) {
         format_ret_status(status, sizeof(status),
-                          T("HTTP client failed", "HTTP 客户端失败"), ret);
-        render_message_page(T("Network Error", "网络错误"), status,
+                          T("HTTP client failed"), ret);
+        render_message_page(T("Network Error"), status,
                             browser_safe_detail(normalized));
         return;
     }
@@ -563,7 +562,7 @@ void load_http_form_post(const char *url, const char *body)
         append_text(status, &pos, sizeof(status), "  truncated");
     }
     if (response.net_status != NET_SERVICE_STATUS_OK) {
-        render_message_page(T("Network Error", "网络错误"), status,
+        render_message_page(T("Network Error"), status,
                             browser_safe_detail(normalized));
         return;
     }
@@ -578,7 +577,7 @@ void load_http_form_post(const char *url, const char *body)
     if (parse_http_url(current_location, &parsed)) {
         copy_text(page_title, sizeof(page_title), parsed.host);
     } else {
-        copy_text(page_title, sizeof(page_title), T("HTTP Page", "HTTP 页面"));
+        copy_text(page_title, sizeof(page_title), T("HTTP Page"));
     }
     rerender_page();
     set_status(status);
@@ -596,8 +595,8 @@ void load_http_url(const char *url)
     char status[BROWSER_STATUS_CAP];
     browser_form_clear_focus();
     if (!parse_http_url(url, &parsed)) {
-        render_message_page(T("Invalid URL", "无效地址"),
-                            T("The address could not be parsed as HTTP.", "无法把该地址解析为 HTTP。"),
+        render_message_page(T("Invalid URL"),
+                            T("The address could not be parsed as HTTP."),
                             browser_safe_detail(url));
         return;
     }
@@ -606,7 +605,7 @@ void load_http_url(const char *url)
     copy_text(current_location, sizeof(current_location), normalized);
     copy_text(address_input, sizeof(address_input), normalized);
     leonos_ui_edit_state_sync(&address_edit);
-    set_status(T("Opening page...", "正在打开页面..."));
+    set_status(T("Opening page..."));
     present_browser();
     for (;;) {
         page_source[0] = 0;
@@ -628,12 +627,12 @@ void load_http_url(const char *url)
         if (retries > BROWSER_HTTP_MAX_RETRIES) {
             break;
         }
-        set_status(T("Retrying...", "正在重试..."));
+        set_status(T("Retrying..."));
     }
     if (ret < 0) {
         format_ret_status(status, sizeof(status),
-                          T("HTTP client failed", "HTTP 客户端失败"), ret);
-        render_message_page(T("Network Error", "网络错误"), status,
+                          T("HTTP client failed"), ret);
+        render_message_page(T("Network Error"), status,
                             browser_safe_detail(normalized));
         return;
     }
@@ -669,7 +668,7 @@ void load_http_url(const char *url)
         append_text(status, &pos, sizeof(status), "  truncated");
     }
     if (response.net_status != NET_SERVICE_STATUS_OK) {
-        render_message_page(T("Network Error", "网络错误"), status,
+        render_message_page(T("Network Error"), status,
                             browser_safe_detail(normalized));
         return;
     }
@@ -685,7 +684,7 @@ void load_http_url(const char *url)
     if (parse_http_url(current_location, &parsed)) {
         copy_text(page_title, sizeof(page_title), parsed.host);
     } else {
-        copy_text(page_title, sizeof(page_title), T("HTTP Page", "HTTP 页面"));
+        copy_text(page_title, sizeof(page_title), T("HTTP Page"));
     }
     rerender_page();
     set_status(status);
@@ -700,8 +699,8 @@ void load_local_file(const char *path)
     browser_form_clear_focus();
     fd = open(path, LEONOS_O_RDONLY, 0);
     if (fd < 0) {
-        format_ret_status(status, sizeof(status), T("Open failed", "打开失败"), fd);
-        render_message_page(T("File Error", "文件错误"), status, path);
+        format_ret_status(status, sizeof(status), T("Open failed"), fd);
+        render_message_page(T("File Error"), status, path);
         return;
     }
     for (;;) {
@@ -714,8 +713,8 @@ void load_local_file(const char *path)
         got = read(fd, page_source + len, free_bytes);
         if (got < 0) {
             close(fd);
-            format_ret_status(status, sizeof(status), T("Read failed", "读取失败"), (int32_t)got);
-            render_message_page(T("File Error", "文件错误"), status, path);
+            format_ret_status(status, sizeof(status), T("Read failed"), (int32_t)got);
+            render_message_page(T("File Error"), status, path);
             return;
         }
         if (got == 0) {
@@ -731,8 +730,8 @@ void load_local_file(const char *path)
     copy_text(page_title, sizeof(page_title), path);
     page_is_html = ends_with_ignore_case(path, ".html") || ends_with_ignore_case(path, ".htm");
     rerender_page();
-    set_status(source_truncated ? T("File loaded, truncated", "文件已打开，内容被截断")
-                                : T("File loaded", "文件已打开"));
+    set_status(source_truncated ? T("File loaded, truncated")
+                                : T("File loaded"));
 }
 
 static int browser_should_download_http_url(const char *url)
@@ -767,9 +766,9 @@ void browser_start_download(const char *url)
     argv[1] = target;
     argv[2] = 0;
     if (leonos_launch_argv(argv) < 0) {
-        set_status(T("Could not start Download Manager", "无法启动下载管理器"));
+        set_status(T("Could not start Download Manager"));
     } else {
-        set_status(T("Download started", "下载已开始"));
+        set_status(T("Download started"));
     }
 }
 
@@ -782,9 +781,9 @@ static void browser_start_api_install(const char *url)
     argv[1] = target;
     argv[2] = 0;
     if (leonos_launch_argv(argv) < 0) {
-        set_status(T("Could not start API Installer", "无法启动 API 安装程序"));
+        set_status(T("Could not start API Installer"));
     } else {
-        set_status(T("Application download started", "应用下载已开始"));
+        set_status(T("Application download started"));
     }
 }
 
@@ -809,9 +808,8 @@ void navigate_to(const char *input, uint8_t add_to_history)
     } else if (is_local_path(url)) {
         load_local_file(url);
     } else {
-        render_message_page(T("Unsupported Address", "不支持的地址"),
-                            T("Use http://, https://, about:, or a LeonOS file path such as /file.html.",
-                              "请使用 http://、https://、about:，或类似 /file.html 的 LeonOS 文件路径。"),
+        render_message_page(T("Unsupported Address"),
+                            T("Use http://, https://, about:, or a LeonOS file path such as /file.html."),
                             browser_safe_detail(url));
     }
     if (add_to_history) {

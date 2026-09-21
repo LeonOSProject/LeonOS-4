@@ -294,10 +294,10 @@ static void desktop_inputm_start_entry(uint32_t index)
     }
     if (spawn_program_path(desktop_inputm_entries[index].path) > 0) {
         copy_text(desktop_inputm_status, sizeof(desktop_inputm_status),
-                  leonos_i18n("Starting input method", "正在启动输入法"));
+                  T("Starting input method"));
     } else {
         copy_text(desktop_inputm_status, sizeof(desktop_inputm_status),
-                  leonos_i18n("Input method could not start", "输入法无法启动"));
+                  T("Input method could not start"));
     }
 }
 
@@ -360,7 +360,7 @@ void desktop_inputm_refresh(void)
         if (!text_eq(previous.active_id, "en") &&
             text_eq(desktop_inputm_state.active_id, "en")) {
             copy_text(desktop_inputm_status, sizeof(desktop_inputm_status),
-                      leonos_i18n("Input method stopped; English restored", "输入法已停止，已恢复英文"));
+                      T("Input method stopped; English restored"));
         }
         if (inputm_state_changed(&previous, &desktop_inputm_state)) {
             full_redraw_pending = 1;
@@ -378,7 +378,7 @@ void desktop_inputm_cycle(void)
     int current = desktop_inputm_entry_for_id(desktop_inputm_state.active_id);
     if (desktop_inputm_entry_count < 2U) {
         copy_text(desktop_inputm_status, sizeof(desktop_inputm_status),
-                  leonos_i18n("Only English input is available", "当前仅有英文输入法可用"));
+                  T("Only English input is available"));
         full_redraw_pending = 1;
         return;
     }
@@ -505,7 +505,7 @@ void draw_inputm_overlay(void)
                             menu_y + 8U + desktop_inputm_entry_count *
                                 DESKTOP_INPUTM_MENU_ROW_H,
                             DESKTOP_INPUTM_MENU_W - 12U,
-                            leonos_i18n("Input method settings", "输入法设置"), 0);
+                            T("Input method settings"), 0);
     }
     if (desktop_inputm_state.composition[0] && !desktop_inputm_menu_open &&
         !(desktop_inputm_state.render_flags & TEXT_INPUT_RENDER_PIXELS)) {

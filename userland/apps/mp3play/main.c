@@ -1,6 +1,8 @@
 #include <leonos/fs.h>
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
 #include <leonos/ui.h>
@@ -10,7 +12,7 @@
 #include <linux/soundcard.h>
 #include <string.h>
 
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 #define MINIMP3_NO_SIMD
 #define MINIMP3_IMPLEMENTATION
@@ -341,8 +343,8 @@ static int player_open_dialog(struct mp3_player *player)
     char path[LEONOS_FS_PATH_LEN];
     player_stop(player, "Playback stopped");
     path[0] = 0;
-    if (leonos_ui_show_open_dialog(T("Open MP3", "打开 MP3"), path, sizeof(path),
-                                   T("MP3 audio (*.mp3)", "MP3 音频 (*.mp3)"),
+    if (leonos_ui_show_open_dialog(T("Open MP3"), path, sizeof(path),
+                                   T("MP3 audio (*.mp3)"),
                                    ".mp3") <= 0 || !path[0]) {
         if (!player->path[0]) {
             copy_text(player->status, sizeof(player->status), "Select an MP3 file to begin");
@@ -416,6 +418,9 @@ static int handle_event(struct mp3_player *player,
 
 int main(int argc, char **argv, char **envp)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     struct mp3_player player = {.fd = -1, .dsp_fd = -1};

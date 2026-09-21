@@ -138,7 +138,7 @@ void select_address_text(void)
     address_edit.cursor = address_edit.length;
     address_edit.scroll = 0;
     address_edit.selecting = 0;
-    set_status(T("Address selected", "已选中地址"));
+    set_status(T("Address selected"));
 }
 
 int handle_menu_click(int32_t x, int32_t y)
@@ -147,11 +147,11 @@ int handle_menu_click(int32_t x, int32_t y)
         return 0;
     }
     struct leonos_ui_menubar_item top_items[] = {
-        {T("File", "文件"), BROWSER_MENU_FILE, BROWSER_MENU_FILE_W, 0},
-        {T("Edit", "编辑"), BROWSER_MENU_EDIT, BROWSER_MENU_EDIT_W, 0},
-        {T("View", "查看"), BROWSER_MENU_VIEW, BROWSER_MENU_VIEW_W, 0},
-        {T("Favorites", "收藏夹"), BROWSER_MENU_FAVORITES, BROWSER_MENU_FAVORITES_W, 0},
-        {T("Help", "帮助"), BROWSER_MENU_HELP, BROWSER_MENU_HELP_W, 0},
+        {T("File"), BROWSER_MENU_FILE, BROWSER_MENU_FILE_W, 0},
+        {T("Edit"), BROWSER_MENU_EDIT, BROWSER_MENU_EDIT_W, 0},
+        {T("View"), BROWSER_MENU_VIEW, BROWSER_MENU_VIEW_W, 0},
+        {T("Favorites"), BROWSER_MENU_FAVORITES, BROWSER_MENU_FAVORITES_W, 0},
+        {T("Help"), BROWSER_MENU_HELP, BROWSER_MENU_HELP_W, 0},
     };
     struct leonos_ui_rect r;
     uint32_t id = 0;
@@ -168,10 +168,10 @@ int handle_menu_click(int32_t x, int32_t y)
     }
     if (menu_open == BROWSER_MENU_FILE) {
         struct leonos_ui_context_menu_item items[] = {
-            {T("Home", "主页"), BROWSER_CMD_HOME, 0},
-            {T("Refresh", "刷新"), BROWSER_CMD_REFRESH, 0},
-            {T("Download Current Page", "下载当前页面"), BROWSER_CMD_DOWNLOAD, 0},
-            {T("Close", "关闭"), BROWSER_CMD_CLOSE, 0},
+            {T("Home"), BROWSER_CMD_HOME, 0},
+            {T("Refresh"), BROWSER_CMD_REFRESH, 0},
+            {T("Download Current Page"), BROWSER_CMD_DOWNLOAD, 0},
+            {T("Close"), BROWSER_CMD_CLOSE, 0},
         };
         leonos_ui_menubar_item_rect(0, 0, top_items,
                                     sizeof(top_items) / sizeof(top_items[0]),
@@ -196,10 +196,10 @@ int handle_menu_click(int32_t x, int32_t y)
     }
     if (menu_open == BROWSER_MENU_EDIT) {
         struct leonos_ui_context_menu_item items[] = {
-            {T("Select Address", "选中地址"), BROWSER_CMD_SELECT_ADDRESS, 0},
-            {T("Clear Address", "清空地址"), BROWSER_CMD_CLEAR_ADDRESS, 0},
-            {T("Find in Page...", "在页面中查找..."), BROWSER_CMD_FIND, 0},
-            {T("Find Next", "查找下一个"), BROWSER_CMD_FIND_NEXT, 0},
+            {T("Select Address"), BROWSER_CMD_SELECT_ADDRESS, 0},
+            {T("Clear Address"), BROWSER_CMD_CLEAR_ADDRESS, 0},
+            {T("Find in Page..."), BROWSER_CMD_FIND, 0},
+            {T("Find Next"), BROWSER_CMD_FIND_NEXT, 0},
         };
         leonos_ui_menubar_item_rect(0, 0, top_items,
                                     sizeof(top_items) / sizeof(top_items[0]),
@@ -214,7 +214,7 @@ int handle_menu_click(int32_t x, int32_t y)
                 address_input[0] = 0;
                 leonos_ui_edit_state_sync(&address_edit);
                 address_edit.focused = 1;
-                set_status(T("Address cleared", "地址已清空"));
+                set_status(T("Address cleared"));
             } else if (id == BROWSER_CMD_FIND) {
                 browser_find_prompt();
             } else if (id == BROWSER_CMD_FIND_NEXT) {
@@ -227,9 +227,9 @@ int handle_menu_click(int32_t x, int32_t y)
     }
     if (menu_open == BROWSER_MENU_VIEW) {
         struct leonos_ui_context_menu_item items[] = {
-            {T("Refresh", "刷新"), BROWSER_CMD_REFRESH, 0},
-            {T("Top", "顶部"), BROWSER_CMD_TOP, 0},
-            {T("Bottom", "底部"), BROWSER_CMD_BOTTOM, 0},
+            {T("Refresh"), BROWSER_CMD_REFRESH, 0},
+            {T("Top"), BROWSER_CMD_TOP, 0},
+            {T("Bottom"), BROWSER_CMD_BOTTOM, 0},
         };
         leonos_ui_menubar_item_rect(0, 0, top_items,
                                     sizeof(top_items) / sizeof(top_items[0]),
@@ -242,11 +242,11 @@ int handle_menu_click(int32_t x, int32_t y)
                 navigate_to(current_location, 0);
             } else if (id == BROWSER_CMD_TOP) {
                 scroll_line = 0;
-                set_status(T("Top of page", "页面顶部"));
+                set_status(T("Top of page"));
             } else if (id == BROWSER_CMD_BOTTOM) {
                 uint32_t rows = visible_rows();
                 scroll_line = line_count > rows ? line_count - rows : 0;
-                set_status(T("Bottom of page", "页面底部"));
+                set_status(T("Bottom of page"));
             }
             return 1;
         }
@@ -277,7 +277,7 @@ int handle_menu_click(int32_t x, int32_t y)
     }
     if (menu_open == BROWSER_MENU_HELP) {
         struct leonos_ui_context_menu_item items[] = {
-            {T("About Browser", "关于浏览器"), BROWSER_CMD_ABOUT, 0},
+            {T("About Browser"), BROWSER_CMD_ABOUT, 0},
         };
         leonos_ui_menubar_item_rect(0, 0, top_items,
                                     sizeof(top_items) / sizeof(top_items[0]),
@@ -287,10 +287,9 @@ int handle_menu_click(int32_t x, int32_t y)
                                      sizeof(items) / sizeof(items[0]), &id)) {
             menu_open = BROWSER_MENU_NONE;
             if (id == BROWSER_CMD_ABOUT) {
-                leonos_ui_show_message_box(T("LeonOS Browser", "LeonOS 浏览器"),
-                                           T("Classic HTTP browser for LeonOS 4.",
-                                             "LeonOS 4 经典 HTTP 浏览器。"),
-                                           T("OK", "确定"));
+                leonos_ui_show_message_box(T("LeonOS Browser"),
+                                           T("Classic HTTP browser for LeonOS 4."),
+                                           T("OK"));
             }
             return 1;
         }

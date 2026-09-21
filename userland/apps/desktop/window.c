@@ -511,7 +511,7 @@ void draw_app_surface_i(uint8_t id, int body_x, int body_y,
                                 APP_CLIENT_MAX_W,
                                 app_client_scratch, &out_w, &out_h) <= 0) {
         text_draw_i(body_x + 16, body_y + 18,
-                    windows[id].app_text ? windows[id].app_text : leonos_i18n("Application window", "应用程序窗口"),
+                    windows[id].app_text ? windows[id].app_text : T("Application window"),
                     LEONOS_UI_BLACK, windows[id].body_color);
         return;
     }

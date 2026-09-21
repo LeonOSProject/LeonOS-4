@@ -20,7 +20,7 @@ void open_selected_entry(void)
     char path[LEONOS_FS_PATH_LEN];
     int pid;
     if (file_list.selected < 0 || (uint32_t)file_list.selected >= entry_count) {
-        set_status(T("Select an item", "请选择一个项目"));
+        set_status(T("Select an item"));
         return;
     }
     build_child_path(path, sizeof(path), entries[file_list.selected].name);
@@ -79,12 +79,12 @@ void create_new_folder(void)
     char name[LEONOS_FS_NAME_LEN] = "New Folder";
     char path[LEONOS_FS_PATH_LEN];
     int ret;
-    if (!leonos_ui_show_input_dialog(T("New Folder", "新建文件夹"), T("Folder name:", "文件夹名称:"), name, sizeof(name))) {
-        set_status(T("New folder canceled", "已取消新建文件夹"));
+    if (!leonos_ui_show_input_dialog(T("New Folder"), T("Folder name:"), name, sizeof(name))) {
+        set_status(T("New folder canceled"));
         return;
     }
     if (!name[0]) {
-        set_status(T("Folder name is empty", "文件夹名称为空"));
+        set_status(T("Folder name is empty"));
         return;
     }
     build_child_path(path, sizeof(path), name);
@@ -98,8 +98,7 @@ void create_new_folder(void)
                                    FILEMAN_MAX_ENTRIES,
                                    &elevated_count) == 0) {
             select_entry_by_name(name, elevated_count);
-            set_status(T("Folder created (elevated)",
-                         "文件夹已创建（已提权）"));
+            set_status(T("Folder created (elevated)"));
             return;
         }
         set_status_error("Create folder failed ", ret);
@@ -115,7 +114,7 @@ void create_new_folder(void)
             break;
         }
     }
-    set_status(T("Folder created", "文件夹已创建"));
+    set_status(T("Folder created"));
 }
 
 void create_shortcut_for_selected(void)
@@ -127,21 +126,20 @@ void create_shortcut_for_selected(void)
     int to_desktop;
     int ret;
     if (!selected_entry_is_file()) {
-        set_status(T("Select a file", "请选择一个文件"));
+        set_status(T("Select a file"));
         return;
     }
     build_child_path(target_path, sizeof(target_path), entries[file_list.selected].name);
     to_desktop = leonos_ui_show_confirm_dialog(
-        T("Create Shortcut", "创建快捷方式"),
-        T("Place shortcut on Desktop? No creates it here.",
-          "是否放到桌面？选择“否”则放在当前目录。"),
+        T("Create Shortcut"),
+        T("Place shortcut on Desktop? No creates it here."),
         1);
     if (to_desktop) {
         if (!home_path[0]) {
             refresh_home_path();
         }
         if (!home_path[0]) {
-            set_status(T("Desktop folder unavailable", "桌面文件夹不可用"));
+            set_status(T("Desktop folder unavailable"));
             return;
         }
         build_path_join(dest_dir, sizeof(dest_dir), home_path, "desktop");
@@ -173,7 +171,7 @@ void create_shortcut_for_selected(void)
             }
         }
     }
-    set_status(T("Shortcut created", "快捷方式已创建"));
+    set_status(T("Shortcut created"));
 }
 
 void rename_selected_entry(void)
@@ -183,16 +181,16 @@ void rename_selected_entry(void)
     char name[LEONOS_FS_NAME_LEN];
     int ret;
     if (!selected_entry_valid()) {
-        set_status(T("Select an item", "请选择一个项目"));
+        set_status(T("Select an item"));
         return;
     }
     copy_text(name, sizeof(name), entries[file_list.selected].name);
-    if (!leonos_ui_show_input_dialog(T("Rename", "重命名"), T("New name:", "新名称:"), name, sizeof(name))) {
-        set_status(T("Rename canceled", "已取消重命名"));
+    if (!leonos_ui_show_input_dialog(T("Rename"), T("New name:"), name, sizeof(name))) {
+        set_status(T("Rename canceled"));
         return;
     }
     if (!name[0]) {
-        set_status(T("New name is empty", "新名称为空"));
+        set_status(T("New name is empty"));
         return;
     }
     build_child_path(old_path, sizeof(old_path), entries[file_list.selected].name);
@@ -205,7 +203,7 @@ void rename_selected_entry(void)
                                     FILEMAN_MAX_ENTRIES,
                                     &elevated_count) == 0) {
             select_entry_by_name(name, elevated_count);
-            set_status(T("Renamed (elevated)", "已重命名（已提权）"));
+            set_status(T("Renamed (elevated)"));
             return;
         }
         set_status_error("Rename failed ", ret);
@@ -221,7 +219,7 @@ void rename_selected_entry(void)
             break;
         }
     }
-    set_status(T("Renamed", "已重命名"));
+    set_status(T("Renamed"));
 }
 
 void delete_selected_entry(void)
@@ -231,15 +229,15 @@ void delete_selected_entry(void)
     uint32_t pos = 0;
     int ret;
     if (!selected_entry_valid()) {
-        set_status(T("Select an item", "请选择一个项目"));
+        set_status(T("Select an item"));
         return;
     }
     message[0] = 0;
-    append_text(message, &pos, sizeof(message), T("Delete ", "删除 "));
+    append_text(message, &pos, sizeof(message), T("Delete "));
     append_text(message, &pos, sizeof(message), entries[file_list.selected].name);
     append_char(message, &pos, sizeof(message), '?');
-    if (!leonos_ui_show_confirm_dialog(T("Delete", "删除"), message, 0)) {
-        set_status(T("Delete canceled", "已取消删除"));
+    if (!leonos_ui_show_confirm_dialog(T("Delete"), message, 0)) {
+        set_status(T("Delete canceled"));
         return;
     }
     {
@@ -252,34 +250,32 @@ void delete_selected_entry(void)
              * an explicit confirmation word for a directory because that
              * removal is unrecoverable. */
             if (is_dir && !leonos_ui_show_confirm_dialog(
-                    T("Delete Folder", "删除文件夹"),
-                    T("This permanently deletes the folder and everything "
-                      "inside it. Continue?",
-                      "此操作将永久删除该文件夹及其全部内容。是否继续？"),
+                    T("Delete Folder"),
+                    T("This permanently deletes the folder and everything inside it. Continue?"),
                     0)) {
-                set_status(T("Delete canceled", "已取消删除"));
+                set_status(T("Delete canceled"));
                 return;
             }
             if (fileman_delete_elevated(path, is_dir, entries,
                                         FILEMAN_MAX_ENTRIES,
                                         &elevated_count) == 0) {
-                present_directory(elevated_count, T("Items ", "项目 "),
+                present_directory(elevated_count, T("Items "),
                                   " in ");
-                set_status(T("Deleted (elevated)", "已删除（已提权）"));
+                set_status(T("Deleted (elevated)"));
                 return;
             }
         }
     }
     if (ret < 0) {
         if (ret == -39) {
-            set_status(T("Delete failed: directory not empty", "删除失败：目录非空"));
+            set_status(T("Delete failed: directory not empty"));
         } else {
             set_status_error("Delete failed ", ret);
         }
         return;
     }
     reload_dir();
-    set_status(T("Deleted", "已删除"));
+    set_status(T("Deleted"));
 }
 
 void execute_action(uint32_t action)
@@ -385,17 +381,17 @@ void extract_tar_with_path(const char *tar_path)
         }
     }
     if (!leonos_tar_extract_all(tar_path, dest_dir)) {
-        set_status(T("Tar extract failed", "Tar解压失败"));
+        set_status(T("Tar extract failed"));
         return;
     }
-    set_status(T("Tar extracted successfully", "Tar解压成功"));
+    set_status(T("Tar extracted successfully"));
 }
 
 void extract_tar_selected(void)
 {
     char tar_path[LEONOS_FS_PATH_LEN];
     if (!selected_entry_valid()) {
-        set_status(T("Select a tar file", "请选择一个tar文件"));
+        set_status(T("Select a tar file"));
         return;
     }
     build_child_path(tar_path, sizeof(tar_path),
@@ -403,7 +399,7 @@ void extract_tar_selected(void)
     fileman_operation_active = 1;
     fileman_operation_percent = 0;
     copy_text(fileman_operation_text, sizeof(fileman_operation_text),
-              T("Extracting tar...", "正在解压tar..."));
+              T("Extracting tar..."));
     fileman_present_progress();
     extract_tar_with_path(tar_path);
     fileman_operation_active = 0;
@@ -424,7 +420,7 @@ void compress_selected_to_tar(void)
     count = fileman_selected_count();
     if (count == 0) {
         if (!selected_entry_valid()) {
-            set_status(T("Mark files first", "请先标记文件"));
+            set_status(T("Mark files first"));
             return;
         }
         count = 1;
@@ -439,7 +435,7 @@ void compress_selected_to_tar(void)
         uint32_t nlen = (uint32_t)text_len(base_name);
         uint32_t clen = (uint32_t)text_len(current_path);
         if (clen + nlen + 6U >= sizeof(tar_path)) {
-            set_status(T("Path too long", "路径过长"));
+            set_status(T("Path too long"));
             return;
         }
         memcpy(tar_path, current_path, clen);
@@ -449,13 +445,13 @@ void compress_selected_to_tar(void)
     }
     tar_fd = open(tar_path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
     if (tar_fd < 0) {
-        set_status(T("Cannot create tar", "无法创建tar"));
+        set_status(T("Cannot create tar"));
         return;
     }
     fileman_operation_active = 1;
     fileman_operation_percent = 0;
     copy_text(fileman_operation_text, sizeof(fileman_operation_text),
-              T("Compressing to tar...", "正在压缩为tar..."));
+              T("Compressing to tar..."));
     fileman_present_progress();
     for (i = 0; i < entry_count && i < FILEMAN_MAX_ENTRIES; ++i) {
         if (count > 1 && !fileman_entry_marked(i)) {
@@ -496,16 +492,16 @@ void compress_selected_to_tar(void)
             close(tar_fd);
             unlink(tar_path);
             fileman_operation_active = 0;
-            set_status(T("Tar finalize failed", "Tar收尾失败"));
+            set_status(T("Tar finalize failed"));
             reload_dir();
             return;
         }
         close(tar_fd);
-        set_status(T("Tar created successfully", "Tar创建成功"));
+        set_status(T("Tar created successfully"));
     } else {
         close(tar_fd);
         unlink(tar_path);
-        set_status(T("No files compressed", "没有文件被压缩"));
+        set_status(T("No files compressed"));
     }
     fileman_operation_active = 0;
     reload_dir();

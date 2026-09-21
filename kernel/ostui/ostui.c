@@ -4,6 +4,7 @@
  * while mirroring the original byte stream to the serial console.
  */
 #include <leonos/psf_font.h>
+#include <leonos/utf8_stream.h>
 #include <ntclks/console.h>
 #include <ntclks/framebuffer.h>
 #include <ntclks/input.h>
@@ -30,6 +31,21 @@ struct ostui_state {
 };
 
 static struct ostui_state state;
+
+static struct leonos_utf8_stream utf8;
+
+static int ostui_wide(uint32_t cp)
+{
+    return (cp >= 0x1100U && cp <= 0x115fU) ||
+           (cp >= 0x2329U && cp <= 0x232aU) ||
+           (cp >= 0x2e80U && cp <= 0xa4cfU) ||
+           (cp >= 0xac00U && cp <= 0xd7a3U) ||
+           (cp >= 0xf900U && cp <= 0xfaffU) ||
+           (cp >= 0xfe10U && cp <= 0xfe19U) ||
+           (cp >= 0xfe30U && cp <= 0xfe6fU) ||
+           (cp >= 0xff01U && cp <= 0xff60U) ||
+           (cp >= 0xffe0U && cp <= 0xffe6U);
+}
 
 static const uint32_t palette[16] = {
     0x00000000u, 0x00aa0000u, 0x0000aa00u, 0x00aaaa00u,
@@ -102,21 +118,20 @@ static void ostui_newline(void)
     }
 }
 
-static void ostui_put_visible(char ch)
+static void ostui_put_visible(uint32_t cp)
 {
     const struct framebuffer *fb = framebuffer_get();
-    char text[2] = {ch, 0};
-    if (ch == '\r') {
+    if (cp == '\r') {
         state.col = 0;
         return;
     }
-    if (ch == '\n') {
+    if (cp == '\n') {
         ostui_newline();
         return;
     }
-    if (ch == '\t') {
-        uint32_t next = (state.col + 8U) & ~7U;
-        while (state.col < next) {
+    if (cp == '\t') {
+        uint32_t spaces = 8U - (state.col & 7U);
+        while (spaces--) {
             ostui_put_visible(' ');
         }
         return;
@@ -127,11 +142,10 @@ static void ostui_put_visible(char ch)
     if (state.col >= ostui_cols()) {
         ostui_newline();
     }
-    framebuffer_rect(state.col * LEONOS_FONT_W, state.row * LEONOS_FONT_H,
-                     LEONOS_FONT_W, LEONOS_FONT_H, state.bg);
-    framebuffer_text(state.col * LEONOS_FONT_W, state.row * LEONOS_FONT_H,
-                     text, state.fg, state.bg);
-    ++state.col;
+    if (ostui_wide(cp) && state.col + 1U >= ostui_cols()) ostui_newline();
+    framebuffer_codepoint(state.col * LEONOS_FONT_W, state.row * LEONOS_FONT_H,
+                          cp, state.fg, state.bg);
+    state.col += framebuffer_codepoint_width(cp);
 }
 
 static uint32_t param_or(uint32_t index, uint32_t fallback)
@@ -279,7 +293,11 @@ static void ostui_feed(char ch)
         state.parser = OSTUI_ESC;
         return;
     }
-    ostui_put_visible(ch);
+    uint32_t cp;
+    int result = leonos_utf8_feed(&utf8, (unsigned char)ch, &cp);
+    if (result) ostui_put_visible(cp);
+    if (result < 0 && leonos_utf8_feed(&utf8, (unsigned char)ch, &cp))
+        ostui_put_visible(cp);
 }
 
 void ostui_clear(void)
@@ -294,6 +312,7 @@ void ostui_clear(void)
 
 void ostui_init(void)
 {
+    utf8 = (struct leonos_utf8_stream){0};
     state = (struct ostui_state){.fg = palette[15], .bg = palette[0]};
     serial_write("\033[?1049h\033[2J\033[H");
     ostui_clear();

@@ -698,13 +698,13 @@ const char *task_state_name(uint32_t state)
 {
     switch (state) {
     case 0:
-        return leonos_i18n("ready", "就绪");
+        return T("ready");
     case 1:
-        return leonos_i18n("run", "运行");
+        return T("run");
     case 2:
-        return leonos_i18n("sleep", "睡眠");
+        return T("sleep");
     case 3:
-        return leonos_i18n("exit", "退出");
+        return T("exit");
     default:
         return "?";
     }
@@ -712,7 +712,7 @@ const char *task_state_name(uint32_t state)
 
 const char *task_kind_name(uint32_t kind)
 {
-    return kind == 1 ? leonos_i18n("user", "用户") : leonos_i18n("kern", "内核");
+    return kind == 1 ? T("user") : T("kern");
 }
 
 void task_line(char *buf, uint32_t cap, const struct leonos_task_info *task)

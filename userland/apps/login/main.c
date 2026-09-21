@@ -1,7 +1,9 @@
 #include <leonos/auth.h>
 #include <leonos/pam_session.h>
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/text_input.h>
 #include <leonos/psf_font.h>
 #include <leonos/stdio.h>
@@ -27,7 +29,7 @@
 #define LOGIN_LIST_HEADER_H (LEONOS_FONT_H + 8U)
 #define LOGIN_USER_ROW_H (LEONOS_FONT_H + 4U)
 #define LOGIN_VISIBLE_USERS 5U
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 static uint32_t pixels[LOGIN_MAX_W * LOGIN_MAX_H];
 static uint32_t surface_w = LOGIN_INITIAL_W;
@@ -116,11 +118,11 @@ static void draw_login(struct leonos_ui_surface *ui)
     leonos_ui_rect(ui, 0, 0, surface_w, surface_h, LEONOS_UI_DESKTOP);
     leonos_ui_panel(ui, panel_x, panel_y, panel_w, panel_h, LEONOS_UI_LIGHT);
     leonos_ui_text(ui, panel_x + 24, panel_y + 24, "LeonOS 4", LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
-    leonos_ui_text(ui, panel_x + 24, panel_y + 50, T("Sign in", "登录"), LEONOS_UI_DARK, LEONOS_UI_LIGHT);
-    leonos_ui_list_header(ui, list_x, list_y - LOGIN_LIST_HEADER_H, list_w, T("Users", "用户"));
+    leonos_ui_text(ui, panel_x + 24, panel_y + 50, T("Sign in"), LEONOS_UI_DARK, LEONOS_UI_LIGHT);
+    leonos_ui_list_header(ui, list_x, list_y - LOGIN_LIST_HEADER_H, list_w, T("Users"));
     if (user_count == 0) {
         leonos_ui_text(ui, list_x + 8, list_y + 8,
-                       T("No enabled accounts", "没有可用账户"),
+                       T("No enabled accounts"),
                        LEONOS_UI_DARK, LEONOS_UI_LIGHT);
     }
     uint32_t first_user = (selected_user / LOGIN_VISIBLE_USERS) * LOGIN_VISIBLE_USERS;
@@ -129,14 +131,14 @@ static void draw_login(struct leonos_ui_surface *ui)
         leonos_ui_list_row(ui, list_x, list_y + i * LOGIN_USER_ROW_H, list_w,
                            users[first_user + i].username, flags);
     }
-    leonos_ui_text(ui, list_x, panel_y + 238, T("Password", "密码"),
+    leonos_ui_text(ui, list_x, panel_y + 238, T("Password"),
                    LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
     password_mask(masked, sizeof(masked));
     leonos_ui_edit(ui, list_x + 92, panel_y + 232, list_w - 92,
                    masked, password_edit.cursor, password_edit.scroll,
                    LEONOS_UI_EDIT_FOCUSED);
     leonos_ui_button(ui, panel_x + panel_w - 124, panel_y + panel_h - 54,
-                     96, LEONOS_UI_BUTTON_H, T("Sign in", "登录"),
+                     96, LEONOS_UI_BUTTON_H, T("Sign in"),
                      user_count ? 0 : LEONOS_UI_BUTTON_DISABLED);
     leonos_ui_text_clipped(ui, panel_x + 24, panel_y + panel_h - 48,
                            panel_w - 160, status_text,
@@ -147,22 +149,22 @@ static int try_login(void)
 {
     struct leonos_user_info user;
     if (user_count == 0) {
-        copy_text(status_text, sizeof(status_text), T("No account available", "没有可用账户"));
+        copy_text(status_text, sizeof(status_text), T("No account available"));
         return 0;
     }
     int result = leonos_pam_login(users[selected_user].username, password, &user);
     explicit_bzero(password, sizeof(password));
     if (result == 0) {
-        copy_text(status_text, sizeof(status_text), T("Signed in", "已登录"));
+        copy_text(status_text, sizeof(status_text), T("Signed in"));
         return 1;
     }
     password[0] = 0;
     leonos_ui_edit_state_init(&password_edit, password, sizeof(password));
     copy_text(status_text, sizeof(status_text),
-              errno == EKEYEXPIRED ? T("Account expired", "账户已过期") :
-              errno == ECANCELED ? T("Authentication canceled", "认证已取消") :
-              errno == EACCES ? T("Authentication failed", "认证失败") :
-              T("Authentication service failed", "认证服务失败"));
+              errno == EKEYEXPIRED ? T("Account expired") :
+              errno == ECANCELED ? T("Authentication canceled") :
+              errno == EACCES ? T("Authentication failed") :
+              T("Authentication service failed"));
     return 0;
 }
 
@@ -201,6 +203,9 @@ static int installer_shell_main(void)
 
 int main(int argc, char **argv)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;

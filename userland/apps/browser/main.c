@@ -22,6 +22,9 @@ static void browser_update_inputm_context(void)
 
 int main(int argc, char **argv, char **envp)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_gui_app_event event;
     const char *initial = "about:leonos";
     (void)envp;
@@ -29,8 +32,8 @@ int main(int argc, char **argv, char **envp)
     if (argc > 1 && argv && argv[1] && argv[1][0]) {
         initial = argv[1];
     }
-    window_id = leonos_gui_create_app_window_ex(T("LeonOS Browser", "LeonOS 浏览器"),
-                                                T("Classic Web Browser", "经典网页浏览器"),
+    window_id = leonos_gui_create_app_window_ex(T("LeonOS Browser"),
+                                                T("Classic Web Browser"),
                                                 view_w, view_h, 0);
     if (window_id <= 0) {
         printf("[browser.elf] create window failed=%d\n", window_id);

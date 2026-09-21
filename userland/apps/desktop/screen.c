@@ -714,7 +714,7 @@ void redraw_region(struct rect dirty)
         leonos_ui_taskbar(&ui, tb_y, TASKBAR_H);
         if (rect_intersects(dirty, start_rect)) {
             draw_taskbar_plain_button(6, tb_y + 5, 86,
-                                      leonos_i18n("Start", "开始"),
+                                      T("Start Menu"),
                                       start_menu_open);
         }
         uint32_t x = 106;
@@ -774,22 +774,22 @@ void draw_power_confirm(void)
     x = fb_w() > W ? (fb_w() - W) / 2 : 0;
     y = fb_h() > H ? (fb_h() - H) / 2 : 0;
     if (desktop_lifecycle_state == DESKTOP_LIFECYCLE_WAITING) {
-        title = leonos_i18n("Closing applications", "正在关闭应用程序");
-        message = leonos_i18n("Waiting for applications to close...", "正在等待应用程序关闭...");
+        title = T("Closing applications");
+        message = T("Waiting for applications to close...");
     } else if (desktop_lifecycle_state == DESKTOP_LIFECYCLE_FORCE_PROMPT) {
-        title = leonos_i18n("Applications are still running", "仍有应用程序正在运行");
-        message = leonos_i18n("Force close remaining applications?", "是否强制关闭剩余应用程序？");
+        title = T("Applications are still running");
+        message = T("Force close remaining applications?");
     } else {
         title = power_confirm_action == POWER_CONFIRM_REBOOT
-                    ? leonos_i18n("Confirm Restart", "确认重启")
+                    ? T("Confirm Restart")
                     : power_confirm_action == POWER_CONFIRM_LOGOUT
-                        ? leonos_i18n("Confirm Sign Out", "确认注销")
-                        : leonos_i18n("Confirm Shut Down", "确认关机");
+                        ? T("Confirm Sign Out")
+                        : T("Confirm Shut Down");
         message = power_confirm_action == POWER_CONFIRM_REBOOT
-                      ? leonos_i18n("Restart LeonOS now?", "是否立即重启 LeonOS？")
+                      ? T("Restart LeonOS now?")
                       : power_confirm_action == POWER_CONFIRM_LOGOUT
-                          ? leonos_i18n("Sign out of LeonOS now?", "是否立即注销 LeonOS？")
-                          : leonos_i18n("Shut down LeonOS now?", "是否立即关闭 LeonOS？");
+                          ? T("Sign out of LeonOS now?")
+                          : T("Shut down LeonOS now?");
     }
     rect_fill_i((int)x + 5, (int)y + 5, W, H, 0x00404040);
     leonos_ui_dialog(&ui, x, y, W, H, title);
@@ -797,21 +797,21 @@ void draw_power_confirm(void)
                            LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     if (desktop_lifecycle_state == DESKTOP_LIFECYCLE_FORCE_PROMPT) {
         leonos_ui_button(&ui, x + W - 188, y + H - 38, 84, LEONOS_UI_BUTTON_H,
-                         leonos_i18n("Force", "强制结束"), 0);
+                         T("Force"), 0);
         leonos_ui_button(&ui, x + W - 96, y + H - 38, 72, LEONOS_UI_BUTTON_H,
-                         leonos_i18n("Cancel", "取消"), 0);
+                         T("Cancel"), 0);
     } else if (desktop_lifecycle_state == DESKTOP_LIFECYCLE_WAITING) {
         char pending[48];
         snprintf(pending, sizeof(pending), "%s: %u",
-                 leonos_i18n("Remaining", "剩余"),
+                 T("Remaining"),
                  (unsigned)desktop_lifecycle_remaining_count);
         leonos_ui_text_clipped(&ui, x + 20, y + 78, W - 40, pending,
                                LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     } else {
         leonos_ui_button(&ui, x + W - 188, y + H - 38, 84, LEONOS_UI_BUTTON_H,
-                         leonos_i18n("Yes", "是"), 0);
+                         T("Yes"), 0);
         leonos_ui_button(&ui, x + W - 96, y + H - 38, 72, LEONOS_UI_BUTTON_H,
-                         leonos_i18n("No", "否"), 0);
+                         T("No"), 0);
     }
 }
 

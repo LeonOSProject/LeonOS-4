@@ -5,7 +5,7 @@
 #include <leonos/layout.h>
 #include <leonos/auth.h>
 #include <leonos/fs.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
 #include <leonos/text_input.h>
 #include <leonos/license.h>
 #include <leonos/launch.h>
@@ -20,6 +20,8 @@
 #include <unistd.h>
 #include <signal.h>
 #include <stdio.h>
+
+#define T(s) gettext(s)
 
 #define MAX_WINDOWS 32
 #define BUILTIN_WINDOWS 4

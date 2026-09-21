@@ -63,11 +63,16 @@ LEONOS_DEPS_TOOL := $(LEONOS_HOST_BIN)/leonos-deps
 LEONOS_GBK_TOOL := $(LEONOS_HOST_BIN)/leonos-gbk
 LEONOS_SDK_DRIVER := $(LEONOS_HOST_BIN)/leonos-musl-cc
 LEONOS_APK_OWN := $(LEONOS_HOST_BIN)/leonos-apk-own
+LEONOS_NLS_EXTRACT := $(LEONOS_HOST_BIN)/leonos-nls-extract
 
 LEONOS_HOST_TOOLS := $(LEONOS_EMIT) $(LEONOS_CONFIG_TOOL) \
 	$(LEONOS_VERSION_TOOL) $(LEONOS_BOOT_LOGO_TOOL) $(LEONOS_DEPS_TOOL) $(LEONOS_GBK_TOOL) $(LEONOS_SDK_DRIVER)
 
 LEONOS_HOST_TOOLS += $(LEONOS_APK_OWN)
+# Registered here although mk/nls.mk owns the link rule: this list is what
+# `make tools` builds, so an unlisted tool would never be compiled by the
+# generic host rule with its strict warning set.
+LEONOS_HOST_TOOLS += $(LEONOS_NLS_EXTRACT)
 
 LEONOS_HOST_COMMON_OBJS := $(patsubst %.c,$(O_HOST)/obj/%.c.o,$(LEONOS_HOST_COMMON_SRCS))
 LEONOS_HOST_PUFF_OBJ := $(O_HOST)/obj/$(LEONOS_HOST_PUFF_SRC).o

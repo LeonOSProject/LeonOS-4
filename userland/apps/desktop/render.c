@@ -17,7 +17,7 @@ void draw_ui_demo_gallery(uint32_t body_x, uint32_t body_y,
     uint32_t pad = 14;
     if (body_w < 300 || body_h < 220) {
         text_draw(body_x + 10, body_y + 12,
-                  leonos_i18n("Resize window to view all components", "调整窗口大小以查看所有组件"),
+                  T("Resize window to view all components"),
                   LEONOS_UI_BLACK, bg);
         return;
     }
@@ -28,53 +28,53 @@ void draw_ui_demo_gallery(uint32_t body_x, uint32_t body_y,
     uint32_t col_w = body_w / 2 > pad * 2 ? body_w / 2 - pad * 2 : 120;
     uint32_t top = body_y + pad;
 
-    text_draw(left_x, top, leonos_i18n("LeonOS UI Component Library", "LeonOS 界面组件库"), LEONOS_UI_BLACK, bg);
-    text_draw(left_x, top + 18, leonos_i18n("Buttons, inputs, lists, menus, panels, windows", "按钮、输入框、列表、菜单、面板、窗口"), LEONOS_UI_DARK, bg);
+    text_draw(left_x, top, T("LeonOS UI Component Library"), LEONOS_UI_BLACK, bg);
+    text_draw(left_x, top + 18, T("Buttons, inputs, lists, menus, panels, windows"), LEONOS_UI_DARK, bg);
 
     uint32_t y = top + header_h + 8;
-    draw_ui_demo_label(left_x, y, leonos_i18n("Buttons", "按钮"), bg);
-    leonos_ui_button(&ui, left_x, y + 18, 74, LEONOS_UI_BUTTON_H, leonos_i18n("OK", "确定"), 0);
-    leonos_ui_button(&ui, left_x + 84, y + 18, 88, LEONOS_UI_BUTTON_H, leonos_i18n("Pressed", "已按下"), LEONOS_UI_BUTTON_PRESSED);
-    leonos_ui_button(&ui, left_x + 182, y + 18, 92, LEONOS_UI_BUTTON_H, leonos_i18n("Disabled", "已禁用"), LEONOS_UI_BUTTON_DISABLED);
+    draw_ui_demo_label(left_x, y, T("Buttons"), bg);
+    leonos_ui_button(&ui, left_x, y + 18, 74, LEONOS_UI_BUTTON_H, T("OK"), 0);
+    leonos_ui_button(&ui, left_x + 84, y + 18, 88, LEONOS_UI_BUTTON_H, T("Pressed"), LEONOS_UI_BUTTON_PRESSED);
+    leonos_ui_button(&ui, left_x + 182, y + 18, 92, LEONOS_UI_BUTTON_H, T("Disabled"), LEONOS_UI_BUTTON_DISABLED);
 
     y += 56;
-    draw_ui_demo_label(left_x, y, leonos_i18n("Checks and Fields", "复选框和输入框"), bg);
-    leonos_ui_checkbox(&ui, left_x, y + 20, leonos_i18n("Checked", "已选中"), 1, 0);
-    leonos_ui_checkbox(&ui, left_x, y + 44, leonos_i18n("Unchecked", "未选中"), 0, 0);
-    leonos_ui_text_field(&ui, left_x + 136, y + 18, col_w > 146 ? col_w - 146 : 120, leonos_i18n("Sample text", "示例文本"), 0);
+    draw_ui_demo_label(left_x, y, T("Checks and Fields"), bg);
+    leonos_ui_checkbox(&ui, left_x, y + 20, T("Checked"), 1, 0);
+    leonos_ui_checkbox(&ui, left_x, y + 44, T("Unchecked"), 0, 0);
+    leonos_ui_text_field(&ui, left_x + 136, y + 18, col_w > 146 ? col_w - 146 : 120, T("Sample text"), 0);
 
     y += 86;
-    draw_ui_demo_label(left_x, y, leonos_i18n("Progress", "进度"), bg);
+    draw_ui_demo_label(left_x, y, T("Progress"), bg);
     leonos_ui_progress(&ui, left_x, y + 20, col_w > 24 ? col_w - 24 : 160, 18, 65, 100);
-    text_draw(left_x, y + 46, leonos_i18n("65 percent", "65%"), LEONOS_UI_DARK, bg);
+    text_draw(left_x, y + 46, T("65 percent"), LEONOS_UI_DARK, bg);
 
     y += 76;
-    draw_ui_demo_label(left_x, y, leonos_i18n("Panel", "面板"), bg);
+    draw_ui_demo_label(left_x, y, T("Panel"), bg);
     leonos_ui_panel(&ui, left_x, y + 18, col_w > 24 ? col_w - 24 : 160, 54, LEONOS_UI_LIGHT);
-    text_draw(left_x + 10, y + 34, leonos_i18n("Inset content panel", "内嵌内容面板"), LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
+    text_draw(left_x + 10, y + 34, T("Inset content panel"), LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
 
     y = top + header_h + 8;
-    draw_ui_demo_label(right_x, y, leonos_i18n("Menu", "菜单"), bg);
+    draw_ui_demo_label(right_x, y, T("Menu"), bg);
     leonos_ui_menu(&ui, right_x, y + 18, col_w > 16 ? col_w - 16 : 180, 90);
-    leonos_ui_menu_item(&ui, right_x + 34, y + 28, col_w > 54 ? col_w - 54 : 140, leonos_i18n("Normal item", "普通项目"), 0);
-    leonos_ui_menu_item(&ui, right_x + 34, y + 52, col_w > 54 ? col_w - 54 : 140, leonos_i18n("Selected item", "选中项目"), LEONOS_UI_MENU_SELECTED);
+    leonos_ui_menu_item(&ui, right_x + 34, y + 28, col_w > 54 ? col_w - 54 : 140, T("Normal item"), 0);
+    leonos_ui_menu_item(&ui, right_x + 34, y + 52, col_w > 54 ? col_w - 54 : 140, T("Selected item"), LEONOS_UI_MENU_SELECTED);
     leonos_ui_menu_item(&ui, right_x + 34, y + 76, col_w > 54 ? col_w - 54 : 140, "", LEONOS_UI_MENU_SEPARATOR);
 
     y += 122;
-    draw_ui_demo_label(right_x, y, leonos_i18n("List", "列表"), bg);
-    leonos_ui_list_header(&ui, right_x, y + 18, col_w > 16 ? col_w - 16 : 180, leonos_i18n("Name        State", "名称        状态"));
-    leonos_ui_list_row(&ui, right_x, y + 46, col_w > 16 ? col_w - 16 : 180, leonos_i18n("Button      ready", "按钮        就绪"), 0);
-    leonos_ui_list_row(&ui, right_x, y + 70, col_w > 16 ? col_w - 16 : 180, leonos_i18n("TextField   selected", "输入框      已选中"), LEONOS_UI_MENU_SELECTED);
-    leonos_ui_list_row(&ui, right_x, y + 94, col_w > 16 ? col_w - 16 : 180, leonos_i18n("Progress    ready", "进度        就绪"), 0);
+    draw_ui_demo_label(right_x, y, T("List"), bg);
+    leonos_ui_list_header(&ui, right_x, y + 18, col_w > 16 ? col_w - 16 : 180, T("Name        State"));
+    leonos_ui_list_row(&ui, right_x, y + 46, col_w > 16 ? col_w - 16 : 180, T("Button      ready"), 0);
+    leonos_ui_list_row(&ui, right_x, y + 70, col_w > 16 ? col_w - 16 : 180, T("TextField   selected"), LEONOS_UI_MENU_SELECTED);
+    leonos_ui_list_row(&ui, right_x, y + 94, col_w > 16 ? col_w - 16 : 180, T("Progress    ready"), 0);
 
     y += 138;
     if (y + 54 < body_y + body_h) {
-        draw_ui_demo_label(right_x, y, leonos_i18n("Window and Taskbar", "窗口和任务栏"), bg);
+        draw_ui_demo_label(right_x, y, T("Window and Taskbar"), bg);
         leonos_ui_window_button(&ui, right_x, y + 20, '_', 0);
         leonos_ui_window_button(&ui, right_x + 24, y + 20, 'M', 0);
         leonos_ui_window_button(&ui, right_x + 48, y + 20, 'X', 0);
         leonos_ui_taskbar_button(&ui, right_x + 86, y + 18,
-                                 col_w > 116 ? col_w - 116 : 110, leonos_i18n("Task Button", "任务按钮"),
+                                 col_w > 116 ? col_w - 116 : 110, T("Task Button"),
                                  LEONOS_UI_BUTTON_ACTIVE);
     }
 }
@@ -103,7 +103,7 @@ static void draw_window_text_block(uint32_t x, uint32_t y, uint32_t w, uint32_t 
                                    const char *text, uint32_t fg, uint32_t bg)
 {
     char line[160];
-    const char *src = text && text[0] ? text : leonos_i18n("Application window", "应用程序窗口");
+    const char *src = text && text[0] ? text : T("Application window");
     uint32_t yy = y;
     uint32_t max_chars;
     if (!w || !h) {
@@ -235,13 +235,13 @@ void draw_window(uint8_t id)
     uint32_t body_y = (uint32_t)body_y_i;
 
     if (id == 0) {
-        text_draw(body_x + 16, body_y + 18, leonos_i18n("Ring-3 desktop shadow blit", "Ring-3 桌面阴影缓冲绘制"), LEONOS_UI_BLACK, w->body_color);
-        text_draw(body_x + 16, body_y + 42, leonos_i18n("Dirty redraw reduces flicker", "脏区重绘减少闪烁"), LEONOS_UI_BLACK, w->body_color);
-        text_draw(body_x + 16, body_y + 66, leonos_i18n("Drag and resize window", "拖动并调整窗口大小"), LEONOS_UI_BLACK, w->body_color);
+        text_draw(body_x + 16, body_y + 18, T("Ring-3 desktop shadow blit"), LEONOS_UI_BLACK, w->body_color);
+        text_draw(body_x + 16, body_y + 42, T("Dirty redraw reduces flicker"), LEONOS_UI_BLACK, w->body_color);
+        text_draw(body_x + 16, body_y + 66, T("Drag and resize window"), LEONOS_UI_BLACK, w->body_color);
     } else if (id == 1) {
         text_draw(body_x + 16, body_y + 18, "/", 0x00000000, w->body_color);
-        text_draw(body_x + 16, body_y + 42, leonos_i18n("boot  system  programs", "boot  system  programs"), 0x00000000, w->body_color);
-        text_draw(body_x + 16, body_y + 66, leonos_i18n("System root view", "系统根目录视图"), 0x00000000, w->body_color);
+        text_draw(body_x + 16, body_y + 42, T("boot  system  programs"), 0x00000000, w->body_color);
+        text_draw(body_x + 16, body_y + 66, T("System root view"), 0x00000000, w->body_color);
     } else if (id == 3) {
         char line[112];
         uint32_t pos = 0;
@@ -253,7 +253,7 @@ void draw_window(uint8_t id)
         text_draw(body_x + 10, body_y + 12, line, 0x00000000, w->body_color);
         leonos_ui_list_header(&ui, body_x + 8, body_y + 30,
                               body_w > 16 ? body_w - 16 : 0,
-                              leonos_i18n("PID PPID STATE KIND CR3        WAKE NAME", "PID PPID 状态 类型 CR3        唤醒 名称"));
+                              T("PID PPID STATE KIND CR3        WAKE NAME"));
         uint32_t max_rows = (body_h > 70) ? (body_h - 70) / (LEONOS_FONT_H + 2) : 0;
         if (max_rows > task_info_count) {
             max_rows = task_info_count;

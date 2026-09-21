@@ -1,5 +1,7 @@
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/launch.h>
 #include <leonos/launch_result.h>
 #include <leonos/psf_font.h>
@@ -13,7 +15,7 @@
 #define DOOM_PATH LEONOS_LAYOUT_LEONOS_APPS "/doom/doom.elf"
 #define DEFAULT_IWAD LEONOS_LAYOUT_LEONOS_APPS "/doom/freedoom1.wad"
 #define TASK_STATE_EXITED 3U
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 static uint32_t pixels[LAUNCHER_W * LAUNCHER_H];
 static char iwad_path[LEONOS_FS_PATH_LEN] = DEFAULT_IWAD;
@@ -44,7 +46,7 @@ static void set_status_code(const char *prefix, int code)
     char digits[16];
     uint32_t count = 0;
     if (!prefix) {
-        prefix = T("Status ", "状态 ");
+        prefix = T("Status ");
     }
     while (prefix[pos] && pos + 1U < sizeof(status_text)) {
         status_text[pos] = prefix[pos];
@@ -71,11 +73,11 @@ static const char *launcher_error_text(int code)
 {
     switch (code) {
     case LAUNCH_RESULT_EMPTY:
-        return T("Arguments are empty", "启动参数为空");
+        return T("Arguments are empty");
     case LAUNCH_RESULT_TOO_MANY_ARGS:
-        return T("Too many arguments", "启动参数过多");
+        return T("Too many arguments");
     case LAUNCH_RESULT_UNCLOSED_QUOTE:
-        return T("Missing closing quote", "缺少闭合引号");
+        return T("Missing closing quote");
     default:
         return leonos_launch_error_text(code);
     }
@@ -92,19 +94,19 @@ static void draw_launcher(struct leonos_ui_surface *ui)
     uint32_t launch_flags = doom_pid ? LEONOS_UI_BUTTON_DISABLED : 0;
     leonos_ui_rect(ui, 0, 0, LAUNCHER_W, LAUNCHER_H, LEONOS_UI_GRAY);
     leonos_ui_rect(ui, 0, 0, LAUNCHER_W, 42, LEONOS_UI_ACTIVE_TITLE);
-    leonos_ui_text(ui, 22, 14, T("DOOM Launcher", "DOOM 启动器"), LEONOS_UI_WHITE,
+    leonos_ui_text(ui, 22, 14, T("DOOM Launcher"), LEONOS_UI_WHITE,
                    LEONOS_UI_ACTIVE_TITLE);
-    leonos_ui_text(ui, 24, 60, T("IWAD path", "IWAD 路径"), LEONOS_UI_BLACK,
+    leonos_ui_text(ui, 24, 60, T("IWAD path"), LEONOS_UI_BLACK,
                    LEONOS_UI_GRAY);
     leonos_ui_edit_state_draw(ui, 24, 80, LAUNCHER_W - 48U, &iwad_edit, 0);
-    leonos_ui_text(ui, 24, 118, T("Extra DOOM arguments", "附加 DOOM 参数"),
+    leonos_ui_text(ui, 24, 118, T("Extra DOOM arguments"),
                    LEONOS_UI_BLACK, LEONOS_UI_GRAY);
     leonos_ui_edit_state_draw(ui, 24, 138, LAUNCHER_W - 48U, &args_edit, 0);
-    leonos_ui_checkbox(ui, 24, 178, T("Disable sound", "禁用声音"), disable_sound, 0);
-    leonos_ui_checkbox(ui, 208, 178, T("Fullscreen", "全屏"), fullscreen, 0);
-    leonos_ui_button(ui, 24, 216, 144, LEONOS_UI_BUTTON_H, T("Launch", "启动"),
+    leonos_ui_checkbox(ui, 24, 178, T("Disable sound"), disable_sound, 0);
+    leonos_ui_checkbox(ui, 208, 178, T("Fullscreen"), fullscreen, 0);
+    leonos_ui_button(ui, 24, 216, 144, LEONOS_UI_BUTTON_H, T("Launch"),
                      launch_flags);
-    leonos_ui_button(ui, 178, 216, 104, LEONOS_UI_BUTTON_H, T("Reset", "重置"), 0);
+    leonos_ui_button(ui, 178, 216, 104, LEONOS_UI_BUTTON_H, T("Reset"), 0);
     if (doom_pid) {
         leonos_ui_activity_bar(ui, 24, 258, LAUNCHER_W - 48U, 10,
                                (uint32_t)((leonos_uptime_ms() / 4UL) % 1000UL));
@@ -120,7 +122,7 @@ static void reset_settings(void)
     fullscreen = 0;
     leonos_ui_edit_state_sync(&iwad_edit);
     leonos_ui_edit_state_sync(&args_edit);
-    copy_text(status_text, sizeof(status_text), T("Settings reset", "设置已重置"));
+    copy_text(status_text, sizeof(status_text), T("Settings reset"));
 }
 
 static void launch_doom(void)
@@ -136,7 +138,7 @@ static void launch_doom(void)
         return;
     }
     if (!iwad_path[0]) {
-        copy_text(status_text, sizeof(status_text), T("An IWAD path is required", "需要指定 IWAD 路径"));
+        copy_text(status_text, sizeof(status_text), T("An IWAD path is required"));
         return;
     }
     argv[argc++] = DOOM_PATH;
@@ -163,13 +165,12 @@ static void launch_doom(void)
     argv[argc] = 0;
     pid = leonos_spawn_argv(DOOM_PATH, argv);
     if (pid < 0) {
-        set_status_code(T("Launch failed: ", "启动失败: "), pid);
+        set_status_code(T("Launch failed: "), pid);
         return;
     }
     doom_pid = (uint32_t)pid;
     copy_text(status_text, sizeof(status_text),
-               T("Starting DOOM: the game window shows loading progress",
-                 "正在启动 DOOM: 游戏窗口将显示加载进度"));
+               T("Starting DOOM: the game window shows loading progress"));
 }
 
 static void update_doom_status(void)
@@ -196,12 +197,12 @@ static void update_doom_status(void)
             int reaped = wait4((int)doom_pid, &exit_status, 0, 0);
             int code = reaped > 0 ? ((exit_status >> 8) & 0xff) : -1;
             doom_pid = 0;
-            set_status_code(T("DOOM exited with code ", "DOOM 已退出，代码 "), code);
+            set_status_code(T("DOOM exited with code "), code);
         }
         return;
     }
     doom_pid = 0;
-    copy_text(status_text, sizeof(status_text), T("DOOM is no longer running", "DOOM 已不再运行"));
+    copy_text(status_text, sizeof(status_text), T("DOOM is no longer running"));
 }
 
 static int handle_mouse(struct leonos_gui_app_event *event)
@@ -242,13 +243,16 @@ static int handle_mouse(struct leonos_gui_app_event *event)
 
 int main(void)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
 
-    copy_text(status_text, sizeof(status_text), T("Ready", "就绪"));
-    window_id = leonos_gui_create_app_window_ex(T("DOOM Launcher", "DOOM 启动器"),
-                                                 T("Configure and start DOOM", "配置并启动 DOOM"),
+    copy_text(status_text, sizeof(status_text), T("Ready"));
+    window_id = leonos_gui_create_app_window_ex(T("DOOM Launcher"),
+                                                 T("Configure and start DOOM"),
                                                  LAUNCHER_W, LAUNCHER_H,
                                                  LEONOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {

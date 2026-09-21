@@ -139,9 +139,23 @@ awk 'BEGIN{theme="metro";mode="fill"} /^CONFIG_VMDK_DEFAULT_THEME_WIN95=y$/{them
 file "$work/data/display.conf" etc/leonos/display.conf
 awk -F '\t' 'BEGIN{print "# Generated from component selection."} $4==1 && $5==0 && $2 ~ /-app$/ {print "hide=/usr/lib/leonos/apps/"$1"/"$1".elf"}' "$metadata" > "$work/data/desktop-entries.conf"
 file "$work/data/desktop-entries.conf" etc/leonos/desktop-entries.conf
-printf 'lang=en\n' > "$work/data/locale.conf"
+locale_name=$(awk -F= 'BEGIN{lang="zh_CN.UTF-8"} /^CONFIG_VMDK_DEFAULT_LANG=/{gsub(/"/,"",$2);lang=$2} END{print lang}' "$config")
+case $locale_name in *[!A-Za-z0-9._@-]*|'') echo 'rootfs-stage: invalid locale name' >&2; exit 2;; esac
+printf 'LANG=%s\nMUSL_LOCPATH=/usr/share/musl/locales\n' "$locale_name" > "$work/data/locale.conf"
 file "$work/data/locale.conf" etc/leonos/locale.conf 0644 product-policy override
+for loc in $(cat "$src/configs/nls/LINGUAS"); do
+    file "$out/generated/nls/$loc/LC_MESSAGES/leonos.mo" "usr/share/locale/$loc/LC_MESSAGES/leonos.mo" 0644 leonos-nls
+    if [ -f "$out/generated/musl-locales/$loc.UTF-8" ]; then
+        file "$out/generated/musl-locales/$loc.UTF-8" "usr/share/musl/locales/$loc.UTF-8" 0644 leonos-nls
+    fi
+done
 for source in "$src/system/docs"/*.hlp; do file "$source" "usr/share/doc/leonos/${source##*/}"; done
+for loc in $(cat "$src/configs/nls/LINGUAS"); do
+    for source in "$src/system/docs/$loc"/*.hlp; do
+        test -f "$source" || continue
+        file "$source" "usr/share/doc/leonos/$loc/${source##*/}"
+    done
+done
 file "$src/logo.png" usr/share/leonos/resources/logo.png
 file "$src/system/resources/mouse.bmp" usr/share/leonos/resources/mouse.bmp
 file "$src/system/resources/wallpaper-metro.bmp" usr/share/leonos/resources/wallpaper-metro.bmp

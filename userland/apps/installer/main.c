@@ -1,7 +1,10 @@
 #include <leonos/fs.h>
 #include <leonos/blockdev.h>
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include "../locale_settings.h"
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/layout.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
@@ -79,7 +82,7 @@
 /* The installer must be able to change language before it has a writable
  * target system.  Do not make rendering depend on persisting locale.conf on
  * the installation medium. */
-#define T(en, zh) ((installer_lang == LEONOS_LANG_ZH && (zh)) ? (zh) : (en))
+#define T(s) gettext(s)
 
 enum installer_page {
     PAGE_LANGUAGE = 0,
@@ -167,7 +170,6 @@ static uint32_t surface_w = INSTALLER_INITIAL_W;
 static uint32_t surface_h = INSTALLER_INITIAL_H;
 static uint8_t page = PAGE_LANGUAGE;
 static uint8_t install_mode = INSTALL_MODE_FRESH;
-static uint8_t installer_lang = LEONOS_LANG_EN;
 static uint8_t installer_theme = LEONOS_UI_THEME_METRO;
 static uint8_t installer_theme_explicit;
 static uint32_t acknowledgements_scroll_y;
@@ -657,7 +659,7 @@ static void markdown_reflow(const char *source, uint32_t width)
 
 static void acknowledgements_reflow(uint32_t width)
 {
-    markdown_reflow(installer_lang == LEONOS_LANG_ZH
+    markdown_reflow(language_selection() == 1
                         ? acknowledgements_zh : acknowledgements_en,
                     width);
 }
@@ -731,7 +733,7 @@ static void set_error_status(const char *prefix, int ret)
     append_text(detail_text, &pos, sizeof(detail_text), prefix);
     append_text(detail_text, &pos, sizeof(detail_text), " ret=");
     append_i32(detail_text, &pos, sizeof(detail_text), ret);
-    copy_text(status_text, sizeof(status_text), T("Installation failed", "安装失败"));
+    copy_text(status_text, sizeof(status_text), T("Installation failed"));
 }
 
 static int hit_rect_i(int32_t x, int32_t y, int32_t rx, int32_t ry,
@@ -838,23 +840,23 @@ static int path_join(char *dst, uint32_t cap, const char *base, const char *name
 
 static const char *mode_action_text(void)
 {
-    return install_mode == INSTALL_MODE_UPDATE ? T("Update", "更新") : T("Install", "安装");
+    return install_mode == INSTALL_MODE_UPDATE ? T("Update") : T("Install");
 }
 
 static const char *mode_progress_title(void)
 {
-    return install_mode == INSTALL_MODE_UPDATE ? T("Updating LeonOS 4", "正在更新 LeonOS 4")
-                                               : T("Installing LeonOS 4", "正在安装 LeonOS 4");
+    return install_mode == INSTALL_MODE_UPDATE ? T("Updating LeonOS 4")
+                                               : T("Installing LeonOS 4");
 }
 
 static void set_disk_select_status(void)
 {
     if (install_mode == INSTALL_MODE_UPDATE) {
-        set_status(T("Select the disk to update", "请选择要更新的硬盘"),
-                   T("Setup will check for an existing LeonOS 4 system.", "安装程序会检测现有 LeonOS 4 系统。"));
+        set_status(T("Select the disk to update"),
+                   T("Setup will check for an existing LeonOS 4 system."));
     } else {
-        set_status(T("Select the target disk", "请选择目标硬盘"),
-                   T("The selected disk will be erased.", "所选硬盘将被清空。"));
+        set_status(T("Select the target disk"),
+                   T("The selected disk will be erased."));
     }
 }
 
@@ -1088,7 +1090,7 @@ static void refresh_disks(void)
     disk_count = count > LEONOS_BLOCK_MAX_DISKS ? LEONOS_BLOCK_MAX_DISKS : count;
     if (disk_count == 0) {
         selected_disk = -1;
-        set_status(T("No disks were found", "未找到硬盘"), T("Attach a disk and click Refresh.", "连接硬盘后点击刷新。"));
+        set_status(T("No disks were found"), T("Attach a disk and click Refresh."));
     } else {
         if (selected_disk < 0 || (uint32_t)selected_disk >= disk_count) {
             selected_disk = 0;
@@ -1106,7 +1108,7 @@ static void draw_sidebar(struct leonos_ui_surface *ui)
     }
     leonos_ui_rect(ui, 0, 0, l.sidebar_w, surface_h, LEONOS_UI_ACTIVE_TITLE);
     leonos_ui_text(ui, 18, 24, "LeonOS 4", LEONOS_UI_WHITE, LEONOS_UI_ACTIVE_TITLE);
-    leonos_ui_text(ui, 18, 48, T("Setup", "安装"), LEONOS_UI_WHITE, LEONOS_UI_ACTIVE_TITLE);
+    leonos_ui_text(ui, 18, 48, T("Setup"), LEONOS_UI_WHITE, LEONOS_UI_ACTIVE_TITLE);
     uint32_t row = 0;
     for (uint32_t i = 0; i < PAGE_COUNT; ++i) {
         if (i == PAGE_UPDATE_APPS && install_mode != INSTALL_MODE_UPDATE) continue;
@@ -1120,27 +1122,27 @@ static void draw_sidebar(struct leonos_ui_surface *ui)
         }
         const char *label = "";
         if (i == PAGE_LANGUAGE) {
-            label = T("Language", "语言");
+            label = T("Language");
         } else if (i == PAGE_THANKS) {
-            label = T("Thanks", "感谢");
+            label = T("Thanks");
         } else if (i == PAGE_THEME) {
-            label = T("Style", "样式");
+            label = T("Style");
         } else if (i == PAGE_WELCOME) {
-            label = T("Welcome", "欢迎");
+            label = T("Welcome");
         } else if (i == PAGE_MODE) {
-            label = T("Mode", "模式");
+            label = T("Mode");
         } else if (i == PAGE_DISK) {
-            label = T("Disk", "硬盘");
+            label = T("Disk");
         } else if (i == PAGE_UPDATE_APPS) {
-            label = T("Apps", "程序");
+            label = T("Apps");
         } else if (i == PAGE_ACCOUNTS) {
-            label = T("Accounts", "账户");
+            label = T("Accounts");
         } else if (i == PAGE_CONFIRM) {
-            label = T("Confirm", "确认");
+            label = T("Confirm");
         } else if (i == PAGE_PROGRESS) {
             label = mode_action_text();
         } else if (i == PAGE_FINISH) {
-            label = T("Finish", "完成");
+            label = T("Finish");
         }
         leonos_ui_text(ui, 20, y, label, fg, bg);
     }
@@ -1175,16 +1177,16 @@ static uint32_t primary_disabled(void)
 static const char *primary_label(void)
 {
     if (page == PAGE_CONFIRM) {
-        return install_mode == INSTALL_MODE_UPDATE ? T("Update", "更新")
-                                                   : T("Install", "安装");
+        return install_mode == INSTALL_MODE_UPDATE ? T("Update")
+                                                   : T("Install");
     }
     if (page == PAGE_FINISH && install_success) {
-        return T("Restart", "重启");
+        return T("Restart");
     }
     if (page == PAGE_FINISH) {
-        return T("Close", "关闭");
+        return T("Close");
     }
-    return T("Next", "下一步");
+    return T("Next");
 }
 
 static void draw_footer(struct leonos_ui_surface *ui)
@@ -1196,25 +1198,24 @@ static void draw_footer(struct leonos_ui_surface *ui)
                                (page == PAGE_FINISH && install_success);
     leonos_ui_rect(ui, l.sidebar_w, l.footer_y, surface_w > l.sidebar_w ? surface_w - l.sidebar_w : surface_w, 1, LEONOS_UI_DARK);
     leonos_ui_rect(ui, l.sidebar_w, l.footer_y + 1, surface_w > l.sidebar_w ? surface_w - l.sidebar_w : surface_w, surface_h > l.footer_y + 1 ? surface_h - l.footer_y - 1 : 0, LEONOS_UI_GRAY);
-    leonos_ui_button(ui, l.back_x, l.button_y, BUTTON_W, BUTTON_H, T("Back", "上一步"),
+    leonos_ui_button(ui, l.back_x, l.button_y, BUTTON_W, BUTTON_H, T("Previous Step"),
                      back_disabled ? LEONOS_UI_BUTTON_DISABLED : 0);
     leonos_ui_button(ui, l.next_x, l.button_y, BUTTON_W, BUTTON_H, primary_label(),
                      primary_disabled() ? LEONOS_UI_BUTTON_DISABLED : 0);
-    leonos_ui_button(ui, l.cancel_x, l.button_y, BUTTON_W, BUTTON_H, T("Cancel", "取消"),
+    leonos_ui_button(ui, l.cancel_x, l.button_y, BUTTON_W, BUTTON_H, T("Cancel"),
                      cancel_disabled ? LEONOS_UI_BUTTON_DISABLED : 0);
 }
 
 static void draw_language_page(struct leonos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
-    draw_title(ui, T("Select Language", "选择语言"), T("Choose the language for Setup and the installed system.", "选择安装程序和安装后系统使用的语言。"));
+    draw_title(ui, T("Select Language"), T("Choose the language for Setup and the installed system."));
     leonos_ui_button(ui, l.content_x, l.content_y + 88, 140, BUTTON_H, "English",
-                     installer_lang == LEONOS_LANG_EN ? LEONOS_UI_BUTTON_PRESSED : 0);
+                     language_selection() == 0 ? LEONOS_UI_BUTTON_PRESSED : 0);
     leonos_ui_button(ui, l.content_x + 156, l.content_y + 88, 140, BUTTON_H, "中文",
-                     installer_lang == LEONOS_LANG_ZH ? LEONOS_UI_BUTTON_PRESSED : 0);
+                     language_selection() == 1 ? LEONOS_UI_BUTTON_PRESSED : 0);
     leonos_ui_text(ui, l.content_x, l.content_y + 140,
-                   T("The installed system will use the same language.",
-                     "安装后的操作系统将使用相同语言。"),
+                   T("The installed system will use the same language."),
                    LEONOS_UI_DARK, LEONOS_UI_WHITE);
 }
 
@@ -1224,9 +1225,8 @@ static void draw_acknowledgements_page(struct leonos_ui_surface *ui)
     uint32_t total_h;
     uint32_t max_scroll;
     uint32_t offset = 0;
-    draw_title(ui, T("Thank You", "感谢"),
-               T("Acknowledgements for public resources and open-source projects.",
-                 "公共资源与开源项目致谢。"));
+    draw_title(ui, T("Thank You"),
+               T("Acknowledgements for public resources and open-source projects."));
     acknowledgements_reflow(view.text_w);
     total_h = policy_total_height();
     max_scroll = total_h > view.h ? total_h - view.h : 0;
@@ -1276,9 +1276,8 @@ static void draw_acknowledgements_page(struct leonos_ui_surface *ui)
 static void draw_theme_page(struct leonos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
-    draw_title(ui, T("Choose UI Style", "选择界面样式"),
-               T("Preview a style now and apply it to the installed system.",
-                 "可立即预览样式，安装后系统也会使用此样式。"));
+    draw_title(ui, T("Choose UI Style"),
+               T("Preview a style now and apply it to the installed system."));
     leonos_ui_button(ui, l.content_x, l.content_y + 88, 140, BUTTON_H, "Metro",
                      installer_theme == LEONOS_UI_THEME_METRO
                          ? LEONOS_UI_BUTTON_PRESSED : 0);
@@ -1287,40 +1286,36 @@ static void draw_theme_page(struct leonos_ui_surface *ui)
                          ? LEONOS_UI_BUTTON_PRESSED : 0);
     leonos_ui_text(ui, l.content_x, l.content_y + 140,
                    installer_theme == LEONOS_UI_THEME_METRO
-                       ? T("Metro uses the modern flat system appearance.",
-                           "Metro 使用现代扁平化系统外观。")
-                       : T("Win95 keeps the classic beveled system appearance.",
-                           "Win95 保留经典立体系统外观。"),
+                       ? T("Metro uses the modern flat system appearance.")
+                       : T("Win95 keeps the classic beveled system appearance."),
                    LEONOS_UI_DARK, LEONOS_UI_WHITE);
 }
 
 static void draw_welcome(struct leonos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
-    draw_title(ui, T("LeonOS 4 Setup", "LeonOS 4 安装程序"), T("Install a new system or update an existing LeonOS 4 disk.", "全新安装系统，或更新现有 LeonOS 4 硬盘。"));
-    leonos_ui_text(ui, l.content_x, l.content_y + 84, T("Setup can copy the full normal system payload", "安装程序可以复制完整的普通系统文件"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, l.content_x, l.content_y + 108, T("or replace the boot/leonos and system files on an existing installation.", "也可以替换现有安装中的启动和系统文件。"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, l.content_x, l.content_y + 164, T("SATA/AHCI and IDE/PATA target disks are supported.", "支持 SATA/AHCI 和 IDE/PATA 目标硬盘。"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+    draw_title(ui, T("LeonOS 4 Setup"), T("Install a new system or update an existing LeonOS 4 disk."));
+    leonos_ui_text(ui, l.content_x, l.content_y + 84, T("Setup can copy the full normal system payload"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+    leonos_ui_text(ui, l.content_x, l.content_y + 108, T("or replace the boot/leonos and system files on an existing installation."), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+    leonos_ui_text(ui, l.content_x, l.content_y + 164, T("SATA/AHCI and IDE/PATA target disks are supported."), LEONOS_UI_DARK, LEONOS_UI_WHITE);
 }
 
 static void draw_mode_page(struct leonos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
     uint32_t card_w = l.content_w > 620 ? 280 : l.content_w;
-    draw_title(ui, T("Choose Setup Mode", "选择安装模式"), T("Fresh install erases the disk. Update keeps existing users and extra programs.", "全新安装会清空硬盘；更新会保留用户和额外程序。"));
+    draw_title(ui, T("Choose Setup Mode"), T("Fresh install erases the disk. Update keeps existing users and extra programs."));
     leonos_ui_button(ui, l.content_x, l.content_y + 84, card_w, BUTTON_H,
-                     T("Fresh Install", "全新安装"),
+                     T("Fresh Install"),
                      install_mode == INSTALL_MODE_FRESH ? LEONOS_UI_BUTTON_PRESSED : 0);
     leonos_ui_text_clipped(ui, l.content_x, l.content_y + 122, card_w,
-                           T("Format the selected disk and copy a clean LeonOS 4 system.",
-                             "格式化所选硬盘并复制干净的 LeonOS 4 系统。"),
+                           T("Format the selected disk and copy a clean LeonOS 4 system."),
                            LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_button(ui, l.content_x, l.content_y + 180, card_w, BUTTON_H,
-                     T("Update Existing System", "更新现有系统"),
+                     T("Update Existing System"),
                      install_mode == INSTALL_MODE_UPDATE ? LEONOS_UI_BUTTON_PRESSED : 0);
     leonos_ui_text_clipped(ui, l.content_x, l.content_y + 218, l.content_w,
-                           T("Replace boot, system, EFI and bundled docs. Then choose changed or missing system apps.",
-                             "替换 boot、system、EFI 和内置文档，然后选择变化或缺失的系统程序。"),
+                           T("Replace boot, system, EFI and bundled docs. Then choose changed or missing system apps."),
                            LEONOS_UI_DARK, LEONOS_UI_WHITE);
 }
 
@@ -1329,15 +1324,15 @@ static void draw_disk_page(struct leonos_ui_surface *ui)
     struct installer_layout l = get_layout();
     char line[128];
     draw_title(ui,
-               install_mode == INSTALL_MODE_UPDATE ? T("Select Disk to Update", "选择要更新的硬盘")
-                                                   : T("Select Installation Disk", "选择安装硬盘"),
-               install_mode == INSTALL_MODE_UPDATE ? T("Choose the disk that already contains LeonOS 4.", "选择已经包含 LeonOS 4 的硬盘。")
-                                                   : T("Choose the disk that will receive LeonOS.", "选择用于安装 LeonOS 的硬盘。"));
-    leonos_ui_button(ui, l.disk_refresh_x, l.disk_refresh_y, 92, BUTTON_H, T("Refresh", "刷新"), 0);
-    leonos_ui_list_header(ui, l.content_x, l.disk_header_y, l.table_w, T("Available disks", "可用硬盘"));
+               install_mode == INSTALL_MODE_UPDATE ? T("Select Disk to Update")
+                                                   : T("Select Installation Disk"),
+               install_mode == INSTALL_MODE_UPDATE ? T("Choose the disk that already contains LeonOS 4.")
+                                                   : T("Choose the disk that will receive LeonOS."));
+    leonos_ui_button(ui, l.disk_refresh_x, l.disk_refresh_y, 92, BUTTON_H, T("Refresh"), 0);
+    leonos_ui_list_header(ui, l.content_x, l.disk_header_y, l.table_w, T("Available disks"));
     leonos_ui_inset(ui, l.content_x, l.disk_list_y, l.table_w, l.disk_list_h, LEONOS_UI_WHITE);
     if (disk_count == 0) {
-        leonos_ui_text(ui, l.content_x + 12, l.disk_list_y + 20, T("No disks were found.", "未找到硬盘。"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+        leonos_ui_text(ui, l.content_x + 12, l.disk_list_y + 20, T("No disks were found."), LEONOS_UI_DARK, LEONOS_UI_WHITE);
     }
     for (uint32_t i = 0; i < disk_count && i < LEONOS_BLOCK_MAX_DISKS; ++i) {
         uint32_t row_y = l.disk_list_y + 2 + i * 24;
@@ -1367,17 +1362,17 @@ static void format_update_reason(char *buf, uint32_t cap,
     append_text(buf, &pos, cap, entry->name);
     append_text(buf, &pos, cap, "  -  ");
     if (entry->missing) {
-        append_text(buf, &pos, cap, T("missing on target", "目标中缺失"));
+        append_text(buf, &pos, cap, T("missing on target"));
     } else if (entry->elf_diff && entry->icon_diff) {
-        append_text(buf, &pos, cap, T("program and icon differ", "程序和图标不同"));
+        append_text(buf, &pos, cap, T("program and icon differ"));
     } else if (entry->elf_diff) {
-        append_text(buf, &pos, cap, T("program differs", "程序不同"));
+        append_text(buf, &pos, cap, T("program differs"));
     } else if (entry->icon_diff) {
-        append_text(buf, &pos, cap, T("icon differs", "图标不同"));
+        append_text(buf, &pos, cap, T("icon differs"));
     } else if (entry->package_diff) {
-        append_text(buf, &pos, cap, T("package files differ", "程序包文件不同"));
+        append_text(buf, &pos, cap, T("package files differ"));
     } else {
-        append_text(buf, &pos, cap, T("will be replaced", "将被替换"));
+        append_text(buf, &pos, cap, T("will be replaced"));
     }
 }
 
@@ -1401,19 +1396,17 @@ static void draw_update_apps_page(struct leonos_ui_surface *ui)
     uint32_t list_w = l.table_w > 22 ? l.table_w - 22 : l.table_w;
     char line[160];
     sync_update_list_layout(list_h);
-    draw_title(ui, T("Program and Driver Updates", "程序和驱动程序更新"),
-               T("Changed or missing programs are selected; changed drivers are refreshed automatically.",
-                 "变化或缺失的程序默认勾选；变化的驱动程序会自动刷新。"));
+    draw_title(ui, T("Program and Driver Updates"),
+               T("Changed or missing programs are selected; changed drivers are refreshed automatically."));
     leonos_ui_text_clipped(ui, l.content_x, l.content_y + 72, l.content_w,
-                           T("boot, libraries, kerneldebug, EFI, docs, and drivers will be refreshed. Extra target applications and drivers are kept.",
-                             "boot、运行库、kerneldebug、EFI、内置文档和驱动程序会刷新；目标中多出的应用和驱动会保留。"),
+                           T("boot, libraries, kerneldebug, EFI, docs, and drivers will be refreshed. Extra target applications and drivers are kept."),
                            LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_list_header(ui, l.content_x, header_y, list_w,
-                          T("Programs to replace", "要替换的程序"));
+                          T("Programs to replace"));
     leonos_ui_inset(ui, l.content_x, list_y, list_w, list_h, LEONOS_UI_WHITE);
     if (update_app_count == 0) {
         leonos_ui_text(ui, l.content_x + 12, list_y + 20,
-                       T("No program package differences were found.", "未发现程序包差异。"),
+                       T("No program package differences were found."),
                        LEONOS_UI_DARK, LEONOS_UI_WHITE);
     }
     for (uint32_t row = 0; row < update_app_list.visible_rows; ++row) {
@@ -1450,28 +1443,26 @@ static void draw_confirm_page(struct leonos_ui_surface *ui)
     struct installer_layout l = get_layout();
     char line[128];
     draw_title(ui,
-               install_mode == INSTALL_MODE_UPDATE ? T("Confirm Update", "确认更新")
-                                                   : T("Confirm Installation", "确认安装"),
-               install_mode == INSTALL_MODE_UPDATE ? T("Installed LeonOS packages will be upgraded.", "将升级已安装的 LeonOS 软件包。")
-                                                   : T("This operation is destructive.", "此操作会清空目标硬盘。"));
+               install_mode == INSTALL_MODE_UPDATE ? T("Confirm Update")
+                                                   : T("Confirm Installation"),
+               install_mode == INSTALL_MODE_UPDATE ? T("Installed LeonOS packages will be upgraded.")
+                                                   : T("This operation is destructive."));
     if (selected_disk >= 0 && (uint32_t)selected_disk < disk_count) {
         format_disk_line(line, sizeof(line), &disks[selected_disk]);
-        leonos_ui_text(ui, l.content_x, l.content_y + 78, T("Target:", "目标:"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+        leonos_ui_text(ui, l.content_x, l.content_y + 78, T("Target:"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
         leonos_ui_text_clipped(ui, l.content_x + 70, l.content_y + 78,
                                l.content_w > 70 ? l.content_w - 70 : l.content_w,
                                line, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     }
     leonos_ui_text_clipped(ui, l.content_x, l.content_y + 130, l.content_w,
                            install_mode == INSTALL_MODE_UPDATE
-                       ? T("Alpine packages and local configuration are retained. Boot files are updated after the package transaction succeeds.",
-                                   "保留 Alpine 软件包和本地配置，软件包事务成功后再更新启动文件。")
-                               : T("The selected disk will be erased and formatted with a FAT32 ESP and ext2 system root.",
-                                   "所选硬盘会被清空并格式化为 FAT32 ESP 和 ext2 系统根分区。"),
+                       ? T("Alpine packages and local configuration are retained. Boot files are updated after the package transaction succeeds.")
+                               : T("The selected disk will be erased and formatted with a FAT32 ESP and ext2 system root."),
                            LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_text(ui, l.content_x, l.content_y + 174,
                    install_mode == INSTALL_MODE_UPDATE
-                       ? T("Type UPDATE to enable the Update button.", "输入 UPDATE 以启用更新按钮。")
-                       : T("Type INSTALL to enable the Install button.", "输入 INSTALL 以启用安装按钮。"),
+                       ? T("Type UPDATE to enable the Update button.")
+                       : T("Type INSTALL to enable the Install button."),
                    LEONOS_UI_DARK, LEONOS_UI_WHITE);
     leonos_ui_edit_state_draw(ui, l.content_x, l.confirm_edit_y, 220, &confirm_edit, 0);
 }
@@ -1479,7 +1470,7 @@ static void draw_confirm_page(struct leonos_ui_surface *ui)
 static void draw_progress_page(struct leonos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
-    draw_title(ui, mode_progress_title(), T("Do not turn off this machine.", "请勿关闭此计算机。"));
+    draw_title(ui, mode_progress_title(), T("Do not turn off this machine."));
     leonos_ui_text_clipped(ui, l.content_x, l.content_y + 94, l.content_w,
                            progress_text, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_progress(ui, l.content_x, l.content_y + 130, l.content_w, 24, progress_value, 100);
@@ -1490,22 +1481,22 @@ static void draw_finish_page(struct leonos_ui_surface *ui)
     struct installer_layout l = get_layout();
     if (install_success) {
         draw_title(ui,
-                   install_mode == INSTALL_MODE_UPDATE ? T("Update Complete", "更新完成")
-                                                       : T("Installation Complete", "安装完成"),
-                   install_mode == INSTALL_MODE_UPDATE ? T("LeonOS was updated on the selected disk.", "所选硬盘上的 LeonOS 已更新。")
-                                                       : T("LeonOS was installed to the selected disk.", "LeonOS 已安装到所选硬盘。"));
-        leonos_ui_text(ui, l.content_x, l.content_y + 96, T("Remove the installation media, then restart.", "移除安装介质，然后重启。"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+                   install_mode == INSTALL_MODE_UPDATE ? T("Update Complete")
+                                                       : T("Installation Complete"),
+                   install_mode == INSTALL_MODE_UPDATE ? T("LeonOS was updated on the selected disk.")
+                                                       : T("LeonOS was installed to the selected disk."));
+        leonos_ui_text(ui, l.content_x, l.content_y + 96, T("Remove the installation media, then restart."), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
         if (reboot_error) {
             leonos_ui_text(ui, l.content_x, l.content_y + 130,
-                           T("Restart failed", "重启失败"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+                           T("Restart failed"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
             leonos_ui_text_clipped(ui, l.content_x, l.content_y + 164, l.content_w,
                                    strerror(reboot_error), LEONOS_UI_DARK, LEONOS_UI_WHITE);
         }
     } else {
         draw_title(ui,
-                   install_mode == INSTALL_MODE_UPDATE ? T("Update Failed", "更新失败")
-                                                       : T("Installation Failed", "安装失败"),
-                   T("No writes will continue after this error.", "出现此错误后不会继续写入。"));
+                   install_mode == INSTALL_MODE_UPDATE ? T("Update Failed")
+                                                       : T("Installation Failed"),
+                   T("No writes will continue after this error."));
         leonos_ui_text(ui, l.content_x, l.content_y + 96, status_text, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
         leonos_ui_text_clipped(ui, l.content_x, l.content_y + 130, l.content_w, detail_text, LEONOS_UI_DARK, LEONOS_UI_WHITE);
     }
@@ -1523,10 +1514,10 @@ static void draw_accounts_page(struct leonos_ui_surface *ui)
     leonos_inputm_set_current_context(LEONOS_INPUTM_CONTEXT_FOCUSED |
         (account_focus ? LEONOS_INPUTM_CONTEXT_SECURE : 0), l.content_x,
         l.content_y + 84 + account_focus * 54, account_width(), LEONOS_FONT_H + 8);
-    const char *labels[] = {T("Username", "普通用户名"), T("Password", "普通用户密码"),
-                            T("Confirm password", "确认普通用户密码"),
-                            T("root password", "root 密码"), T("Confirm root password", "确认 root 密码")};
-    draw_title(ui, T("Accounts", "账户"), T("Administrator: root", "管理员：root"));
+    const char *labels[] = {T("Standard user name"), T("Standard user password"),
+                            T("Confirm password"),
+                            T("root password"), T("Confirm root password")};
+    draw_title(ui, T("Accounts"), T("Administrator: root"));
     for (unsigned i = 0; i < 5; ++i) {
         uint32_t y = l.content_y + 64 + i * 54;
         leonos_ui_text(ui, l.content_x, y, labels[i], LEONOS_UI_BLACK, LEONOS_UI_WHITE);
@@ -1544,8 +1535,7 @@ static void draw_accounts_page(struct leonos_ui_surface *ui)
     }
     if (setup.username[0] && !installer_setup_valid(&setup))
         leonos_ui_text_clipped(ui, l.content_x, l.content_y + 346, l.content_w,
-                               T("Passwords: 1-32 characters, no spaces; confirmations must match",
-                                 "密码为 1 至 32 个字符，不含空格，两次输入需一致；请检查用户名"),
+                               T("Passwords: 1-32 characters, no spaces; confirmations must match"),
                                LEONOS_UI_DARK, LEONOS_UI_WHITE);
 }
 
@@ -1647,7 +1637,7 @@ static void show_copy_progress(int window_id, struct leonos_ui_surface *ui,
         last_present_ms = now;
     }
     show_progress(window_id, ui, copy_progress_percent(),
-                  T("Copying system files", "正在复制系统文件"), detail);
+                  T("Copying system files"), detail);
 }
 
 /* mkdir(3) follows the POSIX convention and returns -1 on failure, while
@@ -1690,7 +1680,7 @@ static int count_files_recursive(const char *src, uint32_t *out_count)
             continue;
         }
         if (path_join(child, sizeof(child), src, entries[i].name) < 0) {
-            set_status(T("Installation failed", "安装失败"), T("Payload path is too long", "负载路径过长"));
+            set_status(T("Installation failed"), T("Payload path is too long"));
             ret = -1;
             goto out;
         }
@@ -1961,7 +1951,7 @@ static int copy_dir_recursive(const char *src, const char *dst,
         }
         if (path_join(src_child, sizeof(src_child), src, entries[i].name) < 0 ||
             path_join(dst_child, sizeof(dst_child), dst, entries[i].name) < 0) {
-            set_status(T("Installation failed", "安装失败"), T("Copy path is too long", "复制路径过长"));
+            set_status(T("Installation failed"), T("Copy path is too long"));
             printf("[installer.elf] copy path too long src=%s dst=%s\n", src, dst);
             ret = -1;
             goto out;
@@ -2044,7 +2034,7 @@ static int merge_dir_recursive(const char *src, const char *dst,
         }
         if (path_join(src_child, sizeof(src_child), src, entries[i].name) < 0 ||
             path_join(dst_child, sizeof(dst_child), dst, entries[i].name) < 0) {
-            set_status(T("Installation failed", "安装失败"), T("Copy path is too long", "复制路径过长"));
+            set_status(T("Installation failed"), T("Copy path is too long"));
             printf("[installer.elf] merge path too long src=%s dst=%s\n", src, dst);
             ret = -1;
             goto out;
@@ -2151,7 +2141,7 @@ static int count_changed_files_recursive(const char *src, const char *dst)
         }
         if (path_join(src_child, sizeof(src_child), src, entries[i].name) < 0 ||
             path_join(dst_child, sizeof(dst_child), dst, entries[i].name) < 0) {
-            set_status(T("Installation failed", "安装失败"), T("Copy path is too long", "复制路径过长"));
+            set_status(T("Installation failed"), T("Copy path is too long"));
             ret = -1;
             goto out;
         }
@@ -2202,7 +2192,7 @@ static int copy_changed_dir_recursive(const char *src, const char *dst,
         }
         if (path_join(src_child, sizeof(src_child), src, entries[i].name) < 0 ||
             path_join(dst_child, sizeof(dst_child), dst, entries[i].name) < 0) {
-            set_status(T("Installation failed", "安装失败"), T("Copy path is too long", "复制路径过长"));
+            set_status(T("Installation failed"), T("Copy path is too long"));
             printf("[installer.elf] changed path too long src=%s dst=%s\n", src, dst);
             ret = -1;
             goto out;
@@ -2267,7 +2257,7 @@ static int copy_payload_ordered(int window_id, struct leonos_ui_surface *ui)
     if (!ret) ret = installer_write_fstab();
     if (!ret && installer_setup_write(&setup, INSTALL_ROOT_MOUNT) < 0) {
         ret = -errno;
-        set_status(T("Account setup failed", "账户创建失败"), strerror(errno));
+        set_status(T("Account setup failed"), strerror(errno));
     }
     if (ret < 0) {
         printf("[installer.elf] root payload copy failed src=%s dst=%s ret=%d\n",
@@ -2335,8 +2325,7 @@ static int check_update_target_required(void)
         if (path_join(path, sizeof(path), INSTALL_ROOT_MOUNT, required_dirs[i]) < 0)
             return -ENAMETOOLONG;
         if (path_type_nofollow(path) != LEONOS_FS_TYPE_DIR) {
-            set_status(T("Unsupported root layout; use a fresh ext2 installation",
-                         "不支持此根目录布局，请执行 ext2 全新安装"), path);
+            set_status(T("Unsupported root layout; use a fresh ext2 installation"), path);
             return -EINVAL;
         }
     }
@@ -2349,7 +2338,7 @@ static int check_update_target_required(void)
             found = 1;
         }
         if (!found) {
-            set_status(T("Existing LeonOS 4 was not detected", "未检测到现有 LeonOS 4"),
+            set_status(T("Existing LeonOS 4 was not detected"),
                        desktop);
             return -2;
         }
@@ -2360,8 +2349,7 @@ static int check_update_target_required(void)
             char path[LEONOS_FS_PATH_LEN];
             if (path_join(path, sizeof(path), INSTALL_ROOT_MOUNT, esp_dirs[i]) < 0 ||
                 path_has_type(path, LEONOS_FS_TYPE_DIR) < 0) {
-                set_status(T("Existing LeonOS 4 boot partition was not detected",
-                             "未检测到现有 LeonOS 4 启动分区"), path);
+                set_status(T("Existing LeonOS 4 boot partition was not detected"), path);
                 return -2;
             }
         }
@@ -2370,14 +2358,12 @@ static int check_update_target_required(void)
         char loader[LEONOS_FS_PATH_LEN];
         if (path_join(loader, sizeof(loader), TARGET_BOOT, "loader.elf") < 0 ||
             path_has_type(loader, LEONOS_FS_TYPE_FILE) < 0) {
-            set_status(T("Existing LeonOS 4 boot partition was not detected",
-                         "未检测到现有 LeonOS 4 启动分区"), loader);
+            set_status(T("Existing LeonOS 4 boot partition was not detected"), loader);
             return -2;
         }
     }
     if (path_has_type(TARGET_ESP_KERNEL, LEONOS_FS_TYPE_FILE) < 0) {
-        set_status(T("Existing LeonOS 4 boot partition was not detected",
-                     "未检测到现有 LeonOS 4 启动分区"), TARGET_ESP_KERNEL);
+        set_status(T("Existing LeonOS 4 boot partition was not detected"), TARGET_ESP_KERNEL);
         return -2;
     }
     return 0;
@@ -2411,7 +2397,7 @@ static int check_update_payload_required(void)
     for (uint32_t i = 0; i < sizeof(required_dirs) / sizeof(required_dirs[0]); ++i) {
         int ret = path_has_type(required_dirs[i], LEONOS_FS_TYPE_DIR);
         if (ret < 0) {
-            set_status(T("Installation media is incomplete", "安装介质不完整"),
+            set_status(T("Installation media is incomplete"),
                        required_dirs[i]);
             return ret;
         }
@@ -2419,7 +2405,7 @@ static int check_update_payload_required(void)
     for (uint32_t i = 0; i < sizeof(required_files) / sizeof(required_files[0]); ++i) {
         int ret = path_has_type(required_files[i], LEONOS_FS_TYPE_FILE);
         if (ret < 0) {
-            set_status(T("Installation media is incomplete", "安装介质不完整"),
+            set_status(T("Installation media is incomplete"),
                        required_files[i]);
             return ret;
         }
@@ -2582,12 +2568,11 @@ static int scan_update_apps(void)
         line[0] = 0;
         append_u64(line, &pos, sizeof(line), update_app_count);
         append_text(line, &pos, sizeof(line),
-                    T(" program package update(s) found.", " 个程序包更新。"));
-        set_status(line, T("All are selected by default.", "默认全部勾选。"));
+                    T(" program package update(s) found."));
+        set_status(line, T("All are selected by default."));
     } else {
-        set_status(T("No program package differences were found.", "未发现程序包差异。"),
-                   T("Core files, bundled docs, and drivers can still be updated.",
-                     "仍可更新核心文件、内置文档和驱动程序。"));
+        set_status(T("No program package differences were found."),
+                   T("Core files, bundled docs, and drivers can still be updated."));
     }
     return 0;
 }
@@ -2654,19 +2639,8 @@ static int copy_selected_update_apps(int window_id, struct leonos_ui_surface *ui
 
 static int write_target_locale(void)
 {
-    const char *text = installer_lang == LEONOS_LANG_ZH ? "lang=zh\n" : "lang=en\n";
-    int fd = open(TARGET_ETC_LEONOS "/locale.conf",
-                  LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
-    long wrote;
-    if (fd < 0) {
-        return fd;
-    }
-    wrote = write(fd, text, strlen(text));
-    close(fd);
-    if (wrote < 0) {
-        return (int)wrote;
-    }
-    return wrote == (long)strlen(text) ? 0 : -5;
+    return write_locale_setting(TARGET_ETC_LEONOS "/locale.conf", language_selection()) == 0
+        ? 0 : -errno;
 }
 
 static int display_config_line_is_theme(const char *line, uint32_t len)
@@ -2781,9 +2755,9 @@ static void finish_install(int window_id, struct leonos_ui_surface *ui, int ret,
         install_success = 1;
         progress_value = 100;
         set_status(install_mode == INSTALL_MODE_UPDATE
-                       ? T("Update completed successfully", "更新成功完成")
-                       : T("Installation completed successfully", "安装成功完成"),
-                   T("Press Restart to boot from the installed disk.", "点击重启从已安装硬盘启动。"));
+                       ? T("Update completed successfully")
+                       : T("Installation completed successfully"),
+                   T("Press Restart to boot from the installed disk."));
     }
     if (installer_tty_mode) {
         if (ret < 0) {
@@ -3191,38 +3165,38 @@ static void prepare_update_target(int window_id, struct leonos_ui_surface *ui)
     progress_value = 0;
     reset_update_app_list();
     show_progress(window_id, ui, 5,
-                  T("Mounting target filesystems", "正在挂载目标文件系统"),
-                  T("Root: /target; ESP: /target/boot", "根分区：/target；ESP：/target/boot"));
+                  T("Mounting target filesystems"),
+                  T("Root: /target; ESP: /target/boot"));
     ret = installer_mount_targets(disks[selected_disk].path, 0);
     if (ret < 0) {
-        finish_install(window_id, ui, ret, T("Mount failed", "挂载失败"));
+        finish_install(window_id, ui, ret, T("Mount failed"));
         return;
     }
     if (leonos_account_legacy_check(INSTALL_ROOT_MOUNT) < 0) {
         finish_install(window_id, ui, -errno,
-                       T("Legacy accounts require recovery before updating", "旧账户需完成受控迁移后再更新"));
+                       T("Legacy accounts require recovery before updating"));
         return;
     }
     show_progress(window_id, ui, 18,
-                  T("Checking existing LeonOS 4", "正在检测现有 LeonOS 4"),
-                  T("Target: /target", "目标: /target"));
+                  T("Checking existing LeonOS 4"),
+                  T("Target: /target"));
     ret = check_update_payload_required();
     if (ret < 0) {
-        finish_install(window_id, ui, ret, T("Payload check failed", "负载检测失败"));
+        finish_install(window_id, ui, ret, T("Payload check failed"));
         return;
     }
     ret = check_update_target_required();
     if (ret < 0) {
-        finish_install(window_id, ui, ret, T("Existing system check failed", "现有系统检测失败"));
+        finish_install(window_id, ui, ret, T("Existing system check failed"));
         return;
     }
     if (path_type_nofollow(INSTALL_ROOT_MOUNT "/lib/apk/db/installed") != LEONOS_FS_TYPE_FILE) {
         finish_install(window_id, ui, -ENOENT,
-                       T("No APK database: reinstall from this media", "缺少 APK 数据库，请使用此介质重新安装"));
+                       T("No APK database: reinstall from this media"));
         return;
     }
-    set_status(T("Update installed LeonOS packages", "更新已安装的 LeonOS 软件包"),
-               T("Alpine packages and local configuration are preserved.", "保留 Alpine 软件包及本地配置。"));
+    set_status(T("Update installed LeonOS packages"),
+               T("Alpine packages and local configuration are preserved."));
     page = PAGE_CONFIRM;
     reset_confirm();
     dirty = 1;
@@ -3233,7 +3207,7 @@ static void perform_install(int window_id, struct leonos_ui_surface *ui)
 {
     int ret;
     if (!installer_setup_valid(&setup)) {
-        finish_install(window_id, ui, -EINVAL, T("Invalid installation settings", "安装设置无效"));
+        finish_install(window_id, ui, -EINVAL, T("Invalid installation settings"));
         return;
     }
     if (selected_disk < 0 || (uint32_t)selected_disk >= disk_count) {
@@ -3261,15 +3235,15 @@ static void perform_install(int window_id, struct leonos_ui_surface *ui)
         ret = count_files_recursive(INSTALL_ESP_PAYLOAD, &copy_total);
     }
     if (ret < 0) {
-        finish_install(window_id, ui, ret, T("Payload scan failed", "扫描安装负载失败"));
+        finish_install(window_id, ui, ret, T("Payload scan failed"));
         return;
     }
 
-    show_progress(window_id, ui, 35, T("Copying system files", "正在复制系统文件"),
-                  T("Root: /target; boot partition: /target/boot", "根分区：/target；启动分区：/target/boot"));
+    show_progress(window_id, ui, 35, T("Copying system files"),
+                  T("Root: /target; boot partition: /target/boot"));
     ret = copy_payload_ordered(window_id, ui);
     if (ret < 0) {
-        finish_install(window_id, ui, ret, T("Copy failed", "复制失败"));
+        finish_install(window_id, ui, ret, T("Copy failed"));
         return;
     }
 
@@ -3279,11 +3253,11 @@ static void perform_install(int window_id, struct leonos_ui_surface *ui)
     explicit_bzero(setup.root_password_confirm, sizeof(setup.root_password_confirm));
     ret = write_target_preferences();
     if (ret < 0) {
-        finish_install(window_id, ui, ret, T("Could not save installed preferences", "无法保存安装后偏好设置"));
+        finish_install(window_id, ui, ret, T("Could not save installed preferences"));
         return;
     }
 
-    show_progress(window_id, ui, 100, T("Installation completed successfully", "安装成功完成"), T("Target disk is ready.", "目标硬盘已准备就绪。"));
+    show_progress(window_id, ui, 100, T("Installation completed successfully"), T("Target disk is ready."));
     finish_install(window_id, ui, 0, "");
 }
 
@@ -3305,24 +3279,24 @@ static void perform_update(int window_id, struct leonos_ui_surface *ui)
     copy_total_bytes = 0;
     copy_done_bytes = 0;
 
-    show_progress(window_id, ui, 2, T("Mounting target filesystems", "正在挂载目标文件系统"),
-                  T("Root: /target; ESP: /target/boot", "根分区：/target；ESP: /target/boot"));
+    show_progress(window_id, ui, 2, T("Mounting target filesystems"),
+                  T("Root: /target; ESP: /target/boot"));
     ret = installer_mount_targets(disks[selected_disk].path, 0);
     if (ret < 0) {
-        finish_install(window_id, ui, ret, T("Mount failed", "挂载失败"));
+        finish_install(window_id, ui, ret, T("Mount failed"));
         return;
     }
 
-    show_progress(window_id, ui, 10, T("Checking existing LeonOS 4", "正在检测现有 LeonOS 4"),
-                  T("Target: /target", "目标: /target"));
+    show_progress(window_id, ui, 10, T("Checking existing LeonOS 4"),
+                  T("Target: /target"));
     ret = check_update_payload_required();
     if (ret < 0) {
-        finish_install(window_id, ui, ret, T("Payload check failed", "负载检测失败"));
+        finish_install(window_id, ui, ret, T("Payload check failed"));
         return;
     }
     ret = check_update_target_required();
     if (ret < 0) {
-        finish_install(window_id, ui, ret, T("Existing system check failed", "现有系统检测失败"));
+        finish_install(window_id, ui, ret, T("Existing system check failed"));
         return;
     }
     if (installer_root_filesystem == LEONOS_BLOCK_FILESYSTEM_EXFAT) {
@@ -3330,29 +3304,28 @@ static void perform_update(int window_id, struct leonos_ui_surface *ui)
          * them, so an update would silently produce an unusable namespace.
          * Refuse instead of materializing directory copies. */
         finish_install(window_id, ui, -38,
-                       T("exFAT root cannot carry the current symlink layout; use a fresh ext2 install",
-                         "exFAT 根分区无法承载当前符号链接布局，请改为 ext2 全新安装"));
+                       T("exFAT root cannot carry the current symlink layout; use a fresh ext2 install"));
         return;
     }
 
     ret = ensure_runtime_layout_dirs();
     if (ret >= 0) ret = apply_runtime_root_paths();
     if (ret < 0) {
-        finish_install(window_id, ui, ret, T("Invalid root layout", "根目录布局无效"));
+        finish_install(window_id, ui, ret, T("Invalid root layout"));
         return;
     }
 
-    show_progress(window_id, ui, 22, T("Scanning update payload", "正在扫描更新负载"),
-                  T("Root and boot payloads", "根分区和启动分区负载"));
+    show_progress(window_id, ui, 22, T("Scanning update payload"),
+                  T("Root and boot payloads"));
     for (uint32_t i = 0; i < sizeof(boot_dirs) / sizeof(boot_dirs[0]); ++i) {
         char src[LEONOS_FS_PATH_LEN];
         if (path_join(src, sizeof(src), INSTALL_ESP_PAYLOAD, boot_dirs[i]) < 0) {
-            finish_install(window_id, ui, -1, T("Payload path is too long", "负载路径过长"));
+            finish_install(window_id, ui, -1, T("Payload path is too long"));
             return;
         }
         ret = count_files_recursive(src, &copy_total);
         if (ret < 0) {
-            finish_install(window_id, ui, ret, T("Payload scan failed", "扫描安装负载失败"));
+            finish_install(window_id, ui, ret, T("Payload scan failed"));
             return;
         }
     }
@@ -3360,15 +3333,15 @@ static void perform_update(int window_id, struct leonos_ui_surface *ui)
         char src[LEONOS_FS_PATH_LEN];
         if (path_join(src, sizeof(src), INSTALL_ESP_PAYLOAD, boot_files[i]) < 0 ||
             add_file_copy_work(src) < 0) {
-            finish_install(window_id, ui, -1, T("Payload scan failed", "扫描安装负载失败"));
+            finish_install(window_id, ui, -1, T("Payload scan failed"));
             return;
         }
     }
-    show_progress(window_id, ui, 35, T("Upgrading signed LeonOS packages", "正在升级已签名的 LeonOS 软件包"),
-                  T("Checking dependencies and preserving local configuration", "检查依赖关系并保留本地配置"));
+    show_progress(window_id, ui, 35, T("Upgrading signed LeonOS packages"),
+                  T("Checking dependencies and preserving local configuration"));
     ret = sync_system_payload(window_id, ui);
     if (ret < 0) {
-        finish_install(window_id, ui, ret, T("Core update failed", "核心系统更新失败"));
+        finish_install(window_id, ui, ret, T("Core update failed"));
         return;
     }
 
@@ -3378,24 +3351,24 @@ static void perform_update(int window_id, struct leonos_ui_surface *ui)
         char src[LEONOS_FS_PATH_LEN], dst[LEONOS_FS_PATH_LEN];
         if (path_join(src, sizeof(src), INSTALL_ESP_PAYLOAD, boot_dirs[i]) < 0 ||
             path_join(dst, sizeof(dst), INSTALL_ESP_MOUNT, boot_dirs[i]) < 0) {
-            finish_install(window_id, ui, -ENAMETOOLONG, T("Boot update failed", "启动更新失败"));
+            finish_install(window_id, ui, -ENAMETOOLONG, T("Boot update failed"));
             return;
         }
         ret = overlay_dir_recursive(src, dst, window_id, ui);
         if (ret < 0) {
-            finish_install(window_id, ui, ret, T("Boot update failed", "启动更新失败"));
+            finish_install(window_id, ui, ret, T("Boot update failed"));
             return;
         }
     }
     ret = copy_file_path(INSTALL_ESP_PAYLOAD "/loader.elf",
                          INSTALL_ESP_MOUNT "/loader.elf", window_id, ui);
     if (ret < 0) {
-        finish_install(window_id, ui, ret, T("Boot update failed", "启动更新失败"));
+        finish_install(window_id, ui, ret, T("Boot update failed"));
         return;
     }
 
-    show_progress(window_id, ui, 100, T("Update completed successfully", "更新成功完成"),
-                  T("Target disk is ready.", "目标硬盘已准备就绪。"));
+    show_progress(window_id, ui, 100, T("Update completed successfully"),
+                  T("Target disk is ready."));
     finish_install(window_id, ui, 0, "");
 }
 
@@ -3535,7 +3508,7 @@ static void handle_mode_click(int32_t x, int32_t y)
 
 static void installer_apply_language_font(void)
 {
-    if (installer_lang == LEONOS_LANG_ZH) {
+    if (language_selection() == 1) {
         /* SimSun supplies the CJK glyphs used throughout the Chinese UI. */
         (void)leonos_ui_set_font_fallback_path(0);
         (void)leonos_ui_set_font_path(INSTALLER_CJK_FONT);
@@ -3551,14 +3524,14 @@ static void installer_apply_language_font(void)
 static void handle_language_click(int32_t x, int32_t y)
 {
     struct installer_layout l = get_layout();
-    uint8_t language = installer_lang;
+    unsigned language = language_selection();
     if (hit_rect_i(x, y, (int32_t)l.content_x, (int32_t)l.content_y + 88, 140, BUTTON_H)) {
-        language = LEONOS_LANG_EN;
+        language = 0;
     } else if (hit_rect_i(x, y, (int32_t)l.content_x + 156, (int32_t)l.content_y + 88, 140, BUTTON_H)) {
-        language = LEONOS_LANG_ZH;
+        language = 1;
     }
-    if (language != installer_lang) {
-        installer_lang = language;
+    if (language != language_selection()) {
+        if (!setlocale(LC_ALL, language_options[language].locale)) return;
         installer_apply_language_font();
         acknowledgements_scroll_y = 0;
         dirty = 1;
@@ -3794,6 +3767,9 @@ static int handle_key(int window_id, struct leonos_ui_surface *ui,
 
 int main(void)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     struct installer_tty_context tty_context;
@@ -3809,7 +3785,7 @@ int main(void)
 
     if (isatty(STDIN_FILENO)) {
         installer_tty_mode = 1;
-        installer_lang = (uint8_t)leonos_i18n_language();
+
         tty_context.disks = disks;
         tty_context.setup = &setup;
         tty_context.disk_count = &disk_count;
@@ -3837,7 +3813,7 @@ int main(void)
     }
 
     leonos_ui_bind(&ui, pixels, surface_w, surface_h, INSTALLER_MAX_W);
-    installer_lang = (uint8_t)leonos_i18n_language();
+
     installer_theme = (uint8_t)leonos_ui_theme();
     installer_apply_language_font();
     leonos_ui_listview_state_init(&update_app_list, 1, UPDATE_APP_ROW_H);

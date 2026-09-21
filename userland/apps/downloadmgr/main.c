@@ -2,7 +2,9 @@
 #include <leonos/fs.h>
 #include <leonos/gui.h>
 #include <leonos/http.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
 #include <leonos/ui.h>
@@ -15,7 +17,7 @@
 #define BUTTON_X 568U
 #define BUTTON_Y 38U
 #define BUTTON_W 86U
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 static uint32_t pixels[DOWNLOAD_W * DOWNLOAD_H];
 static char url_input[LEONOS_HTTP_URL_LEN] = "http://example.com/";
@@ -237,19 +239,19 @@ static const char *net_status_name(uint32_t status)
 {
     switch (status) {
     case LEONOS_NET_STATUS_OK:
-        return T("OK", "成功");
+        return T("Succeeded");
     case LEONOS_NET_STATUS_TCP_TIMEOUT:
-        return T("TCP timeout", "TCP 超时");
+        return T("TCP timeout");
     case LEONOS_NET_STATUS_DNS_FAILED:
-        return T("DNS failed", "DNS 失败");
+        return T("DNS failed");
     case LEONOS_NET_STATUS_DNS_NO_ANSWER:
-        return T("No DNS answer", "没有 DNS 应答");
+        return T("No DNS answer");
     case LEONOS_NET_STATUS_PROTOCOL_UNSUPPORTED:
-        return T("Protocol unsupported", "协议不支持");
+        return T("Protocol unsupported");
     case LEONOS_NET_STATUS_TLS_FAILED:
-        return T("TLS verification failed", "TLS 验证失败");
+        return T("TLS verification failed");
     default:
-        return T("Network failed", "网络失败");
+        return T("Network failed");
     }
 }
 
@@ -257,9 +259,9 @@ static void set_detail_done(const struct leonos_http_response *response)
 {
     uint32_t pos = 0;
     detail_text[0] = 0;
-    append_text(detail_text, &pos, sizeof(detail_text), T("Saved ", "已保存 "));
+    append_text(detail_text, &pos, sizeof(detail_text), T("Saved "));
     append_u32(detail_text, &pos, sizeof(detail_text), response->body_len);
-    append_text(detail_text, &pos, sizeof(detail_text), T(" bytes to ", " 字节到 "));
+    append_text(detail_text, &pos, sizeof(detail_text), T(" bytes to "));
     append_text(detail_text, &pos, sizeof(detail_text), target_path);
 }
 
@@ -286,7 +288,7 @@ static void perform_download(void)
     done = 0;
     failed = 0;
     progress_value = 10;
-    copy_text(status_text, sizeof(status_text), T("Connecting...", "正在连接..."));
+    copy_text(status_text, sizeof(status_text), T("Connecting..."));
     copy_text(detail_text, sizeof(detail_text), url_input);
     body[0] = 0;
     headers[0] = 0;
@@ -296,7 +298,7 @@ static void perform_download(void)
         busy = 0;
         progress_value = 0;
         copy_text(status_text, sizeof(status_text),
-                  T("Only http:// and https:// downloads are supported.", "目前只支持 http:// 和 https:// 下载。"));
+                  T("Only http:// and https:// downloads are supported."));
         return;
     }
     ret = leonos_http_get(url_input, LEONOS_HTTP_DEFAULT_TIMEOUT_MS,
@@ -307,7 +309,7 @@ static void perform_download(void)
         failed = 1;
         busy = 0;
         copy_text(status_text, sizeof(status_text),
-                  ret < 0 ? T("HTTP client failed", "HTTP 客户端失败")
+                  ret < 0 ? T("HTTP client failed")
                           : net_status_name(response.net_status));
         return;
     }
@@ -316,7 +318,7 @@ static void perform_download(void)
         failed = 1;
         busy = 0;
         status_text[0] = 0;
-        append_text(status_text, &pos, sizeof(status_text), T("HTTP status ", "HTTP 状态 "));
+        append_text(status_text, &pos, sizeof(status_text), T("HTTP status "));
         append_u32(status_text, &pos, sizeof(status_text), response.http_status);
         return;
     }
@@ -324,7 +326,7 @@ static void perform_download(void)
         failed = 1;
         busy = 0;
         copy_text(status_text, sizeof(status_text),
-                  T("Download is too large for v1 client.", "文件超过 v1 下载缓冲限制。"));
+                  T("Download is too large for v1 client."));
         return;
     }
     if (choose_target_path(target_path, sizeof(target_path),
@@ -332,7 +334,7 @@ static void perform_download(void)
         failed = 1;
         busy = 0;
         copy_text(status_text, sizeof(status_text),
-                  T("Could not choose target file.", "无法选择目标文件。"));
+                  T("Could not choose target file."));
         return;
     }
     path_parent(detail_text, sizeof(detail_text), target_path);
@@ -341,13 +343,13 @@ static void perform_download(void)
         failed = 1;
         busy = 0;
         copy_text(status_text, sizeof(status_text),
-                  T("Could not save file.", "无法保存文件。"));
+                  T("Could not save file."));
         return;
     }
     progress_value = 100;
     done = 1;
     busy = 0;
-    copy_text(status_text, sizeof(status_text), T("Download complete", "下载完成"));
+    copy_text(status_text, sizeof(status_text), T("Download complete"));
     set_detail_done(&response);
 }
 
@@ -356,14 +358,13 @@ static void draw_downloadmgr(struct leonos_ui_surface *ui)
     uint32_t state_color = failed ? 0x00b03030U : (done ? 0x00108040U : LEONOS_UI_DARK);
     leonos_ui_rect(ui, 0, 0, DOWNLOAD_W, DOWNLOAD_H, LEONOS_UI_GRAY);
     leonos_ui_text(ui, 24, 14,
-                   T("Web downloads are saved to the current user's Downloads folder.",
-                     "网页下载会保存到当前用户的 Downloads 文件夹。"),
+                   T("Web downloads are saved to the current user's Downloads folder."),
                    LEONOS_UI_DARK, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 24, URL_Y + 4U, T("URL:", "地址:"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+    leonos_ui_text(ui, 24, URL_Y + 4U, T("URL:"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_edit_state_draw(ui, URL_X, URL_Y, URL_W, &url_edit, busy ? LEONOS_UI_EDIT_DISABLED : 0);
     leonos_ui_button(ui, BUTTON_X, BUTTON_Y, BUTTON_W, LEONOS_UI_BUTTON_H,
-                     T("Download", "下载"), busy ? LEONOS_UI_BUTTON_DISABLED : 0);
-    leonos_ui_text(ui, 24, 88, T("Progress", "进度"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+                     T("Download"), busy ? LEONOS_UI_BUTTON_DISABLED : 0);
+    leonos_ui_text(ui, 24, 88, T("Progress"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_progress(ui, 104, 84, DOWNLOAD_W - 142, 22,
                        progress_value, 100);
     leonos_ui_text_clipped(ui, 24, 130, DOWNLOAD_W - 48,
@@ -393,6 +394,9 @@ static int hit_rect(int32_t px, int32_t py, uint32_t x, uint32_t y,
 
 int main(int argc, char **argv, char **envp)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
@@ -402,8 +406,8 @@ int main(int argc, char **argv, char **envp)
         copy_text(url_input, sizeof(url_input), argv[1]);
         auto_start = 1;
     }
-    window_id = leonos_gui_create_app_window_ex(T("Download Manager", "下载管理器"),
-                                                T("Web downloads", "网页下载"),
+    window_id = leonos_gui_create_app_window_ex(T("Download Manager"),
+                                                T("Web downloads"),
                                                 DOWNLOAD_W, DOWNLOAD_H,
                                                 LEONOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {

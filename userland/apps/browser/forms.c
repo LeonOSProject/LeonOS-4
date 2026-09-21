@@ -1037,7 +1037,7 @@ static void form_focus_control(uint32_t control_index)
     browser_form_edit_state.focused = 1;
     address_edit.focused = 0;
     menu_open = BROWSER_MENU_NONE;
-    set_status(T("Editing form input", "正在编辑表单输入"));
+    set_status(T("Editing form input"));
 }
 
 int browser_form_input_active(void)
@@ -1514,8 +1514,8 @@ static void form_toggle_control(uint32_t control_index)
     if (control->kind == BROWSER_FORM_CONTROL_CHECKBOX) {
         control->flags ^= BROWSER_FORM_CONTROL_CHECKED;
         set_status((control->flags & BROWSER_FORM_CONTROL_CHECKED)
-                       ? T("Checkbox checked", "复选框已选中")
-                       : T("Checkbox unchecked", "复选框已取消"));
+                       ? T("Checkbox checked")
+                       : T("Checkbox unchecked"));
         return;
     }
     if (control->kind == BROWSER_FORM_CONTROL_RADIO) {
@@ -1528,7 +1528,7 @@ static void form_toggle_control(uint32_t control_index)
             }
         }
         control->flags |= BROWSER_FORM_CONTROL_CHECKED;
-        set_status(T("Radio option selected", "单选项已选择"));
+        set_status(T("Radio option selected"));
         return;
     }
     if (control->kind == BROWSER_FORM_CONTROL_SELECT &&
@@ -1552,7 +1552,7 @@ static void form_toggle_control(uint32_t control_index)
                       browser_form_options[next].value);
             copy_text(control->label, sizeof(control->label),
                       browser_form_options[next].label);
-            set_status(T("Selection changed", "选项已更改"));
+            set_status(T("Selection changed"));
         }
     }
 }
@@ -1562,7 +1562,7 @@ static void form_reset_page(void)
     browser_form_clear_focus();
     form_skip_restore_once = 1;
     rerender_page();
-    set_status(T("Form reset", "表单已重置"));
+    set_status(T("Form reset"));
 }
 
 static void form_edit(uint32_t control_index)

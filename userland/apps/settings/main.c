@@ -5,7 +5,11 @@
 #include <leonos/app.h>
 #include <leonos/fs.h>
 #include <leonos/gui.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include "../locale_settings.h"
+#include <locale.h>
+#include <leonos/layout.h>
+#include <leonos/environment.h>
 #include <leonos/text_input.h>
 #include <leonos/launch.h>
 #include <leonos/license.h>
@@ -39,7 +43,8 @@
 #define SETTINGS_INPUTM_OPTION_KEY_LEN 64U
 #define SETTINGS_INPUTM_OPTION_LABEL_LEN 64U
 #define SETTINGS_KEY_ESCAPE 1U
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
+#define N_(s) (s)
 
 enum {
     PAGE_DISPLAY = 0,
@@ -94,7 +99,6 @@ struct settings_inputm_entry {
 struct settings_inputm_option {
     char key[SETTINGS_INPUTM_OPTION_KEY_LEN];
     char label[SETTINGS_INPUTM_OPTION_LABEL_LEN];
-    char label_zh[SETTINGS_INPUTM_OPTION_LABEL_LEN];
     uint8_t value;
 };
 
@@ -108,16 +112,13 @@ static uint32_t inputm_option_count;
 
 struct assoc_row {
     const char *extension;
-    const char *description_en;
-    const char *description_zh;
+    const char *description;
 };
 
 struct service_row {
     const char *key;
-    const char *name_en;
-    const char *name_zh;
-    const char *detail_en;
-    const char *detail_zh;
+    const char *name;
+    const char *detail;
     uint8_t enabled;
     uint8_t locked;
 };
@@ -135,12 +136,12 @@ static const uint32_t mode_heights[SETTINGS_MODE_COUNT] = {1080, 900, 800, 720, 
 static const uint32_t scale_values[SETTINGS_SCALE_COUNT] = {1, 2, 3};
 static const char *scale_labels[SETTINGS_SCALE_COUNT] = {"1x", "2x", "3x"};
 static const struct assoc_row assoc_rows[SETTINGS_ASSOC_ROWS] = {
-    {".txt", "Text documents", "文本文档"},
-    {".md", "Markdown notes", "Markdown 文档"},
-    {".html", "HTML pages", "HTML 页面"},
-    {".htm", "HTML pages", "HTML 页面"},
-    {".bmp", "Bitmap images", "BMP 图片"},
-    {".hlp", "Help files", "帮助文件"},
+    {".txt", N_("Text documents")},
+    {".md", N_("Markdown notes")},
+    {".html", N_("HTML pages")},
+    {".htm", N_("HTML pages")},
+    {".bmp", N_("Bitmap images")},
+    {".hlp", N_("Help files")},
 };
 /* Open-with buttons are populated from the application registry.  The UI has
  * four compact slots, while the registry may contain more handlers. */
@@ -155,18 +156,11 @@ static const uint32_t settings_assoc_button_w[SETTINGS_ASSOC_CANDIDATE_MAX] = {
     64U, 70U, 58U, 50U,
 };
 static struct service_row service_rows[SETTINGS_SERVICE_ROWS] = {
-    {"desktop", "Desktop window service", "桌面窗口服务",
-     "Required system shell. Cannot be disabled here.", "必需的系统外壳，不能在这里禁用。", 1, 1},
-    {"dhcp", "DHCP auto connect", "DHCP 自动连接",
-     "Boot and service runtime should request an address automatically.",
-     "启动和服务运行时自动请求地址。", 1, 0},
-    {"network_icon", "Taskbar network icon", "任务栏网络图标",
-     "Show network state in the desktop taskbar.", "在桌面任务栏显示网络状态。", 1, 0},
-    {"rtc_clock", "RTC taskbar clock", "RTC 任务栏时钟",
-     "Show the hardware clock in the taskbar.", "在任务栏显示硬件时钟。", 1, 0},
-    {"ntp_sync", "NTP time sync", "NTP 时间同步",
-     "Synchronize the system clock through pool.ntp.org.",
-     "通过 pool.ntp.org 同步系统时钟。", 0, 0},
+    {"desktop", N_("Desktop window service"), N_("Required system shell. Cannot be disabled here."), 1, 1},
+    {"dhcp", N_("DHCP auto connect"), N_("Boot and service runtime should request an address automatically."), 1, 0},
+    {"network_icon", N_("Taskbar network icon"), N_("Show network state in the desktop taskbar."), 1, 0},
+    {"rtc_clock", N_("RTC taskbar clock"), N_("Show the hardware clock in the taskbar."), 1, 0},
+    {"ntp_sync", N_("NTP time sync"), N_("Synchronize the system clock through pool.ntp.org."), 0, 0},
 };
 
 static void copy_text(char *dst, uint32_t cap, const char *src)
@@ -277,19 +271,19 @@ static const char *theme_color_label(uint32_t scheme)
 {
     switch (scheme) {
     case LEONOS_UI_COLOR_SCHEME_TEAL:
-        return T("Teal", "青色");
+        return T("Teal");
     case LEONOS_UI_COLOR_SCHEME_GREEN:
-        return T("Green", "绿色");
+        return T("Green");
     case LEONOS_UI_COLOR_SCHEME_PURPLE:
-        return T("Purple", "紫色");
+        return T("Purple");
     case LEONOS_UI_COLOR_SCHEME_RED:
-        return T("Red", "红色");
+        return T("Red");
     case LEONOS_UI_COLOR_SCHEME_GRAPHITE:
-        return T("Graphite", "石墨色");
+        return T("Graphite");
     case LEONOS_UI_COLOR_SCHEME_PINK:
-        return T("Kawaii Pink", "卡哇伊粉");
+        return T("Kawaii Pink");
     default:
-        return T("Blue", "蓝色");
+        return T("Blue");
     }
 }
 
@@ -297,15 +291,15 @@ static const char *wallpaper_mode_label(uint32_t mode)
 {
     switch (mode) {
     case LEONOS_WALLPAPER_MODE_FIT:
-        return T("Fit", "适应");
+        return T("Fit");
     case LEONOS_WALLPAPER_MODE_CENTER:
-        return T("Center", "居中");
+        return T("Center");
     case LEONOS_WALLPAPER_MODE_TILE:
-        return T("Tile", "平铺");
+        return T("Tile");
     case LEONOS_WALLPAPER_MODE_STRETCH:
-        return T("Stretch", "拉伸");
+        return T("Stretch");
     default:
-        return T("Fill", "填充");
+        return T("Fill");
     }
 }
 
@@ -391,7 +385,7 @@ static int validate_wallpaper_bmp(const char *path)
 
 static const char *role_label(uint32_t role)
 {
-    return role == LEONOS_AUTH_ROLE_ADMIN ? T("Administrator", "管理员") : T("User", "用户");
+    return role == LEONOS_AUTH_ROLE_ADMIN ? T("Administrator") : T("User");
 }
 
 static const char *program_label(const char *program)
@@ -401,7 +395,7 @@ static const char *program_label(const char *program)
         leonos_app_registry_label(program, label, sizeof(label)) == 0) {
         return label;
     }
-    return program && program[0] ? program : T("None", "无");
+    return program && program[0] ? program : T("None");
 }
 
 static void settings_load_assoc_apps(void)
@@ -471,31 +465,31 @@ static const char *license_status_label(uint32_t status)
 {
     switch (status) {
     case LEONOS_LICENSE_STATUS_OK:
-        return T("Activated", "已激活");
+        return T("Activated");
     case LEONOS_LICENSE_STATUS_MISSING:
-        return T("Not activated", "未激活");
+        return T("Not activated");
     case LEONOS_LICENSE_STATUS_INVALID:
-        return T("Invalid activation", "激活无效");
+        return T("Invalid activation");
     case LEONOS_LICENSE_STATUS_NETWORK:
-        return T("Network failure", "网络失败");
+        return T("Network failure");
     case LEONOS_LICENSE_STATUS_CLOCK:
-        return T("Clock failure", "时钟失败");
+        return T("Clock failure");
     case LEONOS_LICENSE_STATUS_DENIED:
-        return T("Activation denied", "激活被拒绝");
+        return T("Activation denied");
     default:
-        return T("Unknown", "未知");
+        return T("Unknown");
     }
 }
 
 static const char *license_mode_label(const char *mode)
 {
     if (text_eq(mode, "online")) {
-        return T("Online", "在线");
+        return T("Online");
     }
     if (text_eq(mode, "offline")) {
-        return T("Offline", "离线");
+        return T("Offline");
     }
-    return T("None", "无");
+    return T("None");
 }
 
 static const char *value_or_dash(const char *value)
@@ -602,14 +596,14 @@ static void refresh_ntp_runtime_state(void)
 static void save_services_config(void)
 {
     if (current_user.role != LEONOS_AUTH_ROLE_ADMIN) {
-        copy_text(status_text, sizeof(status_text), T("Administrator rights required", "需要管理员权限"));
+        copy_text(status_text, sizeof(status_text), T("Administrator rights required"));
         return;
     }
     if (settings_rc_save || settings_rc_kind > 1) return;
     settings_rc_dhcp = service_rows[1].enabled;
     settings_rc_ntp = service_rows[4].enabled;
     settings_rc_save = 1;
-    copy_text(status_text, sizeof(status_text), T("Updating OpenRC...", "正在更新 OpenRC…"));
+    copy_text(status_text, sizeof(status_text), T("Updating OpenRC..."));
 }
 
 static void write_services_preferences(void)
@@ -619,7 +613,7 @@ static void write_services_preferences(void)
     int fd;
     if (current_user.role != LEONOS_AUTH_ROLE_ADMIN) {
         copy_text(status_text, sizeof(status_text),
-                  T("Administrator rights required", "需要管理员权限"));
+                  T("Administrator rights required"));
         return;
     }
     cfg[0] = 0;
@@ -634,15 +628,15 @@ static void write_services_preferences(void)
               LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0644);
     if (fd < 0) {
         copy_text(status_text, sizeof(status_text),
-                  T("Could not save services.", "无法保存服务设置。"));
+                  T("Could not save services."));
         return;
     }
     if (write(fd, cfg, pos) != (long)pos) {
         copy_text(status_text, sizeof(status_text),
-                  T("Could not save services.", "无法保存服务设置。"));
+                  T("Could not save services."));
     } else {
         copy_text(status_text, sizeof(status_text),
-                  T("Service settings saved", "服务设置已保存"));
+                  T("Service settings saved"));
     }
     close(fd);
 }
@@ -921,7 +915,7 @@ static int inputm_schema_value(const char *line, uint32_t length,
 
 static void inputm_add_schema_option(const char *config, const char *key,
                                      const char *type, const char *default_value,
-                                     const char *label, const char *label_zh)
+                                     const char *label)
 {
     struct settings_inputm_option *option;
     char value[16];
@@ -933,7 +927,6 @@ static void inputm_add_schema_option(const char *config, const char *key,
     *option = (struct settings_inputm_option){0};
     copy_text(option->key, sizeof(option->key), key);
     copy_text(option->label, sizeof(option->label), label && label[0] ? label : key);
-    copy_text(option->label_zh, sizeof(option->label_zh), label_zh);
     if (inputm_config_get(config, key, value, sizeof(value))) {
         option->value = inputm_parse_u32(value, 0) ? 1 : 0;
     } else {
@@ -950,7 +943,6 @@ static void inputm_load_extension_options(const char *config)
     char type[16] = {0};
     char default_value[16] = {0};
     char label[SETTINGS_INPUTM_OPTION_LABEL_LEN] = {0};
-    char label_zh[SETTINGS_INPUTM_OPTION_LABEL_LEN] = {0};
     uint8_t in_setting = 0;
     uint32_t pos = 0;
     int fd;
@@ -988,13 +980,12 @@ static void inputm_load_extension_options(const char *config)
             schema[start + 6U] == 'n' && schema[start + 7U] == 'g' &&
             schema[start + 8U] == ']') {
             if (in_setting) {
-                inputm_add_schema_option(config, key, type, default_value, label, label_zh);
+                inputm_add_schema_option(config, key, type, default_value, label);
             }
             key[0] = 0;
             type[0] = 0;
             default_value[0] = 0;
             label[0] = 0;
-            label_zh[0] = 0;
             in_setting = 1;
             continue;
         }
@@ -1008,11 +999,9 @@ static void inputm_load_extension_options(const char *config)
             inputm_schema_value(schema + start, end - start, "label", label, sizeof(label))) {
             continue;
         }
-        (void)inputm_schema_value(schema + start, end - start, "label_zh", label_zh,
-                                  sizeof(label_zh));
     }
     if (in_setting) {
-        inputm_add_schema_option(config, key, type, default_value, label, label_zh);
+        inputm_add_schema_option(config, key, type, default_value, label);
     }
 }
 
@@ -1150,12 +1139,12 @@ static void inputm_load_settings(void)
 static const char *inputm_startup_label(uint32_t mode)
 {
     if (mode == TEXT_INPUT_START_LOGIN) {
-        return T("At sign-in", "登录时启动");
+        return T("At sign-in");
     }
     if (mode == TEXT_INPUT_START_ON_DEMAND) {
-        return T("On demand", "按需启动");
+        return T("On demand");
     }
-    return T("Manual", "手动启动");
+    return T("Manual");
 }
 
 static void request_display(uint32_t action, uint32_t mode, uint32_t scale)
@@ -1181,10 +1170,10 @@ static void request_appearance_change(const char *ok_text)
                                              request.metro_color_scheme,
                                              request.win95_color_scheme);
         copy_text(status_text, sizeof(status_text),
-                  ok_text ? ok_text : T("Personalization updated", "个性化设置已更新"));
+                  ok_text ? ok_text : T("Personalization updated"));
     } else {
         copy_text(status_text, sizeof(status_text),
-                  T("Could not apply personalization", "无法应用个性化设置"));
+                  T("Could not apply personalization"));
     }
 }
 
@@ -1202,9 +1191,11 @@ static const char *scale_label(void)
                : scale_labels[0];
 }
 
+static unsigned selected_language;
+
 static const char *language_label(void)
 {
-    return leonos_i18n_language() == LEONOS_LANG_ZH ? "中文" : "English";
+    return language_options[selected_language].name;
 }
 
 static const char *theme_label(void)
@@ -1229,45 +1220,44 @@ static void draw_display_page(struct leonos_ui_surface *ui)
         scale_items[i].id = i;
         scale_items[i].flags = mode_supported(display_state.mode_index, i) ? 0 : LEONOS_UI_MENU_DISABLED;
     }
-    lang_items[0] = (struct leonos_ui_dropdown_item){"English", LEONOS_LANG_EN, 0};
-    lang_items[1] = (struct leonos_ui_dropdown_item){"中文", LEONOS_LANG_ZH, 0};
+    lang_items[0] = (struct leonos_ui_dropdown_item){language_options[0].name, 0, 0};
+    lang_items[1] = (struct leonos_ui_dropdown_item){language_options[1].name, 1, 0};
 
-    append_text(line, &pos, sizeof(line), T("Framebuffer ", "帧缓冲 "));
+    append_text(line, &pos, sizeof(line), T("Framebuffer "));
     append_dec(line, &pos, sizeof(line), display_state.fb_width);
     append_char(line, &pos, sizeof(line), 'x');
     append_dec(line, &pos, sizeof(line), display_state.fb_height);
     append_text(line, &pos, sizeof(line), "  ");
-    append_text(line, &pos, sizeof(line), T("Desktop ", "桌面 "));
+    append_text(line, &pos, sizeof(line), T("Desktop "));
     append_dec(line, &pos, sizeof(line), display_state.logical_width);
     append_char(line, &pos, sizeof(line), 'x');
     append_dec(line, &pos, sizeof(line), display_state.logical_height);
     leonos_ui_text_clipped(ui, 34, 64, SETTINGS_W - 68, line, LEONOS_UI_DARK, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 44, 104, T("Resolution", "分辨率"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+    leonos_ui_text(ui, 44, 104, T("Resolution"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_combobox(ui, 160, 98, 190, mode_label(), active_drop == DROP_RESOLUTION, 0);
-    leonos_ui_text(ui, 44, 144, T("Scale", "缩放"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+    leonos_ui_text(ui, 44, 144, T("Scale"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_combobox(ui, 160, 138, 190, scale_label(), active_drop == DROP_SCALE, 0);
     leonos_ui_slider(ui, 370, 138, 150, LEONOS_UI_BUTTON_H,
                      display_state.scale_index,
                      SETTINGS_SCALE_COUNT > 1 ? SETTINGS_SCALE_COUNT - 1 : 1,
                      0);
-    leonos_ui_text(ui, 44, 184, T("Language", "语言"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+    leonos_ui_text(ui, 44, 184, T("Language"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_combobox(ui, 160, 178, 190, language_label(), active_drop == DROP_LANGUAGE, 0);
     if (display_state.pending_confirm) {
         uint32_t seconds = (display_state.confirm_remaining_ms + 999) / 1000;
         pos = 0;
         line[0] = 0;
-        append_text(line, &pos, sizeof(line), T("Keep these display settings? Reverting in ",
-                                                "保留这些显示设置？将在 "));
+        append_text(line, &pos, sizeof(line), T("Keep these display settings? Reverting in "));
         append_dec(line, &pos, sizeof(line), seconds);
-        append_text(line, &pos, sizeof(line), T("s", " 秒后还原"));
+        append_text(line, &pos, sizeof(line), T("s"));
         leonos_ui_panel(ui, 44, 272, SETTINGS_W - 88, 64, LEONOS_UI_LIGHT);
         leonos_ui_text_clipped(ui, 54, 284, SETTINGS_W - 108, line, LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
-        leonos_ui_button(ui, 54, 306, 82, LEONOS_UI_BUTTON_H, T("Keep", "保留"), 0);
-        leonos_ui_button(ui, 146, 306, 82, LEONOS_UI_BUTTON_H, T("Revert", "还原"), 0);
+        leonos_ui_button(ui, 54, 306, 82, LEONOS_UI_BUTTON_H, T("Keep"), 0);
+        leonos_ui_button(ui, 146, 306, 82, LEONOS_UI_BUTTON_H, T("Revert"), 0);
     }
     if (active_drop == DROP_LANGUAGE) {
         leonos_ui_dropdown(ui, 160, 202, 190, lang_items, 2,
-                           (uint32_t)leonos_i18n_language(), SETTINGS_DROPDOWN_ROW_H, 1000);
+                           selected_language, SETTINGS_DROPDOWN_ROW_H, 1000);
     } else if (active_drop == DROP_SCALE) {
         leonos_ui_dropdown(ui, 160, 162, 190, scale_items, SETTINGS_SCALE_COUNT,
                            display_state.scale_index, SETTINGS_DROPDOWN_ROW_H, 1000);
@@ -1291,16 +1281,15 @@ static void draw_personalization_page(struct leonos_ui_surface *ui)
     fill_wallpaper_mode_items(wallpaper_items);
 
     leonos_ui_text(ui, 34, 64,
-                   T("Personalization is saved for the current user. Metro and Win95 keep separate colors.",
-                     "个性化设置按当前用户保存。Metro 和 Win95 保留各自独立的颜色。"),
+                   T("Personalization is saved for the current user. Metro and Win95 keep separate colors."),
                    LEONOS_UI_DARK, LEONOS_UI_GRAY);
 
-    leonos_ui_text(ui, 44, 104, T("Theme style", "主题样式"),
+    leonos_ui_text(ui, 44, 104, T("Theme style"),
                    LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_combobox(ui, 160, 98, 190, theme_label(),
                        active_drop == DROP_THEME, disabled);
 
-    leonos_ui_text(ui, 44, 144, T("Metro color", "Metro 颜色"),
+    leonos_ui_text(ui, 44, 144, T("Metro color"),
                    LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_combobox(ui, 160, 138, 190,
                        theme_color_label(appearance_state.metro_color_scheme),
@@ -1309,7 +1298,7 @@ static void draw_personalization_page(struct leonos_ui_surface *ui)
                    leonos_ui_theme_scheme_accent(LEONOS_UI_THEME_METRO,
                                                  appearance_state.metro_color_scheme));
 
-    leonos_ui_text(ui, 44, 184, T("Win95 color", "Win95 颜色"),
+    leonos_ui_text(ui, 44, 184, T("Win95 color"),
                    LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_combobox(ui, 160, 178, 190,
                        theme_color_label(appearance_state.win95_color_scheme),
@@ -1318,27 +1307,27 @@ static void draw_personalization_page(struct leonos_ui_surface *ui)
                    leonos_ui_theme_scheme_accent(LEONOS_UI_THEME_WIN95,
                                                  appearance_state.win95_color_scheme));
 
-    leonos_ui_text(ui, 44, 224, T("Wallpaper", "壁纸"),
+    leonos_ui_text(ui, 44, 224, T("Wallpaper"),
                    LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_text_field(ui, 160, 218, 318, appearance_state.wallpaper_path,
                          LEONOS_UI_EDIT_READONLY | disabled);
     leonos_ui_button(ui, 486, 218, 82, LEONOS_UI_BUTTON_H,
-                     T("Browse", "浏览"), disabled);
+                     T("Browse"), disabled);
     leonos_ui_button(ui, 576, 218, 82, LEONOS_UI_BUTTON_H,
-                     T("Default", "默认"), disabled);
+                     T("Default"), disabled);
 
-    leonos_ui_text(ui, 44, 264, T("Display mode", "显示方式"),
+    leonos_ui_text(ui, 44, 264, T("Display mode"),
                    LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_combobox(ui, 160, 258, 190,
                        wallpaper_mode_label(appearance_state.wallpaper_mode),
                        active_drop == DROP_WALLPAPER_MODE, disabled);
     leonos_ui_text(ui, 360, 264,
-                   T("BMP only, up to 1280 x 720.", "仅 BMP，最大 1280 x 720。"),
+                   T("BMP only, up to 1280 x 720."),
                    LEONOS_UI_DARK, LEONOS_UI_WHITE);
 
     if (!current_user.username[0]) {
         leonos_ui_text(ui, 44, 318,
-                       T("Sign in to change personalization.", "登录后才能更改个性化设置。"),
+                       T("Sign in to change personalization."),
                        LEONOS_UI_DARK, LEONOS_UI_WHITE);
     }
 
@@ -1366,14 +1355,14 @@ static void draw_personalization_page(struct leonos_ui_surface *ui)
 static void draw_input_methods_page(struct leonos_ui_surface *ui)
 {
     const struct leonos_ui_list_column cols[] = {
-        {T("Input method", "输入法"), 220},
-        {T("Enabled", "启用"), 90},
-        {T("Startup", "启动方式"), 150},
+        {T("Input method"), 220},
+        {T("Enable"), 90},
+        {T("Startup"), 150},
     };
     struct leonos_ui_dropdown_item startup_items[3] = {
-        {T("Manual", "手动"), TEXT_INPUT_START_MANUAL, 0},
-        {T("At sign-in", "登录时"), TEXT_INPUT_START_LOGIN, 0},
-        {T("On demand", "按需"), TEXT_INPUT_START_ON_DEMAND, 0},
+        {T("Manual"), TEXT_INPUT_START_MANUAL, 0},
+        {T("At sign-in"), TEXT_INPUT_START_LOGIN, 0},
+        {T("On demand"), TEXT_INPUT_START_ON_DEMAND, 0},
     };
     struct leonos_ui_dropdown_item hotkey_items[2] = {
         {"Win + Space", 0, 0},
@@ -1382,25 +1371,24 @@ static void draw_input_methods_page(struct leonos_ui_surface *ui)
     struct settings_inputm_entry *selected =
         inputm_selected < inputm_entry_count ? &inputm_entries[inputm_selected] : 0;
     leonos_ui_text(ui, 34, 64,
-                   T("Input methods and learning data are isolated for the current user.",
-                     "输入法和学习数据按当前用户隔离保存。"),
+                   T("Input methods and learning data are isolated for the current user."),
                    LEONOS_UI_DARK, LEONOS_UI_GRAY);
     leonos_ui_listview_header(ui, 34, 90, 460, cols, 3);
     for (uint32_t i = 0; i < inputm_entry_count && i < 5U; ++i) {
         const char *cells[3];
         cells[0] = inputm_entries[i].id;
-        cells[1] = inputm_entries[i].enabled ? T("Yes", "是") : T("No", "否");
+        cells[1] = inputm_entries[i].enabled ? T("Yes") : T("No");
         cells[2] = inputm_startup_label(inputm_entries[i].startup_mode);
         leonos_ui_listview_row(ui, 34, 118 + i * 27U, 460, cols, cells, 3,
                                i == inputm_selected ? LEONOS_UI_MENU_SELECTED : 0);
     }
     leonos_ui_button(ui, 510, 92, 156, LEONOS_UI_BUTTON_H,
-                     selected && selected->enabled ? T("Disable", "禁用") :
-                                                     T("Enable", "启用"),
+                     selected && selected->enabled ? T("Disable") :
+                                                     T("Enable"),
                      !selected || !current_user.username[0] || inputm_selected == 0 ?
                          LEONOS_UI_BUTTON_DISABLED : 0);
     leonos_ui_button(ui, 510, 126, 156, LEONOS_UI_BUTTON_H,
-                     T("Use as default", "设为默认"),
+                     T("Use as default"),
                      !selected || !selected->enabled || !current_user.username[0] ?
                          LEONOS_UI_BUTTON_DISABLED : 0);
     leonos_ui_combobox(ui, 510, 160, 156,
@@ -1409,31 +1397,29 @@ static void draw_input_methods_page(struct leonos_ui_surface *ui)
                         !selected || !current_user.username[0] || inputm_selected == 0 ?
                             LEONOS_UI_BUTTON_DISABLED : 0);
     leonos_ui_button(ui, 510, 194, 74, LEONOS_UI_BUTTON_H,
-                     T("Move up", "上移"),
+                     T("Move up"),
                      !selected || !current_user.username[0] || inputm_selected <= 1U ?
                          LEONOS_UI_BUTTON_DISABLED : 0);
     leonos_ui_button(ui, 592, 194, 74, LEONOS_UI_BUTTON_H,
-                     T("Move down", "下移"),
+                     T("Move down"),
                      !selected || !current_user.username[0] || inputm_selected == 0 ||
                          inputm_selected + 1U >= inputm_entry_count ?
                          LEONOS_UI_BUTTON_DISABLED : 0);
-    leonos_ui_text(ui, 44, 266, T("Switch shortcut", "切换快捷键"),
+    leonos_ui_text(ui, 44, 266, T("Switch shortcut"),
                    LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_combobox(ui, 170, 260, 180,
                         text_eq(inputm_hotkey, "alt-shift") ? "Alt + Shift" : "Win + Space",
                         active_drop == DROP_INPUTM_HOTKEY,
                         current_user.username[0] ? 0 : LEONOS_UI_BUTTON_DISABLED);
-    leonos_ui_text(ui, 372, 266, T("Candidates", "候选框"),
+    leonos_ui_text(ui, 372, 266, T("Candidates"),
                    LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 470, 266, T("System overlay", "系统覆盖层"),
+    leonos_ui_text(ui, 470, 266, T("System overlay"),
                    LEONOS_UI_DARK, LEONOS_UI_WHITE);
     if (inputm_option_count) {
         for (uint32_t i = 0; i < inputm_option_count; ++i) {
             char label[SETTINGS_INPUTM_OPTION_LABEL_LEN + 12U];
             uint32_t pos = 0;
-            const char *base = T(inputm_options[i].label,
-                                 inputm_options[i].label_zh[0] ?
-                                     inputm_options[i].label_zh : inputm_options[i].label);
+            const char *base = T(inputm_options[i].label);
             label[0] = 0;
             append_text(label, &pos, sizeof(label), base);
             append_text(label, &pos, sizeof(label), inputm_options[i].value ? ": On" : ": Off");
@@ -1443,14 +1429,13 @@ static void draw_input_methods_page(struct leonos_ui_surface *ui)
                                         LEONOS_UI_BUTTON_DISABLED);
         }
     } else {
-        leonos_ui_text(ui, 44, 314, T("This input method has no configurable options.",
-                                      "此输入法没有可配置选项。"),
+        leonos_ui_text(ui, 44, 314, T("This input method has no configurable options."),
                        LEONOS_UI_DARK, LEONOS_UI_GRAY);
     }
     leonos_ui_button(ui, 510, 344, 156, LEONOS_UI_BUTTON_H,
                      selected && selected->settings_app[0] ?
-                         T("Open provider settings", "打开输入法设置") :
-                         T("Update dictionary", "更新词库"),
+                         T("Open provider settings") :
+                         T("Update dictionary"),
                      !selected ||
                          (!(selected->settings_app[0]) &&
                           (!text_eq(selected->id, "oschinpt") || !selected->path[0])) ?
@@ -1468,15 +1453,15 @@ static void draw_input_methods_page(struct leonos_ui_surface *ui)
 static void draw_users_page(struct leonos_ui_surface *ui)
 {
     const struct leonos_ui_list_column cols[] = {
-        {T("User", "用户"), 180},
-        {T("Role", "权限"), 130},
-        {T("State", "状态"), 120},
+        {T("User"), 180},
+        {T("Role"), 130},
+        {T("State"), 120},
     };
     char state[32];
     leonos_ui_text(ui, 34, 64,
                    current_user.role == LEONOS_AUTH_ROLE_ADMIN
-                       ? T("Administrators can create and manage local accounts.", "管理员可以创建和管理本地账户。")
-                       : T("You can change your password.", "你可以修改自己的密码。"),
+                       ? T("Administrators can create and manage local accounts.")
+                       : T("You can change your password."),
                    LEONOS_UI_DARK, LEONOS_UI_GRAY);
     leonos_ui_listview_header(ui, 34, 98, 430, cols, 3);
     for (uint32_t row = 0; user_scroll + row < user_count && row < SETTINGS_USER_ROWS; ++row) {
@@ -1484,8 +1469,8 @@ static void draw_users_page(struct leonos_ui_surface *ui)
         const char *cells[3];
         copy_text(state, sizeof(state),
                   (users[i].flags & LEONOS_AUTH_USER_DISABLED)
-                      ? T("Disabled", "已禁用")
-                      : T("Enabled", "已启用"));
+                      ? T("Disabled")
+                      : T("Enabled"));
         cells[0] = users[i].username;
         cells[1] = role_label(users[i].role);
         cells[2] = state;
@@ -1493,31 +1478,30 @@ static void draw_users_page(struct leonos_ui_surface *ui)
                                i == selected_user ? LEONOS_UI_MENU_SELECTED : 0);
     }
     if (current_user.role == LEONOS_AUTH_ROLE_ADMIN) {
-        leonos_ui_button(ui, 484, 98, 104, LEONOS_UI_BUTTON_H, T("New User", "新建用户"), 0);
+        leonos_ui_button(ui, 484, 98, 104, LEONOS_UI_BUTTON_H, T("New User"), 0);
         leonos_ui_button(ui, 484, 178, 104, LEONOS_UI_BUTTON_H,
                          users[selected_user].flags & LEONOS_AUTH_USER_DISABLED
-                             ? T("Enable", "启用")
-                             : T("Disable", "禁用"),
+                             ? T("Enable")
+                             : T("Disable"),
                          user_count && users[selected_user].uid ? 0 : LEONOS_UI_BUTTON_DISABLED);
-        leonos_ui_button(ui, 484, 258, 104, LEONOS_UI_BUTTON_H, T("Reset Pass", "重置密码"),
+        leonos_ui_button(ui, 484, 258, 104, LEONOS_UI_BUTTON_H, T("Reset Pass"),
                          user_count ? 0 : LEONOS_UI_BUTTON_DISABLED);
     }
-    leonos_ui_button(ui, 34, 324, 150, LEONOS_UI_BUTTON_H, T("Change Password", "修改密码"),
+    leonos_ui_button(ui, 34, 324, 150, LEONOS_UI_BUTTON_H, T("Change Password"),
                      current_user.username[0] ? 0 : LEONOS_UI_BUTTON_DISABLED);
 }
 
 static void draw_assoc_page(struct leonos_ui_surface *ui)
 {
     const struct leonos_ui_list_column cols[] = {
-        {T("Extension", "扩展名"), 82},
-        {T("Type", "类型"), 170},
-        {T("Default app", "默认应用"), 160},
+        {T("Extension"), 82},
+        {T("Type"), 170},
+        {T("Default app"), 160},
     };
     uint32_t candidate_indices[SETTINGS_ASSOC_CANDIDATE_MAX];
     settings_ensure_assoc_apps();
     leonos_ui_text(ui, 34, 64,
-                   T("Choose the default app used by File Manager and desktop shortcuts.",
-                     "选择文件资源管理器和桌面快捷方式打开文件时使用的默认应用。"),
+                   T("Choose the default app used by File Manager and desktop shortcuts."),
                    LEONOS_UI_DARK, LEONOS_UI_GRAY);
     leonos_ui_listview_header(ui, 34, 96, 412, cols, 3);
     for (uint32_t i = 0; i < SETTINGS_ASSOC_ROWS; ++i) {
@@ -1528,7 +1512,7 @@ static void draw_assoc_page(struct leonos_ui_surface *ui)
         fake_path_for_extension(fake, sizeof(fake), assoc_rows[i].extension);
         program = leonos_launch_resolve_default_app_for_path(fake);
         cells[0] = assoc_rows[i].extension;
-        cells[1] = T(assoc_rows[i].description_en, assoc_rows[i].description_zh);
+        cells[1] = T(assoc_rows[i].description);
         cells[2] = program_label(program);
         leonos_ui_listview_row(ui, 34, y, 412, cols, cells, 3, 0);
         uint32_t candidate_count = settings_assoc_row_candidates(
@@ -1553,8 +1537,7 @@ static void draw_assoc_page(struct leonos_ui_surface *ui)
 static void draw_services_page(struct leonos_ui_surface *ui)
 {
     leonos_ui_text(ui, 34, 64,
-                   T("Startup policy is saved here; Service Manager shows runtime state.",
-                     "这里保存启动策略；服务管理器显示运行状态。"),
+                   T("Startup policy is saved here; Service Manager shows runtime state."),
                    LEONOS_UI_DARK, LEONOS_UI_GRAY);
     for (uint32_t i = 0; i < SETTINGS_SERVICE_ROWS; ++i) {
         uint32_t y = 98 + i * 48;
@@ -1564,22 +1547,22 @@ static void draw_services_page(struct leonos_ui_surface *ui)
                              : 0;
         leonos_ui_panel(ui, 34, y, SETTINGS_W - 68, 40, LEONOS_UI_WHITE);
         leonos_ui_checkbox(ui, 44, y + 9,
-                           T(service_rows[i].name_en, service_rows[i].name_zh),
+                           T(service_rows[i].name),
                            service_rows[i].enabled, flags);
         leonos_ui_text_clipped(ui, 274, y + 11, SETTINGS_W - 318,
                                i == 4U ? ntp_runtime_detail :
-                                         T(service_rows[i].detail_en, service_rows[i].detail_zh),
+                                         T(service_rows[i].detail),
                                service_rows[i].locked ? LEONOS_UI_DARK : LEONOS_UI_BLACK,
                                LEONOS_UI_WHITE);
     }
-    leonos_ui_text(ui, 34, 346, T("NTP runtime state:", "NTP 运行状态:"),
+    leonos_ui_text(ui, 34, 346, T("NTP runtime state:"),
                    LEONOS_UI_DARK, LEONOS_UI_GRAY);
     leonos_ui_text_clipped(ui, 174, 346, SETTINGS_W - 208, ntp_runtime_state,
                            text_eq(ntp_runtime_state, "failed") ? 0x00b03030U :
                            text_eq(ntp_runtime_state, "running") ? 0x00108040U :
                            LEONOS_UI_DARK, LEONOS_UI_GRAY);
     leonos_ui_button(ui, 34, SETTINGS_H - 66, 108, LEONOS_UI_BUTTON_H,
-                     T("Save", "保存"),
+                     T("Save"),
                      current_user.role == LEONOS_AUTH_ROLE_ADMIN
                          ? 0
                          : LEONOS_UI_BUTTON_DISABLED);
@@ -1594,9 +1577,8 @@ static void draw_activation_page(struct leonos_ui_surface *ui)
     required = (uint32_t)leonos_license_required();
     if (!required) {
         info = (struct leonos_license_info){0};
-        copy_text(info.detail, sizeof(info.detail), T("License validation is disabled for this build.",
-                                                      "此构建已关闭许可证验证。"));
-        status = T("Not required", "不需要验证");
+        copy_text(info.detail, sizeof(info.detail), T("License validation is disabled for this build."));
+        status = T("Not required");
         ok = 1;
     } else if (leonos_license_status(&info) < 0) {
         info = (struct leonos_license_info){0};
@@ -1608,34 +1590,34 @@ static void draw_activation_page(struct leonos_ui_surface *ui)
         status = license_status_label(info.status);
         ok = info.status == LEONOS_LICENSE_STATUS_OK;
     }
-    leonos_ui_text(ui, 34, 64, T("Activation", "激活"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+    leonos_ui_text(ui, 34, 64, T("Activation"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
     leonos_ui_panel(ui, 34, 94, SETTINGS_W - 68, 52,
                     ok ? LEONOS_UI_WHITE : LEONOS_UI_LIGHT);
-    leonos_ui_text(ui, 50, 110, T("Computer", "此计算机"),
+    leonos_ui_text(ui, 50, 110, T("Computer"),
                    LEONOS_UI_BLACK, ok ? LEONOS_UI_WHITE : LEONOS_UI_LIGHT);
     leonos_ui_text_clipped(ui, 176, 110, SETTINGS_W - 226,
                            status,
                            ok ? LEONOS_UI_BLACK : LEONOS_UI_DARK,
                            ok ? LEONOS_UI_WHITE : LEONOS_UI_LIGHT);
-    draw_field(ui, 170, T("Activation mode", "激活方式"),
-               !required ? T("Not required", "不需要验证") :
+    draw_field(ui, 170, T("Activation mode"),
+               !required ? T("Not required") :
                ok ? license_mode_label(info.mode) : "-");
-    draw_field(ui, 202, T("Machine ID", "机器码"), info.install_id);
-    draw_field(ui, 234, T("Email hash", "邮箱哈希"), info.email_hash);
-    draw_field(ui, 266, T("Detail", "详情"), info.detail);
-    draw_field(ui, 298, T("License file", "许可证文件"), LEONOS_PATH_LICENSE);
+    draw_field(ui, 202, T("Machine ID"), info.install_id);
+    draw_field(ui, 234, T("Email hash"), info.email_hash);
+    draw_field(ui, 266, T("Detail"), info.detail);
+    draw_field(ui, 298, T("License file"), LEONOS_PATH_LICENSE);
 }
 
 static void draw_settings(struct leonos_ui_surface *ui)
 {
     struct leonos_ui_tab_item tabs[] = {
-        {T("Display", "显示"), PAGE_DISPLAY, 0},
-        {T("Personalize", "个性化"), PAGE_PERSONALIZATION, 0},
-        {T("Users", "用户"), PAGE_USERS, 0},
-        {T("File Types", "文件类型"), PAGE_ASSOC, 0},
-        {T("Services", "服务"), PAGE_SERVICES, 0},
-        {T("Activation", "激活"), PAGE_ACTIVATION, 0},
-        {T("Input", "输入法"), PAGE_INPUT_METHODS, 0},
+        {T("Display"), PAGE_DISPLAY, 0},
+        {T("Personalize"), PAGE_PERSONALIZATION, 0},
+        {T("Users"), PAGE_USERS, 0},
+        {T("File Types"), PAGE_ASSOC, 0},
+        {T("Services"), PAGE_SERVICES, 0},
+        {T("Activation"), PAGE_ACTIVATION, 0},
+        {T("Input Method"), PAGE_INPUT_METHODS, 0},
     };
     leonos_ui_rect(ui, 0, 0, SETTINGS_W, SETTINGS_H, LEONOS_UI_GRAY);
     settings_tabs.selected_id = active_page;
@@ -1680,8 +1662,8 @@ static int handle_open_dropdown_hit(int32_t x, int32_t y)
         scale_items[i].id = i;
         scale_items[i].flags = mode_supported(display_state.mode_index, i) ? 0 : LEONOS_UI_MENU_DISABLED;
     }
-    lang_items[0] = (struct leonos_ui_dropdown_item){"English", LEONOS_LANG_EN, 0};
-    lang_items[1] = (struct leonos_ui_dropdown_item){"中文", LEONOS_LANG_ZH, 0};
+    lang_items[0] = (struct leonos_ui_dropdown_item){language_options[0].name, 0, 0};
+    lang_items[1] = (struct leonos_ui_dropdown_item){language_options[1].name, 1, 0};
     theme_items[0] = (struct leonos_ui_dropdown_item){"Metro", LEONOS_UI_THEME_METRO, 0};
     theme_items[1] = (struct leonos_ui_dropdown_item){"Win95", LEONOS_UI_THEME_WIN95, 0};
     fill_theme_color_items(metro_items);
@@ -1693,7 +1675,7 @@ static int handle_open_dropdown_hit(int32_t x, int32_t y)
         active_drop = DROP_NONE;
         if (id < SETTINGS_MODE_COUNT && mode_supported(id, display_state.scale_index)) {
             request_display(LEONOS_DISPLAY_REQUEST_APPLY, id, display_state.scale_index);
-            copy_text(status_text, sizeof(status_text), T("Resolution changed", "分辨率已更改"));
+            copy_text(status_text, sizeof(status_text), T("Resolution changed"));
         }
         return 1;
     }
@@ -1703,7 +1685,7 @@ static int handle_open_dropdown_hit(int32_t x, int32_t y)
         active_drop = DROP_NONE;
         if (id < SETTINGS_SCALE_COUNT && mode_supported(display_state.mode_index, id)) {
             request_display(LEONOS_DISPLAY_REQUEST_APPLY, display_state.mode_index, id);
-            copy_text(status_text, sizeof(status_text), T("Scale changed", "缩放已更改"));
+            copy_text(status_text, sizeof(status_text), T("Scale changed"));
         }
         return 1;
     }
@@ -1711,11 +1693,14 @@ static int handle_open_dropdown_hit(int32_t x, int32_t y)
         leonos_ui_dropdown_hit(x, y, 160, 202, 190, lang_items, 2,
                                SETTINGS_DROPDOWN_ROW_H, 1000, &id)) {
         active_drop = DROP_NONE;
-        if (id == LEONOS_LANG_EN || id == LEONOS_LANG_ZH) {
-            (void)leonos_i18n_set_language((int)id);
-            request_display(LEONOS_DISPLAY_REQUEST_REFRESH, display_state.mode_index,
-                            display_state.scale_index);
-            copy_text(status_text, sizeof(status_text), T("Language changed", "语言已更改"));
+        if (id < 2) {
+            if (leonos_environment_set(LEONOS_ENV_SCOPE_USER, "LANG",
+                                       language_options[id].locale) == 0) {
+                selected_language = id;
+                copy_text(status_text, sizeof(status_text), T("Reopen applications to apply the language"));
+            } else {
+                copy_text(status_text, sizeof(status_text), T("Could not save language settings"));
+            }
         }
         return 1;
     }
@@ -1726,7 +1711,7 @@ static int handle_open_dropdown_hit(int32_t x, int32_t y)
         if (current_user.username[0] &&
             (id == LEONOS_UI_THEME_METRO || id == LEONOS_UI_THEME_WIN95)) {
             appearance_state.theme = id;
-            request_appearance_change(T("Theme style changed", "主题样式已更改"));
+            request_appearance_change(T("Theme style changed"));
         }
         return 1;
     }
@@ -1737,7 +1722,7 @@ static int handle_open_dropdown_hit(int32_t x, int32_t y)
         active_drop = DROP_NONE;
         if (current_user.username[0] && id < LEONOS_UI_COLOR_SCHEME_COUNT) {
             appearance_state.metro_color_scheme = id;
-            request_appearance_change(T("Metro color changed", "Metro 颜色已更改"));
+            request_appearance_change(T("Metro color changed"));
         }
         return 1;
     }
@@ -1748,7 +1733,7 @@ static int handle_open_dropdown_hit(int32_t x, int32_t y)
         active_drop = DROP_NONE;
         if (current_user.username[0] && id < LEONOS_UI_COLOR_SCHEME_COUNT) {
             appearance_state.win95_color_scheme = id;
-            request_appearance_change(T("Win95 color changed", "Win95 颜色已更改"));
+            request_appearance_change(T("Win95 color changed"));
         }
         return 1;
     }
@@ -1759,7 +1744,7 @@ static int handle_open_dropdown_hit(int32_t x, int32_t y)
         active_drop = DROP_NONE;
         if (current_user.username[0] && id < LEONOS_WALLPAPER_MODE_COUNT) {
             appearance_state.wallpaper_mode = id;
-            request_appearance_change(T("Wallpaper mode changed", "壁纸显示方式已更改"));
+            request_appearance_change(T("Wallpaper mode changed"));
         }
         return 1;
     }
@@ -1771,20 +1756,20 @@ static void create_user_dialog(uint32_t role)
     char name[LEONOS_AUTH_USERNAME_LEN] = "";
     char pass[LEONOS_AUTH_PASSWORD_LEN] = "";
     struct leonos_user_info user;
-    if (leonos_ui_show_input_dialog(T("Create user", "创建用户"), T("Username", "用户名"),
+    if (leonos_ui_show_input_dialog(T("Create user"), T("Username"),
                                     name, sizeof(name)) <= 0) {
         return;
     }
-    if (leonos_ui_show_password_dialog(T("Create user", "创建用户"), T("Password", "密码"),
+    if (leonos_ui_show_password_dialog(T("Create user"), T("Password"),
                                        pass, sizeof(pass)) <= 0) {
         explicit_bzero(pass, sizeof(pass));
         return;
     }
     if (leonos_auth_create_user(name, pass, role, &user) == 0) {
-        copy_text(status_text, sizeof(status_text), T("User created", "用户已创建"));
+        copy_text(status_text, sizeof(status_text), T("User created"));
         refresh_users();
     } else {
-        copy_text(status_text, sizeof(status_text), T("Could not create user", "无法创建用户"));
+        copy_text(status_text, sizeof(status_text), T("Could not create user"));
     }
     explicit_bzero(pass, sizeof(pass));
 }
@@ -1796,7 +1781,7 @@ static void reset_password_dialog(uint32_t uid)
     char *args[] = {"/usr/lib/leonos/apps/terminal/terminal.elf", "-e",
                      "/usr/bin/passwd", account->pw_name, NULL};
     if (leonos_spawn_argv(args[0], args) < 0)
-        copy_text(status_text, sizeof(status_text), T("Could not start passwd", "无法启动 passwd"));
+        copy_text(status_text, sizeof(status_text), T("Could not start passwd"));
 }
 
 static void change_my_password(void)
@@ -1819,9 +1804,9 @@ static void handle_users_click(int32_t x, int32_t y)
             uint32_t flags = users[selected_user].flags ^ LEONOS_AUTH_USER_DISABLED;
             if (leonos_auth_update_user(users[selected_user].uid, LEONOS_AUTH_UPDATE_FLAGS,
                                         users[selected_user].role, flags) == 0) {
-                copy_text(status_text, sizeof(status_text), T("User state updated", "用户状态已更新"));
+                copy_text(status_text, sizeof(status_text), T("User state updated"));
             } else {
-                copy_text(status_text, sizeof(status_text), T("User state change denied", "用户状态更改被拒绝"));
+                copy_text(status_text, sizeof(status_text), T("User state change denied"));
             }
             refresh_users();
         } else if (user_count && hit_rect_i(x, y, 484, 258, 104, LEONOS_UI_BUTTON_H)) {
@@ -1857,7 +1842,7 @@ static void handle_display_click(int32_t x, int32_t y)
             mode_supported(display_state.mode_index, next)) {
             request_display(LEONOS_DISPLAY_REQUEST_APPLY,
                             display_state.mode_index, next);
-            copy_text(status_text, sizeof(status_text), T("Scale changed", "缩放已更改"));
+            copy_text(status_text, sizeof(status_text), T("Scale changed"));
         }
         return;
     }
@@ -1867,12 +1852,12 @@ static void handle_display_click(int32_t x, int32_t y)
     }
     if (display_state.pending_confirm && hit_rect_i(x, y, 54, 306, 82, LEONOS_UI_BUTTON_H)) {
         request_display(LEONOS_DISPLAY_REQUEST_KEEP, display_state.mode_index, display_state.scale_index);
-        copy_text(status_text, sizeof(status_text), T("Display settings saved", "显示设置已保存"));
+        copy_text(status_text, sizeof(status_text), T("Display settings saved"));
         return;
     }
     if (display_state.pending_confirm && hit_rect_i(x, y, 146, 306, 82, LEONOS_UI_BUTTON_H)) {
         request_display(LEONOS_DISPLAY_REQUEST_REVERT, display_state.mode_index, display_state.scale_index);
-        copy_text(status_text, sizeof(status_text), T("Display settings reverted", "显示设置已还原"));
+        copy_text(status_text, sizeof(status_text), T("Display settings reverted"));
     }
 }
 
@@ -1883,21 +1868,20 @@ static void choose_wallpaper_dialog(void)
               appearance_state.wallpaper_path[0]
                   ? appearance_state.wallpaper_path
                   : SETTINGS_DEFAULT_WALLPAPER_PATH);
-    if (leonos_ui_show_open_dialog(T("Choose wallpaper", "选择壁纸"),
+    if (leonos_ui_show_open_dialog(T("Choose wallpaper"),
                                    path, sizeof(path),
-                                   T("Bitmap (*.bmp)", "BMP 图片 (*.bmp)"),
+                                   T("Bitmap (*.bmp)"),
                                    ".bmp") <= 0) {
         return;
     }
     if (!validate_wallpaper_bmp(path)) {
         copy_text(status_text, sizeof(status_text),
-                  T("Wallpaper BMP must be uncompressed 24/32-bit and no larger than 1280 x 720.",
-                    "壁纸 BMP 必须是未压缩 24/32 位，且不超过 1280 x 720。"));
+                  T("Wallpaper BMP must be uncompressed 24/32-bit and no larger than 1280 x 720."));
         return;
     }
     copy_text(appearance_state.wallpaper_path,
               sizeof(appearance_state.wallpaper_path), path);
-    request_appearance_change(T("Wallpaper changed", "壁纸已更改"));
+    request_appearance_change(T("Wallpaper changed"));
 }
 
 static void handle_personalization_click(int32_t x, int32_t y)
@@ -1908,7 +1892,7 @@ static void handle_personalization_click(int32_t x, int32_t y)
     active_drop = DROP_NONE;
     if (!current_user.username[0]) {
         copy_text(status_text, sizeof(status_text),
-                  T("Sign in to change personalization.", "登录后才能更改个性化设置。"));
+                  T("Sign in to change personalization."));
         return;
     }
     if (hit_rect_i(x, y, 160, 98, 190, LEONOS_FONT_H + 8)) {
@@ -1931,7 +1915,7 @@ static void handle_personalization_click(int32_t x, int32_t y)
         copy_text(appearance_state.wallpaper_path,
                   sizeof(appearance_state.wallpaper_path),
                   SETTINGS_DEFAULT_WALLPAPER_PATH);
-        request_appearance_change(T("Default wallpaper restored", "已恢复默认壁纸"));
+        request_appearance_change(T("Default wallpaper restored"));
         return;
     }
     if (hit_rect_i(x, y, 160, 258, 190, LEONOS_FONT_H + 8)) {
@@ -1950,10 +1934,10 @@ static void set_assoc_for_row(uint32_t row, const char *program)
                                                   program);
     if (ret == 0) {
         copy_text(status_text, sizeof(status_text),
-                  T("File association saved", "文件关联已保存"));
+                  T("File association saved"));
     } else {
         copy_text(status_text, sizeof(status_text),
-                  T("Could not save file association", "无法保存文件关联"));
+                  T("Could not save file association"));
     }
 }
 
@@ -1985,7 +1969,7 @@ static void handle_services_click(int32_t x, int32_t y)
             hit_rect_i(x, y, 44, row_y + 4, 220, 32)) {
             service_rows[i].enabled = service_rows[i].enabled ? 0 : 1;
             copy_text(status_text, sizeof(status_text),
-                      T("Service setting changed", "服务设置已更改"));
+                      T("Service setting changed"));
             return;
         }
     }
@@ -2009,7 +1993,7 @@ static void inputm_request_login_start(const struct settings_inputm_entry *entry
     copy_text(command.path, sizeof(command.path), entry->path);
     if (leonos_startup_request(&command, &request_id) == 0) {
         copy_text(status_text, sizeof(status_text),
-                  T("Login startup approval requested", "已请求登录启动权限"));
+                  T("Login startup approval requested"));
     }
 }
 
@@ -2019,9 +2003,9 @@ static void handle_input_methods_click(int32_t x, int32_t y)
         inputm_selected < inputm_entry_count ? &inputm_entries[inputm_selected] : 0;
     if (active_drop == DROP_INPUTM_STARTUP && entry) {
         struct leonos_ui_dropdown_item items[3] = {
-            {T("Manual", "手动"), TEXT_INPUT_START_MANUAL, 0},
-            {T("At sign-in", "登录时"), TEXT_INPUT_START_LOGIN, 0},
-            {T("On demand", "按需"), TEXT_INPUT_START_ON_DEMAND, 0},
+            {T("Manual"), TEXT_INPUT_START_MANUAL, 0},
+            {T("At sign-in"), TEXT_INPUT_START_LOGIN, 0},
+            {T("On demand"), TEXT_INPUT_START_ON_DEMAND, 0},
         };
         uint32_t id = 0;
         if (leonos_ui_dropdown_hit(x, y, 510, 184, 156, items, 3,
@@ -2035,8 +2019,8 @@ static void handle_input_methods_click(int32_t x, int32_t y)
                 value[0] = (char)('0' + id);
                 value[1] = 0;
                 inputm_set_status(inputm_append_config(key, value),
-                                  T("Startup behavior saved", "启动方式已保存"),
-                                  T("Could not save input method", "无法保存输入法设置"));
+                                  T("Startup behavior saved"),
+                                  T("Could not save input method"));
                 if (id == TEXT_INPUT_START_LOGIN) {
                     inputm_request_login_start(entry);
                 }
@@ -2056,15 +2040,15 @@ static void handle_input_methods_click(int32_t x, int32_t y)
             copy_text(inputm_hotkey, sizeof(inputm_hotkey),
                       id == 1U ? "alt-shift" : "win-space");
             inputm_set_status(inputm_append_config("inputm_hotkey", inputm_hotkey),
-                              T("Input shortcut changed", "输入法快捷键已更改"),
-                              T("Could not save input method", "无法保存输入法设置"));
+                              T("Input shortcut changed"),
+                              T("Could not save input method"));
             return;
         }
     }
     active_drop = DROP_NONE;
     if (!current_user.username[0]) {
         copy_text(status_text, sizeof(status_text),
-                  T("Sign in to change input methods", "登录后才能更改输入法"));
+                  T("Sign in to change input methods"));
         return;
     }
     if (y >= 118 && y < 118 + (int32_t)(inputm_entry_count * 27U) &&
@@ -2082,9 +2066,9 @@ static void handle_input_methods_click(int32_t x, int32_t y)
         entry->enabled = entry->enabled ? 0 : 1;
         inputm_provider_key(key, sizeof(key), entry->config_index, "enabled");
         inputm_set_status(inputm_append_config(key, entry->enabled ? "1" : "0"),
-                          entry->enabled ? T("Input method enabled", "输入法已启用") :
-                                           T("Input method disabled", "输入法已禁用"),
-                          T("Could not save input method", "无法保存输入法设置"));
+                          entry->enabled ? T("Input method enabled") :
+                                           T("Input method disabled"),
+                          T("Could not save input method"));
         if (!entry->enabled && text_eq(inputm_default, entry->id)) {
             copy_text(inputm_default, sizeof(inputm_default), "en");
             (void)inputm_append_config("default", "en");
@@ -2097,8 +2081,8 @@ static void handle_input_methods_click(int32_t x, int32_t y)
     if (hit_rect_i(x, y, 510, 126, 156, LEONOS_UI_BUTTON_H) && entry->enabled) {
         copy_text(inputm_default, sizeof(inputm_default), entry->id);
         inputm_set_status(inputm_append_config("default", entry->id),
-                          T("Default input method saved", "默认输入法已保存"),
-                          T("Could not save input method", "无法保存输入法设置"));
+                          T("Default input method saved"),
+                          T("Could not save input method"));
         return;
     }
     if (hit_rect_i(x, y, 510, 160, 156, LEONOS_UI_BUTTON_H) && inputm_selected != 0) {
@@ -2118,7 +2102,7 @@ static void handle_input_methods_click(int32_t x, int32_t y)
         append_dec(value, &pos, sizeof(value), entry->order);
         if (!inputm_append_config(key, value)) {
             copy_text(status_text, sizeof(status_text),
-                      T("Could not save input method order", "无法保存输入法顺序"));
+                      T("Could not save input method order"));
             return;
         }
         inputm_provider_key(key, sizeof(key), previous->config_index, "order");
@@ -2127,13 +2111,13 @@ static void handle_input_methods_click(int32_t x, int32_t y)
         append_dec(value, &pos, sizeof(value), previous->order);
         if (!inputm_append_config(key, value)) {
             copy_text(status_text, sizeof(status_text),
-                      T("Could not save input method order", "无法保存输入法顺序"));
+                      T("Could not save input method order"));
             return;
         }
         inputm_sort_entries();
         --inputm_selected;
         inputm_reload_extension_options();
-        copy_text(status_text, sizeof(status_text), T("Input method moved", "已调整输入法顺序"));
+        copy_text(status_text, sizeof(status_text), T("Input method moved"));
         return;
     }
     if (hit_rect_i(x, y, 592, 194, 74, LEONOS_UI_BUTTON_H) && inputm_selected != 0 &&
@@ -2150,7 +2134,7 @@ static void handle_input_methods_click(int32_t x, int32_t y)
         append_dec(value, &pos, sizeof(value), entry->order);
         if (!inputm_append_config(key, value)) {
             copy_text(status_text, sizeof(status_text),
-                      T("Could not save input method order", "无法保存输入法顺序"));
+                      T("Could not save input method order"));
             return;
         }
         inputm_provider_key(key, sizeof(key), next->config_index, "order");
@@ -2159,13 +2143,13 @@ static void handle_input_methods_click(int32_t x, int32_t y)
         append_dec(value, &pos, sizeof(value), next->order);
         if (!inputm_append_config(key, value)) {
             copy_text(status_text, sizeof(status_text),
-                      T("Could not save input method order", "无法保存输入法顺序"));
+                      T("Could not save input method order"));
             return;
         }
         inputm_sort_entries();
         ++inputm_selected;
         inputm_reload_extension_options();
-        copy_text(status_text, sizeof(status_text), T("Input method moved", "已调整输入法顺序"));
+        copy_text(status_text, sizeof(status_text), T("Input method moved"));
         return;
     }
     if (hit_rect_i(x, y, 170, 260, 180, LEONOS_UI_BUTTON_H)) {
@@ -2177,8 +2161,8 @@ static void handle_input_methods_click(int32_t x, int32_t y)
             inputm_options[i].value = inputm_options[i].value ? 0 : 1;
             inputm_set_status(inputm_append_config(inputm_options[i].key,
                                                    inputm_options[i].value ? "1" : "0"),
-                              T("Input method setting changed", "输入法设置已更改"),
-                              T("Could not save input method", "无法保存输入法设置"));
+                              T("Input method setting changed"),
+                              T("Could not save input method"));
             return;
         }
     }
@@ -2187,8 +2171,8 @@ static void handle_input_methods_click(int32_t x, int32_t y)
         argv[0] = entry->settings_app;
         argv[1] = 0;
         inputm_set_status(leonos_spawn_argv(entry->settings_app, argv) > 0,
-                          T("Provider settings started", "已启动输入法设置"),
-                          T("Could not start provider settings", "无法启动输入法设置"));
+                          T("Provider settings started"),
+                          T("Could not start provider settings"));
         return;
     }
     if (hit_rect_i(x, y, 510, 344, 156, LEONOS_UI_BUTTON_H) &&
@@ -2198,21 +2182,21 @@ static void handle_input_methods_click(int32_t x, int32_t y)
         argv[1] = "--update";
         argv[2] = 0;
         inputm_set_status(leonos_spawn_argv(entry->path, argv) > 0,
-                          T("Dictionary update started", "词库更新已开始"),
-                          T("Could not start dictionary update", "无法启动词库更新"));
+                          T("Dictionary update started"),
+                          T("Could not start dictionary update"));
     }
 }
 
 static void handle_click(int32_t x, int32_t y)
 {
     struct leonos_ui_tab_item tabs[] = {
-        {T("Display", "显示"), PAGE_DISPLAY, 0},
-        {T("Personalize", "个性化"), PAGE_PERSONALIZATION, 0},
-        {T("Users", "用户"), PAGE_USERS, 0},
-        {T("File Types", "文件类型"), PAGE_ASSOC, 0},
-        {T("Services", "服务"), PAGE_SERVICES, 0},
-        {T("Activation", "激活"), PAGE_ACTIVATION, 0},
-        {T("Input", "输入法"), PAGE_INPUT_METHODS, 0},
+        {T("Display"), PAGE_DISPLAY, 0},
+        {T("Personalize"), PAGE_PERSONALIZATION, 0},
+        {T("Users"), PAGE_USERS, 0},
+        {T("File Types"), PAGE_ASSOC, 0},
+        {T("Services"), PAGE_SERVICES, 0},
+        {T("Activation"), PAGE_ACTIVATION, 0},
+        {T("Input Method"), PAGE_INPUT_METHODS, 0},
     };
     if (leonos_ui_tab_control_handle_mouse(&settings_tabs, x, y, 18,
                                            SETTINGS_TAB_Y, SETTINGS_W - 36,
@@ -2238,14 +2222,18 @@ static void handle_click(int32_t x, int32_t y)
 
 int main(void)
 {
+    setlocale(LC_ALL, "");
+    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    textdomain("leonos");
+    selected_language = language_selection();
     struct leonos_ui_surface ui;
     struct leonos_gui_app_event event;
     int window_id;
     unsigned long last_refresh = 0;
     puts("[settings.elf] settings starting");
     leonos_ui_tab_state_init(&settings_tabs, PAGE_DISPLAY);
-    window_id = leonos_gui_create_app_window_ex(T("Settings", "设置"),
-                                                T("System settings", "系统设置"),
+    window_id = leonos_gui_create_app_window_ex(T("Settings"),
+                                                T("System settings"),
                                                 SETTINGS_W, SETTINGS_H,
                                                 LEONOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {

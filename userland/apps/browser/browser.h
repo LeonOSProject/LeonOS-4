@@ -5,7 +5,9 @@
 #include <leonos/gui.h>
 #include <leonos/auth.h>
 #include <leonos/http.h>
-#include <leonos/i18n.h>
+#include <libintl.h>
+#include <locale.h>
+#include <leonos/layout.h>
 #include <leonos/launch.h>
 #include <leonos/net_service.h>
 #include <leonos/psf_font.h>
@@ -98,7 +100,7 @@
 #define BROWSER_TABLE_BORDER 0x00a8b8c8U
 #define BROWSER_CODE_BG 0x00eeeeeeU
 #define BROWSER_IMAGE_BG 0x00f0f4f8U
-#define T(en, zh) leonos_i18n((en), (zh))
+#define T(s) gettext(s)
 
 enum browser_menu {
     BROWSER_MENU_NONE = 0,
