@@ -74,13 +74,14 @@ $(KCONFIG_CONF) $(KCONFIG_MCONF) &: $(LEONOS_SRC)/$(LEONOS_HOST_PUFF_SRC) \
 # configuration cannot loop; the guard below catches the pathological case
 # instead of hanging (plan section 7).
 ifeq ($(LEONOS_PASSIVE),1)
-else ifneq ($(wildcard $(LEONOS_AUTOCONF_MK)),)
-ifneq ($(LEONOS_INSPECT),)
-$(eval $(file <$(LEONOS_AUTOCONF_MK)))
 else
--include $(LEONOS_AUTOCONF_MK)
+ifneq ($(LEONOS_INSPECT),)
+ifneq ($(wildcard $(LEONOS_AUTOCONF_MK)),)
+$(eval $(file <$(LEONOS_AUTOCONF_MK)))
 endif
 else
-$(if $(filter-out help clean distclean,$(MAKECMDGOALS)),,\
-	$(info no configuration in $(O_CONFIG) yet; run 'make defconfig' or let a build target create it))
+# Include even when absent: Make must generate this file and restart before
+# expanding recipes that consume KCONFIG_* on the first clean build.
+-include $(LEONOS_AUTOCONF_MK)
+endif
 endif
