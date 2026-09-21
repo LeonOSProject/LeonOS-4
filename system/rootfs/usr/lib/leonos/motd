@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# Shadow login uses PAM_SILENT for the standard .hushlogin case. pam_exec
+# cannot see that flag, so preserve the login convention here.
+motd_home=
+while IFS=: read -r account password uid gid gecos home shell; do
+    if [ "$account" = "${PAM_USER-}" ]; then
+        motd_home=$home
+        break
+    fi
+done < /etc/passwd
+if [ -n "$motd_home" ] && [ -e "$motd_home/.hushlogin" ]; then
+    exit 0
+fi
+
+locale=${LC_ALL:-${LC_MESSAGES:-${LANG:-C}}}
+case $locale in
+    zh|zh_*) motd=/etc/motd.zh_CN ;;
+    *) motd=/etc/motd ;;
+esac
+
+cat "$motd"

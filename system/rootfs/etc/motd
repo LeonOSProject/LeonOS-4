@@ -1,0 +1,17 @@
+Welcome to LeonOS 4!
+This operating system is completely free and open source.
+
+Open-source repositories:
+* https://github.com/Leonmmcoset/LeonOS-4
+* https://sr.ht/~leonmmcoset/LeonOS-4/
+
+If you find a bug, please report it at:
+* https://github.com/Leonmmcoset/LeonOS-4/issues
+or:
+* https://sr.ht/~leonmmcoset/LeonOS-4/trackers
+
+For questions, please send an email to:
+~leonmmcoset/LeonOS-4@lists.sr.ht
+
+You can customize this login message by editing /etc/motd.
+You can also disable the MOTD by creating a .hushlogin file in your home directory.

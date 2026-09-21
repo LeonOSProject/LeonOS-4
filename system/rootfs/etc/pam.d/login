@@ -4,3 +4,4 @@ auth include common-auth
 account include common-account
 password include common-password
 session include common-session
+session optional pam_exec.so stdout type=open_session /usr/lib/leonos/motd
