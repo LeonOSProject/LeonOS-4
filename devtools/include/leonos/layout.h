@@ -68,9 +68,7 @@
 /* Third-party suites retained under /opt with /usr/bin command entries. */
 #define LEONOS_LAYOUT_OPT_CMD "/opt/cmd"
 #define LEONOS_LAYOUT_OPT_DYNE "/opt/dyne"
-#define LEONOS_LAYOUT_OPT_LUA "/opt/lua"
 #define LEONOS_LAYOUT_OPT_PYTHON "/opt/python"
-#define LEONOS_LAYOUT_OPT_TCC "/opt/tcc"
 
 /* Runtime configuration. */
 #define LEONOS_PATH_LEONOS_CONF LEONOS_LAYOUT_ETC_LEONOS "/leonos.conf"

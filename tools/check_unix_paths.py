@@ -13,15 +13,12 @@ ROOT = Path(__file__).resolve().parents[1]
 EXCLUDED_PREFIXES = (
     "third_party/",
     "build/",
-    "devtools/components/tcc/upstream/",
-    "devtools/components/lua/upstream/",
 )
 EXCLUDED_FILES = {
     "tools/check_unix_paths.py",
     # This file rejects ':' and '\\' as manifest path separators; the
     # checker's broad legacy-drive patterns are intentional there.
     "userland/libc/src/app_registry.c",
-    "devtools/components/tcc/runtime/include/sqlite3.h",
     "devtools/include/sqlite3.h",
 }
 TEXT_SUFFIXES = {

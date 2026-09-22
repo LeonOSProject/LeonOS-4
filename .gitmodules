@@ -10,24 +10,12 @@
 [submodule "third_party/pl_editor"]
 	path = third_party/pl_editor
 	url = https://github.com/Leonmmcoset/pl_editor.git
-[submodule "third_party/tinycc"]
-	path = third_party/tinycc
-	url = https://github.com/TinyCC/tinycc.git
 [submodule "third_party/zlib"]
 	path = third_party/zlib
 	url = https://github.com/madler/zlib.git
 [submodule "third_party/libpng"]
 	path = third_party/libpng
 	url = https://github.com/pnggroup/libpng.git
-[submodule "third_party/lua"]
-	path = third_party/lua
-	url = https://github.com/lua/lua.git
-[submodule "devtools/components/lua/upstream"]
-    path = devtools/components/lua/upstream
-    url = https://github.com/lua/lua.git
-[submodule "third_party/file"]
-	path = third_party/file
-	url = https://github.com/file/file.git
 [submodule "third_party/stardustui"]
 	path = third_party/stardustui
 	url = https://github.com/xingji-studio/StardustUI.git
@@ -40,9 +28,6 @@
 [submodule "third_party/sl"]
 	path = third_party/sl
 	url = https://github.com/mtoyoda/sl.git
-[submodule "third_party/less"]
-	path = third_party/less
-	url = https://github.com/gwsw/less.git
 [submodule "third_party/portablegl"]
 	path = third_party/portablegl
 	url = https://github.com/rswinkle/PortableGL.git
@@ -52,9 +37,6 @@
 [submodule "third_party/mimalloc"]
 	path = third_party/mimalloc
 	url = https://github.com/microsoft/mimalloc.git
-[submodule "third_party/vim"]
-	path = third_party/vim
-	url = https://github.com/vim/vim.git
 [submodule "third_party/ncurses"]
 	path = third_party/ncurses
 	url = https://github.com/ThomasDickey/ncurses-snapshots.git

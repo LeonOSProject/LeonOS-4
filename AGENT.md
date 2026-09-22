@@ -50,7 +50,7 @@ installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
 | `drivers/` | 可加载 Ring-0 驱动模块及其打包输入；`bootstrap/storage/` 还实现文件系统与 `LEONACL.SYS` 权限元数据。 |
 | `userland/libc/` | LeonOS libc、syscall 包装、UI/字体、网络/HTTP/TLS、PTY 等公共实现。 |
 | `userland/apps/` | Ring-3 系统与桌面应用；`desktop/` 是窗口服务器，其他应用为它的客户端。 |
-| `userland/{busybox,tcc,lua,nano,file,cmd,stardustui}/` | 第三方软件的 LeonOS 端口、适配层与构建输入。 |
+| `userland/{busybox,cmd,stardustui}/` | 第三方软件的 LeonOS 端口、适配层与构建输入。 |
 | `include/leonos/` | 公共 C ABI 头文件；修改公开 ABI 时优先检查这里。 |
 | `system/` | 被 staging 的系统配置、字体、壁纸、证书、图标、应用资源和默认内容。 |
 | `configs/` | 动态组件清单、可提交 build profile 与默认配置。 |

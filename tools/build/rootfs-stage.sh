@@ -58,11 +58,12 @@ printf '/lib:/usr/local/lib:/usr/lib:/usr/lib/leonos\n' > "$work/data/ld.path"
 file "$work/data/ld.path" etc/ld-musl-x86_64.path 0644 musl
 file "$out/generated/system/kerneldebug.sys" usr/lib/leonos/kerneldebug.sys 0755
 for driver in "$out/generated/drivers"/*.drv; do file "$driver" "usr/lib/leonos/drivers/${driver##*/}" 0755; done
+file "$out/userland/motd.elf" usr/lib/leonos/motd-status 0755 leonos-base
 file "$out/userland/dynlinkerror.elf" usr/lib/leonos/apps/dynlinkerror/dynlinkerror.elf 0755 leonos-apps
 # awk reads TSV without collapsing empty label/extension fields. No data is
 # interpreted as a command; only validated component IDs are used in paths.
 awk -F '\t' -v dir="$work/manifests" -v src="$src" '
-$4==1 && ($2 ~ /-app$/ || $1 ~ /^(vim|busybox|file|lua|cmd|less|sl)$/) {
+$4==1 && ($2 ~ /-app$/ || $1 ~ /^(busybox|cmd|sl)$/) {
   terminal=0; ini=src "/userland/apps/" $1 "/" $1 ".app.ini";
   while ((getline line < ini)>0) {split(line,a,"="); if(a[1]=="terminal" && a[2]~/^(1|true|yes)$/) terminal=1} close(ini);
   ini=src "/userland/" $1 "/" $1 ".app.ini";
@@ -85,7 +86,7 @@ while read -r app entry; do
 done < "$work/apps"
 # Tool executables keep their native locations; registry entries use a local
 # symlink so the registry's relative exec contract remains the same as apps.
-for app in vim busybox file lua cmd less sl; do
+for app in busybox cmd sl; do
     if enabled "$app"; then
         file "$work/manifests/$app.ini" "usr/lib/leonos/apps/$app/manifest.ini" 0644 "$app"
         target=/usr/bin/$app
@@ -93,7 +94,7 @@ for app in vim busybox file lua cmd less sl; do
         link "usr/lib/leonos/apps/$app/$app.elf" "$target" "$app"
     fi
 done
-for package in ncurses vim; do
+for package in ncurses; do
     if enabled "$package"; then
         # Only runtime data and commands belong in the root (development static
         # archives/headers are exported by SDK rules instead).
@@ -101,30 +102,29 @@ for package in ncurses vim; do
             input=$out/upstream/$package/root/usr/$directory
             if [ -d "$input" ]; then tree "$input" "usr/$directory" "$package"; fi
         done
-        if [ "$package" = ncurses ]; then tree "$out/upstream/ncurses/root/usr/share/terminfo" etc/terminfo ncurses; fi
+        tree "$out/upstream/ncurses/root/usr/share/terminfo" etc/terminfo ncurses
     fi
 done
-for app in fastfetch file less sl; do
+for app in fastfetch sl; do
     if enabled "$app"; then file "$out/userland/$app.elf" "usr/bin/$app" 0755 "$app" override; fi
 done
-for app in lua cmd; do
+for app in cmd; do
     if enabled "$app"; then
         file "$out/userland/$app.elf" "opt/$app/$app.elf" 0755 "$app"
         link "usr/bin/$app" "../../opt/$app/$app.elf" "$app"
     fi
 done
-for spec in 'file libmagic.so.1' 'lua liblua.so.5' 'sqlite sqlite.so.3'; do
+for spec in 'sqlite sqlite.so.3'; do
     set -- $spec
     if enabled "$1"; then file "$out/userland/$2" "usr/lib/$2" 0755 "$1"; fi
 done
 if enabled portablegl || enabled glxgears; then file "$out/system/lib/libportablegl.so.1" usr/lib/libportablegl.so.1 0755 portablegl; fi
-if enabled file; then file "$out/resources/magic.mgc" usr/share/misc/magic.mgc 0644 file; fi
 if enabled fastfetch; then
     file "$src/userland/fastfetch/config.jsonc" etc/fastfetch/config.jsonc 0644 fastfetch
     file "$src/userland/fastfetch/leonos-ascii.txt" usr/share/fastfetch/leonos-ascii.txt 0644 fastfetch
     file "$src/userland/fastfetch/hyfetch.json" etc/skel/.config/hyfetch.json 0644 fastfetch
 fi
-for spec in 'busybox third_party/busybox/LICENSE' 'file third_party/file/COPYING' 'lua userland/lua/LICENSE' 'cmd third_party/cmd/LICENSE' 'less third_party/less/LICENSE' 'sl third_party/sl/LICENSE' 'pleditor third_party/pl_editor/LICENSE' 'vim third_party/vim/LICENSE'; do
+for spec in 'busybox third_party/busybox/LICENSE' 'cmd third_party/cmd/LICENSE' 'sl third_party/sl/LICENSE' 'pleditor third_party/pl_editor/LICENSE'; do
     set -- $spec
     if enabled "$1"; then file "$src/$2" "usr/share/licenses/$1/${2##*/}" 0644 "$1" override; fi
 done
@@ -196,8 +196,8 @@ if enabled busybox; then
         if awk -F '\t' -v path="$guest" '$3==path{found=1} END{exit !found}' "$plan"; then continue; fi
         # Tree rules also own actual paths; ask whether the original stage has it.
         claimed=0
-        for package in libmd libbsd util-linux sudo shadow e2fsprogs dosfstools exfatprogs ncurses vim; do
-            case $package in ncurses|vim) enabled "$package" || continue ;; esac
+        for package in libmd libbsd util-linux sudo shadow e2fsprogs dosfstools exfatprogs ncurses; do
+            case $package in ncurses) enabled "$package" || continue ;; esac
             if [ -e "$out/upstream/$package/root$guest" ] || [ -L "$out/upstream/$package/root$guest" ]; then claimed=1; break; fi
         done
         [ "$claimed" = 0 ] || continue

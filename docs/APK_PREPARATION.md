@@ -9,9 +9,10 @@ The database is never synthesized from the ownership inventory.
 
 Existing payloads are packaged into local `leonos-*` packages. This is actual
 APK ownership of the current binaries, not a claim that Alpine built them.
-The current default root has 22 packages, including the patched musl runtime and development files,
-authentication stack, BusyBox, official Alpine findutils, desktop, storage tools and custom Fastfetch.
-Optional build selections can change this count.
+The default root includes the patched musl runtime and development files,
+authentication stack, BusyBox, official Alpine findutils, file, less and Vim,
+desktop, storage tools and custom Fastfetch. Optional build selections change
+the package set.
 
 `configs/apk-ownership.json` still records the eventual upstream handover
 decisions. The packaged copy reports `installed-by-upstream-apk`. Remaining
@@ -27,8 +28,18 @@ Upstream BusyBox `add-shell` and `remove-shell` register shell packages in
 `/etc/shells` during their original installation/removal scripts.
 This coarse package split can be refined in a future signed package migration.
 
-Nano is no longer bundled or built by LeonOS; install the upstream package
-with `apk add nano` when needed. The CA bundle has its own
+Nano, TinyCC and Lua are not bundled or built by LeonOS; install the upstream
+packages with `apk add nano`, `apk add tcc` or `apk add lua5.4` when needed.
+file, less and Vim and their runtime dependencies are pinned as signed Alpine
+APKs in `configs/dependencies.lock.json`. `make fetch` downloads the binary
+archives; rootfs packaging verifies their signatures and installs them offline
+with their original package names and ownership. No local `leonos-file`,
+`leonos-less`, `leonos-vim`, `leonos-lua` or `leonos-tcc` packages are produced.
+After `make O=out rootfs`, run
+`sh tests/integration/test-official-tools.sh out` to check installed ownership,
+original executable bytes and absence of the retired local packages.
+
+The CA bundle has its own
 `ca-certificates-bundle` package. Its local version identifies a LeonOS build;
 signed Alpine upgrades can replace it without overwriting the trust package.
 

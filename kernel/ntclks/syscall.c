@@ -3802,6 +3802,7 @@ static int64_t syscall_sysinfo(uint64_t info_ptr)
     uint32_t task_count = 0;
     if (!info_ptr || !user_range_writable(info_ptr, sizeof(info))) return -LEONOS_EFAULT;
     info.uptime = (int64_t)(time_ticks() / NTCLKS_TICK_HZ);
+    sched_load_averages(info.loads);
     info.totalram = mm_total_memory_kib();
     info.freeram = mm_free_memory_kib();
     info.mem_unit = 1024;

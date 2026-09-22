@@ -32,8 +32,6 @@ REGION_PATTERNS: dict[str, tuple[str, ...]] = {
     "devtools": (
         "devtools/examples/**/*.c", "devtools/examples/**/*.cpp",
         "devtools/examples/**/*.cc", "devtools/examples/**/*.cxx",
-        "devtools/components/tcc/port/**/*.c",
-        "devtools/components/lua/port/**/*.c",
     ),
 }
 
@@ -65,9 +63,8 @@ def include_flags(root: Path, region: str) -> list[str]:
             root / "third_party/stardustui",
         ]
     else:
-        paths = [root / "devtools/include", root / "devtools/components/tcc/runtime/include",
-                 root / "devtools/components/tcc/port", root / "devtools/examples",
-                 root / "devtools/components/lua/port", root / "include",
+        paths = [root / "devtools/include", root / "devtools/examples",
+                 root / "include",
                  root / "build/include", root / "userland/libc/include",
                  root / "build/musl/sysroot/include"]
     return [f"-I{path.relative_to(root).as_posix()}" for path in paths if path.is_dir()]

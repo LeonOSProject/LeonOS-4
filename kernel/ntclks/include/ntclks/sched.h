@@ -836,6 +836,13 @@ void sched_cpu_runtime_snapshot(uint64_t *busy_ticks, uint64_t *idle_ticks,
                                 uint32_t *current_pids, uint32_t *ready_counts,
                                 uint32_t capacity);
 /**
+ * @brief Read Linux sysinfo-compatible 1/5/15-minute load averages.
+ * @param loads Output array of three Q16 values; must not be NULL.
+ * @return None. Values are sampled every five seconds under the scheduler lock.
+ */
+void sched_load_averages(uint64_t loads[3]);
+
+/**
  * @brief Report the current task totals: all, running, ready, and sleeping.
  */
 void sched_task_counts(uint32_t *task_count, uint32_t *running_tasks,

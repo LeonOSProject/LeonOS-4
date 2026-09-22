@@ -1,25 +1,25 @@
 Final upstream migration checkpoint — 2026-09-19
 
+Update: the tinycc, lua, file, vim and less source/submodule ports were retired.
+file/libmagic/less/ncurses runtime/vim are fetched as signed upstream Alpine APKs
+(locked alpine-* entries, make fetch) and preinstalled through the APK transaction
+instead of being compiled; tinycc and lua are ordinary `apk add` installs.
+
 Implementation:
 - mk/upstream.mk; include after third-party.mk, pam.mk and runtime.mk. Root Makefile already includes it.
 - tools/build/upstream.sh: libmd, libbsd, util-linux, sudo, shadow, e2fsprogs, dosfstools, exfatprogs (pinned tarballs, configure/Make, offline SHA verification, isolated atomic staging).
-- upstream-terminal.sh: pinned ncurses + Vim; embedded fallback terminfo and case-fold dedup retained.
-- upstream-app.sh: lua, sl, nano, less, file/libmagic, sqlite, pleditor, cmd, TinyCC plus private runtime SDK. Original port patches are source-only embedded diffs in upstream-cmd-patch.sh and upstream-tcc-patch.sh. No old binaries copied.
+- upstream-terminal.sh: pinned ncurses; embedded fallback terminfo and case-fold dedup retained.
+- upstream-app.sh: sl, sqlite, pleditor, cmd. The original port patch is a source-only embedded diff in upstream-cmd-patch.sh. No old binaries copied.
 - upstream-busybox.sh: original official-source mode, pinned git archive, config fragment, static musl+mimalloc, applet links.
 - fastfetch: original locked upstream prebuilt static ELF, SHA256 + ELF validation in Make.
-- upstream-magic.sh: matching host file builds magic.mgc via autoreconf/configure/Make; no Python execution.
 - upstream-apk.sh: pinned apk.static extracted and RSA SHA256 verified; five OpenRC Alpine APKs SHA/signature verified, offline.
-- upstream-verify.sh: complete install inventory presence check; stable signature on intact install, missing secondary files invalidate package. TCC copied primary header mtime normalized after successful recipe so no-op is stable.
+- upstream-verify.sh: complete install inventory presence check; stable signature on intact install, missing secondary files invalidate package.
 
 Output interfaces:
 UPSTREAM_ROOT=$(O)/upstream; PACKAGE roots $(UPSTREAM_ROOT)/PACKAGE/root.
-UPSTREAM_APP_DIR=$(O)/userland; busybox/lua/sl/nano/less/file/pleditor/cmd/tcc/fastfetch.elf.
-LUA_SO=$(O)/userland/liblua.so.5; liblua.a adjacent.
-MAGIC_SO=$(O)/userland/libmagic.so.1; libmagic.a and magic.h adjacent.
+UPSTREAM_APP_DIR=$(O)/userland; busybox/sl/pleditor/cmd/fastfetch.elf.
 SQLITE_SO=$(O)/userland/sqlite.so.3; SQLITE_HEADER=$(O)/userland/sqlite3.h; libsqlite3.a adjacent.
 BUSYBOX_LINKS=$(O)/userland/busybox.links.
-TinyCC runtime: $(O)/userland/tcc-runtime (includes, CRT, libc, mimalloc, libtcc1, libleonos, separate libz/libpng, licenses/examples).
-FILE_MAGIC=$(O)/resources/magic.mgc.
 UPSTREAM_APK=$(O)/upstream/apk/apk.static; verified APKs $(UPSTREAM_APK_ROOT)/packages.
 Aggregate leonos-upstream; per-package upstream-NAME; app upstream-app-NAME; leonos-storage.
 

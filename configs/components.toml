@@ -633,20 +633,6 @@ sdk = false
 api = false
 
 [[components]]
-id = "vim"
-symbol = "TOOL_VIM"
-label = "Vim"
-category = "Developer applications"
-kind = "tool"
-default = true
-required = false
-stage = true
-entry = false
-sdk = false
-api = false
-depends = ["ncurses"]
-
-[[components]]
 id = "ncurses"
 symbol = "LIB_NCURSES"
 label = "ncurses wide-character terminal library"
@@ -665,19 +651,6 @@ symbol = "APP_FASTFETCH"
 label = "fastfetch system summary"
 category = "Developer applications"
 kind = "program-app"
-default = true
-required = false
-stage = true
-entry = false
-sdk = false
-api = false
-
-[[components]]
-id = "less"
-symbol = "TOOL_LESS"
-label = "GNU less pager"
-category = "Developer applications"
-kind = "tool"
 default = true
 required = false
 stage = true
@@ -804,32 +777,6 @@ required = false
 stage = true
 entry = false
 sdk = false
-api = false
-
-[[components]]
-id = "file"
-symbol = "TOOL_FILE"
-label = "file and libmagic"
-category = "Developer applications"
-kind = "tool"
-default = true
-required = false
-stage = true
-entry = false
-sdk = true
-api = false
-
-[[components]]
-id = "lua"
-symbol = "TOOL_LUA"
-label = "Lua interpreter"
-category = "Developer applications"
-kind = "tool"
-default = true
-required = false
-stage = true
-entry = false
-sdk = true
 api = false
 
 [[components]]

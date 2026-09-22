@@ -52,7 +52,8 @@ Runtime, libraries, and applications
   see COPYING. These authentication dependencies use verified release archives
   listed in configs/auth-upstream.json; full notices are copied into the
   isolated staging root's /usr/share/licenses/<package>/ directory.
-* Vim 9.1.1590: Vim License. See third_party/vim/LICENSE.
+* Vim (vim, vim-common, xxd): Vim License. Installed from signed Alpine APKs;
+  versions and archive hashes are recorded in configs/dependencies.lock.json.
 * ncurses 6.6: MIT-style license. See third_party/ncurses/COPYING.
 * Dyne musl 2.2.0 native toolchain: GCC 15.1.0 and GNU binutils 2.44
   (GPL-3.0-or-later), musl (MIT), and the upstream bundled static libraries.
@@ -60,13 +61,12 @@ Runtime, libraries, and applications
   See userland/musl-gcc/README.md, COPYING3 and COPYING.RUNTIME; installed
   provenance and upstream file hashes are in /share/licenses/musl-gcc/.
   Source/build recipes: https://github.com/dyne/musl/tree/2.2.0.
-* GNU less: GNU GPL-3.0-or-later and/or the upstream Less License. See
-  third_party/less/COPYING and third_party/less/LICENSE.
+* less: GPL-3.0-or-later OR BSD-2-Clause. Installed from the signed Alpine APK;
+  package license metadata is in .PKGINFO.
 * ChenPi11/cmd: GPL-3.0-only. See third_party/cmd/LICENSE.
-* TinyCC: LGPL-2.1-or-later. See third_party/tinycc/COPYING.
-* Lua 5.4.8: MIT. See userland/lua/LICENSE and the Lua upstream checkout.
 * Fastfetch 2.68.1 (VasilyZa/fastfetch release): MIT. See userland/fastfetch/LICENSE.
-* file/libmagic: BSD-2-Clause-style terms. See third_party/file/COPYING.
+* file/libmagic: BSD-2-Clause. Installed from signed Alpine APKs; package
+  license metadata is in .PKGINFO.
 * StardustUI: MIT. See third_party/stardustui/LICENSE.
 * PL Editor (LeonOS fork): MIT. See third_party/pl_editor/LICENSE.
 * sl: permissive upstream license. See third_party/sl/LICENSE.

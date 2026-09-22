@@ -8,10 +8,11 @@ out=$(CDPATH= cd -- "$out" && pwd)
 work=$(mktemp -d "$out/meta/upstream-incremental.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 snapshot() {
- for pkg in libmd libbsd util-linux sudo shadow e2fsprogs dosfstools exfatprogs ncurses vim; do
+ for pkg in libmd libbsd util-linux sudo shadow e2fsprogs dosfstools exfatprogs ncurses; do
   find "$out/upstream/$pkg/root" -type f -printf '%p %T@ %s\n'
  done
- find "$out/userland" "$out/resources" -type f -printf '%p %T@ %s\n'
+ find "$out/userland" -type f -printf '%p %T@ %s\n'
+ if [ -d "$out/resources" ]; then find "$out/resources" -type f -printf '%p %T@ %s\n'; fi
 }
 make -C "$src" O="$make_out" leonos-upstream -j8 > "$work/baseline.log" 2>&1 || { cat "$work/baseline.log" >&2; exit 1; }
 snapshot > "$work/before.unsorted"

@@ -39,16 +39,11 @@ commits are the revisions recorded by the LeonOS checkout.
 
 | Path | Upstream | Pinned commit |
 | --- | --- | --- |
-| `devtools/components/lua/upstream` | `https://github.com/lua/lua.git` | `6e22fedb74cf0c9b6656e9fce8b7331db847c605` |
 | `third_party/busybox` | `https://github.com/mirror/busybox.git` | `1a64f6a20aaf6ea4dbba68bbfa8cc1ab7e5c57c4` |
 | `third_party/cmd` | `https://github.com/ChenPi11/cmd.git` | `2290c38bc9da54db53aa56161a7204a27b388e21` |
-| `third_party/file` | `https://github.com/file/file.git` | `711ccc264519cdc5073ccb26651c0a9bafc3b47a` |
-| `third_party/less` | `https://github.com/gwsw/less.git` | `b8bbf4297169e20d35e1cc3e015180e8a011bcf2` |
 | `third_party/libpng` | `https://github.com/pnggroup/libpng.git` | `3061454d980de7d53608f594194cfac722721d2a` |
 | `third_party/litehtml` | `https://github.com/litehtml/litehtml.git` | `b9e89f0b9494ff9a5f008800af35503efabddf59` |
-| `third_party/lua` | `https://github.com/lua/lua.git` | `6e22fedb74cf0c9b6656e9fce8b7331db847c605` |
 | `third_party/mbedtls` | `https://github.com/Mbed-TLS/mbedtls.git` | `5a764e5555c64337ed17444410269ff21cb617b1` |
-| `third_party/vim` | `https://github.com/vim/vim.git` | `af9a7a04f18693eee4400dd134135527f4e8cd5f` |
 | `third_party/ncurses` | `https://github.com/ThomasDickey/ncurses-snapshots.git` | `0096bd402c4a9c8f39bd7ed266e1b8920327e4d8` |
 | `third_party/musl` | `https://git.musl-libc.org/git/musl` | `9fa28ece75d8a2191de7c5bb53bed224c5947417` |
 | `third_party/mimalloc` | `https://github.com/microsoft/mimalloc` | `34fbd7e7cd4627424490afe19b20f8066bfc537d` |
@@ -57,7 +52,6 @@ commits are the revisions recorded by the LeonOS checkout.
 | `third_party/sqlite` | `https://github.com/sqlite/sqlite.git` | `f3d536d37825302e31ed0eddd811c689f38f85a3` |
 | `third_party/stardustui` | `https://github.com/xingji-studio/StardustUI.git` | `67aae17214a0d27bb6a8b0caf10b7c1f98313086` |
 | `third_party/stardustui/third_party/ab_glyph_rasterizer/upstream` | `https://github.com/alexheretic/ab-glyph.git` | `791b15214d376dec06ae1c886da4c5f92f31e2e0` |
-| `third_party/tinycc` | `https://github.com/TinyCC/tinycc.git` | `2ba12e83b3599ca8f5d50c179fe5138fe956f0c9` |
 | `third_party/zlib` | `https://github.com/madler/zlib.git` | `da607da739fa6047df13e66a2af6b8bec7c2a498` |
 
 ## Mbed TLS
@@ -221,92 +215,37 @@ not upstream grub-install. See `docs/UPSTREAM_TOOLS.md` for host, image and gues
 evidence and remaining kernel compatibility gaps. Availability in an image does
 not certify every operation or filesystem feature.
 
-## Vim and ncurses
+## ncurses and Vim
 
-Vim 9.1.1590 and ncurses 6.6 are default components, built from the pinned,
-unmodified upstream submodules by `build.py run vim` and `build.py run ncurses`.
-Vim uses Linux x86-64 musl, mimalloc and the real wide-character ncurses library;
-its normal terminal profile retains timers and multibyte support. No LeonOS
-source patch or private syscall wrapper is applied to either upstream package.
+ncurses 6.6 is a default component, built from the pinned, unmodified upstream
+submodule by `make upstream-ncurses`. Vim is no longer compiled by LeonOS: the
+signed upstream Alpine `vim`, `vim-common` and `xxd` packages are preinstalled
+instead and carry their own package license metadata.
 
 Normal images, the live installer and its installed payload contain
-`/usr/bin/vim`, `/usr/share/vim/vim91`, ncurses utilities in `/usr/bin`,
-and `/usr/share/terminfo`. Vim and these utilities are static Linux
+`/usr/bin/vim`, `/usr/share/vim/vim92`, ncurses utilities in `/usr/bin`,
+and `/usr/share/terminfo`. The ncurses utilities are static Linux
 executables. The developer and musl SDKs include upstream curses headers,
 `libncursesw.a`, `libtinfow.a`, panel/menu/form archives and terminfo data.
 Link wide-character applications with `-lncursesw -ltinfow`.
 
 The earlier internal ANSI curses implementation remains an implementation
 detail of existing LeonOS applications; its headers are not the SDK's ncurses
-interface. Licenses ship as `/usr/lib/leonos/apps/vim/LICENSE` and
-`/usr/share/licenses/ncurses/COPYING`, with `THIRD_PARTY/NCURSES-COPYING` in the
-developer SDK. `build.py run test-terminal-packages` runs the actual binaries
-and library on Linux; guest validation is documented separately.
+interface. Licenses ship as `/usr/share/licenses/ncurses/COPYING`, with
+`THIRD_PARTY/NCURSES-COPYING` in the developer SDK.
+`build.py run test-terminal-packages` runs the ncurses binaries and library on
+Linux; guest validation is documented separately.
 
-## GNU less
+## TinyCC and Lua
 
-- Path: `third_party/less`
-- Upstream: `https://github.com/gwsw/less.git`
-- Pinned commit: `b8bbf4297169e20d35e1cc3e015180e8a011bcf2`
-- License: GNU GPL-3.0-or-later or the upstream Less License; preserve both
-  `third_party/less/COPYING` and `third_party/less/LICENSE`.
-
-LeonOS installs the upstream pager at `/usr/lib/leonos/apps/less/less.elf`. It uses the
-shared PTY, polling and POSIX regular-expression runtime through a small ANSI
-termcap adapter. Shell escapes, external editor commands, tags, user key files,
-logfile output and shell pipes are disabled for the system build.
-
-## TinyCC
-
-The former built-in TinyCC component has been removed from the production
-build, images, installer and generated SDK. The source and historical port
-below are retained for reference; future system installation will use apk.
-
-- Path: `third_party/tinycc`
-- Upstream: `https://github.com/TinyCC/tinycc.git`
-- Version: `0.9.28rc`
-- Pinned commit: `2ba12e83b3599ca8f5d50c179fe5138fe956f0c9` (`release_0_9_27-1440-g2ba12e83`)
-- License: LGPL-2.1-or-later; the complete upstream `COPYING` is staged at
-  `/opt/tcc/COPYING` beside the executable and runtime files.
-
-The former build used TinyCC as the static, on-device x86_64 C compiler at
-`/opt/tcc/tcc.elf`. It uses the installed musl headers,
-`libleonos.a`, `libc.a`, musl CRT objects, the target support archive
-`libleonos-tcc-rt.a`, and TinyCC's `libtcc1.a` to produce normal static LeonOS
-ELF programs. musl headers are staged unchanged; LeonOS ABI predefines are
-owned by TinyCC's target definition layer. Dynamic linking, shared libraries,
-PIE and in-memory `tcc -run` execution are deliberately unavailable until the
-runtime loader ABI exists. The target runtime currently reports `ENOSYS` for
-`times()`; `signal()` supports the `SIG_DFL` and `SIG_IGN` dispositions, while
-arbitrary user callbacks remain unavailable.
-
-## Lua
-
-- Path: `third_party/lua`
-- Upstream: `https://github.com/lua/lua.git`
-- Version: `5.4.8`
-- Pinned commit: `6e22fedb74cf0c9b6656e9fce8b7331db847c605` (`v5.4.8`)
-- License: MIT; the LeonOS copy of the complete upstream license is staged at
-  `/opt/lua/LICENSE` beside the executable.
-
-LeonOS builds Lua as the command-line interpreter at `/opt/lua/lua.elf`
-and provides its ABI-v1 C API in `/usr/lib/liblua.so.5`. It uses Lua's
-portable C89 configuration with the LeonOS runtime. Dynamic C modules and
-`package.loadlib` remain unavailable. Lua scripts can be loaded from the current directory or from
-`/opt/lua/lua/`.
-
-## Lua Development Source
-
-- Path: `devtools/components/lua/upstream`
-- Upstream: `https://github.com/lua/lua.git`
-- Pinned commit: `6e22fedb74cf0c9b6656e9fce8b7331db847c605` (`v5.4.8`)
-- License: MIT; preserve the upstream `COPYRIGHT` and license notices when
-  redistributing this development checkout.
-
-This separate checkout is used by the Lua development tooling and is not the
-runtime submodule built into the system image. It is pinned independently in
-the root `.gitmodules` file, even though it currently tracks the same Lua
-release as `third_party/lua`.
+TinyCC and Lua are no longer bundled or compiled from source; their source
+submodules and development components were deleted. Users who want them
+install the official repository packages with `apk add tcc` and
+`apk add lua5.4`. file/libmagic, GNU less and Vim are likewise official
+repository packages (`file`, `libmagic`, `less`, `libncursesw`,
+`ncurses-terminfo-base`, `vim`, `vim-common`, `xxd`); those are preinstalled
+from the locked `alpine-*` archives by `make fetch` and the APK transaction
+instead of being compiled.
 
 ## PL Editor
 
@@ -347,16 +286,11 @@ semantics.
 
 ## file / libmagic
 
-- Path: `third_party/file`
-- Upstream: `https://github.com/file/file.git`
-- Version: `5.48`
-- Pinned commit: `711ccc264519cdc5073ccb26651c0a9bafc3b47a` (`FILE5_48-17-g711ccc26`)
-- License: BSD-2-Clause-style upstream license; preserve `third_party/file/COPYING`.
-
-LeonOS builds the upstream `file` command at `/usr/lib/leonos/apps/file/file.elf` and
-the ABI-v1 `libmagic.so.1` at `/usr/lib/libmagic.so.1`. The compiled magic
-database is installed at `/usr/share/misc/magic.mgc`; the port keeps the
-upstream recognizers while adapting file access to the Linux x86-64 musl ABI.
+file and libmagic are no longer compiled by LeonOS. The signed upstream Alpine
+`file` and `libmagic` packages are preinstalled instead: `/usr/bin/file` comes
+from `file`, and `libmagic.so.1` plus the compiled magic database
+`/usr/share/misc/magic.mgc` come from `libmagic`. Their license metadata
+travels with the packages.
 
 ## Fastfetch
 
