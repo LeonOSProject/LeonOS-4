@@ -5,6 +5,27 @@ status is recorded in `LINUX_ABI_SYSCALLS_2026-09-07.csv` and
 `LINUX_ABI_PROGRESS_2026-09-08.md`. The tables below are an extension reference
 and historical subset, not a complete compatibility claim.
 
+## Login system information
+
+The dynamic MOTD uses `uname`, `time`/`localtime_r`, Linux `sysinfo`,
+`statvfs`, and the Linux `SIOCGIFCONF`/`SIOCGIFFLAGS` network ioctls.
+Terminal width comes from `TIOCGWINSZ`, including `PAM_TTY` when PAM redirects
+stdout to a pipe. No private syscall is used or added.
+
+`sysinfo.loads` now reports real 1/5/15-minute exponentially weighted runnable
+load averages with Linux's Q16 scaling. The BSP samples non-idle RUNNING/READY
+tasks every five seconds under the scheduler lock. Current BLOCKED tasks are
+sleepers/waiters; the scheduler does not have a separate uninterruptible I/O
+state. Memory percentage is allocated physical RAM (`totalram - freeram`);
+root usage excludes blocks reserved from ordinary users, like `df`.
+
+`/etc/motd` and `/etc/motd.zh_CN` hold the short, editable link footer.
+`/usr/lib/leonos/motd` honors the PAM user's `.hushlogin` before running the
+standard-interface helper `motd-status`. It selects one language using
+`LC_ALL`, `LC_MESSAGES`, then `LANG`. Versions, times and state are read at
+login; unavailable measurements are labelled rather than invented. UTF-8
+cell widths determine aligned 3/2/1-column layouts and wrapping.
+
 ## Entry Convention
 
 musl enters the kernel with the native `syscall` instruction. The LeonOS

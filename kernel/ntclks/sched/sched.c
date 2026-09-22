@@ -8,6 +8,7 @@
 #include <ntclks/paging.h>
 #include <ntclks/pty.h>
 #include <ntclks/sched.h>
+#include <ntclks/loadavg.h>
 #include <ntclks/permissions.h>
 #include <ntclks/storage.h>
 #include <ntclks/syscall.h>
@@ -35,6 +36,7 @@ static uint32_t next_pid = 1;
 static uint32_t current_pid[SMP_MAX_CPUS];
 static uint32_t next_session_id = 1;
 static uint64_t scheduler_ticks;
+static uint64_t scheduler_loads[3];
 static uint64_t scheduler_busy_ticks;
 static uint64_t scheduler_idle_ticks;
 static uint64_t scheduler_cpu_busy_ticks[SMP_MAX_CPUS];
@@ -434,6 +436,7 @@ void sched_init(void)
     for (uint32_t i = 0; i < SMP_MAX_CPUS; ++i) current_pid[i] = 0;
     next_session_id = 1;
     scheduler_ticks = 0;
+    for (unsigned i = 0; i < 3; ++i) scheduler_loads[i] = 0;
     scheduler_busy_ticks = 0;
     scheduler_idle_ticks = 0;
     for (uint32_t i = 0; i < SMP_MAX_CPUS; ++i) {
@@ -1892,6 +1895,14 @@ void sched_on_tick(void)
     uint64_t flags;
     kernel_spin_lock_irqsave(&scheduler_lock, &flags);
     ++scheduler_ticks;
+    if (scheduler_ticks % (5 * NTCLKS_TICK_HZ) == 0) {
+        uint32_t active = 0;
+        /* TASK_BLOCKED represents interruptible waits (including vfork), not
+         * Linux D-state I/O waits. Do not count sleepers or the pid-0 idle task. */
+        for (uint32_t i = 0; i < task_count; ++i)
+            if (tasks[i]->pid && (tasks[i]->state == TASK_RUNNING || tasks[i]->state == TASK_READY)) ++active;
+        sched_load_update(scheduler_loads, active);
+    }
     current = sched_find(scheduler_current_pid());
     uint32_t cpu = scheduler_cpu_index();
     if (current && current->state == TASK_RUNNING) {
@@ -1948,6 +1959,19 @@ void sched_on_cpu_tick(void)
 uint64_t sched_tick_count(void)
 {
     return scheduler_ticks;
+}
+
+/**
+ * @brief Read a consistent snapshot of the Linux Q16 load averages.
+ * @param loads Output array of three 1/5/15-minute averages; must not be NULL.
+ * @return None. The scheduler lock serializes readers with BSP tick sampling.
+ */
+void sched_load_averages(uint64_t loads[3])
+{
+    uint64_t flags;
+    kernel_spin_lock_irqsave(&scheduler_lock, &flags);
+    for (unsigned i = 0; i < 3; ++i) loads[i] = scheduler_loads[i];
+    kernel_spin_unlock_irqrestore(&scheduler_lock, flags);
 }
 
 void sched_yield_current(void)

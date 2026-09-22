@@ -88,3 +88,7 @@ $(USERLAND_DIR)/dynlinkerror.elf: $(DYNLINKERROR_OBJ) $(RUNTIME_ARCHIVE) $(RUNTI
 	$(Q)mv $@.tmp $@
 userland: $(USERLAND_DIR)/dynlinkerror.elf
 -include $(DYNLINKERROR_OBJ).d
+
+# PAM helper: ordinary musl/POSIX process, without a desktop component entry.
+$(eval $(call LEONOS_APP,motd,motd,$(USERLAND_DIR)/motd.elf,$(AUTOCONF_H),))
+userland: $(USERLAND_DIR)/motd.elf

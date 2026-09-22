@@ -1,17 +1,6 @@
-欢迎来到 LeonOS 4！
-本操作系统完全免费且开源。
-
-开源仓库：
-* https://github.com/Leonmmcoset/LeonOS-4
-* https://sr.ht/~leonmmcoset/LeonOS-4/
-
-如果你发现了 bug，请报告至：
-* https://github.com/Leonmmcoset/LeonOS-4/issues
-或：
-* https://sr.ht/~leonmmcoset/LeonOS-4/trackers
-
-如有疑问，请发送邮件至：
-~leonmmcoset/LeonOS-4@lists.sr.ht
-
-你可以通过修改 /etc/motd 自定义此登录提示。
-也可以在你的主目录中创建 .hushlogin 文件来关闭 MOTD。
+项目：GitHub https://github.com/Leonmmcoset/LeonOS-4
+      SourceHut https://sr.ht/~leonmmcoset/LeonOS-4/
+反馈：https://github.com/Leonmmcoset/LeonOS-4/issues
+      https://sr.ht/~leonmmcoset/LeonOS-4/trackers
+支持：~leonmmcoset/LeonOS-4@lists.sr.ht
+创建 ~/.hushlogin 可隐藏此消息。
