@@ -171,12 +171,8 @@ static int load_rules(struct state *state, const char *policy_path, json_value *
             {"leonos-apps", "usr/share/licenses/pleditor"},
             {"busybox", "bin/busybox"}, {"busybox", "bin/sh"}, {"busybox", "usr/share/licenses/busybox"},
             {"leonos-apps", "opt/cmd"}, {"leonos-apps", "usr/bin/cmd"}, {"leonos-apps", "usr/share/licenses/cmd"},
-            {"file", "usr/bin/file"}, {"file", "usr/lib/libmagic.so.1"}, {"file", "usr/share/misc/magic.mgc"},
-            {"file", "usr/share/licenses/file"}, {"editors", "usr/bin/less"}, {"editors", "usr/share/licenses/less"},
-            {"lua", "opt/lua"}, {"lua", "usr/bin/lua"}, {"lua", "usr/lib/liblua.so.5"},
-            {"lua", "usr/share/licenses/lua"}, {"ncurses", "usr/share/terminfo"}, {"ncurses", "etc/terminfo"},
-            {"ncurses", "usr/share/licenses/ncurses"}, {"sl", "usr/bin/sl"}, {"sl", "usr/share/licenses/sl"},
-            {"editors", "usr/bin/vim"}, {"editors", "usr/share/vim"}, {"editors", "usr/share/licenses/vim"}
+            {"ncurses", "usr/share/terminfo"}, {"ncurses", "etc/terminfo"},
+            {"ncurses", "usr/share/licenses/ncurses"}, {"sl", "usr/bin/sl"}, {"sl", "usr/share/licenses/sl"}
         };
         static const char *const ncurses_commands[] = {
             "clear", "infocmp", "infotocap", "captoinfo", "reset", "tabs", "tic",

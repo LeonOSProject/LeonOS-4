@@ -4,7 +4,7 @@ set -eu
 [ "$#" = 4 ] || exit 2
 deps=$1 lock=$2 metadata=$3 output=$4
 mkdir -p "$output"
-for spec in musl:MUSL zlib:ZLIB libpng:LIBPNG file:LIBMAGIC lua:LUA sqlite:SQLITE portablegl:PORTABLEGL stardustui:STARDUSTUI; do
+for spec in musl:MUSL zlib:ZLIB libpng:LIBPNG sqlite:SQLITE portablegl:PORTABLEGL stardustui:STARDUSTUI; do
     id=${spec%:*} name=${spec#*:}
     case $id in
         musl|zlib|libpng) ;;

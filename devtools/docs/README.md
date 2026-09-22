@@ -14,8 +14,8 @@ SDK 头文件和静态库已经提供的接口；没有出现在头文件中的�
    [LIBRARIES.md](LIBRARIES.md)。
 5. 需要设计生命周期、I/O 和安全边界时阅读 [PROGRAMS.md](PROGRAMS.md)。
 
-musl 的运行时接入和镜像内 TinyCC 的限制仍分别记录在 SDK 根目录的
-`README-musl.md`；它补充本目录的通用文档。
+musl 的运行时接入记录在 SDK 根目录的 `README-musl.md`，
+它补充本目录的通用文档。TinyCC 和 Lua 不再随 SDK 分发。
 
 ## SDK 目录
 

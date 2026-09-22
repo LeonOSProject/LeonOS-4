@@ -84,12 +84,6 @@
       "alpine_candidates": ["e2fsprogs", "dosfstools", "exfatprogs"],
       "reason": "Transfer formatter/checker aliases with commands; preserve ext2 installer behavior."
     },
-    "editors": {
-      "destination": "alpine-after-validation",
-      "components": ["vim", "less"],
-      "alpine_candidates": ["vim", "nano", "less"],
-      "reason": "Generic tools; transfer commands and runtime data together, then remove old built-in producers."
-    },
     "ncurses": {
       "destination": "alpine-after-validation",
       "components": ["ncurses"],
@@ -102,18 +96,6 @@
       "paths": ["etc/ssl/certs/ca-certificates.crt"],
       "alpine_candidates": ["ca-certificates-bundle"],
       "reason": "The actual CA bundle is packaged separately so curl dependencies and authenticated upstream updates can own it."
-    },
-    "file": {
-      "destination": "alpine-after-validation",
-      "components": ["file"],
-      "alpine_candidates": ["file", "libmagic"],
-      "reason": "Binary, libmagic and magic.mgc must be transferred as a matching version set."
-    },
-    "lua": {
-      "destination": "alpine-after-validation",
-      "components": ["lua"],
-      "alpine_candidates": ["lua5.4"],
-      "reason": "Current liblua.so.5 and /opt/lua layout require native consumer migration; no false SONAME compatibility links."
     },
     "sqlite": {
       "destination": "alpine-after-validation",

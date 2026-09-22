@@ -57,10 +57,10 @@
             "cStandard": "gnu11",
             "cppStandard": "c++17",
             "compileCommands": "${workspaceFolder}/build/vscode/compile_commands.json",
-            "includePath": ["${workspaceFolder}/devtools/include", "${workspaceFolder}/devtools/components/tcc/runtime/include", "${workspaceFolder}/devtools/components/tcc/port", "${workspaceFolder}/devtools/components/lua/port", "${workspaceFolder}/devtools/examples", "${workspaceFolder}/include", "${workspaceFolder}/build/include", "${workspaceFolder}/userland/libc/include", "${workspaceFolder}/build/picolibc/sysroot/include", "${workspaceFolder}/userland/stardustui/include", "${workspaceFolder}/third_party/stardustui"],
+            "includePath": ["${workspaceFolder}/devtools/include", "${workspaceFolder}/devtools/examples", "${workspaceFolder}/include", "${workspaceFolder}/build/include", "${workspaceFolder}/userland/libc/include", "${workspaceFolder}/build/picolibc/sysroot/include", "${workspaceFolder}/userland/stardustui/include", "${workspaceFolder}/third_party/stardustui"],
             "defines": ["LEONOS_USE_PICOLIBC=1", "_POSIX_C_SOURCE=200809L", "_DEFAULT_SOURCE=1", "LEONOS_DEVTOOLS=1"],
             "compilerArgs": ["-target", "x86_64-unknown-none", "-ffreestanding", "-fno-stack-protector", "-fPIC", "-fPIE", "-mno-red-zone", "-mgeneral-regs-only", "-Wall", "-Wextra"],
-            "browse": {"path": ["${workspaceFolder}/devtools/include", "${workspaceFolder}/devtools/components/tcc/runtime/include", "${workspaceFolder}/devtools/examples"], "limitSymbolsToIncludedHeaders": true}
+            "browse": {"path": ["${workspaceFolder}/devtools/include", "${workspaceFolder}/devtools/examples"], "limitSymbolsToIncludedHeaders": true}
         }
     ]
 }

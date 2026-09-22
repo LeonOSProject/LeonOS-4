@@ -1,6 +1,6 @@
 > 2026-09-08：默认 SDK 已迁移至 musl 1.2.6 + mimalloc 3.5.1。构建以
 > `docs/BUILDING.md` 和当前 Makefile 为准，旧 ABI 二进制必须重建。
-> TinyCC 已在 QEMU 中编译并执行 musl 测试程序，退出码为 0；完整程序覆盖仍待验证。
+> SDK 不再包含 TinyCC 或 Lua 源码与端口；需要时可在系统中通过官方 APK 仓库安装。
 
 # LeonOS 4 Developer SDK
 
@@ -23,10 +23,6 @@ ELF 应用程序。
   的公开头文件与许可证也包含在 SDK 中。
 - `lib/libstardustui.a`: StardustUI 静态 GUI 库，含 LeonOS 像素窗口后端、
   C++ 兼容头、上游公共头文件、许可证和最小示例。
-- `lib/libmagic.so.1` 与 `lib/libmagic.a`: file 5.48 的动态和静态文件类型
-  识别库，公共头文件为 `include/magic.h`。
-- `lib/liblua.so.5` 与 `lib/liblua.a`: Lua 5.4.8 的动态和静态 C API，公共
-  头文件为 `include/lua5.4/`。
 - `lib/sqlite.so.3` 与 `lib/sqlite.a`: SQLite 3.46.1 的动态和静态 C API，
   公共头文件为 `include/sqlite3.h`。
 - `bin/leonos-musl-cc`：选择 SDK 内 musl 启动对象、库和加载器的编译驱动。

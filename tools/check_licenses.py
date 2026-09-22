@@ -24,25 +24,17 @@ from typing import Iterable, Sequence
 
 DEFAULT_EXCLUDED_CREDITS = ("llama2.c", "TinyLlama", "karpathy")
 
-# The first existing candidate is accepted.  Lua is a special case: upstream
-# ships its MIT text as README.md and the LeonOS port carries a dedicated copy.
+# The first existing candidate is accepted.
 SUBMODULE_LICENSES: dict[str, tuple[str, ...]] = {
     "litehtml": ("LICENSE",),
     "mbedtls": ("LICENSE",),
     "musl": ("COPYRIGHT",),
     "mimalloc": ("LICENSE",),
     "busybox": ("LICENSE",),
-    "nano": ("COPYING", "LICENSE"),
-    "vim": ("LICENSE",),
     "ncurses": ("COPYING",),
     "pl_editor": ("LICENSE", "COPYING"),
-    "tinycc": ("COPYING", "LICENSE"),
     "zlib": ("LICENSE",),
     "libpng": ("LICENSE",),
-    # Lua's upstream mirror has no standalone license file; the port keeps
-    # the complete MIT text in userland/lua/LICENSE.
-    "lua": ("LICENSE", "COPYRIGHT"),
-    "file": ("COPYING", "LICENSE"),
     "stardustui": ("LICENSE",),
     "cmd": ("LICENSE", "COPYING"),
     "sl": ("LICENSE",),
@@ -52,17 +44,14 @@ SUBMODULE_LICENSES: dict[str, tuple[str, ...]] = {
 
 # Program directories are conditional: a disabled component is not a missing
 # license, while an executable that made it into an image must have its notice.
+# file, less and vim arrive as signed upstream Alpine packages now, so their
+# notices travel with the package metadata in /lib/apk/db/installed instead.
 IMAGE_LICENSES: dict[str, tuple[str, ...]] = {
     "busybox": ("LICENSE",),
-    "file": ("COPYING",),
-    "lua": ("LICENSE",),
     "cmd": ("LICENSE",),
-    "nano": ("COPYING",),
-    "vim": ("LICENSE",),
     "fastfetch": ("LICENSE",),
     "sl": ("LICENSE",),
     "pleditor": ("LICENSE",),
-    "tcc": ("COPYING",),
 }
 
 SDK_LICENSES: dict[str, tuple[str, ...]] = {
@@ -71,8 +60,6 @@ SDK_LICENSES: dict[str, tuple[str, ...]] = {
     "libc.a": ("THIRD_PARTY/MUSL-COPYING",),
     "libz.a": ("THIRD_PARTY/ZLIB-LICENSE",),
     "libpng.a": ("THIRD_PARTY/LIBPNG-LICENSE",),
-    "libmagic.a": ("THIRD_PARTY/LIBMAGIC-COPYING",),
-    "liblua.a": ("THIRD_PARTY/LUA-LICENSE",),
     "sqlite.a": ("THIRD_PARTY/SQLITE-LICENSE",),
     "sqlite.so.3": ("THIRD_PARTY/SQLITE-LICENSE",),
     "libstardustui.a": ("THIRD_PARTY/STARDUSTUI-LICENSE",),
@@ -202,25 +189,20 @@ def check_submodules(root: Path) -> list[Finding]:
     findings: list[Finding] = []
     for name, path in parse_submodules(root):
         candidates = SUBMODULE_LICENSES.get(name, ("LICENSE", "COPYING", "COPYING.md", "LICENSE.md"))
-        expected_candidates = candidates + (("userland/lua/LICENSE",) if name == "lua" else ())
         if not path.is_dir():
             findings.append(result("submodule-license", "fail", "error", name,
-                                   " or ".join(expected_candidates), "missing submodule", str(path),
+                                   " or ".join(candidates), "missing submodule", str(path),
                                    "submodule directory is not initialized"))
             continue
         found = next((path / candidate for candidate in candidates
                       if (path / candidate).is_file() and (path / candidate).stat().st_size), None)
-        if not found and name == "lua":
-            port_license = root / "userland/lua/LICENSE"
-            if port_license.is_file() and port_license.stat().st_size:
-                found = port_license
         if found:
             findings.append(result("submodule-license", "pass", "info", name,
-                                   " or ".join(expected_candidates), str(found.relative_to(root)), str(found),
+                                   " or ".join(candidates), str(found.relative_to(root)), str(found),
                                    "license file is present and non-empty"))
         else:
             findings.append(result("submodule-license", "fail", "error", name,
-                                   " or ".join(expected_candidates), "missing", str(path),
+                                   " or ".join(candidates), "missing", str(path),
                                    "no accepted license file was found"))
     return findings
 
@@ -322,12 +304,6 @@ def check_sdk(source: Path) -> list[Finding]:
                                    library, " or ".join(candidates), found or "missing", str(source),
                                    "SDK library license is present" if found else
                                    "SDK library is present but its third-party license is missing"))
-        # Component source trees can carry runtime notices independent of a
-        # compiled archive.
-        for relative in ("components/tcc/runtime/COPYING", "components/lua/port/LICENSE"):
-            if artifact.exists(relative):
-                findings.append(result("sdk-license", "pass", "info", relative, relative, relative,
-                                       str(source), "component license is present"))
         if not findings:
             findings.append(result("sdk-license", "warn", "warning", "sdk", "third-party SDK libraries",
                                    "none detected", str(source), "no known third-party SDK library was detected"))
@@ -393,12 +369,14 @@ def self_test() -> int:
         (root / "userland/apps/installer").mkdir(parents=True)
         (root / "userland/apps/installer/main.c").write_text('static const char acknowledgements_en[] = "ok";\nstatic int text_eq(void);', encoding="utf-8")
         assert check_submodules(root)[0].status == "pass"
-        esp_program = root / "build/esp/usr/bin/nano"
+        esp_program = root / "build/esp/usr/bin"
         esp_program.mkdir(parents=True)
-        (esp_program / "nano.elf").write_bytes(b"elf")
-        assert any(f.component == "nano" and f.status == "fail" for f in check_image(root / "build/esp"))
-        (esp_program / "COPYING").write_text("GPL\n", encoding="utf-8")
-        assert any(f.component == "nano" and f.status == "pass" for f in check_image(root / "build/esp"))
+        (esp_program / "sl").write_bytes(b"elf")
+        assert any(f.component == "sl" and f.status == "fail" for f in check_image(root / "build/esp"))
+        esp_license = root / "build/esp/usr/share/licenses/sl"
+        esp_license.mkdir(parents=True)
+        (esp_license / "LICENSE").write_text("MIT\n", encoding="utf-8")
+        assert any(f.component == "sl" and f.status == "pass" for f in check_image(root / "build/esp"))
         sdk = root / "sdk"
         (sdk / "lib").mkdir(parents=True)
         (sdk / "lib/libz.a").write_bytes(b"archive")

@@ -4,10 +4,10 @@ MUSL_SDK_ARCHIVE := $(O_PACKAGES)/leonos-musl-sdk.tar.gz
 SDK_EPOCH := $(or $(SOURCE_DATE_EPOCH),$(shell git -C $(LEONOS_SRC) show -s --format=%ct HEAD))
 SDK_INPUT_HEADERS := $(shell find $(LEONOS_SRC)/include/uapi $(LEONOS_SRC)/include/leonos $(LEONOS_SRC)/userland/libc/include/leonos -type f -name '*.h' | LC_ALL=C sort)
 SDK_TEMPLATE_INPUTS := $(shell find $(LEONOS_SRC)/devtools -type f | LC_ALL=C sort)
-SDK_SOURCE_INPUTS := $(shell find $(LEONOS_SRC)/userland/stardustui/include $(LEONOS_SRC)/third_party/stardustui/includes $(LEONOS_SRC)/userland/lua -type f | LC_ALL=C sort)
-SDK_SOURCE_INPUTS += $(wildcard $(LEONOS_SRC)/third_party/lua/* $(LEONOS_SRC)/third_party/zlib/LICENSE $(LEONOS_SRC)/third_party/libpng/LICENSE $(LEONOS_SRC)/third_party/stardustui/LICENSE $(LEONOS_SRC)/third_party/sqlite/LICENSE.md)
+SDK_SOURCE_INPUTS := $(shell find $(LEONOS_SRC)/userland/stardustui/include $(LEONOS_SRC)/third_party/stardustui/includes -type f | LC_ALL=C sort)
+SDK_SOURCE_INPUTS += $(wildcard $(LEONOS_SRC)/third_party/zlib/LICENSE $(LEONOS_SRC)/third_party/libpng/LICENSE $(LEONOS_SRC)/third_party/stardustui/LICENSE $(LEONOS_SRC)/third_party/sqlite/LICENSE.md)
 SDK_SOURCE_INPUTS += $(shell find $(LEONOS_SRC)/third_party/stardustui/platforms $(LEONOS_SRC)/third_party/stardustui/examples -type f | LC_ALL=C sort)
-SDK_SOURCE_INPUTS += $(LEONOS_SRC)/third_party/stardustui/settings.hpp $(LEONOS_SRC)/third_party/file/COPYING $(LEONOS_SRC)/third_party/portablegl/LICENSE $(LEONOS_SRC)/userland/apps/lua/lua.app.ini
+SDK_SOURCE_INPUTS += $(LEONOS_SRC)/third_party/stardustui/settings.hpp $(LEONOS_SRC)/third_party/portablegl/LICENSE
 SDK_SOURCE_INPUTS += $(LEONOS_SRC)/tools/build/sdk-versions.sh $(LEONOS_LOCK)
 DEVELOPER_SDK := $(O)/sdk/devtools
 DEVELOPER_SDK_ARCHIVE := $(O_PACKAGES)/LeonOS4-Developer-SDK.zip
@@ -22,12 +22,6 @@ SDK_EXAMPLES := $(filter stardusthello stardustlayout stardustshowcase,$(LEONOS_
 SDK_OPTIONAL_INPUTS += $(addprefix $(USERLAND_DIR)/,$(addsuffix .elf,$(SDK_EXAMPLES)))
 ifneq ($(filter ncurses,$(LEONOS_COMPONENTS_SDK)),)
 SDK_OPTIONAL_INPUTS += $(UPSTREAM_ROOT)/ncurses/root/.complete $(upstream_ncurses_products)
-endif
-ifneq ($(filter file,$(LEONOS_COMPONENTS_SDK)),)
-SDK_OPTIONAL_INPUTS += $(UPSTREAM_APP_DIR)/libmagic.a $(MAGIC_SO) $(UPSTREAM_APP_DIR)/magic.h
-endif
-ifneq ($(filter lua,$(LEONOS_COMPONENTS_SDK)),)
-SDK_OPTIONAL_INPUTS += $(UPSTREAM_APP_DIR)/liblua.a $(LUA_SO) $(USERLAND_DIR)/lua.elf
 endif
 ifneq ($(filter sqlite,$(LEONOS_COMPONENTS_SDK)),)
 SDK_OPTIONAL_INPUTS += $(UPSTREAM_APP_DIR)/libsqlite3.a $(SQLITE_SO) $(SQLITE_HEADER)
@@ -91,13 +85,10 @@ $(SDK_EXTRA_STAMP): $(LEONOS_DEPS_TOOL) $(COMPONENT_METADATA) $(SDK_ZLIB_ARCHIVE
 	$(Q)set -eu; printf '{"builder":"tools/build/pam","version":"1.7.2","target":"%s"}\n' '$(TRIPLE_USER)' >$(SDK_EXTRA).tmp/THIRD_PARTY/LINUX-PAM-BUILD.json
 	$(Q)set -eu; if test -d $(PAM_ROOT)/lib/pkgconfig; then for pc in $(PAM_ROOT)/lib/pkgconfig/*.pc; do test -f "$$pc" || continue; sed -e 's|^prefix=.*|prefix=$${pcfiledir}/../..|' -e 's|^libdir=.*|libdir=$${prefix}/lib|' -e 's|^includedir=.*|includedir=$${prefix}/include|' "$$pc" >$(SDK_EXTRA).tmp/lib/pkgconfig/$${pc##*/}; done; fi
 	$(Q)set -eu; if test -n "$(filter ncurses,$(LEONOS_COMPONENTS_SDK))"; then cp -a $(UPSTREAM_ROOT)/ncurses/root/usr/include/. $(SDK_EXTRA).tmp/include/; cp -a $(UPSTREAM_ROOT)/ncurses/root/usr/lib/. $(SDK_EXTRA).tmp/lib/; if test -d $(UPSTREAM_ROOT)/ncurses/root/usr/share; then cp -a $(UPSTREAM_ROOT)/ncurses/root/usr/share/. $(SDK_EXTRA).tmp/share/; fi; fi
-	$(Q)set -eu; if test -n "$(filter file,$(LEONOS_COMPONENTS_SDK))"; then cp $(UPSTREAM_APP_DIR)/libmagic.a $(MAGIC_SO) $(SDK_EXTRA).tmp/lib/; cp $(UPSTREAM_APP_DIR)/magic.h $(SDK_EXTRA).tmp/include/; cp $(LEONOS_SRC)/third_party/file/COPYING $(SDK_EXTRA).tmp/THIRD_PARTY/LIBMAGIC-COPYING; fi
-	$(Q)set -eu; if test -n "$(filter lua,$(LEONOS_COMPONENTS_SDK))"; then cp $(UPSTREAM_APP_DIR)/liblua.a $(LUA_SO) $(SDK_EXTRA).tmp/lib/; mkdir -p $(SDK_EXTRA).tmp/include/lua5.4; cp $(LEONOS_SRC)/third_party/lua/lua.h $(LEONOS_SRC)/third_party/lua/lauxlib.h $(LEONOS_SRC)/third_party/lua/lualib.h $(LEONOS_SRC)/third_party/lua/luaconf.h $(SDK_EXTRA).tmp/include/lua5.4/; fi
 	$(Q)set -eu; if test -n "$(filter sqlite,$(LEONOS_COMPONENTS_SDK))"; then cp $(UPSTREAM_APP_DIR)/libsqlite3.a $(SDK_EXTRA).tmp/lib/sqlite.a; cp $(SQLITE_SO) $(SDK_EXTRA).tmp/lib/; cp $(SQLITE_HEADER) $(SDK_EXTRA).tmp/include/; fi
 	$(Q)set -eu; if test -n "$(filter portablegl,$(LEONOS_COMPONENTS_SDK))"; then cp $(PORTABLEGL_ARCHIVE) $(PORTABLEGL_SO) $(SDK_EXTRA).tmp/lib/; cp $(LEONOS_SRC)/third_party/portablegl/portablegl.h $(SDK_EXTRA).tmp/include/; cp $(LEONOS_SRC)/userland/libc/include/leonos/pgl.h $(SDK_EXTRA).tmp/include/leonos/pgl.h; cp $(LEONOS_SRC)/third_party/portablegl/LICENSE $(SDK_EXTRA).tmp/THIRD_PARTY/PORTABLEGL-LICENSE; fi
 	$(Q)set -eu; if test -n "$(filter stardustui,$(LEONOS_COMPONENTS_SDK))"; then cp $(STARDUSTUI_ARCHIVE) $(SDK_EXTRA).tmp/lib/; mkdir -p $(SDK_EXTRA).tmp/include/stardustui; cp -a $(LEONOS_SRC)/third_party/stardustui/includes $(LEONOS_SRC)/third_party/stardustui/platforms $(LEONOS_SRC)/third_party/stardustui/settings.hpp $(SDK_EXTRA).tmp/include/stardustui/; fi
 	$(Q)set -eu; if test -n "$(filter stardustui,$(LEONOS_COMPONENTS_SDK))"; then mkdir -p $(SDK_EXTRA).tmp/include/stardustui/leonos; cp -a $(LEONOS_SRC)/userland/stardustui/include/. $(SDK_EXTRA).tmp/include/stardustui/leonos/; cp $(LEONOS_SRC)/third_party/stardustui/LICENSE $(SDK_EXTRA).tmp/THIRD_PARTY/STARDUSTUI-LICENSE; fi
-	$(Q)set -eu; if test -n "$(filter lua,$(LEONOS_COMPONENTS_SDK))"; then mkdir -p $(SDK_EXTRA).tmp/components/lua/bin; cp $(USERLAND_DIR)/lua.elf $(SDK_EXTRA).tmp/components/lua/bin/; cp -a $(LEONOS_SRC)/third_party/lua $(SDK_EXTRA).tmp/components/lua/upstream; cp -a $(LEONOS_SRC)/userland/lua $(SDK_EXTRA).tmp/components/lua/port; rm -f $(SDK_EXTRA).tmp/components/lua/upstream/.git; cp $(LEONOS_SRC)/userland/apps/lua/lua.app.ini $(SDK_EXTRA).tmp/components/lua/; cp $(LEONOS_SRC)/userland/lua/LICENSE $(SDK_EXTRA).tmp/THIRD_PARTY/LUA-LICENSE; fi
 	$(Q)set -eu; if test -n "$(filter sqlite,$(LEONOS_COMPONENTS_SDK))"; then cp $(LEONOS_SRC)/third_party/sqlite/LICENSE.md $(SDK_EXTRA).tmp/THIRD_PARTY/SQLITE-LICENSE; fi
 	$(Q)set -eu; $(foreach app,$(SDK_EXAMPLES),mkdir -p $(SDK_EXTRA).tmp/components/$(app)/bin; cp $(USERLAND_DIR)/$(app).elf $(SDK_EXTRA).tmp/components/$(app)/bin/; cp $(LEONOS_SRC)/third_party/stardustui/examples/$(STARDUSTUI_EXAMPLE_$(app)) $(SDK_EXTRA).tmp/components/$(app)/example.cpp; cp $(LEONOS_SRC)/userland/apps/$(app)/main.c $(SDK_EXTRA).tmp/components/$(app)/leonos-main.c;)
 	$(Q)set -eu; touch $(SDK_EXTRA).tmp/.complete

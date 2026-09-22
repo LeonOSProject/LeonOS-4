@@ -36,6 +36,18 @@
       "license_in_source": ".LICENSE"
     },
     {
+      "id": "alpine-file",
+      "kind": "apk",
+      "version": "5.47-r2",
+      "url": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main/x86_64/file-5.47-r2.apk",
+      "sha256": "4681c153c509aec126e2b9ea2c959730309b24a792d49fc8cc26fa5fa87e8fdd",
+      "directory": "file-5.47-r2",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "note": "Alpine aports recipe commit a05d36fa86411cd0ce86d756f818e525d0eee1c3; .PKGINFO license = BSD-2-Clause",
+      "license_in_source": ".PKGINFO"
+    },
+    {
       "id": "alpine-findutils",
       "kind": "apk",
       "version": "4.10.0-r1",
@@ -48,6 +60,18 @@
       "license_in_source": ".LICENSE"
     },
     {
+      "id": "alpine-less",
+      "kind": "apk",
+      "version": "702-r0",
+      "url": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main/x86_64/less-702-r0.apk",
+      "sha256": "afa47eee1729eab04d6d72142c52dea513c756b71be91cc13756fa628282ec7e",
+      "directory": "less-702-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "note": "Alpine aports recipe commit 58c8a1ed3dcfa0680c6ad25e2edd6512bcb0ff93; .PKGINFO license = GPL-3.0-or-later OR BSD-2-Clause",
+      "license_in_source": ".PKGINFO"
+    },
+    {
       "id": "alpine-libcap2",
       "kind": "apk",
       "version": "2.78-r0",
@@ -58,6 +82,42 @@
       "target": "apk-root",
       "note": "Alpine aports recipe commit 0c35848136c4c16a1b1672cb812efa88fffef1c2 apk-tools installs .LICENSE as usr/share/licenses/libcap2",
       "license_in_source": ".LICENSE"
+    },
+    {
+      "id": "alpine-libmagic",
+      "kind": "apk",
+      "version": "5.47-r2",
+      "url": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main/x86_64/libmagic-5.47-r2.apk",
+      "sha256": "1820acd299025619a848b19ac98c7996fd92c06965255898800b6a790a8b03a2",
+      "directory": "libmagic-5.47-r2",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "note": "Alpine aports recipe commit a05d36fa86411cd0ce86d756f818e525d0eee1c3; .PKGINFO license = BSD-2-Clause; so:libmagic.so.1 for alpine-file",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-libncursesw",
+      "kind": "apk",
+      "version": "6.6_p20260516-r0",
+      "url": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main/x86_64/libncursesw-6.6_p20260516-r0.apk",
+      "sha256": "cf8caa8a88bc4ce9d9e395567fefaf9ef7fbd55c50ae6155b35c1b58f3755023",
+      "directory": "libncursesw-6.6_p20260516-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "note": "Alpine aports recipe commit 2cee8a7328d061418336ad327b512d96bcd7bc5e; .PKGINFO license = X11; so:libncursesw.so.6 for alpine-less and alpine-vim",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-ncurses-terminfo-base",
+      "kind": "apk",
+      "version": "6.6_p20260516-r0",
+      "url": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/main/x86_64/ncurses-terminfo-base-6.6_p20260516-r0.apk",
+      "sha256": "ce83be6d0bd10584a53c3a5868cc1595ce5f0f8e0b621f8f7f70b6144e521fc9",
+      "directory": "ncurses-terminfo-base-6.6_p20260516-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "note": "Alpine aports recipe commit 2cee8a7328d061418336ad327b512d96bcd7bc5e; .PKGINFO license = X11; required by alpine-libncursesw",
+      "license_in_source": ".PKGINFO"
     },
     {
       "id": "alpine-openrc",
@@ -82,6 +142,42 @@
       "target": "apk-root",
       "note": "Alpine aports recipe commit 30c61338b7a04d3c94509eabba5210b7bf81151a apk-tools installs .LICENSE as usr/share/licenses/openrc-user",
       "license_in_source": ".LICENSE"
+    },
+    {
+      "id": "alpine-vim",
+      "kind": "apk",
+      "version": "9.2.1091-r0",
+      "url": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/community/x86_64/vim-9.2.1091-r0.apk",
+      "sha256": "6677af51cdce462afaf06af353acfe059b4a3c68c4257a539121c3ce46d25c68",
+      "directory": "vim-9.2.1091-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "note": "Alpine aports recipe commit b7c31805c49a6e75b725aee8601e2e99e1d693e9; .PKGINFO license = Vim",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-vim-common",
+      "kind": "apk",
+      "version": "9.2.1091-r0",
+      "url": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/community/x86_64/vim-common-9.2.1091-r0.apk",
+      "sha256": "c59dbdca8d0e6b42de67bcae3819f68c4cd5ceabc8c917ec8ba5fc6a36e0bfdb",
+      "directory": "vim-common-9.2.1091-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "note": "Alpine aports recipe commit b7c31805c49a6e75b725aee8601e2e99e1d693e9; .PKGINFO license = Vim; runtime data required by alpine-vim",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-xxd",
+      "kind": "apk",
+      "version": "9.2.1091-r0",
+      "url": "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.24/community/x86_64/xxd-9.2.1091-r0.apk",
+      "sha256": "44d1d44f0c8a7f9a1190d0451c26805c32fe9573291714425ac520c035308445",
+      "directory": "xxd-9.2.1091-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "note": "Alpine aports recipe commit b7c31805c49a6e75b725aee8601e2e99e1d693e9; .PKGINFO license = Vim; required by alpine-vim",
+      "license_in_source": ".PKGINFO"
     },
     {
       "id": "apk-tools-license",
@@ -174,15 +270,6 @@
       "license": "userland/fastfetch/LICENSE"
     },
     {
-      "id": "file",
-      "kind": "submodule",
-      "commit": "711ccc264519cdc5073ccb26651c0a9bafc3b47a",
-      "directory": "third_party/file",
-      "script": "tools/build/upstream-app.sh",
-      "target": "file",
-      "license": "third_party/file/COPYING"
-    },
-    {
       "id": "kconfig-frontends",
       "kind": "submodule",
       "commit": "75d35b172fc0f7b6620dd659af41f2ce04edc4e6",
@@ -190,15 +277,6 @@
       "script": "tools/build/kconfig-frontends.sh",
       "target": "kconfig-frontends",
       "license": "third_party/kconfig-frontends/COPYING"
-    },
-    {
-      "id": "less",
-      "kind": "submodule",
-      "commit": "b8bbf4297169e20d35e1cc3e015180e8a011bcf2",
-      "directory": "third_party/less",
-      "script": "tools/build/upstream-app.sh",
-      "target": "less",
-      "license": "third_party/less/LICENSE"
     },
     {
       "id": "libbsd",
@@ -299,22 +377,6 @@
       "license_in_source": "ltp/COPYING",
       "script": "tools/build_musl_ltp.py",
       "target": "musl-ltp"
-    },
-    {
-      "id": "lua",
-      "kind": "submodule",
-      "commit": "6e22fedb74cf0c9b6656e9fce8b7331db847c605",
-      "directory": "third_party/lua",
-      "script": "tools/build/upstream-app.sh",
-      "target": "lua",
-      "license": "userland/lua/LICENSE"
-    },
-    {
-      "id": "lua-devtools",
-      "kind": "submodule",
-      "commit": "6e22fedb74cf0c9b6656e9fce8b7331db847c605",
-      "directory": "devtools/components/lua/upstream",
-      "license": "userland/lua/LICENSE"
     },
     {
       "id": "mbedtls",
@@ -429,15 +491,6 @@
       "target": "auth-upstream"
     },
     {
-      "id": "tinycc",
-      "kind": "submodule",
-      "commit": "2ba12e83b3599ca8f5d50c179fe5138fe956f0c9",
-      "directory": "third_party/tinycc",
-      "script": "tools/build/upstream-app.sh",
-      "target": "tcc",
-      "license": "third_party/tinycc/COPYING"
-    },
-    {
       "id": "util-linux",
       "kind": "tarball",
       "version": "2.41.6",
@@ -448,15 +501,6 @@
       "checksum_source": "https://www.kernel.org/pub/linux/utils/util-linux/v2.41/sha256sums.asc",
       "script": "tools/build/upstream.sh",
       "target": "auth-upstream"
-    },
-    {
-      "id": "vim",
-      "kind": "submodule",
-      "commit": "af9a7a04f18693eee4400dd134135527f4e8cd5f",
-      "directory": "third_party/vim",
-      "script": "tools/build/upstream-terminal.sh",
-      "target": "terminal-packages",
-      "license": "third_party/vim/LICENSE"
     },
     {
       "id": "zlib",

@@ -259,29 +259,29 @@ NCURSES_COMMANDS = (
 _PAYLOAD_PATHS: dict[str, tuple[str, ...]] = {
     "fastfetch": (f"{USR_BIN}/fastfetch", f"{LICENSES}/fastfetch", "etc/fastfetch",
                   "usr/share/fastfetch/leonos-ascii.txt", "etc/skel/.config/hyfetch.json"),
-    "nano": (f"{USR_BIN}/nano", f"{LICENSES}/nano"),
     "pleditor": (f"{LICENSES}/pleditor",),
     "busybox": (f"{BIN}/busybox", f"{BIN}/sh", f"{LICENSES}/busybox"),
     "cmd": (OPT_CMD, f"{USR_BIN}/cmd", f"{LICENSES}/cmd"),
-    "file": (f"{USR_BIN}/file", f"{USR_LIB}/libmagic.so.1",
-             f"{MISC}/magic.mgc", f"{LICENSES}/file"),
-    "less": (f"{USR_BIN}/less", f"{LICENSES}/less"),
-    "lua": (OPT_LUA, f"{USR_BIN}/lua", f"{USR_LIB}/liblua.so.5",
-            f"{LICENSES}/lua"),
     "ncurses": (f"{TERMINFO}", "etc/terminfo",
                 *tuple(f"{USR_BIN}/{name}" for name in NCURSES_COMMANDS),
                 f"{LICENSES}/ncurses"),
     "sl": (f"{USR_BIN}/sl", f"{LICENSES}/sl"),
-    "vim": (f"{USR_BIN}/vim", f"{USR_SHARE}/vim", f"{LICENSES}/vim"),
 }
 
 # Only used on host build staging, never on a user's installed filesystem.
+# file, less and vim now arrive as signed upstream Alpine packages during the
+# APK transaction, and lua is an ordinary repository install.
 RETIRED_TOOL_PATHS = (
-    OPT_DYNE, OPT_PYTHON, OPT_TCC, f"{LEONOS_APPS}/tcc",
-    *(f"{USR_BIN}/{name}" for name in (*GCC_ALIASES, "python", "python3", "python3.14", "tcc")),
+    OPT_DYNE, OPT_LUA, OPT_PYTHON, OPT_TCC,
+    *(f"{LEONOS_APPS}/{name}" for name in ("file", "less", "lua", "tcc", "vim")),
+    *(f"{USR_BIN}/{name}" for name in (*GCC_ALIASES, "file", "less", "lua", "nano",
+                                      "python", "python3", "python3.14", "tcc", "vim")),
     *(f"{USR_BIN}/x86_64-linux-musl-{name}" for name in GCC_ALIASES
       if not name.startswith("musl-")),
-    *(f"{LICENSES}/{name}" for name in ("musl-gcc", "python", "tcc")),
+    f"{USR_LIB}/libmagic.so.1", f"{USR_LIB}/liblua.so.5", f"{MISC}/magic.mgc",
+    f"{USR_SHARE}/vim",
+    *(f"{LICENSES}/{name}" for name in ("file", "less", "lua", "musl-gcc", "nano",
+                                       "python", "tcc", "vim")),
     *(f"{EXAMPLES}/{name}" for name in ("musl-gcc", "python")),
 )
 
@@ -330,8 +330,6 @@ def builtin_command_links(enabled=None) -> list[tuple[str, str]]:
         entries.append((link, relative_symlink_target(link, f"{BIN}/busybox")))
     if enabled("cmd"):
         add("cmd", OPT_CMD + "/cmd.elf")
-    if enabled("lua"):
-        add("lua", OPT_LUA + "/lua.elf")
     return entries
 
 

@@ -201,19 +201,6 @@
       "sdk": false,
       "symbol": "APP_FASTFETCH"
     },
-    "file": {
-      "api": false,
-      "api_requires": [],
-      "build": true,
-      "depends": [],
-      "entry": false,
-      "id": "file",
-      "image": true,
-      "kind": "tool",
-      "required": false,
-      "sdk": true,
-      "symbol": "TOOL_FILE"
-    },
     "fileman": {
       "api": false,
       "api_requires": [],
@@ -318,19 +305,6 @@
       "sdk": false,
       "symbol": "APP_INSTALLER"
     },
-    "less": {
-      "api": false,
-      "api_requires": [],
-      "build": true,
-      "depends": [],
-      "entry": false,
-      "id": "less",
-      "image": true,
-      "kind": "tool",
-      "required": false,
-      "sdk": false,
-      "symbol": "TOOL_LESS"
-    },
     "login": {
       "api": false,
       "api_requires": [],
@@ -343,19 +317,6 @@
       "required": true,
       "sdk": false,
       "symbol": "APP_LOGIN"
-    },
-    "lua": {
-      "api": false,
-      "api_requires": [],
-      "build": true,
-      "depends": [],
-      "entry": false,
-      "id": "lua",
-      "image": true,
-      "kind": "tool",
-      "required": false,
-      "sdk": true,
-      "symbol": "TOOL_LUA"
     },
     "memtest": {
       "api": false,
@@ -674,19 +635,6 @@
       "required": false,
       "sdk": false,
       "symbol": "APP_TASKMGR"
-    },
-    "tcc": {
-      "api": false,
-      "api_requires": [],
-      "build": true,
-      "depends": [],
-      "entry": false,
-      "id": "tcc",
-      "image": true,
-      "kind": "tool",
-      "required": false,
-      "sdk": true,
-      "symbol": "TOOL_TCC"
     },
     "terminal": {
       "api": false,
