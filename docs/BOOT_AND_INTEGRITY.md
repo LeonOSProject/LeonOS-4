@@ -4,6 +4,13 @@
 
 LeonOS 4 boots through GRUB and the custom loader:
 
+The image build uses the tracked GRUB 2.12 EFI kernel and modules in
+`boot/grub_modules_x86_64-efi`. The host `grub-mkstandalone` assembles these
+inputs into each new EFI image. `GRUB_EFI_DIR` can explicitly select another
+validated module set. Unpatched GRUB 2.14 EFI modules fault while patching
+read-only relocator stubs during Multiboot2 boot; upstream fixes this in
+[commit 62289192](https://github.com/rhboot/grub2/commit/62289192bb45bd90f5917c53fd29083d9a9672b1).
+
 1. GRUB starts `boot/loader.elf` through Multiboot2.
 2. The loader locates `kernel.sys`.
 3. The loader validates that file before loading its ELF image.
