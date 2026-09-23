@@ -99,6 +99,18 @@ class InstallerInputTests(unittest.TestCase):
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
 
+    def test_partial_send_survives_paused_compositor(self):
+        with tempfile.TemporaryDirectory(prefix="leonos-ipc-send-") as tmp:
+            executable = str(Path(tmp) / "partial-send")
+            subprocess.run([
+                "cc", "-std=c11", "-D_GNU_SOURCE", "-Wall", "-Wextra", "-Werror",
+                "-O1", "-g", "-fsanitize=address,undefined", "-include", "sys/un.h",
+                "-idirafter", "userland/libc/include",
+                "tools/tests/unix_ipc_partial_send_test.c", "userland/libc/src/unix_ipc.c",
+                "-o", executable,
+            ], cwd=ROOT, check=True)
+            subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
+
     def test_input_before_fetch_reply_preserves_descriptor(self):
         with tempfile.TemporaryDirectory(prefix="leonos-wind-") as tmp:
             executable = str(Path(tmp) / "wind-reply")
