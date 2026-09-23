@@ -8,7 +8,7 @@ two independent channels:
 - `/kernel` contains the latest matching `kernel.sys` and `loader.elf` pair plus
   their version and SHA-256 metadata.
 
-The default base URL is `https://leonmmcoset.github.io/LeonOS-4`. It can be
+The default base URL is `https://leonosproject.github.io/LeonOS-4`. It can be
 changed under **Build > LeonOS remote package repository URL** in `menuconfig`.
 The selected value is installed as `/etc/leonos/rpr.conf`.
 
