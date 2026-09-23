@@ -8,7 +8,7 @@ two independent channels:
 - `/kernel` contains the latest matching `kernel.sys` and `loader.elf` pair plus
   their version and SHA-256 metadata.
 
-The default base URL is `https://leonmmcoset.github.io/LeonOS-4`. It can be
+The default base URL is `https://leonosproject.github.io/LeonOS-4`. It can be
 changed under **Build > LeonOS remote package repository URL** in `menuconfig`.
 The selected value is installed as `/etc/leonos/rpr.conf`.
 
@@ -18,7 +18,7 @@ The APK identity must be generated with Alpine `abuild-keygen`. Run the helper
 from an Alpine host with `alpine-sdk`, OpenSSL, and an authenticated GitHub CLI:
 
 ```sh
-./tools/provision_rpr_signing_key.sh Leonmmcoset/LeonOS-4
+./tools/provision_rpr_signing_key.sh LeonOSProject/LeonOS-4
 ```
 
 The helper runs `abuild-keygen` in a private temporary home, stores the private

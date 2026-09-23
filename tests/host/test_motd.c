@@ -35,7 +35,7 @@ int main(void)
             char *text = NULL; size_t size = 0;
             FILE *output = open_memstream(&text, &size); assert(output);
             motd_render(output, &info, zh, width);
-            motd_wrap(output, "Project: https://github.com/Leonmmcoset/LeonOS-4", width);
+            motd_wrap(output, "Project: https://github.com/LeonOSProject/LeonOS-4", width);
             assert(fclose(output) == 0);
             check_width(text, width);
             if (width >= 80) {

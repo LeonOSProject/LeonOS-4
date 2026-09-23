@@ -21,7 +21,7 @@ config INSTALLER_INSTALLED_REQUIRE_LICENSE
 
 config RPR_BASE_URL
     string "LeonOS remote package repository URL"
-    default "https://leonmmcoset.github.io/LeonOS-4"
+    default "https://leonosproject.github.io/LeonOS-4"
     help
       HTTPS base URL of the GitHub Pages repository. The client appends /apk
       for signed APK metadata and /kernel for kernel and middle-layer releases.
