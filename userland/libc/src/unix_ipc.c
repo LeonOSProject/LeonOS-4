@@ -112,73 +112,148 @@ int leonos_ipc_peer_credentials(int fd, struct ucred *credentials)
     return 0;
 }
 
+/* At most one accepted frame tail per connection. A later send first drains
+ * that tail; it cannot interleave a new header with an incomplete frame. */
+struct ipc_send_state {
+    struct ipc_send_state *next;
+    int fd, busy, ancillary;
+    uint32_t done, length;
+    uint8_t bytes[LEONOS_IPC_ATOMIC_FRAME_CAP];
+};
+
+static struct ipc_send_state *send_states;
+static unsigned send_lock;
+
+static void send_states_lock(void)
+{
+    while (__atomic_exchange_n(&send_lock, 1, __ATOMIC_ACQUIRE)) __asm__ volatile("pause");
+}
+
+static void send_states_unlock(void)
+{
+    __atomic_store_n(&send_lock, 0, __ATOMIC_RELEASE);
+}
+
+static struct ipc_send_state *send_acquire(int fd, int create)
+{
+    send_states_lock();
+    struct ipc_send_state *state = send_states;
+    while (state && state->fd != fd) state = state->next;
+    if (state && state->busy) {
+        send_states_unlock();
+        errno = EAGAIN;
+        return NULL;
+    }
+    if (!state && create) {
+        state = calloc(1, sizeof(*state));
+        if (state) {
+            state->fd = fd;
+            state->ancillary = -1;
+            state->next = send_states;
+            send_states = state;
+        }
+    }
+    if (state) state->busy = 1;
+    else if (!create) errno = 0;
+    send_states_unlock();
+    return state;
+}
+
+static void send_release(struct ipc_send_state *state, int retain)
+{
+    send_states_lock();
+    if (retain) state->busy = 0;
+    else {
+        struct ipc_send_state **p = &send_states;
+        while (*p && *p != state) p = &(*p)->next;
+        if (*p) *p = state->next;
+    }
+    send_states_unlock();
+    if (!retain) {
+        explicit_bzero(state, sizeof(*state));
+        free(state);
+    }
+}
+
+static int send_pending(struct ipc_send_state *state)
+{
+    while (state->done < state->length) {
+        char control[CMSG_SPACE(sizeof(int))];
+        struct iovec vector = {.iov_base = state->bytes + state->done,
+                               .iov_len = state->length - state->done};
+        struct msghdr message = {.msg_iov = &vector, .msg_iovlen = 1};
+        if (state->ancillary >= 0 && !state->done) {
+            memset(control, 0, sizeof(control));
+            message.msg_control = control;
+            message.msg_controllen = sizeof(control);
+            struct cmsghdr *header = (struct cmsghdr *)control;
+            header->cmsg_len = CMSG_LEN(sizeof(int));
+            header->cmsg_level = SOL_SOCKET;
+            header->cmsg_type = SCM_RIGHTS;
+            memcpy(CMSG_DATA(header), &state->ancillary, sizeof(int));
+        }
+        ssize_t sent = sendmsg(state->fd, &message, MSG_NOSIGNAL);
+        if (sent < 0) {
+            if (errno == EINTR) continue;
+            return -1;
+        }
+        if (!sent) { errno = EPIPE; return -1; }
+        state->done += (uint32_t)sent;
+    }
+    return 0;
+}
+
+static void send_finish(struct ipc_send_state *state, int result)
+{
+    int saved = errno;
+    int pending = result < 0 && saved == EAGAIN && state->done != 0;
+    /* A terminal error after a short write makes this stream unusable. Never
+     * allow a later frame to be mistaken for the missing bytes. */
+    if (result < 0 && !pending && state->done && state->done < state->length)
+        (void)shutdown(state->fd, SHUT_RDWR);
+    send_release(state, pending);
+    errno = saved;
+}
+
+int leonos_ipc_flush(int fd)
+{
+    struct ipc_send_state *state = send_acquire(fd, 0);
+    if (!state) return errno ? -1 : 0;
+    int result = send_pending(state);
+    send_finish(state, result);
+    return result;
+}
+
 int leonos_ipc_send_fd(int fd, uint32_t type, const void *payload,
                        uint32_t length, int send_fd)
 {
-    uint8_t frame_buffer[LEONOS_IPC_ATOMIC_FRAME_CAP];
-    uint32_t offset = 0;
     if (length && !payload) { errno = EINVAL; return -1; }
     if (length > LEONOS_IPC_ATOMIC_FRAME_CAP - sizeof(struct leonos_ipc_frame) -
                      sizeof(uint32_t)) {
         errno = EMSGSIZE;
         return -1;
     }
-    {
-        struct leonos_ipc_frame frame = {
-            .magic = LEONOS_IPC_MAGIC,
-            .version = LEONOS_IPC_VERSION,
-            .length = sizeof(uint32_t) + length,
-        };
-        memcpy(frame_buffer + offset, &frame, sizeof(frame));
-        offset += (uint32_t)sizeof(frame);
-        memcpy(frame_buffer + offset, &type, sizeof(type));
-        offset += (uint32_t)sizeof(type);
-        if (length) {
-            memcpy(frame_buffer + offset, payload, length);
-            offset += length;
-        }
+    struct ipc_send_state *state = send_acquire(fd, 1);
+    if (!state) return -1;
+    if (send_pending(state) < 0) {
+        send_finish(state, -1);
+        return -1;
     }
-    uint32_t done = 0;
-    while (done < offset) {
-        char control[CMSG_SPACE(sizeof(int))];
-        struct iovec vector = {.iov_base = frame_buffer + done, .iov_len = offset - done};
-        struct msghdr message;
-        struct cmsghdr *header;
-        memset(control, 0, sizeof(control));
-        memset(&message, 0, sizeof(message));
-        message.msg_iov = &vector;
-        message.msg_iovlen = 1;
-        if (send_fd >= 0 && !done) {
-            message.msg_control = control;
-            message.msg_controllen = sizeof(control);
-        }
-        header = (struct cmsghdr *)control;
-        header->cmsg_len = CMSG_LEN(sizeof(int));
-        header->cmsg_level = SOL_SOCKET;
-        header->cmsg_type = SCM_RIGHTS;
-        *(int *)CMSG_DATA(header) = send_fd;
-        ssize_t sent = sendmsg(fd, &message, MSG_NOSIGNAL);
-        if (sent < 0) {
-            if (errno == EINTR) continue;
-            if (errno == EAGAIN) {
-                if (!done) goto failed;
-                struct pollfd ready = {.fd = fd, .events = POLLOUT};
-                int result = poll(&ready, 1, 3000);
-                if (result > 0) continue;
-                if (!result) errno = ETIMEDOUT;
-            }
-            goto failed;
-        }
-        if (!sent) { errno = EPIPE; goto failed; }
-        done += (uint32_t)sent;
-    }
-    explicit_bzero(frame_buffer, sizeof(frame_buffer));
-    return 0;
-failed:;
-    int saved = errno;
-    explicit_bzero(frame_buffer, sizeof(frame_buffer));
-    errno = saved;
-    return -1;
+    struct leonos_ipc_frame frame = {
+        .magic = LEONOS_IPC_MAGIC,
+        .version = LEONOS_IPC_VERSION,
+        .length = sizeof(uint32_t) + length,
+    };
+    memcpy(state->bytes, &frame, sizeof(frame));
+    memcpy(state->bytes + sizeof(frame), &type, sizeof(type));
+    if (length) memcpy(state->bytes + sizeof(frame) + sizeof(type), payload, length);
+    state->length = sizeof(frame) + sizeof(type) + length;
+    state->done = 0;
+    state->ancillary = send_fd;
+    int result = send_pending(state);
+    int accepted = result == 0 || (errno == EAGAIN && state->done != 0);
+    send_finish(state, result);
+    return accepted ? 0 : -1;
 }
 
 int leonos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
@@ -304,6 +379,9 @@ static int receive_frame(int fd, uint32_t *type, void *payload, uint32_t capacit
 {
     if (received_fd) *received_fd = -1;
     if (length) *length = 0;
+    /* Request/reply clients may have an accepted request tail to drain. Still
+     * read on EAGAIN so two peers under backpressure can both make progress. */
+    if (leonos_ipc_flush(fd) < 0 && errno != EAGAIN) return -1;
     struct ipc_receive_state *state = receive_acquire(fd);
     if (!state) return -1;
     if (!state->header_bytes) {
@@ -366,6 +444,9 @@ int leonos_ipc_recv(int fd, uint32_t *type, void *payload, uint32_t capacity,
 
 int leonos_ipc_close(int fd)
 {
+    struct ipc_send_state *pending = send_acquire(fd, 0);
+    if (!pending && errno) return -1;
+    if (pending) send_release(pending, 0);
     receive_states_lock();
     struct ipc_receive_state *state = receive_states;
     while (state && state->fd != fd) state = state->next;

@@ -4,7 +4,6 @@
 #include <sys/un.h>
 #define ioctl leonos_test_ioctl
 #include <leonos/syscall.h>
-#undef ioctl
 
 #define main windowd_main
 #define open test_open
@@ -21,6 +20,7 @@ void *test_mmap(void *addr, size_t size, int prot, int flags, int fd, off_t off)
 int test_munmap(void *addr, size_t size);
 #include "../../userland/apps/windowd/main.c"
 #undef main
+#undef ioctl
 #undef open
 #undef ftruncate
 #undef mmap

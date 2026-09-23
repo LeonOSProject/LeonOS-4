@@ -489,6 +489,14 @@ static int login_process_alive(void)
     return 0;
 }
 
+static int spawn_graphical_login(void)
+{
+    /* A graphical session has a controlling VT too. Explicitly select the
+     * windowed login so it cannot steal that VT through the getty path. */
+    char *argv[] = {"login", "--graphical-login", NULL};
+    return leonos_launch_argv(argv);
+}
+
 void maybe_launch_login(void)
 {
     struct leonos_auth_status status;
@@ -515,7 +523,7 @@ void maybe_launch_login(void)
     }
     login_last_spawn_ms = leonos_uptime_ms();
     {
-        int pid = spawn_program_path("login");
+        int pid = spawn_graphical_login();
         login_spawn_pid = pid > 0 ? (uint32_t)pid : 0;
     }
 }
@@ -578,7 +586,7 @@ void login_lock_update(void)
     if (now - login_last_spawn_ms >= LOGIN_RESPAWN_MS) {
         login_last_spawn_ms = now;
         {
-            int pid = spawn_program_path("login");
+            int pid = spawn_graphical_login();
             login_spawn_pid = pid > 0 ? (uint32_t)pid : 0;
         }
     }

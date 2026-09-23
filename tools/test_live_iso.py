@@ -82,7 +82,8 @@ class LiveRootTests(unittest.TestCase):
         config = (ROOT / "boot/grub/live.cfg").read_text()
         self.assertNotIn("(hd", config)
         self.assertIn("search --no-floppy --file /leonos-installer-iso.marker --set=root", config)
-        self.assertIn("mode=live startup=desktop", config)
+        self.assertIn("mode=live", config)
+        self.assertNotIn("startup=", config)
         self.assertIn("module2 /install/root.fat leonos-installer-root", config)
         self.assertIn("module2 /leonos/kernel.sys leonos-kernel", config)
 

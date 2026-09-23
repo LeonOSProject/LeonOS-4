@@ -6,6 +6,12 @@
 static struct task current = {.pid = 42, .name = "test", .uid = 1000};
 static struct task foreign = {.pid = 43, .name = "foreign", .uid = 2000};
 static bool expose_foreign;
+struct task_pty_fd *task_pty_fd_for_fd(struct task *t, int fd)
+{ for (unsigned i = 0; i < SCHED_TASK_PTY_FD_MAX; ++i)
+    if (t->pty_fds[i].used && t->pty_fds[i].fd == fd) return &t->pty_fds[i];
+  return NULL; }
+struct task_file *task_file_for_fd(struct task *t, int fd) { (void)t; (void)fd; return NULL; }
+uint32_t pty_vt_number(uint32_t id) { return id >= 1 && id <= 6 ? id : 0; }
 uint32_t address_space_user_resident_kib(const struct address_space *as)
 { assert(as == sched_task_as(&current)); return 12; }
 struct task *sched_current_task(void) { return &current; }
@@ -77,6 +83,14 @@ int main(void)
     assert(proc_readlink("/proc/42/exe", link, sizeof(link)) == (int)strlen(current.path));
     assert(!memcmp(link, current.path, strlen(current.path)));
     assert(proc_readlink("/proc/42/stat", link, sizeof(link)) == -22);
+    current.pty_fds[0] = (struct task_pty_fd){.used = 1, .fd = 0,
+        .pty_id = 2, .endpoint = TASK_PTY_ENDPOINT_SLAVE};
+    assert(proc_readlink("/proc/self/fd/0", link, sizeof(link)) == 9);
+    assert(!memcmp(link, "/dev/tty2", 9));
+    assert(proc_lookup("/proc/42/fd", &node) == 0 && node.type == LEONOS_FS_TYPE_DIR);
+    assert(proc_lookup("/proc/42/fd/0", &node) == 0 && node.type == LEONOS_FS_TYPE_SYMLINK);
+    assert(proc_readlink("/proc/self/fd/99", link, sizeof(link)) == -2);
+    assert(proc_readlink("/proc/self/fd/4294967296", link, sizeof(link)) == -2);
     current.euid = current.suid = current.fsuid = 1001;
     current.as.cr3 = 4096;
     current.gid = 4000000000U; current.egid = current.sgid = current.fsgid = 4000000001U;
@@ -122,7 +136,11 @@ int main(void)
     }
     assert(proc_readdir("/proc/42", &offset, &entry) == 1 && !strcmp(entry.name, "comm"));
     assert(proc_readdir("/proc/42", &offset, &entry) == 1 && !strcmp(entry.name, "environ"));
+    assert(proc_readdir("/proc/42", &offset, &entry) == 1 && !strcmp(entry.name, "fd") && entry.type == LEONOS_FS_TYPE_DIR);
     assert(proc_readdir("/proc/42", &offset, &entry) == 0);
+    offset = 0;
+    assert(proc_readdir("/proc/42/fd", &offset, &entry) == 1 && !strcmp(entry.name, "0"));
+    assert(proc_readdir("/proc/42/fd", &offset, &entry) == 0);
     assert(proc_lookup("/proc/mounts", &node) == 0 && node.type == LEONOS_FS_TYPE_SYMLINK);
     memset(link, '#', sizeof(link));
     assert(proc_readlink("/proc/mounts", link, 4) == 4 && !memcmp(link, "self", 4) && link[4] == '#');

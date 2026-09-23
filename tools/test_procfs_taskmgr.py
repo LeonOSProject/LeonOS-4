@@ -47,10 +47,10 @@ class ProcfsTaskmgrTests(unittest.TestCase):
 
     def test_taskmgr_service_manager_entry_uses_openrc_manager(self):
         source = (ROOT / "userland/apps/taskmgr/main.c").read_text()
-        self.assertIn('T("Service Manager", "服务管理")', source)
+        self.assertIn('T("Service Manager")', source)
         self.assertIn('leonos_launch_builtin_path("servicemgr")', source)
         self.assertIn('leonos_launch_argv(argv)', source)
-        self.assertNotIn('T("Startup Apps", "启动应用")', source)
+        self.assertNotIn('T("Startup Apps")', source)
 
     def test_musl_forkpty_propagates_child_setup_failure(self):
         # forkpty now belongs to the unmodified musl provider; the removed

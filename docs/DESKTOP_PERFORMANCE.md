@@ -4,7 +4,8 @@ The compositor previously wrote a small framebuffer region and then issued
 `FBIOPAN_DISPLAY`. The kernel interpreted that request as a complete VMware
 SVGA update, so cursor movement and application frames repeatedly submitted and
 waited for the whole display. The desktop now uses the LeonOS fbdev extension
-`LEONOS_FBIOUPDATE_REGION` (`0x46f1`) after each blit. The kernel clamps the
+`LEONOS_FBIOBLIT` (`0x46f2`) for each blit, validating active VT ownership
+and copying the pixels before presenting them. The kernel clamps the
 rectangle to the framebuffer and submits only that region; `FBIOPAN_DISPLAY`
 remains the explicit full-refresh operation.
 

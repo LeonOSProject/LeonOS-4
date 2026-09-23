@@ -11,6 +11,14 @@
 /* /dev/fb0 hardware limits; fbdev's visible geometry is not a mode limit. */
 #define LEONOS_FBIOGET_CAPABILITIES 0x46f0UL
 #define LEONOS_FBIOUPDATE_REGION 0x46f1UL
+#define LEONOS_FBIOBLIT 0x46f2UL
+
+/* Atomic presentation by the active graphical controlling VT. Inactive callers
+ * receive EAGAIN. pixels == 0 fills color; otherwise stride counts RGB32 pixels. */
+struct leonos_fb_present {
+    uint32_t x, y, width, height, stride, color;
+    uint64_t pixels;
+};
 
 struct leonos_fb_capabilities {
     uint8_t bytes_per_pixel;

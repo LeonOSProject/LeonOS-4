@@ -156,7 +156,7 @@ int main(void)
     int result;
 
     if (leonos_gui_connect() < 0) {
-        puts("glxgears requires GUI mode");
+        puts("glxgears requires a graphical session");
         return 1;
     }
     ctx = leonos_pgl_create(width, height, "glxgears");

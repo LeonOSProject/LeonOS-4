@@ -26,6 +26,11 @@ int leonos_ipc_connect(const char *path);
 int leonos_ipc_bind_listen(const char *path, int backlog);
 int leonos_ipc_bind_listen_mode(const char *path, int backlog, uint32_t mode);
 int leonos_ipc_accept(int listen_fd, struct ucred *peer);
+/* On nonblocking streams, success may retain one partially sent frame.
+ * Call flush from the event loop until it succeeds (EAGAIN means backpressure).
+ * A new send drains that frame first; EAGAIN rejects the new message entirely.
+ * SCM_RIGHTS is attached once. Release pending state with leonos_ipc_close. */
+int leonos_ipc_flush(int fd);
 int leonos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length);
 int leonos_ipc_send_fd(int fd, uint32_t type, const void *payload,
                        uint32_t length, int send_fd);

@@ -35,6 +35,13 @@
 #define LEONOS_DEV_FB0 "/dev/fb0"
 #define LEONOS_DEV_INPUT_EVENT0 "/dev/input/event0"
 #define LEONOS_DEV_INPUT_EVENT1 "/dev/input/event1"
+/* Query uint64 display invalidation generation on a fixed VT descriptor. */
+#define LEONOS_VT_GETGENERATION 0x800856f0UL
+
+/* evdev extension: uint32_t input, 0 for raw events, 1-6 for events that
+ * originated while that VT was graphical. The setting belongs to the open
+ * file description and applies to read and poll. */
+#define LEONOS_EVIOCSVT 0x400445f0UL
 /* Linux OSS PCM playback device. */
 #define LEONOS_DEV_DSP "/dev/dsp"
 #define LEONOS_DEV_SERIAL0 "/dev/serial0"

@@ -4,6 +4,8 @@
 
 #include "../../userland/libc/src/wind.c"
 
+int leonos_ipc_flush(int fd) { (void)fd; return 0; }
+
 static int backing_fd;
 static int reply_fd = -1;
 static int allow_fetch = 1;

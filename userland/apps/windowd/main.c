@@ -15,10 +15,13 @@
 #include <leonos/unix_ipc.h>
 #include <leonos/windowd.h>
 #include <linux/input.h>
+#include <linux/vt.h>
+#include <linux/kd.h>
 #include <poll.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -72,6 +75,19 @@ static int32_t cursor_y = 240;
 static uint8_t cursor_buttons;
 static uint8_t cursor_pending;
 static int32_t cursor_wheel;
+
+#ifndef WINDOWD_VT_TEST
+static int windowd_vt_active(void)
+{
+    static int vt_fd = -1;
+    struct vt_stat state;
+    int mode;
+    if (vt_fd < 0) vt_fd = open("/dev/tty1", O_RDONLY | O_CLOEXEC);
+    return vt_fd >= 0 && ioctl(vt_fd, VT_GETSTATE, &state) == 0 &&
+           state.v_active == 1 && ioctl(vt_fd, KDGETMODE, &mode) == 0 &&
+           mode == KD_GRAPHICS;
+}
+#endif
 
 static int copy_text(char *dst, uint32_t capacity, const char *src)
 {
@@ -329,7 +345,8 @@ static uint16_t evdev_to_legacy_keycode(uint16_t code)
 
 static void send_input_event(const struct leonos_input_event *event)
 {
-    (void)send_to_policy(LEONOS_WIN_MSG_INPUT, event, sizeof(*event));
+    if (windowd_vt_active())
+        (void)send_to_policy(LEONOS_WIN_MSG_INPUT, event, sizeof(*event));
 }
 
 static void pump_input_device(int fd, uint32_t type)
@@ -669,6 +686,12 @@ int main(void)
     (void)leonos_ipc_set_nonblock(listen_fd, 1);
     keyboard_fd = open(LEONOS_DEV_INPUT_EVENT0, LEONOS_O_RDONLY | O_NONBLOCK, 0);
     mouse_fd = open(LEONOS_DEV_INPUT_EVENT1, LEONOS_O_RDONLY | O_NONBLOCK, 0);
+    uint32_t graphical_vt = 1;
+    if ((keyboard_fd >= 0 && ioctl(keyboard_fd, LEONOS_EVIOCSVT, &graphical_vt) < 0) ||
+        (mouse_fd >= 0 && ioctl(mouse_fd, LEONOS_EVIOCSVT, &graphical_vt) < 0)) {
+        perror("Bind graphical VT input");
+        return 1;
+    }
     printf("[windowd.elf] listening on %s keyboard=%d mouse=%d\n",
            LEONOS_IPC_SOCK_WINDOWD, keyboard_fd, mouse_fd);
 
@@ -679,6 +702,8 @@ int main(void)
             {.fd = mouse_fd, .events = POLLIN},
         };
         for (uint32_t i = 0; i < WINDOWD_MAX_CLIENTS; ++i) {
+            if (clients[i].used && leonos_ipc_flush(clients[i].fd) < 0 && errno != EAGAIN)
+                close_client((int)i);
             fds[3 + i].fd = clients[i].used ? clients[i].fd : -1;
             fds[3 + i].events = POLLIN;
         }

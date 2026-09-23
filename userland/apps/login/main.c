@@ -16,6 +16,8 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <errno.h>
+#include <linux/vt.h>
+#include <linux/kd.h>
 
 #define LOGIN_MAX_W 1920
 #define LOGIN_MAX_H 1080
@@ -201,6 +203,20 @@ static int installer_shell_main(void)
     return 1;
 }
 
+static int graphical_session_main(void)
+{
+    if (!isatty(STDIN_FILENO) || take_console_terminal() < 0) return 1;
+    if (ioctl(STDIN_FILENO, VT_ACTIVATE, 1) < 0 ||
+        ioctl(STDIN_FILENO, KDSETMODE, KD_GRAPHICS) < 0) {
+        perror("Activate graphical terminal");
+        return 1;
+    }
+    execl("/usr/lib/leonos/apps/desktop/desktop.elf", "desktop.elf", (char *)0);
+    perror("Start desktop session");
+    (void)ioctl(STDIN_FILENO, KDSETMODE, KD_TEXT);
+    return 1;
+}
+
 int main(int argc, char **argv)
 {
     setlocale(LC_ALL, "");
@@ -210,10 +226,14 @@ int main(int argc, char **argv)
     struct leonos_gui_app_event event;
     int window_id;
     int installer_shell = argc == 2 && strcmp(argv[1], "--installer-shell") == 0;
-    if (argc != 1 && !installer_shell) {
-        fputs("usage: login.elf [--installer-shell]\n", stderr);
+    int graphical_session = argc == 2 && strcmp(argv[1], "--graphical-session") == 0;
+    int graphical_login = argc == 2 && strcmp(argv[1], "--graphical-login") == 0;
+    int getty_login = argc >= 2 && strcmp(argv[1], "--") == 0;
+    if (argc != 1 && !installer_shell && !graphical_session && !graphical_login && !getty_login) {
+        fputs("usage: login.elf [--installer-shell|--graphical-session|--graphical-login]\n", stderr);
         return 2;
     }
+    if (graphical_session) return graphical_session_main();
     if (installer_shell) {
         if (!isatty(STDIN_FILENO)) {
             fputs("Installer shell requires a TTY\n", stderr);
@@ -221,7 +241,7 @@ int main(int argc, char **argv)
         }
         return installer_shell_main();
     }
-    if (isatty(STDIN_FILENO)) {
+    if (!graphical_login && isatty(STDIN_FILENO)) {
         return tty_login_main();
     }
     puts("[login.elf] starting login UI");

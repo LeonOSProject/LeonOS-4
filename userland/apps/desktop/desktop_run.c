@@ -1,5 +1,19 @@
 #include "desktop.h"
 #include <stdlib.h>
+#include <sys/ioctl.h>
+#include <linux/vt.h>
+#include <linux/kd.h>
+#include <leonos/device.h>
+
+static int desktop_vt_active(uint64_t *generation)
+{
+    struct vt_stat state;
+    int mode;
+    return ioctl(STDIN_FILENO, LEONOS_VT_GETGENERATION, generation) == 0 &&
+           ioctl(STDIN_FILENO, VT_GETSTATE, &state) == 0 &&
+           state.v_active == 1 &&
+           ioctl(STDIN_FILENO, KDGETMODE, &mode) == 0 && mode == KD_GRAPHICS;
+}
 
 void init_desktop(void)
 {
@@ -100,6 +114,10 @@ void desktop_run(void)
     desktop_inputm_load_config();
     puts("[desktop.elf] Ring-3 desktop uses shadow framebuffer blit");
     maybe_launch_login();
+    if (access("/etc/leonos/installer-runtime", F_OK) == 0) {
+        char *argv[] = {"installer", "--graphical", NULL};
+        (void)leonos_launch_argv(argv);
+    }
 
     int profile = access("/etc/leonos/desktop-profile", F_OK) == 0;
     unsigned long profile_start = leonos_uptime_ms();
@@ -110,7 +128,16 @@ void desktop_run(void)
     unsigned long last_inputm_refresh = 0;
     unsigned long last_desktop_items_poll = 0;
     int last_mouse_visible = 1;
+    uint64_t painted_generation = 0;
     for (;;) {
+        uint64_t generation;
+        int vt_active = desktop_vt_active(&generation);
+        if (vt_active && generation != painted_generation) {
+            /* Keep the generation read before repaint: a switch during the
+             * repaint must cause another complete redraw on the next loop. */
+            painted_generation = generation;
+            redraw_all();
+        }
         struct leonos_gui_window_msg window_msg;
         int did_work = 0;
         uint32_t window_budget = 64;
@@ -195,6 +222,12 @@ void desktop_run(void)
             handle_mouse((uint32_t)deferred_motion.x,
                          (uint32_t)deferred_motion.y,
                          deferred_motion.buttons);
+        }
+        /* Keep consuming window IPC while text owns the display. Otherwise
+         * continuously presenting clients fill the compositor connection. */
+        if (!vt_active) {
+            sleep_ms(30);
+            continue;
         }
         if (start_menu_update()) {
             did_work = 1;

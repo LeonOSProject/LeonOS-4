@@ -3761,7 +3761,7 @@ static int handle_key(int window_id, struct leonos_ui_surface *ui,
     return 0;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     setlocale(LC_ALL, "");
     bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
@@ -3779,7 +3779,12 @@ int main(void)
     leonos_ui_edit_state_init(&account_edits[4], setup.root_password_confirm, sizeof(setup.root_password_confirm));
     account_edits[0].focused = 1;
 
-    if (isatty(STDIN_FILENO)) {
+    int graphical = argc == 2 && strcmp(argv[1], "--graphical") == 0;
+    if (argc != 1 && !graphical) {
+        fputs("usage: installer [--graphical]\n", stderr);
+        return 2;
+    }
+    if (!graphical && isatty(STDIN_FILENO)) {
         installer_tty_mode = 1;
 
         tty_context.disks = disks;

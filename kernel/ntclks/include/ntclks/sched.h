@@ -81,6 +81,7 @@ struct task_file {
     uint64_t aux;
     /* Per-descriptor device state; currently the evdev EVIOCGRAB token. */
     uint64_t aux2;
+    uint32_t input_vt; /* evdev graphical-VT filter, zero for the raw stream. */
     struct storage_read_cursor read_cursor;
     char path[LEONOS_FS_PATH_LEN];
 };

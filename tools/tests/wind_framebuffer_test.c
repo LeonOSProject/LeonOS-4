@@ -18,6 +18,7 @@ static size_t mapped_bytes;
 static unsigned maps, unmaps;
 static int map_failure;
 static unsigned damage_calls;
+static int reject_presentation;
 
 int open(const char *path, int flags, ...)
 {
@@ -44,9 +45,14 @@ int ioctl(int fd, unsigned long request, ...)
         if (mode->xres == 1234) { errno = EINVAL; return -1; }
         display_width = mode->xres;
         display_height = mode->yres;
-    } else if (request == 0x46f1UL) {
-        const uint32_t *rect = arg;
-        assert(rect[0] == 1919 && rect[1] == 1079 && rect[2] == 1 && rect[3] == 1);
+    } else if (request == LEONOS_FBIOBLIT) {
+        if (reject_presentation) { errno = EAGAIN; return -1; }
+        const struct leonos_fb_present *r = arg;
+        const uint32_t *pixels = (const void *)(uintptr_t)r->pixels;
+        for (uint32_t y = 0; y < r->height && r->y + y < display_height; ++y)
+            for (uint32_t x = 0; x < r->width && r->x + x < display_width; ++x)
+                vram[(r->y + y) * display_width + r->x + x] =
+                    pixels ? pixels[y * r->stride + x] : r->color;
         ++damage_calls;
     } else if (request == FBIOPAN_DISPLAY) {
         assert(!"A one-pixel blit must not force a full-screen VMware update");
@@ -60,7 +66,8 @@ int ioctl(int fd, unsigned long request, ...)
 
 void *test_mmap(void *addr, size_t bytes, int prot, int flags, int fd, off_t off)
 {
-    (void)addr; (void)prot; (void)flags;
+    (void)addr; (void)flags;
+    assert(prot == PROT_READ);
     assert(fd == 42 && off == 0 && bytes <= sizeof(vram));
     ++maps;
     if (map_failure) { errno = ENOMEM; return MAP_FAILED; }
@@ -85,15 +92,22 @@ int main(void)
            caps.max_height == 4096 && caps.backend == LEONOS_FB_BACKEND_VMWARE_SVGA);
     assert(caps.max_bytes >= 1920 * 1080 * 4);
     assert(leonos_fb_rect(1279, 799, 1, 1, 0x123456) == 0);
-    assert(vram[1280 * 800 - 1] == 0x123456 && maps == 1);
+    assert(vram[1280 * 800 - 1] == 0x123456 && maps == 0);
+    assert(leonos_fb_pixel(1279, 799) == 0x123456 && maps == 1);
     assert(leonos_fb_set_mode(1234, 800) < 0);
     assert(unmaps == 0 && leonos_fb_pixel(1279, 799) == 0x123456);
     assert(leonos_fb_set_mode(1920, 1080) == 0);
     const uint32_t pixel = 0xabcdef;
     assert(leonos_fb_blit(1919, 1079, 1, 1, 1, &pixel) == 0);
+    assert(leonos_fb_pixel(1919, 1079) == pixel);
     assert(mapped_bytes == sizeof(vram) && maps == 2 && unmaps == 1);
     assert(vram[1920 * 1080 - 1] == pixel);
-    assert(damage_calls == 1);
+    assert(damage_calls == 2);
+    reject_presentation = 1;
+    const uint32_t other = 0x123123;
+    assert(leonos_fb_blit(1919, 1079, 1, 1, 1, &other) < 0 && errno == EAGAIN);
+    assert(vram[1920 * 1080 - 1] == pixel);
+    reject_presentation = 0;
     assert(leonos_fb_set_mode(1280, 800) == 0);
     assert(leonos_fb_pixel(0, 0) == 0 && maps == 3 && unmaps == 2);
 
@@ -101,10 +115,11 @@ int main(void)
     display_width = 1024;
     display_height = 768;
     assert(leonos_fb_rect(1023, 767, 1, 1, 42) == 0);
+    assert(leonos_fb_pixel(1023, 767) == 42);
     assert(mapped_bytes == 1024 * 768 * 4 && maps == 4 && unmaps == 3);
     assert(leonos_fb_set_mode(1280, 800) == 0);
     map_failure = 1;
-    assert(leonos_fb_rect(0, 0, 1, 1, 0) < 0 && !mapped_bytes);
+    assert(leonos_fb_pixel(0, 0) == 0 && !mapped_bytes);
     map_failure = 0;
     assert(leonos_fb_rect(0, 0, 1, 1, 42) == 0);
 

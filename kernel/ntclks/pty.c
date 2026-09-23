@@ -8,9 +8,11 @@
 #include <ntclks/framebuffer.h>
 #include <ntclks/sched.h>
 #include <ntclks/futex.h>
+#include <ntclks/wait.h>
 #include <leonos/psf_font.h>
 
-#define PTY_MAX 8u
+#define PTY_MAX 32u
+#define VT_COUNT 6u
 #define PTY_INPUT_CAP 1024u
 #define PTY_OUTPUT_CAP 8192u
 
@@ -43,7 +45,9 @@ struct pty_session {
 
 static struct pty_session sessions[PTY_MAX];
 static uint32_t next_generation;
-static uint32_t console_pty_id;
+static uint8_t vt_ready;
+static uint32_t active_vt;
+static uint8_t vt_graphical[VT_COUNT];
 /* Set-1 modifier keys currently held, tracked per physical key so the derived
  * shift/ctrl/alt levels survive either side being released first. */
 #define CONSOLE_KEY_LSHIFT (1U << 0)
@@ -56,6 +60,8 @@ static uint32_t console_modifier_keys;
 static uint8_t console_shift_down;
 static uint8_t console_ctrl_down;
 static uint8_t console_alt_down;
+static struct kernel_wait_queue vt_waiters;
+static uint64_t vt_display_generation;
 
 /**
  * @brief Return the PTY session for pty_id (1-based), or NULL if invalid/unused.
@@ -95,8 +101,24 @@ int pty_lookup_path(const char *path, struct storage_node *node)
         if (id > PTY_MAX) return -2;
     } while (*path >= '0' && *path <= '9');
     struct pty_session *session = find_session(id);
-    if (*path || !session || session->hungup) return -2;
+    if (*path || !session || session->hungup || session->console) return -2;
     return pty_get_node(id, node);
+}
+
+/** @brief Resolve one of the six fixed Linux virtual consoles.
+ * @param path Device pathname, nullable.
+ * @param node Optional output storage node.
+ * @return Zero if resolved or negative ENOENT. */
+int pty_lookup_vt_path(const char *path, struct storage_node *node)
+{
+    static const char prefix[] = "/dev/tty";
+    uint32_t i;
+    if (!path || !vt_ready) return -2;
+    for (i = 0; i < sizeof(prefix) - 1u; ++i) {
+        if (path[i] != prefix[i]) return -2;
+    }
+    if (path[i] < '1' || path[i] > '6' || path[i + 1u]) return -2;
+    return pty_get_node((uint32_t)(path[i] - '0'), node);
 }
 
 int pty_inode_permissions(const struct storage_node *node,
@@ -171,7 +193,11 @@ static int pty_canonical_mode(const struct pty_session *session)
  */
 void pty_init(void)
 {
-    console_pty_id = 0;
+    kernel_wait_queue_init(&vt_waiters);
+    vt_display_generation = 0;
+    vt_ready = 0;
+    active_vt = 0;
+    for (uint32_t i = 0; i < VT_COUNT; ++i) vt_graphical[i] = 0;
     console_modifier_keys = 0;
     console_shift_down = 0;
     console_ctrl_down = 0;
@@ -183,27 +209,114 @@ void pty_init(void)
     }
 }
 
-int pty_bind_console(uint32_t pty_id, uint32_t owner_pid)
+/** @brief Reserve tty1 through tty6 before user processes start.
+ * @return Zero on success, negative ENOMEM if allocation fails. */
+int pty_vt_init(void)
 {
-    struct pty_session *session = find_session(pty_id);
-    struct task *owner = owner_pid ? sched_find(owner_pid) : 0;
-    if (!session || !owner) {
-        return -22;
+    if (vt_ready) return 0;
+    for (uint32_t number = 1; number <= VT_COUNT; ++number) {
+        int32_t id = pty_create(0);
+        if (id != (int32_t)number) return -12;
+        sessions[number - 1u].console = 1;
+        sessions[number - 1u].locked = 0;
     }
-    session->owner_pid = owner_pid;
-    session->process_session = owner_pid;
-    session->foreground_pgid = owner_pid;
-    session->console = 1;
-    session->locked = 0;
-    console_pty_id = pty_id;
-    /* Publish the controlling PTY together with the session and foreground
-     * group.  Callers may bind a console before the task is first scheduled,
-     * so terminal ioctls must never observe a partially attached owner. */
-    owner->pty_id = pty_id;
-    owner->controlling_pty_id = pty_id;
-    owner->process_session = owner_pid;
-    owner->process_group = owner_pid;
+    vt_display_generation = 1;
+    active_vt = 1;
+    vt_ready = 1;
+    console_vt_activate(1, false);
     return 0;
+}
+
+/** @brief Resolve a fixed VT after initialization.
+ * @param number Virtual console number.
+ * @return Terminal identifier, or zero for an invalid/uninitialized VT. */
+uint32_t pty_vt_id(uint32_t number)
+{
+    return vt_ready && number >= 1u && number <= VT_COUNT ? number : 0u;
+}
+
+/** @brief Resolve a terminal to a fixed VT.
+ * @param pty_id Terminal identifier.
+ * @return VT number or zero for a dynamic PTY. */
+uint32_t pty_vt_number(uint32_t pty_id)
+{
+    return pty_vt_id(pty_id);
+}
+
+/** @brief Read the selected virtual console.
+ * @return One through six, or zero before initialization. */
+uint32_t pty_vt_active(void)
+{
+    return active_vt;
+}
+
+/** @brief Read display invalidation state under the execution transaction.
+ * @return Generation incremented by visible VT switches and mode activations.
+ */
+uint64_t pty_vt_generation(void)
+{
+    return vt_display_generation;
+}
+
+/** @brief Activate and repaint a VT under the execution transaction.
+ * @param number Virtual console number.
+ * @return Zero on success or negative EINVAL. */
+int pty_vt_switch(uint32_t number)
+{
+    if (!pty_vt_id(number)) return -22;
+    if (active_vt != number) {
+        ++vt_display_generation;
+        active_vt = number;
+        input_set_graphical_vt(vt_graphical[number - 1u] ? number : 0);
+        console_vt_activate(number, vt_graphical[number - 1u] != 0);
+        (void)kernel_wait_queue_wake_all(&vt_waiters);
+    }
+    return 0;
+}
+
+/**
+ * @brief Wait for a VT under the syscall execution lock; switching wakes all waiters.
+ * @param number Requested fixed VT number, one through six.
+ * @return Zero if active, negative EINVAL, or KERNEL_SYSCALL_BLOCKED for retry.
+ */
+int64_t pty_vt_wait_active(uint32_t number)
+{
+    kernel_wait_queue_remove(&vt_waiters, sched_current_task());
+    if (!pty_vt_id(number)) return -22;
+    if (active_vt == number) return 0;
+    kernel_wait_queue_block_current(&vt_waiters);
+    return KERNEL_SYSCALL_BLOCKED;
+}
+
+/** @brief Change display mode under the execution transaction.
+ * @param pty_id Fixed terminal identifier.
+ * @param enabled One for graphics, zero for text.
+ * @return Zero on success or negative EINVAL. */
+int pty_vt_set_graphics(uint32_t pty_id, int enabled)
+{
+    if (!pty_vt_number(pty_id) || (enabled != 0 && enabled != 1)) return -22;
+    vt_graphical[pty_id - 1u] = (uint8_t)enabled;
+    if (active_vt == pty_id) {
+        ++vt_display_generation;
+        input_set_graphical_vt(enabled ? pty_id : 0);
+        console_vt_activate(pty_id, enabled != 0);
+    }
+    return 0;
+}
+
+/** @brief Inspect the selected display mode.
+ * @return Nonzero if the active VT is graphical. */
+int pty_vt_graphical_active(void)
+{
+    return active_vt && vt_graphical[active_vt - 1u] != 0;
+}
+
+/** @brief Inspect one fixed virtual console.
+ * @param pty_id Fixed terminal identifier.
+ * @return Nonzero if graphical, zero if text or invalid. */
+int pty_vt_graphical(uint32_t pty_id)
+{
+    return pty_vt_number(pty_id) && vt_graphical[pty_id - 1u] != 0;
 }
 
 static int console_key_to_bytes(uint8_t keycode, char *buffer, uint32_t *length)
@@ -272,8 +385,8 @@ static int console_key_to_bytes(uint8_t keycode, char *buffer, uint32_t *length)
  * @param held Bit identifying this physical modifier key.
  * @param pressed Non-zero for a make code, zero for a break code.
  *
- * Only the keyboard interrupt path on the CPU owning that IRQ calls this, so
- * the held-key set needs no lock. Tracking left and right sides separately
+ * The deferred keyboard path holds the kernel execution transaction, so
+ * the held-key set needs no additional lock. Tracking left and right sides separately
  * keeps, for example, a released left Ctrl from clearing a still-held right
  * Ctrl, which would otherwise turn the next plain letter into a control byte.
  */
@@ -302,12 +415,13 @@ static void console_update_modifier(uint32_t held, uint8_t pressed)
  * because they neither enqueue bytes nor signal a process. Translating the key
  * to terminal bytes and feeding the console PTY's line discipline happens only
  * while the console owns the keyboard, so a GUI session cannot also drive the
- * console's foreground group. Called from interrupt context with the console
- * PTY already bound by pty_bind_console().
+ * console's foreground group. Called by the deferred input consumer under the
+ * kernel execution transaction after VT initialization, never by a keyboard ISR.
  */
 void pty_console_key_event(uint8_t keycode, uint8_t pressed)
 {
-    struct pty_session *session = find_session(console_pty_id);
+    uint32_t pty_id = active_vt;
+    struct pty_session *session = find_session(pty_id);
     char bytes[8];
     uint32_t length;
     switch (keycode) {
@@ -320,41 +434,33 @@ void pty_console_key_event(uint8_t keycode, uint8_t pressed)
     case 115: console_update_modifier(CONSOLE_KEY_RALT, pressed); return;
     default: break;
     }
-    /* Diagnostic escape hatch for distinguishing a frozen display from a
-     * stalled TTY process.  console_write_tty_len() deliberately bypasses
-     * kernel-log timestamps and writes the same bytes to the framebuffer,
-     * serial console, and log buffer.  Kept available in every mode because
-     * it produces no terminal input and sends no signal. */
+    if (vt_ready && pressed && console_ctrl_down && console_alt_down &&
+        keycode >= 59u && keycode <= 64u) {
+        (void)pty_vt_switch((uint32_t)keycode - 58u);
+        return;
+    }
+    /* Keep the diagnostic escape hatch on the logging console. */
     if (pressed && keycode == 88 && console_ctrl_down &&
         console_alt_down && console_shift_down) {
         static const char test_message[] = "\r\nTest message\r\n";
-        console_write_tty_len(test_message, sizeof(test_message) - 1U);
+        console_write_len(test_message, sizeof(test_message) - 1U);
         return;
     }
-    if (input_keyboard_owner() != INPUT_KEYBOARD_OWNER_CONSOLE) {
-        /* A GUI session owns the keyboard: windowd reads the evdev stream and
-         * the focused application feeds its own terminal.  Delivering the same
-         * keystroke here would drive a second, unattended line discipline --
-         * in GUI modes console-session only sleeps, so the console's
-         * foreground group is still PID 1 and Ctrl-C in a GUI terminal becomes
-         * SIGINT to init, which runs its ctrlaltdel action and shuts the
-         * desktop down. */
-        return;
-    }
+    if (pty_vt_graphical_active()) return;
     if (!pressed || !session || !console_key_to_bytes(keycode, bytes, &length)) {
         return;
     }
     /* Feed through the same canonical/ISIG handling used by PTY hosts. */
-    (void)pty_write_input(session->owner_pid, console_pty_id, bytes, length);
+    (void)pty_write_input(session->owner_pid, pty_id, bytes, length);
     if (session->termios.c_lflag & LEONOS_PTY_LFLAG_ECHO) {
         if (keycode == 14) {
             static const char erase[] = "\b \b";
-            console_write_tty_len(erase, sizeof(erase) - 1U);
+            console_vt_write(active_vt, erase, sizeof(erase) - 1U);
         } else if (keycode == 28) {
             static const char newline[] = "\r\n";
-            console_write_tty_len(newline, sizeof(newline) - 1U);
+            console_vt_write(active_vt, newline, sizeof(newline) - 1U);
         } else if (length == 1 && (uint8_t)bytes[0] >= 32U) {
-            console_write_tty_len(bytes, 1);
+            console_vt_write(active_vt, bytes, 1);
         }
     }
 }
@@ -486,7 +592,7 @@ void pty_transfer_put(uint32_t pty_id, uint32_t endpoint)
 int pty_destroy(uint32_t owner_pid, uint32_t pty_id)
 {
     struct pty_session *session = find_session(pty_id);
-    if (!session || session->owner_pid != owner_pid) {
+    if (!session || pty_vt_number(pty_id) || session->owner_pid != owner_pid) {
         return -22;
     }
     if (session->hungup) {
@@ -740,7 +846,7 @@ int64_t pty_write_output(uint32_t pty_id, const char *buffer, uint32_t length)
         return 0;
     }
     if (session->console) {
-        console_write_tty_len(buffer, length);
+        console_vt_write(pty_id, buffer, length);
         return (int64_t)length;
     }
     if (!session->output_reported) {
@@ -953,6 +1059,7 @@ int pty_detach_controlling(uint32_t pty_id, uint32_t caller_pid)
         sched_clear_controlling_pty(pty_id);
         session->process_session = 0;
         session->foreground_pgid = 0;
+        if (pty_vt_number(pty_id)) (void)pty_vt_set_graphics(pty_id, 0);
         if (group) {
             sched_signal_kernel_group(group, 1);
             sched_signal_kernel_group(group, 18);
@@ -969,10 +1076,12 @@ void pty_process_session_exit(uint32_t tgid)
     leader->tty_old_pgrp = 0;
     struct pty_session *session = find_session(leader->controlling_pty_id);
     if (session) {
+        uint32_t pty_id = leader->controlling_pty_id;
         uint32_t foreground = session->foreground_pgid;
-        sched_clear_controlling_pty(leader->controlling_pty_id);
+        sched_clear_controlling_pty(pty_id);
         session->process_session = 0;
         session->foreground_pgid = 0;
+        if (pty_vt_number(pty_id)) (void)pty_vt_set_graphics(pty_id, 0);
         if (foreground) sched_signal_kernel_group(foreground, 1);
     } else if (old) {
         sched_signal_kernel_group(old, 1);

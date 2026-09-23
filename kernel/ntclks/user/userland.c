@@ -45,7 +45,6 @@ static bool autospawn_hello;
 static bool autospawn_uidemo;
 static bool autospawn_terminal;
 static bool autospawn_memtest;
-static bool autospawn_installer;
 static bool autospawn_linuxabi;
 static bool autospawn_ltp;
 static bool autospawn_gcc;
@@ -535,7 +534,10 @@ static int userland_load_task_image_locked(struct task *task, const struct task 
         return -8;
     }
     int entropy_result = kernel_random_fill(task->dynamic_launch.random, sizeof(task->dynamic_launch.random));
-    if (entropy_result < 0) return entropy_result;
+    if (entropy_result < 0) {
+        console_printf("[ntclks] image entropy failed path=%s ret=%d\n", task->path, entropy_result);
+        return entropy_result;
+    }
     if (task->flags & TASK_FLAG_PENDING_LOAD) {
         if (task->image_node.type != LEONOS_FS_TYPE_FILE) {
             char resolved[LEONOS_FS_PATH_LEN];
@@ -571,6 +573,8 @@ static int userland_load_task_image_locked(struct task *task, const struct task 
         task->image = NULL;
         task->image_len = 0;
     } else {
+        console_printf("[ntclks] image has no pending load path=%s flags=0x%x node=%u\n",
+                       task->path, task->flags, task->image_node.type);
         return -8;
     }
 
@@ -616,7 +620,11 @@ static bool userland_load_task_image(struct task *task)
      * below safely join this transaction. */
     kernel_execution_lock_irqsave(&execution_flags);
     userland_loader_lock(&loader_flags);
-    result = userland_load_task_image_locked(task, NULL, NULL) == 0;
+    int load_result = userland_load_task_image_locked(task, NULL, NULL);
+    result = load_result == 0;
+    if (!result)
+        console_printf("[ntclks] image load failed pid=%u path=%s flags=0x%x ret=%d\n",
+                       task->pid, task->path, task->flags, load_result);
     userland_loader_unlock(loader_flags);
     kernel_execution_unlock_irqrestore(execution_flags);
     return result;
@@ -719,7 +727,9 @@ static int64_t spawn_path_internal_deferred(const char *path, const char *task_n
 static struct task *wait_for_runnable_task(uint64_t *execution_flags)
 {
     struct task *next;
-    while (!(next = sched_select_next_user())) {
+    for (;;) {
+        input_process_pending();
+        if ((next = sched_select_next_user())) break;
         /* Selection retired the previous CR3 and task reservation. Never
          * sleep holding the transaction needed by CPUs producing work. */
         kernel_execution_unlock_irqrestore(*execution_flags);
@@ -739,6 +749,7 @@ struct task *userland_schedule_from_frame(struct trap_frame *frame)
 {
     uint64_t execution_flags;
     kernel_execution_lock_irqsave(&execution_flags);
+    input_process_pending();
     struct task *current;
     struct task *next;
 retry:
@@ -926,8 +937,7 @@ static int userland_prepare_runtime(void)
 void userland_init(const struct boot_info *boot)
 {
     int64_t pid;
-    int tty_mode;
-    int installer_mode;
+    int installer_tui;
 
     console_printf("[ntclks] userland storage load started modules=%u\n",
                    boot ? boot->module_count : 0);
@@ -935,7 +945,6 @@ void userland_init(const struct boot_info *boot)
     autospawn_uidemo = boot && name_contains(boot->cmdline, "autospawn=uidemo");
     autospawn_terminal = boot && name_contains(boot->cmdline, "autospawn=terminal");
     autospawn_memtest = boot && name_contains(boot->cmdline, "autospawn=memtest");
-    autospawn_installer = false;
     autospawn_linuxabi = boot && name_contains(boot->cmdline, "autospawn=linuxabi");
     autospawn_ltp = boot && name_contains(boot->cmdline, "autospawn=ltp");
     autospawn_gcc = boot && name_contains(boot->cmdline, "autospawn=gcc");
@@ -955,9 +964,6 @@ void userland_init(const struct boot_info *boot)
     if (autospawn_memtest) {
         console_printf("[ntclks] debug autospawn memtest enabled\n");
     }
-    if (autospawn_installer) {
-        console_printf("[ntclks] installer autospawn enabled\n");
-    }
 
     if (!storage_ready()) {
         console_printf("[ntclks] no block-backed root filesystem available for userland\n");
@@ -970,35 +976,13 @@ void userland_init(const struct boot_info *boot)
         kernel_idle_loop();
     }
 
-    installer_mode = boot && name_contains(boot->cmdline, "mode=installer");
-
-#ifdef CONFIG_STARTUP_TTY
-    tty_mode = 1;
-#else
-    tty_mode = 0;
-#endif
-    if (boot && name_contains(boot->cmdline, "startup=tty")) {
-        tty_mode = 1;
-    } else if (boot && name_contains(boot->cmdline, "startup=desktop")) {
-        tty_mode = 0;
-    }
-
-    /* Resolve physical keyboard ownership from the same two flags that pick
-     * LEONOS_BOOT_MODE below.  console-session execs login.elf against the
-     * console PTY in the tty and installer-tty modes, and merely sleeps in the
-     * GUI modes, so only those two may translate keystrokes into console
-     * input; otherwise a keystroke drives two terminals at once and Ctrl-C in
-     * a GUI terminal signals PID 1, whose ctrlaltdel action reboots the
-     * machine.  Keep this mapping in sync with that script. */
-    input_set_keyboard_owner(tty_mode ? INPUT_KEYBOARD_OWNER_CONSOLE
-                                      : INPUT_KEYBOARD_OWNER_GUI);
-
-    /* The boot environment selects policy; it never grants image privileges. */
-    const char *boot_mode = installer_mode ? (tty_mode ? "LEONOS_BOOT_MODE=installer-tty" :
-                                                       "LEONOS_BOOT_MODE=installer") :
-                                           (tty_mode ? "LEONOS_BOOT_MODE=tty" : "LEONOS_BOOT_MODE=default");
+    /* Installer UI selection changes the tty1 session, never the console
+     * topology or the service runlevel. */
+    installer_tui = boot && name_contains(boot->cmdline, "installer-session=tui");
     const char *env[] = {"PATH=" LEONOS_DEFAULT_PATH, "HOME=/root", "PWD=/",
-                        "TERM=xterm-256color", boot_mode, NULL};
+                        "TERM=xterm-256color",
+                        installer_tui ? "LEONOS_INSTALLER_SESSION=tui" :
+                                        "LEONOS_INSTALLER_SESSION=graphical", NULL};
     char init_path[256] = "/sbin/init";
     if (boot) {
         const char *arg = boot->cmdline;
@@ -1031,14 +1015,8 @@ void userland_init(const struct boot_info *boot)
         kernel_idle_loop();
     }
     init_pid = (uint32_t)pid;
-    int32_t pty = pty_create(init_pid);
-    if (pty <= 0 || pty_bind_console((uint32_t)pty, init_pid) < 0) {
-        console_printf("[ntclks] cannot attach PID 1 console pty=%d\n", pty);
-        kernel_idle_loop();
-    }
-    console_printf("[ntclks] PID 1 path=%s mode=%s console-pty=%d keyboard-owner=%s\n",
-                   init_path, boot_mode, pty,
-                   tty_mode ? "console" : "gui");
+    console_printf("[ntclks] PID 1 path=%s console=tty1 installer-session=%s\n",
+                   init_path, installer_tui ? "tui" : "graphical");
     sched_mark_ready(init_pid);
 }
 
@@ -1363,11 +1341,6 @@ void userland_yield_if_runnable(void)
         autospawn_memtest = false;
         int64_t pid = userland_spawn_path(LEONOS_LAYOUT_LEONOS_APPS "/memtest/memtest.elf");
         console_printf("[ntclks] debug autospawn memtest pid=%lld\n", (long long)pid);
-    }
-    if (autospawn_installer && sched_current_pid() == desktop_pid) {
-        autospawn_installer = false;
-        int64_t pid = userland_spawn_path(LEONOS_LAYOUT_LEONOS_APPS "/installer/installer.elf");
-        console_printf("[ntclks] installer autospawn pid=%lld\n", (long long)pid);
     }
     if (autospawn_inventory && sched_current_pid() == desktop_pid) {
         autospawn_inventory = false;

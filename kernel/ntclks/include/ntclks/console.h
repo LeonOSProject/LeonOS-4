@@ -29,18 +29,10 @@ void console_write(const char *s);
  * @brief Write exactly len bytes of s to the console; s need not be NUL-terminated.
  */
 void console_write_len(const char *s, size_t len);
-/**
- * @brief Write terminal data without adding diagnostic timestamps.
- */
-void console_write_tty_len(const char *s, size_t len);
-/**
- * @brief Enter the TTY runtime: hide kernel diagnostics and reset the visible console.
- */
-void console_enter_tty_runtime(void);
-/** @brief Hide boot diagnostics once the graphical desktop owns the framebuffer. */
-void console_enter_graphical_runtime(void);
-/** @brief Keep kernel diagnostics on serial while leaving the framebuffer for service logs. */
-void console_show_service_logs_only(void);
+/** @brief Record text emitted by a VT and paint it only while that VT is visible. */
+void console_vt_write(uint32_t number, const char *s, size_t len);
+/** @brief Present the active text VT or yield the framebuffer to graphics. */
+void console_vt_activate(uint32_t number, bool graphical);
 /**
  * @brief Format and write a message to the console, printf-style.
  */

@@ -1,18 +1,29 @@
 #!/bin/sh
-case "$LEONOS_BOOT_MODE" in
-    tty)
-        exec /usr/lib/leonos/apps/login/login.elf ;;
-    installer-tty)
-        test -f /etc/leonos/installer-runtime || exit 1
-        export HOME=/root
-        export PS1='\w \$ '
-        export COLORTERM=truecolor
-        cd "$HOME" || exit 1
-        exec /usr/lib/leonos/apps/login/login.elf --installer-shell ;;
-    default|installer|'')
-        # GUI owns keyboard input; keep BusyBox's respawn child quiescent.
-        exec /bin/sleep 2147483647 ;;
-    *)
-        echo "Invalid boot mode: $LEONOS_BOOT_MODE" >&2
-        exit 1 ;;
+# BusyBox init supplies the named VT as fd 0, 1, and 2.
+case "$1" in
+    tty1|tty2|tty3|tty4|tty5|tty6) ;;
+    *) exit 2 ;;
 esac
+
+if test "$1" = tty1; then
+    if test -f /etc/leonos/installer-runtime &&
+       test "$LEONOS_INSTALLER_SESSION" = tui; then
+        export HOME=/root
+        cd "$HOME" || exit 1
+        exec /usr/lib/leonos/apps/login/login.elf --installer-shell
+    fi
+    if test -f /etc/leonos/desktop-session &&
+       test ! -e /run/leonos/graphical-session-started; then
+        : > /run/leonos/graphical-session-started
+        /usr/lib/leonos/apps/login/login.elf --graphical-session \
+            >>/var/log/desktop.log 2>&1
+    fi
+fi
+# Installation media has locked account passwords; offer the same local
+# rescue shell on every text VT, including tty1 after the graphical session.
+if test -f /etc/leonos/installer-runtime; then
+    export HOME=/root
+    cd "$HOME" || exit 1
+    exec /usr/lib/leonos/apps/login/login.elf --installer-shell
+fi
+exec /sbin/getty -n -l /usr/lib/leonos/apps/login/login.elf 115200 "$1"

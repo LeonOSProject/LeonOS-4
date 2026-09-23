@@ -42,6 +42,7 @@ typedef struct __user_cap_data_struct *cap_user_data_t;
 #define CAP_SYS_PTRACE 19
 #define CAP_SYS_ADMIN 21
 #define CAP_SYS_BOOT 22
+#define CAP_SYS_TTY_CONFIG 26
 #define CAP_SYS_RESOURCE 24
 #define CAP_SYS_TIME 25
 #define CAP_MKNOD 27

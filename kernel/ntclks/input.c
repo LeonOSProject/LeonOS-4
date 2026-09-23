@@ -18,6 +18,7 @@
 struct input_evdev_record {
     uint64_t sequence;
     uint32_t device_kind;
+    uint32_t graphical_vt;
     struct input_event event;
 };
 
@@ -35,29 +36,9 @@ static uint32_t evdev_grab_owner[INPUT_EVDEV_DEVICES];
 static uint64_t evdev_grab_token[INPUT_EVDEV_DEVICES];
 static uint64_t evdev_next_grab_token = 1;
 static struct kernel_spinlock input_lock = KERNEL_SPINLOCK_INIT;
-/* Owner of physical keyboard input. Initialized to the console so the boot
- * log and any pre-userland console remain usable until userland.c decides the
- * boot mode; a single writer sets it before PID 1 is marked ready. */
-static uint32_t keyboard_owner = INPUT_KEYBOARD_OWNER_CONSOLE;
-
-/**
- * @brief Read the physical keyboard sink selected before userland starts.
- * @return Console or GUI ownership, loaded with acquire ordering.
- */
-enum input_keyboard_owner input_keyboard_owner(void)
-{
-    return (enum input_keyboard_owner)__atomic_load_n(&keyboard_owner,
-                                                      __ATOMIC_ACQUIRE);
-}
-
-/**
- * @brief Publish the boot mode's physical keyboard sink.
- * @param owner Console or GUI sink selected by userland initialization.
- */
-void input_set_keyboard_owner(enum input_keyboard_owner owner)
-{
-    __atomic_store_n(&keyboard_owner, (uint32_t)owner, __ATOMIC_RELEASE);
-}
+static uint32_t input_graphical_vt;
+static struct { uint8_t keycode, pressed; } pending_keys[INPUT_QUEUE_CAP];
+static uint32_t pending_key_head, pending_key_tail;
 
 /**
  * @brief Deliver one physical-key event from a keyboard driver to the kernel.
@@ -65,15 +46,48 @@ void input_set_keyboard_owner(enum input_keyboard_owner owner)
  * @param pressed Non-zero for a make code, zero for a break code.
  *
  * Shared entry point for PS/2 and USB HID so the hardware paths cannot
- * diverge. Always publishes the normalized and evdev streams, and offers the
- * event to the console PTY, which applies keyboard ownership before accepting
- * it. Callable from interrupt context; takes the input lock internally, so
- * callers must not hold it.
+ * diverge. After VT initialization, only queues work: the execution-serialized
+ * consumer publishes evdev and applies terminal state in physical event order.
+ * Before VT initialization, publishes directly for boot-menu input. Callers
+ * must not hold input_lock.
  */
 void input_handle_scancode(uint8_t keycode, uint8_t pressed)
 {
-    input_push_key(keycode, pressed);
-    pty_console_key_event(keycode, pressed);
+    if (!pty_vt_active()) {
+        input_push_key(keycode, pressed);
+        return;
+    }
+    uint64_t flags;
+    kernel_spin_lock_irqsave(&input_lock, &flags);
+    uint32_t next = (pending_key_head + 1u) % INPUT_QUEUE_CAP;
+    if (next != pending_key_tail) {
+        pending_keys[pending_key_head].keycode = keycode;
+        pending_keys[pending_key_head].pressed = pressed;
+        pending_key_head = next;
+    }
+    kernel_spin_unlock_irqrestore(&input_lock, flags);
+}
+
+/** @brief Drain a bounded key batch while the caller holds the kernel execution transaction.
+ * Terminal/session mutation and framebuffer replay never run in a keyboard IRQ.
+ */
+void input_process_pending(void)
+{
+    for (uint32_t budget = 0; budget < INPUT_QUEUE_CAP; ++budget) {
+        uint64_t flags;
+        uint8_t keycode, pressed;
+        kernel_spin_lock_irqsave(&input_lock, &flags);
+        if (pending_key_tail == pending_key_head) {
+            kernel_spin_unlock_irqrestore(&input_lock, flags);
+            break;
+        }
+        keycode = pending_keys[pending_key_tail].keycode;
+        pressed = pending_keys[pending_key_tail].pressed;
+        pending_key_tail = (pending_key_tail + 1u) % INPUT_QUEUE_CAP;
+        kernel_spin_unlock_irqrestore(&input_lock, flags);
+        input_push_key(keycode, pressed);
+        pty_console_key_event(keycode, pressed);
+    }
 }
 
 static uint64_t evdev_oldest_sequence(void)
@@ -116,6 +130,7 @@ static void evdev_publish(uint32_t device_kind, uint16_t type, uint16_t code,
     *record = (struct input_evdev_record){
         .sequence = evdev_next_sequence,
         .device_kind = device_kind,
+        .graphical_vt = input_graphical_vt,
         .event = {
             .time_sec = (int64_t)(microseconds / 1000000ULL),
             .time_usec = (int64_t)(microseconds % 1000000ULL),
@@ -171,6 +186,41 @@ static uint8_t evdev_publish_mouse_buttons(uint8_t buttons)
     return published;
 }
 
+/**
+ * @brief Label graphical input and restore pointer state when a VT resumes.
+ * @param number Graphical VT number, or zero for a text terminal.
+ * The snapshot repairs releases filtered out while text owned input, including
+ * when windowd did not run at all between the two switches.
+ */
+void input_set_graphical_vt(uint32_t number)
+{
+    uint64_t flags;
+    kernel_spin_lock_irqsave(&input_lock, &flags);
+    uint32_t previous = input_graphical_vt;
+    input_graphical_vt = number;
+    if (number && number != previous) {
+        evdev_publish(STORAGE_DEV_KIND_MOUSE, EV_ABS, ABS_X, evdev_mouse_x);
+        evdev_publish(STORAGE_DEV_KIND_MOUSE, EV_ABS, ABS_Y, evdev_mouse_y);
+        const uint16_t codes[] = {BTN_LEFT, BTN_RIGHT, BTN_MIDDLE};
+        for (uint32_t bit = 0; bit < 3; ++bit)
+            evdev_publish(STORAGE_DEV_KIND_MOUSE, EV_KEY, codes[bit],
+                          (evdev_mouse_buttons >> bit) & 1u);
+        evdev_publish(STORAGE_DEV_KIND_MOUSE, EV_SYN, SYN_REPORT, 0);
+        /* Reconcile modifiers released on text VTs without forwarding any
+         * printable key that could be part of a password. */
+        const uint16_t modifiers[] = {KEY_LEFTSHIFT, KEY_RIGHTSHIFT,
+            KEY_LEFTCTRL, KEY_RIGHTCTRL, KEY_LEFTALT, KEY_RIGHTALT,
+            KEY_LEFTMETA, KEY_RIGHTMETA};
+        for (uint32_t i = 0; i < sizeof(modifiers) / sizeof(modifiers[0]); ++i) {
+            uint16_t code = modifiers[i];
+            int down = (evdev_key_state[code / 8u] >> (code % 8u)) & 1u;
+            evdev_publish(STORAGE_DEV_KIND_KEYBOARD, EV_KEY, code, down);
+        }
+        evdev_publish(STORAGE_DEV_KIND_KEYBOARD, EV_SYN, SYN_REPORT, 0);
+    }
+    kernel_spin_unlock_irqrestore(&input_lock, flags);
+}
+
 /* Caller holds input_lock. */
 static void push_event(const struct input_raw_event *event)
 {
@@ -194,15 +244,16 @@ static void push_event(const struct input_raw_event *event)
     }
 }
 
-/** @brief Reset raw and evdev input streams, device state and keyboard owner. */
+/** @brief Reset raw and evdev input streams and device state. */
 void input_init(void)
 {
     uint64_t flags;
     kernel_spin_lock_irqsave(&input_lock, &flags);
     head = 0;
     tail = 0;
-    keyboard_owner = INPUT_KEYBOARD_OWNER_CONSOLE;
     evdev_next_sequence = 1;
+    input_graphical_vt = 0;
+    pending_key_head = pending_key_tail = 0;
     evdev_mouse_buttons = 0;
     __atomic_store_n(&caps_lock_active, 0, __ATOMIC_RELAXED);
     evdev_mouse_x = 0;
@@ -332,6 +383,21 @@ uint64_t input_evdev_cursor_now(void)
 int input_evdev_read(uint32_t device_kind, uint64_t *cursor,
                      void *buffer, uint32_t length, uint64_t grab_token)
 {
+    return input_evdev_read_vt(device_kind, cursor, buffer, length, grab_token, 0);
+}
+
+/** @brief Copy complete evdev records matching the requested graphical origin.
+ * @param device_kind Keyboard or mouse device kind.
+ * @param cursor In/out reader sequence position.
+ * @param buffer Writable record storage.
+ * @param length Storage size in bytes.
+ * @param grab_token Open description's grab token.
+ * @param number Graphical VT filter, or zero for raw input.
+ * @return Bytes copied, or negative errno.
+ */
+int input_evdev_read_vt(uint32_t device_kind, uint64_t *cursor,
+                        void *buffer, uint32_t length, uint64_t grab_token, uint32_t number)
+{
     struct input_event *events = (struct input_event *)buffer;
     uint32_t index = evdev_device_index(device_kind);
     uint32_t capacity;
@@ -360,7 +426,8 @@ int input_evdev_read(uint32_t device_kind, uint64_t *cursor,
             continue;
         }
         ++(*cursor);
-        if (record->device_kind != device_kind) {
+        if (record->device_kind != device_kind ||
+            (number && record->graphical_vt != number)) {
             continue;
         }
         /* EVIOCGRAB is exclusive: non-owning descriptors advance over events
@@ -376,6 +443,19 @@ int input_evdev_read(uint32_t device_kind, uint64_t *cursor,
 
 int input_evdev_available(uint32_t device_kind, uint64_t cursor,
                           uint64_t grab_token)
+{
+    return input_evdev_available_vt(device_kind, cursor, grab_token, 0);
+}
+
+/** @brief Check readiness using the same origin and grab rules as read.
+ * @param device_kind Keyboard or mouse device kind.
+ * @param cursor Reader sequence position.
+ * @param grab_token Open description's grab token.
+ * @param number Graphical VT filter, or zero for raw input.
+ * @return Nonzero when a matching record is queued.
+ */
+int input_evdev_available_vt(uint32_t device_kind, uint64_t cursor,
+                             uint64_t grab_token, uint32_t number)
 {
     uint32_t index = evdev_device_index(device_kind);
     uint64_t flags;
@@ -395,6 +475,7 @@ int input_evdev_available(uint32_t device_kind, uint64_t cursor,
         const struct input_evdev_record *record =
             &evdev_queue[cursor % INPUT_EVDEV_QUEUE_CAP];
         if (record->sequence == cursor && record->device_kind == device_kind &&
+            (!number || record->graphical_vt == number) &&
             (evdev_grab_token[index] == 0 ||
              (grab_token && grab_token == evdev_grab_token[index]))) {
             available = 1;

@@ -24,20 +24,6 @@ struct input_raw_event {
 };
 
 /**
- * @brief Which terminal sink the physical keyboards currently feed as input.
- *
- * A keystroke may drive at most one line discipline. The GUI modes route the
- * keyboard through the evdev stream to windowd and then to the focused
- * application's own PTY; the tty modes hand it to the single console PTY.
- * The mapping from LEONOS_BOOT_MODE to an owner lives in userland.c and must
- * stay in sync with system/rootfs/usr/lib/leonos/console-session.
- */
-enum input_keyboard_owner {
-    INPUT_KEYBOARD_OWNER_CONSOLE = 0,
-    INPUT_KEYBOARD_OWNER_GUI = 1
-};
-
-/**
  * @brief Initialize the input event queue.
  */
 void input_init(void);
@@ -59,24 +45,15 @@ void input_push_key(uint8_t keycode, uint8_t pressed);
  * @param pressed Non-zero for a make code, zero for a break code.
  *
  * Shared entry point for PS/2 and USB HID so the hardware paths cannot
- * diverge. Always publishes the normalized and evdev streams, and offers the
- * event to the console PTY, which applies keyboard ownership before accepting
- * it. Callable from interrupt context; takes the input lock internally, so
- * callers must not hold it.
+ * diverge. Queues runtime input for the execution-serialized consumer; early
+ * boot input is published directly. Callable from interrupt context; takes
+ * input_lock internally, so callers must not hold it.
  */
 void input_handle_scancode(uint8_t keycode, uint8_t pressed);
-/**
- * @brief Transfer physical keyboard input ownership to the console or the GUI.
- * @param owner Sink that subsequent keystrokes feed as terminal input.
- *
- * Existing buffered console input is not flushed: a GUI session never fills
- * the console queue, so no stale keystroke can be delivered on the switch.
+/** @brief Drain queued keyboard input outside the physical keyboard ISR.
+ * The caller must hold the kernel execution transaction, without input_lock.
  */
-void input_set_keyboard_owner(enum input_keyboard_owner owner);
-/**
- * @brief Return which sink currently owns physical keyboard input.
- */
-enum input_keyboard_owner input_keyboard_owner(void);
+void input_process_pending(void);
 uint8_t input_caps_lock_active(void);
 /**
  * @brief Dequeue the oldest event into event; returns non-zero when one was available.
@@ -91,6 +68,30 @@ int input_evdev_read(uint32_t device_kind, uint64_t *cursor,
                      void *buffer, uint32_t length, uint64_t grab_token);
 int input_evdev_available(uint32_t device_kind, uint64_t cursor,
                           uint64_t grab_token);
+/** @brief Set graphical origin and publish pointer/modifier state when resuming a VT.
+ * @param number Active graphical VT, or zero for text/boot input.
+ */
+void input_set_graphical_vt(uint32_t number);
+/** @brief Read events filtered by their graphical VT at production time.
+ * @param device_kind Keyboard or mouse device kind.
+ * @param cursor In/out reader sequence position.
+ * @param buffer Writable array of Linux input_event records.
+ * @param length Buffer size in bytes, a multiple of input_event size.
+ * @param grab_token Open description's EVIOCGRAB token.
+ * @param number Graphical VT filter, or zero for all events.
+ * @return Bytes read or negative errno.
+ */
+int input_evdev_read_vt(uint32_t device_kind, uint64_t *cursor,
+                        void *buffer, uint32_t length, uint64_t grab_token, uint32_t number);
+/** @brief Test whether the same filtered read would produce a record.
+ * @param device_kind Keyboard or mouse device kind.
+ * @param cursor Reader sequence position.
+ * @param grab_token Open description's EVIOCGRAB token.
+ * @param number Graphical VT filter, or zero for all events.
+ * @return Nonzero if a matching record is available.
+ */
+int input_evdev_available_vt(uint32_t device_kind, uint64_t cursor,
+                             uint64_t grab_token, uint32_t number);
 /**
  * @brief Acquire or release EVIOCGRAB ownership for an event node.
  * @return New grab token on acquire/release, 0 when the device is invalid,

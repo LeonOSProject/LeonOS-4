@@ -38,7 +38,7 @@ with tempfile.TemporaryDirectory(prefix='leonos-motd-qemu-') as directory:
         run(['debugfs', '-w', '-R', command, root], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     config = work / 'grub.cfg'
     config.write_text((src / 'boot/grub/live.cfg').read_text().replace('set timeout=5', 'set timeout=0')
-                      .replace('bootlog=1', '').replace('startup=desktop', 'startup=desktop autospawn=ioctlcloexec'))
+                      .replace('bootlog=1', '').replace('mode=live', 'mode=live autospawn=ioctlcloexec'))
     iso = work / 'motd.iso'
     with (work / 'iso.log').open('w') as build_log:
         run(['sh', src / 'tools/build/iso.sh', src, src / 'boot/grub_modules_x86_64-efi',
