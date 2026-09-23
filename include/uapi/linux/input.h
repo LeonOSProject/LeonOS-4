@@ -50,6 +50,7 @@ struct input_absinfo {
 #define KEY_ENTER 28
 #define KEY_LEFTCTRL 29
 #define KEY_LEFTSHIFT 42
+#define KEY_RIGHTSHIFT 54
 #define KEY_LEFTALT 56
 #define KEY_SPACE 57
 #define KEY_CAPSLOCK 58

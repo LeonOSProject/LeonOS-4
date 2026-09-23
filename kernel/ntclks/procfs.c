@@ -245,6 +245,49 @@ static int proc_fill_content(const char *path, char *buffer, uint32_t capacity)
     return -2;
 }
 
+/**
+ * @brief Parse a proc fd link without accepting overflow or trailing text.
+ * @param file Task-relative pathname, nullable.
+ * @return Descriptor number or negative ENOENT.
+ */
+static int proc_fd_number(const char *file)
+{
+    uint32_t fd = 0;
+    if (!file || __builtin_strncmp(file, "fd/", 3) || !file[3]) return -2;
+    for (const char *p = file + 3; *p; ++p) {
+        if (*p < '0' || *p > '9' || fd >= SCHED_TASK_FILE_LIMIT) return -2;
+        fd = fd * 10 + (uint32_t)(*p - '0');
+    }
+    return fd < SCHED_TASK_FILE_LIMIT ? (int)fd : -2;
+}
+
+/**
+ * @brief Resolve named file and terminal descriptors for procfs readlink.
+ * @param task Existing task whose descriptor table is protected by the execution lock.
+ * @param fd Descriptor number.
+ * @param target Kernel buffer with LEONOS_FS_PATH_LEN bytes.
+ * @return Zero on success, negative ENOENT for closed or unnamed descriptors.
+ */
+static int proc_fd_target(struct task *task, int fd, char *target)
+{
+    struct task_pty_fd *pty = task_pty_fd_for_fd(task, fd);
+    if (pty && pty->pty_id && pty->endpoint) {
+        const char *prefix = pty->endpoint == TASK_PTY_ENDPOINT_MASTER ? "/dev/ptmx" :
+            pty_vt_number(pty->pty_id) ? "/dev/tty" : "/dev/pts/";
+        proc_copy(target, LEONOS_FS_PATH_LEN, prefix);
+        if (pty->endpoint == TASK_PTY_ENDPOINT_SLAVE) {
+            uint32_t pos = 0;
+            while (target[pos]) ++pos;
+            proc_append_u64(target, &pos, LEONOS_FS_PATH_LEN, pty->pty_id);
+        }
+        return 0;
+    }
+    struct task_file *file = task_file_for_fd(task, fd);
+    if (!file || !file->path[0]) return -2;
+    proc_copy(target, LEONOS_FS_PATH_LEN, file->path);
+    return 0;
+}
+
 /** @brief Recognize the global mount table and per-process view of this namespace. */
 static int proc_mount_view(const char *path)
 {
@@ -454,6 +497,21 @@ int proc_lookup(const char *path, struct storage_node *out)
         const char *file = 0;
         uint32_t pid = 0;
         int kind = proc_path_kind(path, &file, &pid);
+        if ((kind == 2 || kind == 3) && file && proc_text_eq(file, "fd")) {
+            struct task *task = kind == 3 ? sched_current_task() : sched_find(pid);
+            if (!task) return -LEONOS_ENOENT;
+            if (out) *out = (struct storage_node){.type = LEONOS_FS_TYPE_DIR,
+                .flags = STORAGE_NODE_FLAG_PROC};
+            return 0;
+        }
+        if ((kind == 2 || kind == 3) && proc_fd_number(file) >= 0) {
+            char target[LEONOS_FS_PATH_LEN];
+            int ret = proc_readlink(path, target, sizeof(target));
+            if (ret < 0) return ret;
+            if (out) *out = (struct storage_node){.type = LEONOS_FS_TYPE_SYMLINK,
+                .flags = STORAGE_NODE_FLAG_PROC};
+            return 0;
+        }
         if ((kind == 2 || kind == 3) && file &&
             (proc_text_eq(file, "exe") || proc_text_eq(file, "cwd") || proc_text_eq(file, "root"))) {
             if (kind == 3) pid = sched_current_pid();
@@ -588,7 +646,7 @@ int proc_readlink(const char *path, char *buffer, uint32_t capacity)
     }
     task = kind == 3 ? caller : sched_find(pid);
     if (!task) return -LEONOS_ENOENT;
-    if (!file || (!proc_text_eq(file, "exe") && !proc_text_eq(file, "cwd") && !proc_text_eq(file, "root")))
+    if (!file || (!proc_text_eq(file, "exe") && !proc_text_eq(file, "cwd") && !proc_text_eq(file, "root") && proc_fd_number(file) < 0))
         return proc_lookup(path, NULL) == 0 ? -LEONOS_EINVAL : -LEONOS_ENOENT;
     /* Match the available FSCREDS/dumpable policy. Capability namespaces and
      * executable inode tracking still need the common ptrace/VFS machinery. */
@@ -598,7 +656,11 @@ int proc_readlink(const char *path, char *buffer, uint32_t capacity)
          caller->fsuid != task->suid || caller->fsgid != task->gid ||
          caller->fsgid != task->egid || caller->fsgid != task->sgid ||
          sched_task_mm(task)->nondumpable)) return -LEONOS_EACCES;
-    const char *target = proc_text_eq(file, "exe") ? task->path :
+    char fd_target[LEONOS_FS_PATH_LEN];
+    if (proc_fd_number(file) >= 0 && proc_fd_target(task, proc_fd_number(file), fd_target) < 0)
+        return -LEONOS_ENOENT;
+    const char *target = proc_fd_number(file) >= 0 ? fd_target :
+        proc_text_eq(file, "exe") ? task->path :
         proc_text_eq(file, "cwd") ? sched_task_cwd(task) : "/";
     if (!target[0]) return -LEONOS_ENOENT;
     while (length < capacity && target[length]) {
@@ -635,11 +697,28 @@ int proc_readdir(const char *path, uint64_t *offset, struct leonos_dir_entry *en
         uint32_t pid;
         int kind = proc_path_kind(path, &file, &pid);
         if (kind == 3) pid = sched_current_pid();
+        if ((kind == 2 || kind == 3) && file && proc_text_eq(file, "fd")) {
+            struct task *task = sched_find(pid);
+            struct task *caller = sched_current_task();
+            if (!task) return -LEONOS_ENOENT;
+            if (!caller || (caller->euid && sched_task_tgid(caller) != sched_task_tgid(task)))
+                return -LEONOS_EACCES;
+            char target[LEONOS_FS_PATH_LEN];
+            while (*offset < SCHED_TASK_FILE_LIMIT) {
+                uint32_t fd = (uint32_t)(*offset)++;
+                if (proc_fd_target(task, (int)fd, target) < 0) continue;
+                *entry = (struct leonos_dir_entry){.type = LEONOS_FS_TYPE_SYMLINK};
+                uint32_t pos = 0;
+                proc_append_u64(entry->name, &pos, sizeof(entry->name), fd);
+                return 1;
+            }
+            return 0;
+        }
         if ((kind != 2 && kind != 3) || file) return -20;
         if (!sched_find(pid)) return -2;
-        static const char *task_files[] = {"stat", "cmdline", "status", "mounts", "mountinfo", "exe", "cwd", "root", "comm", "environ"};
+        static const char *task_files[] = {"stat", "cmdline", "status", "mounts", "mountinfo", "exe", "cwd", "root", "comm", "environ", "fd"};
         if (*offset >= sizeof(task_files) / sizeof(task_files[0])) return 0;
-        *entry = (struct leonos_dir_entry){.type = *offset >= 5 && *offset <= 7 ? LEONOS_FS_TYPE_SYMLINK : LEONOS_FS_TYPE_FILE};
+        *entry = (struct leonos_dir_entry){.type = *offset == 10 ? LEONOS_FS_TYPE_DIR : *offset >= 5 && *offset <= 7 ? LEONOS_FS_TYPE_SYMLINK : LEONOS_FS_TYPE_FILE};
         proc_copy(entry->name, sizeof(entry->name), task_files[(*offset)++]);
         return 1;
     }

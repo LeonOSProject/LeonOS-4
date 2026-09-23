@@ -9,10 +9,7 @@ int main(void)
 {
     char **inherited = environ;
     char **configured = NULL;
-    /* OpenRC starts the desktop directly. Load its locale without exporting
-     * defaults back into the launch environment: new apps reread locale.conf. */
-    /* OpenRC may export its own stale LANG. The desktop service is the locale
-     * boundary, so let /etc/leonos/locale.conf seed this session. */
+    /* The graphical VT session loads its locale for child applications. */
     unsetenv("LANG");
     unsetenv("LC_ALL");
     unsetenv("LC_MESSAGES");

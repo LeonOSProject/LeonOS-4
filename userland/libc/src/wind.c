@@ -209,6 +209,7 @@ static int wind_wait_type(int fd, uint32_t expected, void *payload,
     uint32_t deadline = now_ms() + 3000u;
     if (received_fd) *received_fd = -1;
     for (;;) {
+        if (leonos_ipc_flush(fd) < 0 && errno != EAGAIN) return -1;
         uint8_t buffer[WIND_FRAME_CAP];
         /* Read into a full-size buffer: frames that are not the expected
          * reply must be routed into their queues. Reading into the (small)
@@ -258,6 +259,8 @@ static int wind_pump_fd(int fd)
     uint32_t got = 0;
     int result = 0;
     if (fd < 0) return 0;
+    /* Finish an accepted short write even when no later message is sent. */
+    if (leonos_ipc_flush(fd) < 0 && errno != EAGAIN) return -1;
     for (uint32_t budget = 0; budget < WIND_EVENT_QUEUE / 2u; ++budget) {
         if ((wind_msg_head + 1u) % WIND_MSG_QUEUE == wind_msg_tail) break;
         struct pollfd pollfd = {.fd = fd, .events = POLLIN, .revents = 0};
@@ -386,7 +389,7 @@ unsigned long leonos_uptime_ms(void)
                            (uint64_t)ts.tv_nsec / 1000000ULL);
 }
 
-/* ---- /dev/fb0 standard mmap drawing path ---- */
+/* ---- /dev/fb0 atomic VT presentation and read-only pixel inspection ---- */
 
 static int wind_fb_fd(void)
 {
@@ -416,7 +419,7 @@ static void *wind_fb_map(struct leonos_fb_info *info)
     if (wind_fb_mapping) return wind_fb_mapping;
     wind_fb_mapping_bytes = (size_t)info->pitch * info->height;
     wind_fb_mapping = mmap(0, wind_fb_mapping_bytes,
-                          PROT_READ | PROT_WRITE, MAP_SHARED, wind_fb_fd(), 0);
+                          PROT_READ, MAP_SHARED, wind_fb_fd(), 0);
     /* mmap failure reports MAP_FAILED ((void*)-1), which is nonzero: a bare
      * truthiness check would hand memcpy an invalid destination. */
     if (wind_fb_mapping == MAP_FAILED) wind_fb_mapping = 0;
@@ -469,33 +472,16 @@ int leonos_fb_set_mode(uint32_t width, uint32_t height)
 int leonos_fb_fill(uint32_t color)
 {
     struct leonos_fb_info info;
-    void *mapping = wind_fb_map(&info);
-    uint32_t *pixels;
-    uint32_t count;
-    if (!mapping) return -1;
-    pixels = (uint32_t *)mapping;
-    count = ((uint32_t)info.pitch / 4u) * info.height;
-    for (uint32_t i = 0; i < count; ++i) pixels[i] = color;
-    (void)ioctl(wind_fb_fd(), FBIOPAN_DISPLAY, 0);
-    return 0;
+    if (leonos_fb_info(&info) < 0) return -1;
+    return leonos_fb_rect(0, 0, info.width, info.height, color);
 }
 
 int leonos_fb_rect(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
                    uint32_t color)
 {
-    struct leonos_fb_info info;
-    void *mapping = wind_fb_map(&info);
-    uint8_t *base;
-    if (!mapping) return -1;
-    if (x >= info.width || y >= info.height) return 0;
-    if (width > info.width - x) width = info.width - x;
-    if (height > info.height - y) height = info.height - y;
-    base = (uint8_t *)mapping + y * info.pitch + x * 4u;
-    for (uint32_t row = 0; row < height; ++row) {
-        uint32_t *pixels = (uint32_t *)(base + row * info.pitch);
-        for (uint32_t col = 0; col < width; ++col) pixels[col] = color;
-    }
-    return 0;
+    struct leonos_fb_present update = { .x = x, .y = y, .width = width,
+        .height = height, .color = color };
+    return ioctl(wind_fb_fd(), LEONOS_FBIOBLIT, &update);
 }
 
 int leonos_fb_text(uint32_t x, uint32_t y, const char *text, uint32_t fg, uint32_t bg)
@@ -536,23 +522,11 @@ uint32_t leonos_fb_pixel(uint32_t x, uint32_t y)
 int leonos_fb_blit(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
                    uint32_t stride, const uint32_t *pixels)
 {
-    struct leonos_fb_info info;
-    void *mapping = wind_fb_map(&info);
-    if (!pixels || !mapping) return -1;
-    if (x >= info.width || y >= info.height) return 0;
-    if (width > info.width - x) width = info.width - x;
-    if (height > info.height - y) height = info.height - y;
-    for (uint32_t row = 0; row < height; ++row) {
-        /* stride counts pixels (caller buffers are uint32_t rows), the
-         * framebuffer mapping counts bytes. */
-        memcpy((uint8_t *)mapping + (y + row) * info.pitch + x * 4u,
-               (const uint8_t *)pixels + row * stride * 4u, (size_t)width * 4u);
-    }
-    /* Submit only the bytes changed by this blit. FBIOPAN_DISPLAY remains
-     * available for callers that intentionally request a full refresh. */
-    uint32_t region[4] = {x, y, width, height};
-    (void)ioctl(wind_fb_fd(), LEONOS_FBIOUPDATE_REGION, region);
-    return 0;
+    if (!pixels || stride < width) { errno = EINVAL; return -1; }
+    struct leonos_fb_present update = { .x = x, .y = y, .width = width,
+        .height = height, .stride = stride, .pixels = (uintptr_t)pixels };
+    /* Kernel validation and copying share the VT switch transaction. */
+    return ioctl(wind_fb_fd(), LEONOS_FBIOBLIT, &update);
 }
 
 /* ---- window protocol ---- */

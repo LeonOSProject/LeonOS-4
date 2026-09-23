@@ -12,6 +12,8 @@ static int display_reply;
 static unsigned unrelated_fd_closed;
 int close(int fd) { assert(fd == 43); ++unrelated_fd_closed; return 0; }
 
+int leonos_ipc_flush(int fd) { (void)fd; return 0; }
+
 int leonos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
 {
     (void)fd; (void)type; (void)payload; (void)length;

@@ -51,6 +51,8 @@ static int copy_user_string_fixed(char *dst, uint32_t cap, uint64_t user_ptr,
 #include <leonos/startup.h>
 #include <leonos/text.h>
 #include <linux/tty.h>
+#include <linux/vt.h>
+#include <linux/kd.h>
 #include <linux/fb.h>
 #include <linux/input.h>
 #include <linux/ioctl.h>
@@ -1196,6 +1198,10 @@ static int task_pty_endpoint_path(const char *path, uint32_t *pty_id)
     uint32_t value = 0;
     uint32_t digits = 0;
     if (!path || !pty_id) return 0;
+    if (pty_lookup_vt_path(path, NULL) == 0) {
+        *pty_id = (uint32_t)(path[8] - '0');
+        return 1;
+    }
     while (*prefix && *path && *prefix == *path) { ++prefix; ++path; }
     if (*prefix || !*path) return 0;
     while (*path >= '0' && *path <= '9') {
@@ -1512,7 +1518,14 @@ static int task_pty_node_for_fd(struct task *task, int fd, struct storage_node *
     }
     uint32_t id = endpoint ? endpoint->pty_id : task_pty_stream_for_fd(task, fd) >= 0 ? task->pty_id : 0;
     if (!id) return -LEONOS_EBADF;
-    *path = "/dev/pts";
+    if (pty_vt_number(id)) {
+        static const char *const vt_paths[] = {
+            "/dev/tty1", "/dev/tty2", "/dev/tty3",
+            "/dev/tty4", "/dev/tty5", "/dev/tty6"};
+        *path = vt_paths[id - 1u];
+    } else {
+        *path = "/dev/pts";
+    }
     return pty_get_node(id, node);
 }
 
@@ -1910,8 +1923,8 @@ static int task_device_read(struct task *task, struct task_file *file,
     }
     if (task_device_is(file, STORAGE_DEV_KIND_KEYBOARD) ||
         task_device_is(file, STORAGE_DEV_KIND_MOUSE)) {
-        int ret = input_evdev_read(file->node.first_cluster, &file->aux,
-                                   buffer, length, file->aux2);
+        int ret = input_evdev_read_vt(file->node.first_cluster, &file->aux,
+                                      buffer, length, file->aux2, file->input_vt);
         if (ret == 0 && (file->flags & LEONOS_O_NONBLOCK)) {
             return -LEONOS_EAGAIN;
         }
@@ -1945,10 +1958,14 @@ static int task_device_write(struct task *task, struct task_file *file,
         task_device_is(file, STORAGE_DEV_KIND_RANDOM) ||
         task_device_is(file, STORAGE_DEV_KIND_URANDOM)) return (int)length;
     if (task_device_is(file, STORAGE_DEV_KIND_FULL)) return -LEONOS_ENOSPC;
-    if (task_device_is(file, STORAGE_DEV_KIND_TTY) ||
-        task_device_is(file, STORAGE_DEV_KIND_CONSOLE)) {
+    if (task_device_is(file, STORAGE_DEV_KIND_TTY)) {
         if (!buffer) return -LEONOS_EFAULT;
         return (int)pty_write_output(task->pty_id, (const char *)buffer, length);
+    }
+    if (task_device_is(file, STORAGE_DEV_KIND_CONSOLE)) {
+        if (!buffer) return -LEONOS_EFAULT;
+        console_write_len((const char *)buffer, length);
+        return (int)length;
     }
     if (task_device_is(file, STORAGE_DEV_KIND_KMSG)) {
         if (!buffer) return -LEONOS_EFAULT;
@@ -2008,6 +2025,15 @@ static int task_evdev_ioctl(struct task_file *file, uint64_t request,
         return -LEONOS_ENOTTY;
     }
     device_kind = file->node.first_cluster;
+    if (request == LEONOS_EVIOCSVT) {
+        uint32_t number;
+        if (!user_range_ok(user_arg, sizeof(number))) return -LEONOS_EFAULT;
+        __builtin_memcpy(&number, (const void *)(uintptr_t)user_arg, sizeof(number));
+        if (number && !pty_vt_id(number)) return -LEONOS_EINVAL;
+        file->input_vt = number;
+        file->aux = input_evdev_cursor_now();
+        return 0;
+    }
     if (request == EVIOCGVERSION) {
         if (!user_range_ok(user_arg, sizeof(int))) return -LEONOS_EFAULT;
         *(int *)(uintptr_t)user_arg = 0x00010001;
@@ -3477,8 +3503,8 @@ static int64_t syscall_poll_impl(struct task *task, struct pollfd *fds,
             if (task_device_is(file, STORAGE_DEV_KIND_KEYBOARD) ||
                 task_device_is(file, STORAGE_DEV_KIND_MOUSE)) {
                 if ((events & POLLIN) &&
-                    input_evdev_available(file->node.first_cluster, file->aux,
-                                          file->aux2)) {
+                    input_evdev_available_vt(file->node.first_cluster, file->aux,
+                                             file->aux2, file->input_vt)) {
                     revents |= POLLIN;
                 }
             } else if (task_device_is(file, STORAGE_DEV_KIND_AUDIO)) {
@@ -6632,7 +6658,8 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
     if (number == LINUX_SYS_IOCTL &&
         (a1 == FBIOGET_VSCREENINFO || a1 == FBIOPUT_VSCREENINFO ||
          a1 == FBIOGET_FSCREENINFO || a1 == FBIOPAN_DISPLAY ||
-         a1 == LEONOS_FBIOGET_CAPABILITIES || a1 == LEONOS_FBIOUPDATE_REGION)) {
+         a1 == LEONOS_FBIOGET_CAPABILITIES || a1 == LEONOS_FBIOUPDATE_REGION ||
+         a1 == LEONOS_FBIOBLIT)) {
         struct task *task = sched_current_task();
         struct task_file *file = task_file_for_fd(task, (int)a0);
         const struct framebuffer *fb = framebuffer_get();
@@ -6640,6 +6667,31 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
             file->node.first_cluster != STORAGE_DEV_KIND_FB0 || !fb ||
             !fb->available) {
             return -LEONOS_ENOTTY;
+        }
+        if (a1 == LEONOS_FBIOBLIT || a1 == FBIOPUT_VSCREENINFO) {
+            if (!task || !pty_vt_number(task->controlling_pty_id)) return -LEONOS_EPERM;
+            if (pty_vt_active() != task->controlling_pty_id || !pty_vt_graphical_active())
+                return -LEONOS_EAGAIN;
+        }
+        if (a1 == LEONOS_FBIOBLIT) {
+            struct leonos_fb_present update;
+            if (!user_range_ok(a2, sizeof(update))) return -LEONOS_EFAULT;
+            __builtin_memcpy(&update, (const void *)(uintptr_t)a2, sizeof(update));
+            if (update.pixels && update.stride < update.width) return -LEONOS_EINVAL;
+            if (!update.width || !update.height || update.x >= fb->width || update.y >= fb->height)
+                return 0;
+            if (update.width > fb->width - update.x) update.width = fb->width - update.x;
+            if (update.height > fb->height - update.y) update.height = fb->height - update.y;
+            if (update.pixels) {
+                uint64_t bytes = ((uint64_t)(update.height - 1) * update.stride + update.width) * 4;
+                if (!user_range_ok(update.pixels, bytes)) return -LEONOS_EFAULT;
+                framebuffer_blit(update.x, update.y, update.width, update.height,
+                                 update.stride, (const uint32_t *)(uintptr_t)update.pixels);
+            } else {
+                framebuffer_rect(update.x, update.y, update.width, update.height, update.color);
+            }
+            framebuffer_present_region(update.x, update.y, update.width, update.height);
+            return 0;
         }
         /* Panning display is the Linux fbdev flush request: VMware SVGA
          * scanout only refreshes from VRAM when the FIFO receives an
@@ -6715,6 +6767,47 @@ int64_t syscall_dispatch_regs_legacy(uint64_t number, uint64_t a0, uint64_t a1, 
             return framebuffer_set_mode(info->xres, info->yres) == 0
                        ? 0 : -LEONOS_EINVAL;
         }
+    }
+
+    /* Linux virtual-console and keyboard-display ioctls operate on a VT
+     * descriptor, never on a serial device or an unrelated PTY. */
+    if (number == LINUX_SYS_IOCTL &&
+        (a1 == VT_GETSTATE || a1 == LEONOS_VT_GETGENERATION ||
+         a1 == VT_ACTIVATE || a1 == VT_WAITACTIVE || a1 == KDGETMODE ||
+         a1 == KDSETMODE)) {
+        struct task *task = sched_current_task();
+        struct task_pty_fd *endpoint = task_pty_endpoint_for_fd(task, (int)a0);
+        uint32_t id = endpoint && endpoint->endpoint == TASK_PTY_ENDPOINT_SLAVE
+                          ? endpoint->pty_id : 0u;
+        if (!pty_vt_number(id)) return -LEONOS_ENOTTY;
+        if (a1 == LEONOS_VT_GETGENERATION) {
+            if (!user_range_writable(a2, sizeof(uint64_t))) return -LEONOS_EFAULT;
+            *(uint64_t *)(uintptr_t)a2 = pty_vt_generation();
+            return 0;
+        }
+        if (a1 == VT_GETSTATE) {
+            if (!user_range_writable(a2, sizeof(struct vt_stat))) return -LEONOS_EFAULT;
+            *(struct vt_stat *)(uintptr_t)a2 = (struct vt_stat){
+                .v_active = (unsigned short)pty_vt_active(),
+                .v_state = 0x7eu,
+            };
+            return 0;
+        }
+        if (a1 == VT_ACTIVATE || a1 == VT_WAITACTIVE) {
+            if (task->controlling_pty_id != id &&
+                !(task->cap_effective & (1ULL << CAP_SYS_TTY_CONFIG))) return -LEONOS_EPERM;
+            if (a2 < 1 || a2 > 6) return -LEONOS_EINVAL;
+            return a1 == VT_ACTIVATE ? pty_vt_switch((uint32_t)a2)
+                                    : pty_vt_wait_active((uint32_t)a2);
+        }
+        if (a1 == KDGETMODE) {
+            if (!user_range_writable(a2, sizeof(int))) return -LEONOS_EFAULT;
+            *(int *)(uintptr_t)a2 = pty_vt_graphical(id) ? KD_GRAPHICS : KD_TEXT;
+            return 0;
+        }
+        if (task->controlling_pty_id != id) return -LEONOS_EPERM;
+        if (a2 != KD_TEXT && a2 != KD_GRAPHICS) return -LEONOS_EINVAL;
+        return pty_vt_set_graphics(id, a2 == KD_GRAPHICS);
     }
 
     /* TCGETS uses the 36-byte kernel ABI, not libc's larger public struct. */
@@ -6979,6 +7072,7 @@ void syscall_dispatch_frame(struct trap_frame *frame)
     }
     /* Several storage and GUI services still own global scratch buffers. */
     kernel_execution_lock_irqsave(&lock_flags);
+    input_process_pending();
     number = frame->rax;
     struct task *calling_task = sched_current_task();
     bool trace = syscall_trace_task(calling_task);
@@ -7090,6 +7184,12 @@ void syscall_dispatch_frame(struct trap_frame *frame)
         calling_task && calling_task->nproc_exceeded)
         eagain_from_nonblocking = 1;
     if (number == LINUX_SYS_FCNTL && (uint32_t)frame->rsi == LINUX_F_SETLK && result == -LEONOS_EAGAIN)
+        eagain_from_nonblocking = 1;
+    /* Inactive VT presentation must return to the compositor, allowing its
+     * loop to observe the switch and request a complete repaint on return. */
+    if (number == LINUX_SYS_IOCTL && result == -LEONOS_EAGAIN &&
+        ((uint32_t)frame->rsi == LEONOS_FBIOBLIT ||
+         (uint32_t)frame->rsi == FBIOPUT_VSCREENINFO))
         eagain_from_nonblocking = 1;
     /* LOCK_NB conflicts are final even on blocking, readonly descriptions.
      * EWOULDBLOCK aliases EAGAIN; retrying it here deadlocks session readers

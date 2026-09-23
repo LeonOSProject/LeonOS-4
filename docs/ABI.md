@@ -409,3 +409,22 @@ record must call the explicitly named `leonos_stat_legacy` or
 `leonos_fstat_legacy` functions. Linux fbdev applications can open `/dev/fb0`,
 map its framebuffer, and use the `FBIOGET_VSCREENINFO`, `FBIOGET_FSCREENINFO`,
 and `FBIOPUT_VSCREENINFO` requests from `<linux/fb.h>`.
+
+### Fixed virtual consoles and atomic presentation
+
+See [Console, VT and sessions](TTY_VT.md) for tty1–tty6, VT_GETSTATE,
+VT_ACTIVATE, VT_WAITACTIVE, KDGETMODE/KDSETMODE, controlling-terminal permissions,
+and the bounded text history. `<leonos/fb.h>` adds LEONOS_FBIOBLIT (0x46f2),
+using the fixed 32-byte leonos_fb_present record. Inactive graphical callers
+receive EAGAIN. `<leonos/device.h>` adds LEONOS_EVIOCSVT (0x400445f0), a uint32
+graphical-origin filter shared by an evdev open file description; zero keeps
+the raw stream. LEONOS_VT_GETGENERATION (0x800856f0) returns a uint64 display
+generation so a compositor can detect switches that happened while it was
+paused. These three requests are LeonOS extensions, not Linux ioctl ABI.
+
+The userspace IPC library retains at most one partially transmitted frame per
+nonblocking connection. A successful send means the frame is accepted; event
+loops must call `leonos_ipc_flush(fd)` until it succeeds. EAGAIN from a new send
+rejects that new frame while preserving the earlier tail. Later sends and
+receives also attempt to drain it. Close with `leonos_ipc_close` to release the
+pending state. Framing and SCM_RIGHTS association remain unchanged.

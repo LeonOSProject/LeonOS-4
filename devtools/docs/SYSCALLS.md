@@ -1,5 +1,10 @@
 # 系统调用 ABI
 
+窗口 IPC 的非阻塞发送会保留一帧短写尾部；事件循环通过
+`leonos_ipc_flush(fd)` 续传，EAGAIN 表示暂时仍不可写。后续 send/recv 也会尝试
+续传；关闭连接必须使用 `leonos_ipc_close()` 清理缓存。声明位于
+`<leonos/unix_ipc.h>`，这是用户态库接口。
+
 ## 进入方式
 
 musl 使用 x86-64 原生 `syscall` 进入内核；SDK 的 LeonOS 扩展中
@@ -106,3 +111,29 @@ void *p = mmap(0, size, PROT_READ | PROT_WRITE,
 封装函数一般直接返回内核结果：非负值表示成功或传输字节数，负值表示失败。
 不要把一个负返回值当作合法文件描述符或窗口 ID。`ioctl` 的请求结构体必须
 使用对应头文件定义的大小和布局，未知请求会失败。
+
+## VT and compositor extensions
+
+`<linux/vt.h>` / `<linux/kd.h>` describe the six fixed virtual consoles.
+VT_ACTIVATE and VT_WAITACTIVE require the descriptor to be the caller's
+controlling terminal, or CAP_SYS_TTY_CONFIG. KDSETMODE requires the owning
+controlling terminal. The GUI remains a tty1 session, including while inactive.
+
+`<leonos/fb.h>` defines LEONOS_FBIOBLIT (0x46f2) and the fixed 32-byte
+`struct leonos_fb_present`. Set pixels to a readable RGB32 buffer address and
+stride to pixels per source row; pixels == 0 fills color. Presentation is atomic
+with VT switching, and returns EAGAIN when the caller's graphical VT is inactive.
+The libwind framebuffer drawing functions use this interface. Raw writable
+fbdev mappings have no VT revocation and must not be used by the compositor.
+
+`<leonos/device.h>` defines LEONOS_EVIOCSVT (0x400445f0), taking a uint32 pointer.
+Use 1–6 to scope evdev read/poll to events originating on that graphical VT,
+or 0 for the raw stream. It changes the shared open file description and resets
+its cursor to the current producer position. The framebuffer and input requests
+above are LeonOS extensions, not Linux standard ioctls.
+
+LEONOS_VT_GETGENERATION (0x800856f0, `<leonos/device.h>`) writes a uint64
+display generation through a fixed VT descriptor. Compare it across compositor
+iterations to detect switches that occurred while the compositor was paused.
+Record the value read before repainting so an intervening switch triggers a
+second repaint. This is a LeonOS extension.

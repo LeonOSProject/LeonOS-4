@@ -1,9 +1,5 @@
 #!/bin/sh
-# LEONOS_BOOT_MODE is set by the kernel, never read from a writable state file.
-case "$LEONOS_BOOT_MODE" in
-    tty) exec /sbin/openrc tty ;;
-    installer) exec /sbin/openrc installer ;;
-    installer-tty) exec /sbin/openrc installer-tty ;;
-    default|'') exec /sbin/openrc default ;;
-    *) echo "Invalid boot mode: $LEONOS_BOOT_MODE" >&2; exit 1 ;;
-esac
+if test -f /etc/leonos/installer-runtime; then
+    exec /sbin/openrc installer
+fi
+exec /sbin/openrc default

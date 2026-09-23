@@ -7,17 +7,27 @@
 
 static long test_read(long number, long fd, long buffer, long length);
 #define syscall3 test_read
+#define WINDOWD_VT_TEST
+static int windowd_vt_active(void);
 #define main windowd_program_main
 #include "../../userland/apps/windowd/main.c"
 #undef main
+#undef WINDOWD_VT_TEST
 #undef syscall3
 #include "../../kernel/ntclks/input.c"
 #include "../../userland/libc/src/ui_input.c"
 #include "../../kernel/ntclks/arch/x86_64/keyboard_led.h"
 
 static uint64_t read_cursor;
-static struct leonos_input_event delivered[32];
+static struct leonos_input_event delivered[128];
 static unsigned delivered_count;
+static int vt_active = 1;
+static unsigned console_key_calls;
+uint32_t pty_vt_active(void) { return 1; }
+void pty_console_key_event(uint8_t keycode, uint8_t pressed)
+{ (void)keycode; (void)pressed; ++console_key_calls; }
+
+static int windowd_vt_active(void) { return vt_active; }
 
 uint64_t time_uptime_us(void) { return 0; }
 const struct framebuffer *framebuffer_get(void)
@@ -39,14 +49,14 @@ void kernel_spin_unlock_irqrestore(struct kernel_spinlock *lock, uint64_t flags)
 static long test_read(long number, long fd, long buffer, long length)
 {
     assert(number == SYS_read && (fd == 10 || fd == 12));
-    return input_evdev_read(fd == 10 ? STORAGE_DEV_KIND_MOUSE : STORAGE_DEV_KIND_KEYBOARD, &read_cursor,
-                            (void *)buffer, (uint32_t)length, 0);
+    return input_evdev_read_vt(fd == 10 ? STORAGE_DEV_KIND_MOUSE : STORAGE_DEV_KIND_KEYBOARD, &read_cursor,
+                               (void *)buffer, (uint32_t)length, 0, 1);
 }
 
 int leonos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
 {
     assert(fd == 11 && type == LEONOS_WIN_MSG_INPUT);
-    assert(length == sizeof(delivered[0]) && delivered_count < 32);
+    assert(length == sizeof(delivered[0]) && delivered_count < 128);
     delivered[delivered_count++] = *(const struct leonos_input_event *)payload;
     return 0;
 }
@@ -90,6 +100,7 @@ static void test_caps_lock_routing(void)
 {
     char ch;
     input_init();
+    input_set_graphical_vt(1);
     delivered_count = 0;
     policy_slot = 0;
     clients[0].fd = 11;
@@ -156,10 +167,16 @@ static void test_keyboard_led_protocol(void)
 
 int main(void)
 {
+    input_init();
+    input_handle_scancode(30, 1);
+    assert(console_key_calls == 0); /* Physical IRQ must not render a VT. */
+    input_process_pending();
+    assert(console_key_calls == 1);
     test_keyboard_led_protocol();
     test_evdev_damaged_records();
     test_caps_lock_routing();
     input_init();
+    input_set_graphical_vt(1);
     read_cursor = input_evdev_cursor_now();
     policy_slot = 0;
     clients[0].fd = 11;
@@ -193,11 +210,60 @@ int main(void)
     pump_input_device(10, LEONOS_INPUT_MOUSE);
     assert(delivered_count == 5 && delivered[4].type == LEONOS_INPUT_MOUSE_WHEEL);
     assert(delivered[4].x == 950 && delivered[4].y == 650 && delivered[4].dy == -1);
+    /* An inactive graphical session must drain devices without taking input
+     * away from the current text terminal or replaying old events on return. */
+    vt_active = 0;
+    input_set_graphical_vt(0);
+    input_push_key(30, 1);
+    input_push_mouse(600, 400, -350, -250, 0);
+    pump_input_device(12, LEONOS_INPUT_KEYBOARD);
+    pump_input_device(10, LEONOS_INPUT_MOUSE);
+    assert(delivered_count == 5);
+    vt_active = 1;
+    input_set_graphical_vt(1);
+    input_push_key(48, 1);
+    pump_input_device(12, LEONOS_INPUT_KEYBOARD);
+    assert(delivered[delivered_count - 1].keycode == 48);
+    unsigned before_switch = delivered_count;
+    /* A stalled windowd must not replay text-VT input after switching back. */
+    vt_active = 0;
+    input_set_graphical_vt(0);
+    input_push_key(31, 1);
+    vt_active = 1;
+    input_set_graphical_vt(1);
+    pump_input_device(12, LEONOS_INPUT_KEYBOARD);
+    for (unsigned i = before_switch; i < delivered_count; ++i)
+        assert(delivered[i].keycode != 31);
+    input_push_key(KEY_LEFTSHIFT, 1);
+    pump_input_device(12, LEONOS_INPUT_KEYBOARD);
+    vt_active = 0;
+    input_set_graphical_vt(0);
+    input_push_key(KEY_LEFTSHIFT, 0);
+    vt_active = 1;
+    input_set_graphical_vt(1);
+    before_switch = delivered_count;
+    pump_input_device(12, LEONOS_INPUT_KEYBOARD);
+    int shift_released = 0;
+    for (unsigned i = before_switch; i < delivered_count; ++i)
+        if (delivered[i].keycode == KEY_LEFTSHIFT && !delivered[i].pressed) shift_released = 1;
+    assert(shift_released);
+    /* Release on a text VT must clear a drag even if windowd was paused. */
+    input_push_mouse(600, 400, 0, 0, 1);
+    pump_input_device(10, LEONOS_INPUT_MOUSE);
+    assert(cursor_buttons == 1);
+    vt_active = 0;
+    input_set_graphical_vt(0);
+    input_push_mouse(600, 400, 0, 0, 0);
+    vt_active = 1;
+    input_set_graphical_vt(1);
+    pump_input_device(10, LEONOS_INPUT_MOUSE);
+    assert(cursor_buttons == 0);
+    assert(delivered[delivered_count - 1].buttons == 0);
     struct input_absinfo info;
     assert(input_evdev_absinfo(ABS_X, &info) == 0);
-    assert(info.value == 950 && info.minimum == 0 && info.maximum == 1279);
+    assert(info.value == 600 && info.minimum == 0 && info.maximum == 1279);
     assert(input_evdev_absinfo(ABS_Y, &info) == 0);
-    assert(info.value == 650 && info.maximum == 799);
+    assert(info.value == 400 && info.maximum == 799);
     uint8_t bits[8];
     input_evdev_capabilities(STORAGE_DEV_KIND_MOUSE, 0, bits, sizeof(bits));
     assert(bits[0] & (1u << EV_ABS));

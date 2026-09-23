@@ -12,6 +12,17 @@ static struct leonos_utf8_stream console_utf8;
 #define CONSOLE_MAX_ROWS 192u
 #define FB_ANSI_MAX_PARAMS 16u
 #define FB_CONSOLE_CURSOR_BYTES (LEONOS_FONT_W * LEONOS_FONT_H * 4u)
+#define CONSOLE_VT_COUNT 6u
+#define CONSOLE_VT_TEXT_CAP 65536u
+
+struct console_vt_text {
+    char bytes[CONSOLE_VT_TEXT_CAP];
+    size_t length;
+};
+
+static struct console_vt_text vt_text[CONSOLE_VT_COUNT];
+static uint32_t console_active_vt;
+static bool console_vt_graphical;
 
 static char log_buffer[CONSOLE_LOG_CAP];
 static size_t log_len;
@@ -808,7 +819,7 @@ static void fb_console_initialize_fullscreen(void)
 static void console_emit_raw(char ch)
 {
     char s[2] = {ch, 0};
-    fb_console_hide_tty_cursor();
+    if (!console_service_logs_only) fb_console_hide_tty_cursor();
     log_store(ch);
     serial_write(s);
     if (vga_console_enabled && !console_service_logs_only) {
@@ -822,7 +833,8 @@ static void console_emit_raw(char ch)
 
 static void console_present(void)
 {
-    if (console_presenting || !fb_console_enabled || !framebuffer_get()->available) {
+    if (console_presenting || console_vt_graphical || !fb_console_enabled ||
+        !framebuffer_get()->available) {
         return;
     }
     console_presenting = true;
@@ -920,62 +932,58 @@ void console_write_len(const char *s, size_t len)
     }
 }
 
-void console_write_tty_len(const char *s, size_t len)
+/**
+ * @brief Append terminal output to its own VT history and paint only the active text VT.
+ * @param number Virtual terminal from one through six.
+ * @param s Bytes to append; need not be NUL terminated.
+ * @param len Number of bytes to append.
+ */
+void console_vt_write(uint32_t number, const char *s, size_t len)
 {
-    fb_console_hide_tty_cursor();
-    for (size_t i = 0; i < len; ++i) {
-        char byte[2] = {s[i], 0};
-        log_store(s[i]);
-        serial_write(byte);
-        if (vga_console_enabled) {
-            vga_putc(s[i]);
-        }
-        fb_console_ansi_feed(s[i]);
-        console_line_start = s[i] == '\n';
-    }
-    console_present();
-}
-
-void console_enter_tty_runtime(void)
-{
-    console_runtime_quiet = true;
-    console_line_start = true;
-    if (fb_console_enabled) {
+    if (!s || number < 1u || number > CONSOLE_VT_COUNT) return;
+    if (number == console_active_vt && !console_vt_graphical)
         fb_console_hide_tty_cursor();
-        fb_col = 0;
-        fb_row = 0;
-        fb_scroll_top = 0;
-        fb_scroll_bottom = fb_rows ? fb_rows - 1u : 0u;
-        fb_console_reset_attributes();
-        fb_console_reset_ansi();
-        fb_console_clear_log();
-        fb_console_tty_cursor_active = true;
-        console_present();
-    } else if (vga_console_enabled) {
-        vga_init();
+    struct console_vt_text *screen = &vt_text[number - 1u];
+    for (size_t i = 0; i < len; ++i) {
+        if (screen->length == CONSOLE_VT_TEXT_CAP) {
+            size_t drop = 4096u;
+            while (drop < screen->length && screen->bytes[drop - 1u] != '\n') ++drop;
+            for (size_t j = 0; j < screen->length - drop; ++j)
+                screen->bytes[j] = screen->bytes[j + drop];
+            screen->length -= drop;
+        }
+        screen->bytes[screen->length++] = s[i];
+        if (number == console_active_vt && !console_vt_graphical)
+            fb_console_ansi_feed(s[i]);
     }
+    if (number == console_active_vt && !console_vt_graphical) console_present();
 }
 
-void console_enter_graphical_runtime(void)
+/**
+ * @brief Select the framebuffer owner and restore a VT's text state when visible.
+ * @param number Virtual terminal from one through six.
+ * @param graphical True if the VT's graphical session owns the display.
+ */
+void console_vt_activate(uint32_t number, bool graphical)
 {
-    /* Keep diagnostics on serial, but never paint kernel/OpenRC output over
-     * the desktop surface after the window server takes ownership. */
-    console_runtime_quiet = true;
-    if (!fb_console_enabled) return;
+    if (number < 1u || number > CONSOLE_VT_COUNT) return;
     fb_console_hide_tty_cursor();
+    console_active_vt = number;
+    console_vt_graphical = graphical;
+    console_service_logs_only = true;
+    console_runtime_quiet = false;
+    fb_console_tty_cursor_active = !graphical;
+    if (!fb_console_enabled || !framebuffer_get()->available) return;
+    if (graphical) {
+        framebuffer_clear(0u);
+        framebuffer_present();
+        return;
+    }
     fb_console_initialize_fullscreen();
     fb_console_clear_log();
+    struct console_vt_text *screen = &vt_text[number - 1u];
+    for (size_t i = 0; i < screen->length; ++i) fb_console_ansi_feed(screen->bytes[i]);
     console_present();
-}
-
-void console_show_service_logs_only(void)
-{
-    console_service_logs_only = true;
-    if (fb_console_enabled) {
-        fb_console_initialize_fullscreen();
-        fb_console_clear_log();
-        console_present();
-    }
 }
 
 void console_printf(const char *fmt, ...)

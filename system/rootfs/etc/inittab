@@ -2,7 +2,12 @@
 ::sysinit:/sbin/openrc sysinit
 ::wait:/sbin/openrc boot
 ::wait:/usr/lib/leonos/rc-default
-::respawn:/usr/lib/leonos/console-session
+tty1::respawn:/usr/lib/leonos/console-session tty1
+tty2::respawn:/usr/lib/leonos/console-session tty2
+tty3::respawn:/usr/lib/leonos/console-session tty3
+tty4::respawn:/usr/lib/leonos/console-session tty4
+tty5::respawn:/usr/lib/leonos/console-session tty5
+tty6::respawn:/usr/lib/leonos/console-session tty6
 ::ctrlaltdel:/sbin/reboot
 ::shutdown:/sbin/openrc shutdown
 ::shutdown:/bin/sync

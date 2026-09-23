@@ -146,9 +146,7 @@ static void boot_import_handoff_modules(struct boot_info *boot,
 static void kernel_start(uint32_t magic, uint32_t multiboot_info,
                          const struct leonos_boot_handoff *handoff)
 {
-    bool boot_log_screen;
     bool boot_log_pause;
-    int startup_tty;
 
     __asm__ volatile("cli");
     console_init();
@@ -167,18 +165,6 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
 
     struct boot_info boot;
     multiboot2_parse(magic, (uintptr_t)multiboot_info, &boot);
-#ifdef CONFIG_STARTUP_TTY
-    startup_tty = 1;
-#else
-    startup_tty = 0;
-#endif
-    if (cmdline_has(&boot, "startup=tty")) {
-        startup_tty = 1;
-    } else if (cmdline_has(&boot, "mode=installer")) {
-        startup_tty = 0;
-    } else if (cmdline_has(&boot, "startup=desktop")) {
-        startup_tty = 0;
-    }
     /**
  * @brief UEFI GRUB keeps boot services active for the second-stage loader and may therefore omit Multiboot2 memory-map tags. The loader captures a stable EFI map after loading all images; use it before the allocator falls back to the legacy 512 MiB estimate.
  */
@@ -192,7 +178,6 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
                        boot.efi_mmap_entry_count, boot.efi_mmap_entry_size);
     }
     boot_log_pause = cmdline_has(&boot, "bootlog-pause=1");
-    boot_log_screen = cmdline_has(&boot, "bootlog=1") || boot_log_pause;
     if (!boot.rsdp_addr && handoff && handoff->magic == LEONOS_BOOT_HANDOFF_MAGIC) {
         boot.rsdp_addr = handoff->rsdp_addr;
     }
@@ -279,34 +264,17 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
         }
         boot_log_wait_for_enter();
     }
+    if (pty_vt_init() < 0) {
+        console_printf("[ntclks] unable to initialize six virtual terminals\n");
+        kernel_idle_loop();
+    }
     userland_init(&boot);
     /* All initial task objects are now present. APs may enter the shared
      * scheduler without racing the bootstrap task construction above. */
     smp_start_aps();
     sched_dump();
-    if (startup_tty) {
-        console_printf("[ntclks] boot complete: version=%s root=/ fs=%s startup=tty\n",
-                       system->kernel_version, storage_root_filesystem_name());
-    } else {
-        console_printf("[ntclks] boot complete: version=%s root=/ fs=%s desktop=desktop.elf\n",
-                       system->kernel_version, storage_root_filesystem_name());
-    }
-    if (boot_log_screen) {
-        if (startup_tty) {
-            console_printf("[ntclks] starting Ring-3 BusyBox TTY\n");
-        } else {
-            /**
-             * @brief Keep the original log console visible until the Ring-3 desktop replaces it. The graphical path retains the completed splash.
-             */
-            console_printf("[ntclks] starting Ring-3 desktop.elf\n");
-        }
-    }
-
-    if (startup_tty) {
-        console_enter_tty_runtime();
-    } else if (boot_log_screen) {
-        console_enter_graphical_runtime();
-    }
+    console_printf("[ntclks] boot complete: version=%s root=/ fs=%s vt=tty1\n",
+                   system->kernel_version, storage_root_filesystem_name());
 
     userland_enter_first();
     kernel_idle_loop();

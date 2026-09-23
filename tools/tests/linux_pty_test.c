@@ -5,9 +5,22 @@
 
 static struct task owner;
 static unsigned signals;
+static unsigned blocked, awakened;
+struct task *sched_current_task(void) { return &owner; }
+void kernel_wait_queue_init(struct kernel_wait_queue *q) { memset(q, 0, sizeof(*q)); }
+void kernel_wait_queue_remove(struct kernel_wait_queue *q, struct task *t) { (void)q; (void)t; }
+void kernel_wait_queue_block_current(struct kernel_wait_queue *q) { (void)q; ++blocked; }
+uint32_t kernel_wait_queue_wake_all(struct kernel_wait_queue *q) { (void)q; ++awakened; return 1; }
 static unsigned descriptor_refs = 1;
 static uint8_t keyboard_caps;
 uint8_t input_caps_lock_active(void) { return keyboard_caps; }
+void input_set_graphical_vt(uint32_t number) { (void)number; }
+static uint32_t shown_vt;
+static uint32_t shown_graphical;
+void console_vt_activate(uint32_t number, bool graphical)
+{ shown_vt = number; shown_graphical = graphical; }
+void console_vt_write(uint32_t number, const char *text, size_t count)
+{ (void)number; (void)text; (void)count; }
 void sched_set_controlling_pty(uint32_t pid, uint32_t id)
 { assert(pid == owner.pid); owner.controlling_pty_id = id; }
 void sched_clear_controlling_pty(uint32_t id)
@@ -31,7 +44,7 @@ int sched_process_group_has_pty(uint32_t group, uint32_t id)
 { (void)group; (void)id; return 1; }
 const struct framebuffer *framebuffer_get(void) { return NULL; }
 void console_printf(const char *format, ...) { (void)format; }
-void console_write_tty_len(const char *text, size_t count) { (void)text; (void)count; }
+void console_write_len(const char *text, size_t count) { (void)text; (void)count; }
 
 int main(void)
 {
@@ -100,8 +113,8 @@ int main(void)
     assert(pty_get_foreground_pgid(id, &group) == 0 && group == owner.pid);
     assert(pty_destroy(owner.pid, id) == 0 && signals == 2);
     pty_init();
-    id = pty_create(owner.pid);
-    assert(pty_bind_console(id, owner.pid) == 0);
+    assert(pty_vt_init() == 0);
+    id = 1;
     assert(pty_slave_open_allowed(id));
     assert(pty_read_input(id, &ch, 1) == -11);
     const uint8_t keys[] = {23, 49, 31, 20, 30, 38, 38};
@@ -142,6 +155,47 @@ int main(void)
     pty_transfer_put(id, TASK_PTY_ENDPOINT_SLAVE);
     assert(find_session(id) == NULL);
     assert(pty_transfer_get(id, TASK_PTY_ENDPOINT_SLAVE) == -9);
+    pty_init();
+    assert(pty_vt_init() == 0);
+    assert(pty_vt_active() == 1 && shown_vt == 1 && shown_graphical == 0);
+    for (uint32_t number = 1; number <= 6; ++number) {
+        char path[16];
+        snprintf(path, sizeof(path), "/dev/tty%u", number);
+        assert(pty_vt_id(number) == number);
+        assert(pty_vt_number(number) == number);
+        assert(pty_lookup_vt_path(path, &node) == 0);
+        assert(pty_lookup_path("/dev/pts/1", &node) == -2);
+    }
+    assert(pty_vt_id(0) == 0 && pty_vt_id(7) == 0);
+    assert(pty_lookup_vt_path("/dev/tty0", &node) == -2);
+    assert(pty_lookup_vt_path("/dev/ttyS0", &node) == -2);
+    assert(pty_create(owner.pid) == 7);
+    pty_console_key_event(29, 1); /* Ctrl */
+    pty_console_key_event(56, 1); /* Alt */
+    pty_console_key_event(60, 1); /* F2 */
+    assert(pty_vt_active() == 2 && shown_vt == 2);
+    assert(pty_read_input(1, &ch, 1) == -11);
+    assert(pty_read_input(2, &ch, 1) == -11);
+    pty_console_key_event(64, 1); /* F6 */
+    assert(pty_vt_active() == 6 && shown_vt == 6);
+    pty_console_key_event(29, 0);
+    pty_console_key_event(56, 0);
+    assert(pty_vt_switch(1) == 0);
+    assert(pty_vt_set_graphics(1, 1) == 0);
+    assert(pty_vt_graphical_active() && shown_graphical == 1);
+    assert(pty_vt_switch(2) == 0 && !pty_vt_graphical_active());
+    assert(pty_vt_switch(1) == 0 && pty_vt_graphical_active());
+    assert(pty_vt_set_graphics(1, 0) == 0 && !pty_vt_graphical_active());
+    assert(pty_vt_wait_active(1) == 0 && blocked == 0);
+    assert(pty_vt_wait_active(7) == -22 && blocked == 0);
+    assert(pty_vt_wait_active(2) == KERNEL_SYSCALL_BLOCKED && blocked == 1);
+    unsigned before_wake = awakened;
+    uint64_t generation = pty_vt_generation();
+    assert(pty_vt_switch(2) == 0 && awakened == before_wake + 1);
+    assert(pty_vt_generation() == generation + 1);
+    assert(pty_vt_wait_active(2) == 0);
+    assert(pty_vt_switch(1) == 0);
+    assert(pty_vt_switch(0) == -22 && pty_vt_active() == 1);
     puts("PASS native PTY modes, controlling-session isolation and queued-rights lifetime");
     return 0;
 }

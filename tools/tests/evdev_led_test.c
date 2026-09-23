@@ -38,9 +38,20 @@ int main(void)
     assert(task_evdev_ioctl(&file, EVIOCGLED(0), 0) == 0);
     output_writable = true;
     assert(task_evdev_ioctl(&file, EVIOCGLED(1), 0) == -LEONOS_EFAULT);
+    uint32_t scope = 7;
+    assert(task_evdev_ioctl(&file, LEONOS_EVIOCSVT, (uintptr_t)&scope) == -LEONOS_EINVAL);
+    scope = 1;
+    assert(task_evdev_ioctl(&file, LEONOS_EVIOCSVT, (uintptr_t)&scope) == 0);
+    assert(file.input_vt == 1 && file.aux == input_evdev_cursor_now());
+    input_set_graphical_vt(0);
+    input_push_key(30, 1);
+    assert(!input_evdev_available_vt(STORAGE_DEV_KIND_KEYBOARD, file.aux, 0, 1));
+    assert(input_evdev_available(STORAGE_DEV_KIND_KEYBOARD, file.aux, 0));
     file.node.first_cluster = STORAGE_DEV_KIND_MOUSE;
     assert(task_evdev_ioctl(&file, EVIOCGLED(1), (uintptr_t)buffer) == 1);
     assert(buffer[0] == 0);
     puts("EVIOCGLED passed: real input state, bitmap size, untouched tail and EFAULT");
     return 0;
 }
+
+uint32_t pty_vt_id(uint32_t number) { return number >= 1 && number <= 6 ? number : 0; }

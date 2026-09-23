@@ -137,9 +137,9 @@ def test_kernel_descriptor_table(directory: Path) -> None:
 # --------------------------------------------------------------------------- #
 
 def sdk_compiler() -> Path:
-    compiler = ROOT / "build/musl/sdk/bin/leonos-musl-cc"
+    compiler = ROOT / "out/x86_64/release/sdk/leonos-musl-sdk/bin/leonos-musl-cc"
     if not compiler.is_file():
-        raise SystemExit("missing build/musl/sdk; run: python3 build.py run sdk")
+        raise SystemExit("missing SDK; run: make -j8 sdk")
     return compiler
 
 
@@ -184,7 +184,7 @@ terminal_input console serial
 terminal_output gfxterm serial
 
 menuentry "LeonOS 4 ioctl CLOEXEC regression" {
-    multiboot2 /loader.elf root=/ log=serial mode=live startup=desktop syscall-trace=/opt/python/ autospawn=ioctlcloexec autospawn=python315
+    multiboot2 /loader.elf root=/ log=serial mode=live syscall-trace=/opt/python/ autospawn=ioctlcloexec autospawn=python315
     module2 /leonos/kernel.sys leonos-kernel
     module2 /install/root.fat leonos-installer-root
     boot
@@ -433,7 +433,7 @@ def write_evidence(host_output: str, host: dict, guest_text: str | None,
         "ioctl(FIOCLEX/FIONCLEX) close-on-exec regression evidence",
         f"format: {FORMAT}",
         f"commit: {commit}",
-        f"kernel.sys sha256: {digest(ROOT / 'build/system/kernel.sys')}",
+        f"kernel.sys sha256: {digest(ROOT / 'out/x86_64/release/generated/system/kernel.sys')}",
         f"probe sha256: {digest(ROOT / 'build/ioctl-cloexec/linux-ioctl-cloexec.elf')}",
         "",
         f"[host] host Linux raw-syscall reference: checks={host['checks']} "
@@ -443,7 +443,7 @@ def write_evidence(host_output: str, host: dict, guest_text: str | None,
         "--- host reference probe output ---",
         host_output.strip(),
     ]
-    kernel_hash = digest(ROOT / "build/system/kernel.sys")
+    kernel_hash = digest(ROOT / "out/x86_64/release/generated/system/kernel.sys")
     previous_guest = preserved_guest_evidence(path)
     if guest_text is not None and iso is not None and serial is not None:
         guest = parse_probe(guest_text)
