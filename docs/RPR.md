@@ -18,7 +18,7 @@ The APK identity must be generated with Alpine `abuild-keygen`. Run the helper
 from an Alpine host with `alpine-sdk`, OpenSSL, and an authenticated GitHub CLI:
 
 ```sh
-./tools/provision_rpr_signing_key.sh Leonmmcoset/LeonOS-4
+./tools/provision_rpr_signing_key.sh LeonOSProject/LeonOS-4
 ```
 
 The helper runs `abuild-keygen` in a private temporary home, stores the private
