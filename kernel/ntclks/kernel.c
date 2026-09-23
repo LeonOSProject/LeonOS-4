@@ -5,7 +5,6 @@
 #include <leonos/boot_handoff.h>
 #include <ntclks/arch.h>
 #include <ntclks/apic.h>
-#include <ntclks/boot_splash.h>
 #include <ntclks/console.h>
 #include <ntclks/driver_manager.h>
 #include <ntclks/framebuffer.h>
@@ -209,28 +208,19 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
     ioapic_init();
     smp_init();
     framebuffer_init(&boot);
-    /* A TTY boot owns the framebuffer after kernel initialization, so leave
-     * the splash disabled and route the console to the visible text panel. */
-    boot_splash_init(!boot_log_screen && !startup_tty);
     mm_init(&boot, handoff);
     kernel_heap_init();
     page_cache_init();
     kernel_objects_init();
-    boot_splash_update(84u);
     time_init();
     input_init();
     pty_init();
     console_set_ui_theme(handoff && handoff->magic == LEONOS_BOOT_HANDOFF_MAGIC
                               ? handoff->ui_theme
                               : 1u);
-    if (boot_log_screen || startup_tty) {
-        console_enable_framebuffer(handoff && handoff->magic == LEONOS_BOOT_HANDOFF_MAGIC
-                                       ? &handoff->boot_log
-                                       : 0);
-        if (boot_log_screen && !startup_tty) {
-            console_show_service_logs_only();
-        }
-    }
+    console_enable_framebuffer(handoff && handoff->magic == LEONOS_BOOT_HANDOFF_MAGIC
+                                   ? &handoff->boot_log
+                                   : 0);
     console_enable_vga_fallback();
     sched_init();
     sched_create_idle_task();
@@ -249,7 +239,6 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
     }
     idt_init();
     irq_init();
-    boot_splash_update(90u);
     {
         bool ramdisk_root = cmdline_has(&boot, "mode=installer") ||
                             cmdline_has(&boot, "mode=live");
@@ -259,12 +248,10 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
             storage_init_installer_root(&boot);
         }
     }
-    boot_splash_update(96u);
     driver_manager_init();
     driver_manager_autoload();
     usb_init();
     net_init();
-    boot_splash_update(98u);
     if (kernel_debug_boot_requested(handoff)) {
         console_printf("[ntclks] entering kernel debug tool before userland\n");
         (void)kernel_debug_run_module();
@@ -304,7 +291,6 @@ static void kernel_start(uint32_t magic, uint32_t multiboot_info,
         console_printf("[ntclks] boot complete: version=%s root=/ fs=%s desktop=desktop.elf\n",
                        system->kernel_version, storage_root_filesystem_name());
     }
-    boot_splash_update(100u);
     if (boot_log_screen) {
         if (startup_tty) {
             console_printf("[ntclks] starting Ring-3 BusyBox TTY\n");

@@ -60,7 +60,7 @@ pass 'both output trees build from scratch'
 
 # Every product, not just the image: a generated header that drifts would change
 # what the next rebuild recompiles.
-for product in include/generated/autoconf.h include/generated/boot_logo.h \
+for product in include/generated/autoconf.h \
         include/generated/build_info.h obj/kernel/sources.list \
         generated/system/kernel.unstripped generated/system/kernel.sys \
         generated/system/kernel.debug; do

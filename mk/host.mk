@@ -58,7 +58,6 @@ LEONOS_HOST_BIN := $(O_HOST)/bin
 LEONOS_EMIT := $(LEONOS_HOST_BIN)/leonos-emit
 LEONOS_CONFIG_TOOL := $(LEONOS_HOST_BIN)/leonos-config
 LEONOS_VERSION_TOOL := $(LEONOS_HOST_BIN)/leonos-version
-LEONOS_BOOT_LOGO_TOOL := $(LEONOS_HOST_BIN)/leonos-boot-logo
 LEONOS_DEPS_TOOL := $(LEONOS_HOST_BIN)/leonos-deps
 LEONOS_GBK_TOOL := $(LEONOS_HOST_BIN)/leonos-gbk
 LEONOS_SDK_DRIVER := $(LEONOS_HOST_BIN)/leonos-musl-cc
@@ -66,7 +65,7 @@ LEONOS_APK_OWN := $(LEONOS_HOST_BIN)/leonos-apk-own
 LEONOS_NLS_EXTRACT := $(LEONOS_HOST_BIN)/leonos-nls-extract
 
 LEONOS_HOST_TOOLS := $(LEONOS_EMIT) $(LEONOS_CONFIG_TOOL) \
-	$(LEONOS_VERSION_TOOL) $(LEONOS_BOOT_LOGO_TOOL) $(LEONOS_DEPS_TOOL) $(LEONOS_GBK_TOOL) $(LEONOS_SDK_DRIVER)
+	$(LEONOS_VERSION_TOOL) $(LEONOS_DEPS_TOOL) $(LEONOS_GBK_TOOL) $(LEONOS_SDK_DRIVER)
 
 LEONOS_HOST_TOOLS += $(LEONOS_APK_OWN)
 # Registered here although mk/nls.mk owns the link rule: this list is what
@@ -75,7 +74,6 @@ LEONOS_HOST_TOOLS += $(LEONOS_APK_OWN)
 LEONOS_HOST_TOOLS += $(LEONOS_NLS_EXTRACT)
 
 LEONOS_HOST_COMMON_OBJS := $(patsubst %.c,$(O_HOST)/obj/%.c.o,$(LEONOS_HOST_COMMON_SRCS))
-LEONOS_HOST_PUFF_OBJ := $(O_HOST)/obj/$(LEONOS_HOST_PUFF_SRC).o
 
 # --- command signatures -----------------------------------------------------
 # One signature per action class records the real argv, the absolute tool path
@@ -155,12 +153,6 @@ $(O_HOST)/obj/tools/host/%.c.o: $(LEONOS_SRC)/tools/host/%.c $(O_META)/host-cc.s
 	$(Q)$(HOSTCC) $(LEONOS_STRICT_WARNINGS) $(LEONOS_HOST_INCLUDES) $(HOST_CFLAGS) \
 		-MMD -MF $@.d -c $< -o $@
 
-$(LEONOS_HOST_PUFF_OBJ): $(LEONOS_SRC)/$(LEONOS_HOST_PUFF_SRC) $(O_META)/host-cc.sig
-	$(Q)mkdir -p $(dir $@)
-	$(call LEONOS_LOG,HOSTCC,$<)
-	$(Q)$(HOSTCC) $(LEONOS_HOST_PUFF_WARNINGS) $(HOST_CFLAGS) \
-		-MMD -MF $@.d -c $< -o $@
-
 $(LEONOS_EMIT): $(O_HOST)/obj/tools/host/gen/leonos-emit.c.o $(LEONOS_HOST_COMMON_OBJS) | $(LEONOS_HOST_BIN)
 	$(call LEONOS_LOG,HOSTLD,$@)
 	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
@@ -170,11 +162,6 @@ $(LEONOS_CONFIG_TOOL): $(O_HOST)/obj/tools/host/config/leonos-config.c.o $(LEONO
 	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
 
 $(LEONOS_VERSION_TOOL): $(O_HOST)/obj/tools/host/version/leonos-version.c.o $(LEONOS_HOST_COMMON_OBJS) | $(LEONOS_HOST_BIN)
-	$(call LEONOS_LOG,HOSTLD,$@)
-	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
-
-$(LEONOS_BOOT_LOGO_TOOL): $(O_HOST)/obj/tools/host/assets/leonos-boot-logo.c.o \
-	$(LEONOS_HOST_PUFF_OBJ) $(LEONOS_HOST_COMMON_OBJS) | $(LEONOS_HOST_BIN)
 	$(call LEONOS_LOG,HOSTLD,$@)
 	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
 

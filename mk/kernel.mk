@@ -14,7 +14,6 @@ KERNEL_SOURCES_MK := $(O_OBJ)/kernel/sources.mk
 KERNEL_UNSTRIPPED := $(O_GENERATED)/system/kernel.unstripped
 LEONOS_KERNEL_SYS := $(O_GENERATED)/system/kernel.sys
 LEONOS_KERNEL_DEBUG := $(O_GENERATED)/system/kernel.debug
-BOOT_LOGO_HEADER := $(O_INCLUDE)/generated/boot_logo.h
 BUILD_INFO_HEADER := $(O_INCLUDE)/generated/build_info.h
 LEONOS_SOURCE_ID := $(shell git -C $(LEONOS_SRC) rev-parse --short HEAD 2>/dev/null || echo unknown)
 LEONOS_SIG_version := source=$(LEONOS_SOURCE_ID)|epoch=$(SOURCE_DATE_EPOCH)
@@ -110,7 +109,6 @@ $(O_OBJ)/kernel/%.S.o: $(LEONOS_SRC)/%.S $(O_META)/kernel-as.sig
 
 # Extra prerequisites for the objects that consume generated headers. Depfiles
 # take over from the second build onward; these make the first build correct.
-$(O_OBJ)/kernel/drivers/bootstrap/boot_splash.c.o: $(BOOT_LOGO_HEADER)
 $(O_OBJ)/kernel/kernel/ntclks/version.c.o: $(BUILD_INFO_HEADER)
 
 # The storage facade textually includes its private modules.
@@ -119,10 +117,6 @@ $(O_OBJ)/kernel/drivers/bootstrap/storage.c.o: \
 	$(LEONOS_SRC)/drivers/bootstrap/storage/storage_internal.h
 
 # --- generated inputs -------------------------------------------------------
-$(BOOT_LOGO_HEADER): $(LEONOS_SRC)/logo.png $(LEONOS_BOOT_LOGO_TOOL) | $(O_INCLUDE)/generated
-	$(call LEONOS_LOG,GEN,$@)
-	$(Q)$(LEONOS_BOOT_LOGO_TOOL) --input $< --output $@ --size 192
-
 $(BUILD_INFO_HEADER): $(LEONOS_SRC)/configs/build-version $(LEONOS_VERSION_TOOL) $(O_META)/version.sig \
 	| $(O_INCLUDE)/generated
 	$(call LEONOS_LOG,GEN,$@)

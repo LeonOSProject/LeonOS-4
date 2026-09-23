@@ -9,7 +9,7 @@ $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,boot)))
 $(LOADER_INTEGRITY): $(LEONOS_KERNEL_SYS) $(LEONOS_EMIT) $(LEONOS_SRC)/tools/build/loader-integrity.sh
 	$(Q)mkdir -p $(@D)
 	$(Q)sh $(LEONOS_SRC)/tools/build/loader-integrity.sh $(LEONOS_KERNEL_SYS) $@ $(LEONOS_EMIT)
-$(O_OBJ)/loader/%.c.o: $(LEONOS_SRC)/%.c $(LOADER_INTEGRITY) $(AUTOCONF_H) $(BOOT_LOGO_HEADER) $(O_META)/boot.sig
+$(O_OBJ)/loader/%.c.o: $(LEONOS_SRC)/%.c $(LOADER_INTEGRITY) $(AUTOCONF_H) $(O_META)/boot.sig
 	$(Q)mkdir -p $(@D)
 	$(Q)$(TARGET_CC) $(LOADER_CFLAGS) -MMD -MP -MF $@.d -MT $@ -c $< -o $@.tmp
 	$(Q)mv $@.tmp $@

@@ -2,7 +2,6 @@
 #include <leonos/psf_font.h>
 #include <generated/autoconf.h>
 #include <generated/loader_integrity.h>
-#include <generated/boot_logo.h>
 #include <stdint.h>
 #include <stddef.h>
 
@@ -42,9 +41,6 @@
 #define EFI_MEMORY_MAP_BYTES (256u * 1024u)
 #define LOADER_LOG_MAX_COLUMNS 512u
 #define LOADER_LOG_MAX_ROWS 192u
-#define LOADER_SPLASH_BACKGROUND 0x00ffffffu
-#define LOADER_SPLASH_TRACK 0x00e6f2fbu
-#define LOADER_SPLASH_PROGRESS 0x000078d4u
 #define LOADER_PAGE_SIZE 4096ULL
 #define LOADER_IDENTITY_MAP_LIMIT (4ULL * 1024ULL * 1024ULL * 1024ULL)
 
@@ -697,78 +693,6 @@ static void loader_framebuffer_fill(uint32_t x, uint32_t y, uint32_t width,
     }
 }
 
-static uint32_t loader_framebuffer_splash_bar_height(void)
-{
-    uint32_t height;
-
-    if (!framebuffer_console.height) {
-        return 0;
-    }
-    height = framebuffer_console.height / 90u;
-    if (height < 4u) {
-        height = 4u;
-    }
-    if (height > 10u) {
-        height = 10u;
-    }
-    return height > framebuffer_console.height ? framebuffer_console.height : height;
-}
-
-static void loader_framebuffer_draw_boot_splash(uint32_t percent)
-{
-    uint32_t bar_height;
-    uint32_t available_height;
-    uint32_t logo_x;
-    uint32_t logo_y;
-    uint32_t draw_width;
-    uint32_t draw_height;
-    uint32_t progress_width;
-
-    if (loader_boot_log_screen || !framebuffer_console.enabled) {
-        return;
-    }
-    if (percent > 100u) {
-        percent = 100u;
-    }
-
-    bar_height = loader_framebuffer_splash_bar_height();
-    available_height = framebuffer_console.height - bar_height;
-    logo_x = framebuffer_console.width > LEONOS_BOOT_LOGO_WIDTH
-                 ? (framebuffer_console.width - LEONOS_BOOT_LOGO_WIDTH) / 2u
-                 : 0u;
-    logo_y = available_height > LEONOS_BOOT_LOGO_HEIGHT
-                 ? (available_height - LEONOS_BOOT_LOGO_HEIGHT) / 2u
-                 : 0u;
-    draw_width = LEONOS_BOOT_LOGO_WIDTH;
-    draw_height = LEONOS_BOOT_LOGO_HEIGHT;
-    if (draw_width > framebuffer_console.width - logo_x) {
-        draw_width = framebuffer_console.width - logo_x;
-    }
-    if (draw_height > available_height - logo_y) {
-        draw_height = available_height - logo_y;
-    }
-
-    loader_framebuffer_fill(0, 0, framebuffer_console.width,
-                            framebuffer_console.height, LOADER_SPLASH_BACKGROUND);
-    for (uint32_t row = 0; row < draw_height; ++row) {
-        uint8_t *line = framebuffer_console.pixels +
-                        (uint64_t)(logo_y + row) * framebuffer_console.pitch +
-                        (uint64_t)logo_x * framebuffer_console.bytes_per_pixel;
-        const uint32_t *pixels = leonos_boot_logo_pixels +
-                                 (uint64_t)row * LEONOS_BOOT_LOGO_WIDTH;
-        for (uint32_t column = 0; column < draw_width; ++column) {
-            loader_framebuffer_write_native(
-                line + (uint64_t)column * framebuffer_console.bytes_per_pixel,
-                loader_framebuffer_native_color(pixels[column]));
-        }
-    }
-    loader_framebuffer_fill(0, framebuffer_console.height - bar_height,
-                            framebuffer_console.width, bar_height, LOADER_SPLASH_TRACK);
-    progress_width = (uint32_t)(((uint64_t)framebuffer_console.width * percent) / 100u);
-    loader_framebuffer_fill(0, framebuffer_console.height - bar_height,
-                            progress_width, bar_height, LOADER_SPLASH_PROGRESS);
-}
-
 static void loader_framebuffer_char(uint32_t x, uint32_t y, char ch,
                                     uint32_t foreground, uint32_t background)
 {
@@ -1304,42 +1228,6 @@ static int text_eq(const char *a, const char *b)
         ++b;
     }
     return *a == 0 && *b == 0;
-}
-
-static int loader_cmdline_has(const char *needle)
-{
-    const char *cursor = handoff.cmdline;
-    size_t needle_len = 0;
-
-    if (!cursor || !needle || !*needle) {
-        return 0;
-    }
-    while (needle[needle_len]) {
-        ++needle_len;
-    }
-    while (*cursor) {
-        const char *token;
-        size_t index = 0;
-
-        while (*cursor == ' ' || *cursor == '\t') {
-            ++cursor;
-        }
-        token = cursor;
-        while (token[index] && token[index] != ' ' && token[index] != '\t') {
-            ++index;
-        }
-        if (index == needle_len) {
-            size_t match = 0;
-            while (match < needle_len && token[match] == needle[match]) {
-                ++match;
-            }
-            if (match == needle_len) {
-                return 1;
-            }
-        }
-        cursor = token + index;
-    }
-    return 0;
 }
 
 static struct loader_module *find_loader_module(const char *name)
@@ -1930,11 +1818,8 @@ void loader_main(uint32_t magic, uint32_t multiboot_info)
     serial_init();
     serial_write("[loader] LeonOS two-stage loader starting\n");
     parse_multiboot2(magic, multiboot_info);
-    /* TTY startup is itself a text-console request.  Treat it like an
-     * explicit bootlog request so the graphical splash never owns the
-     * framebuffer while the kernel is preparing the shell. */
-    loader_boot_log_screen = loader_cmdline_has("bootlog=1") ||
-                             loader_cmdline_has("startup=tty");
+    /* The loader always hands a visible console log to the kernel. */
+    loader_boot_log_screen = 1u;
     installer_root_module = find_loader_module("leonos-installer-root");
     if (installer_root_module && installer_root_module->end > installer_root_module->start) {
         handoff.installer_root.start = installer_root_module->start;
@@ -1960,12 +1845,7 @@ void loader_main(uint32_t magic, uint32_t multiboot_info)
             __asm__ volatile("hlt");
         }
     }
-    if (loader_boot_log_screen) {
-        boot_write("[loader] framebuffer boot log active\n");
-    } else {
-        loader_framebuffer_draw_boot_splash(12u);
-        serial_write("[loader] graphical boot splash active\n");
-    }
+    boot_write("[loader] framebuffer boot log active\n");
 
     if (kernel_module) {
         len = kernel_module->end - kernel_module->start;
@@ -2020,14 +1900,12 @@ void loader_main(uint32_t magic, uint32_t multiboot_info)
     serial_write("-");
     serial_write_hex(handoff.kernel.end);
     serial_write("\n");
-    loader_framebuffer_draw_boot_splash(50u);
 
     if (!handoff.mmap_entry_count && !handoff.efi_mmap_entry_count) {
         (void)efi_capture_memory_map();
     }
 
     serial_write("[loader] jumping to kernel\n");
-    loader_framebuffer_draw_boot_splash(80u);
     handoff.boot_uptime_us = loader_uptime_us();
     loader_framebuffer_save_state();
     void (*entry)(const struct leonos_boot_handoff *) =

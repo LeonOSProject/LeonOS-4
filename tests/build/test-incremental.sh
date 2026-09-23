@@ -68,7 +68,7 @@ snapshot() {
                    "$O/generated/system/kernel.debug" \
                    "$O/generated/system/kernel.unstripped" \
                    "$O/include/generated/autoconf.h" \
-                   "$O/include/generated/boot_logo.h"; do
+                   "$O/include/generated/build_info.h"; do
         [ -e "$product" ] && printf '%s %s\n' "$product" "$(stat -c %y "$product")"
     done | LC_ALL=C sort
 }
@@ -311,9 +311,9 @@ if [ -f "$O/generated/system/kernel.sys" ]; then
 else
     fail 'a deleted image product is regenerated' 'still missing'
 fi
-rm -f "$O/include/generated/boot_logo.h"
+rm -f "$O/include/generated/build_info.h"
 ninth=$(build)
-if [ -f "$O/include/generated/boot_logo.h" ]; then
+if [ -f "$O/include/generated/build_info.h" ]; then
     pass 'a deleted generated header is regenerated'
 else
     fail 'a deleted generated header is regenerated' 'still missing'
