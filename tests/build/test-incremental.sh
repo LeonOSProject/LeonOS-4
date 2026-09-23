@@ -151,6 +151,45 @@ else
 fi
 expect_same "$before" "$after" 'no-op build leaves every object and product mtime unchanged'
 
+printf '\n=== A02b: deleted headers in existing dependency files ===\n'
+legacy_object="$O/obj/kernel/kernel/ntclks/kernel.c.o"
+legacy_header="$repo_root/kernel/ntclks/include/ntclks/boot_splash.h"
+# Reproduce an output tree from before the splash removal and before -MP.
+# No empty header target is present in these old compiler-generated files.
+printf '\n%s: %s\n' "$legacy_object" "$legacy_header" >>"$legacy_object.d"
+if migration=$(build); then
+    expect_count "$migration" CC 1 'a legacy deleted header recompiles its consumer'
+    expect_count "$migration" LD 1 'a legacy deleted header allows the kernel to relink'
+else
+    printf '%s\n' "$migration"
+    exit 1
+fi
+if grep -qF "$legacy_header" "$legacy_object.d"; then
+    fail 'recompilation removes the obsolete header dependency'
+else
+    pass 'recompilation removes the obsolete header dependency'
+fi
+
+# Simulate a later header removal in a real compiler-generated depfile. Retain
+# any empty targets emitted by the compiler, so dropping -MP breaks this case.
+old_header="$repo_root/kernel/ntclks/include/ntclks/arch.h"
+grep -qF "$old_header" "$legacy_object.d" || exit 1
+sed "s|$old_header|$work/removed-header.h|g" "$legacy_object.d" >"$work/removed.d"
+mv "$work/removed.d" "$legacy_object.d"
+if removal=$(build); then
+    expect_count "$removal" CC 1 'new depfiles tolerate a subsequently removed header'
+else
+    printf '%s\n' "$removal"
+    exit 1
+fi
+if settled=$(build); then
+    expect_count "$settled" CC 0 'header dependency recovery settles to a no-op'
+    expect_count "$settled" LD 0 'header dependency recovery does not repeatedly relink'
+else
+    printf '%s\n' "$settled"
+    exit 1
+fi
+
 printf '\n=== A03: one ordinary source file ===\n'
 target_source=kernel/ntclks/futex.c
 target_object=$O/obj/kernel/$target_source.o

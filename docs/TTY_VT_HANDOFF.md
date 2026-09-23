@@ -44,6 +44,12 @@
 
 普通镜像截图在 `build/vt-qemu-ipc-fixed/`，包括暂停后重绘、图形登录成功、tty1 桌面退出和 tty2 退出后的 getty。安装测试仅创建和格式化各自新建的 4 GiB scratch.raw；没有操作主机磁盘。
 
+## 旧输出目录的增量构建兼容
+
+旧 `O=out` 的 `kernel.c.o.d` 仍可能引用已删除的 `boot_splash.h`，导致 Make 在重新编译前报缺失目标。`mk/kernel.mk` 为该旧头文件保留空依赖目标，并为 C、汇编启用 `-MP`；依赖参数纳入编译签名，使旧目录自动重新生成依赖文件，无需清理输出目录。
+
+`tests/build/test-incremental.sh` 新增旧依赖迁移、后续头文件删除和恢复后无重复编译/链接的回归。原规则在旧依赖迁移用例中复现了同一错误，日志为 `build/vt-stale-dependency-red.log`。
+
 ## 提交与保留边界
 
 - `837a932 refactor: 删除旧版图形启动画面`（上一 Agent）。

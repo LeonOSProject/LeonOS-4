@@ -28,17 +28,18 @@ KERNEL_INCLUDES := -I$(O_INCLUDE) -I$(LEONOS_SRC)/kernel/ntclks/include \
 KERNEL_CC_BASE := $(TARGET_CC) -target $(TRIPLE_KERNEL) \
 	$(LEONOS_OPTIMIZATION_FLAGS) -std=c11 -ffreestanding -fno-stack-protector \
 	-fno-pic -fno-pie -mno-red-zone -mgeneral-regs-only -mcmodel=kernel \
-	-Wall -Wextra $(KERNEL_INCLUDES) -include $(AUTOCONF_H)
+	-Wall -Wextra -MMD -MP $(KERNEL_INCLUDES) -include $(AUTOCONF_H)
 
 KERNEL_AS_BASE := $(TARGET_CC) -target $(TRIPLE_KERNEL) \
 	$(LEONOS_OPTIMIZATION_FLAGS) -ffreestanding -mno-red-zone \
-	-mgeneral-regs-only $(KERNEL_INCLUDES)
+	-mgeneral-regs-only -MMD -MP $(KERNEL_INCLUDES)
 
 KERNEL_LD_BASE := $(TARGET_LD) -nostdlib -z max-page-size=0x1000 \
 	-T $(KERNEL_LD_SCRIPT)
 
 # The signature records the resolved tool paths as well as the argv, so moving
-# to a different clang on PATH rebuilds instead of mixing objects.
+# to a different clang on PATH rebuilds instead of mixing objects. Dependency
+# flags are included so old output trees regenerate their depfiles with -MP.
 leonos_absolute = $(shell command -v $(1) 2>/dev/null || printf '%s' '$(1)')
 
 LEONOS_SIG_kernel-cc := argv=$(KERNEL_CC_BASE) $(KERNEL_CFLAGS)|path=$(call leonos_absolute,$(TARGET_CC))|identity=$(shell $(TARGET_CC) --version 2>&1 | head -n1)
@@ -89,6 +90,11 @@ else
 -include $(KERNEL_SOURCES_MK)
 endif
 endif
+# Output trees predating -MP can still reference the removed splash header.
+# Allow that dependency to be read once so the compiler can replace the stale
+# depfile. New depfiles emit empty header targets themselves via -MP.
+$(LEONOS_SRC)/kernel/ntclks/include/ntclks/boot_splash.h:
+
 -include $(shell find $(O_OBJ)/kernel -name '*.o.d' 2>/dev/null)
 
 LEONOS_KERNEL_OBJS := $(LEONOS_KERNEL_CC_OBJS) $(LEONOS_KERNEL_AS_OBJS)
@@ -100,12 +106,12 @@ LEONOS_KERNEL_OBJS := $(LEONOS_KERNEL_CC_OBJS) $(LEONOS_KERNEL_AS_OBJS)
 $(O_OBJ)/kernel/%.c.o: $(LEONOS_SRC)/%.c $(AUTOCONF_H) $(O_META)/kernel-cc.sig
 	$(Q)mkdir -p $(dir $@)
 	$(call LEONOS_LOG,CC,$<)
-	$(Q)$(KERNEL_CC_BASE) $(KERNEL_CFLAGS) -MMD -MF $@.d -c $< -o $@
+	$(Q)$(KERNEL_CC_BASE) $(KERNEL_CFLAGS) -MF $@.d -c $< -o $@
 
 $(O_OBJ)/kernel/%.S.o: $(LEONOS_SRC)/%.S $(O_META)/kernel-as.sig
 	$(Q)mkdir -p $(dir $@)
 	$(call LEONOS_LOG,AS,$<)
-	$(Q)$(KERNEL_AS_BASE) $(KERNEL_AFLAGS) -MMD -MF $@.d -c $< -o $@
+	$(Q)$(KERNEL_AS_BASE) $(KERNEL_AFLAGS) -MF $@.d -c $< -o $@
 
 # Extra prerequisites for the objects that consume generated headers. Depfiles
 # take over from the second build onward; these make the first build correct.
