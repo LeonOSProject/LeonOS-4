@@ -1,6 +1,6 @@
 # LeonOS 4
 <p align="center">
-    <img src="https://github.com/Leonmmcoset/LeonOS-4/blob/main/logo.png?raw=true" alt="LeonOS 4's logo" width="240"/>
+    <img src="https://github.com/LeonOSProject/LeonOS-4/blob/main/logo.png?raw=true" alt="LeonOS 4's logo" width="240"/>
 </p>
 
 此代码库是 **LeonOS 4** 项目的源代码仓库，此仓库的开源协议位于[LICENSE](LICENSE)。
