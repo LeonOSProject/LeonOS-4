@@ -33,10 +33,26 @@ for f in index.html download/index.html download/leonos4-installer.iso download/
     [ -e "$site/$f" ] || report "missing $f"
 done
 
+# --- Documentation section --------------------------------------------------
+# The docs are rendered from the repository docs/ tree at build time, so the
+# index and at least one rendered document must exist, and no raw Markdown may
+# leak into the published tree (only generated HTML and copied assets).
+[ -e "$site/docs/index.html" ] || report "missing docs/index.html"
+if [ -z "$(find "$site/docs" -name index.html 2>/dev/null | tail -n +2)" ]; then
+    report "no rendered documentation pages under docs/"
+fi
+md_leak=$(find "$site/docs" -type f -name '*.md' 2>/dev/null || true)
+[ -z "$md_leak" ] || report "raw Markdown leaked into published docs: $md_leak"
+
 # --- JavaScript must be absent ----------------------------------------------
 js=$(find "$site" -type f \( -name '*.js' -o -name '*.mjs' -o -name '*.cjs' \) -print 2>/dev/null || true)
 [ -z "$js" ] || report "JavaScript files present: $js"
-scripts=$(grep -RInE -e '<script' -e 'javascript:' -e ' on[a-z]+=' "$site" 2>/dev/null || true)
+# Inline JS is only a real risk when an event-handler attribute (onX=...) sits
+# inside an HTML tag. A bare '<script' or a 'javascript:' URL is always a
+# problem, but the string 'online=2' in technical prose is not, so the event
+# pattern is anchored to an open tag rather than to any whitespace-preceded
+# 'on...' token.
+scripts=$(grep -RInE -e '<script' -e 'javascript:' -e '<[a-zA-Z][^>]* on[a-z]+=' "$site" 2>/dev/null || true)
 [ -z "$scripts" ] || report "inline JS markers present in Pages tree:
 $scripts"
 

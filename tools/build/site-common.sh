@@ -63,7 +63,8 @@ site_page_begin() {
 <nav class="site">
 <a href="${home}index.html">Home</a> &middot;
 <a href="${home}download/index.html">Download</a> &middot;
-<a href="${home}rpr/index.html">RPR</a>
+<a href="${home}rpr/index.html">RPR</a> &middot;
+<a href="${home}docs/index.html">Docs</a>
 </nav>
 <main>
 HEAD

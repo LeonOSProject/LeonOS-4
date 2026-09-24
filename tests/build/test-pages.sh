@@ -79,6 +79,54 @@ grep -q '^version=4.9.1$' "$tmp/pages/rpr/kernel/release.txt" \
     && ok 'installer ISO matches download/SHA256SUMS' \
     || bad 'installer ISO checksum mismatch'
 
+# 5b. Documentation: at least one rendered doc, index exists, raw Markdown does
+#     not leak, and no HTML/JS injection characters survive.
+[ -f "$tmp/pages/docs/index.html" ] && ok 'docs index present' || bad 'docs index missing'
+docs_rendered=$(find "$tmp/pages/docs" -mindepth 2 -name index.html 2>/dev/null | wc -l)
+[ "$docs_rendered" -gt 0 ] && ok "docs rendered ($docs_rendered pages)" || bad 'no docs rendered'
+md_leak=$(find "$tmp/pages/docs" -type f -name '*.md' 2>/dev/null)
+[ -z "$md_leak" ] && ok 'no raw Markdown in published docs' || bad "Markdown leaked: $md_leak"
+if grep -qE '<script|javascript:' "$tmp/pages/docs/index.html"; then
+    bad 'script marker in docs index'
+else
+    ok 'docs index has no script markers'
+fi
+
+# 5c. md2html.awk escaping discipline: raw <tag>, javascript: link, and onX=
+#     attribute must not survive the converter as live HTML/JS.
+inj="$tmp/inj.md"
+cat > "$inj" <<'MD'
+# Test
+
+Literal tokens: <app> <pid> <sha256>.
+
+Inline code: `<script>alert(1)</script>`.
+
+Link [bad](javascript:alert(1)) and [ok](https://example.com).
+
+Event-like text: onerror=alert(1) as plain prose.
+
+Markdown HTML attempt: <img src=x onerror=alert(1)>
+MD
+awk -f "$src/tools/build/md2html.awk" "$inj" > "$tmp/inj.html"
+# No unescaped raw tags beyond the converter's own allowlist, and no live
+# javascript: URL in the href attribute.
+if grep -qE 'href="javascript:' "$tmp/inj.html"; then
+    bad 'javascript: URL survived href sanitization'
+else
+    ok 'javascript: href neutralized'
+fi
+if grep -qE '<(img|script)\b' "$tmp/inj.html"; then
+    bad 'raw HTML tag injection succeeded'
+else
+    ok 'raw HTML injection escaped'
+fi
+if ! grep -q '&lt;app&gt;' "$tmp/inj.html"; then
+    bad '<app> not escaped to &lt;app&gt;'
+else
+    ok 'angle-bracket tokens escaped'
+fi
+
 # 6. Negative: a broken link must fail verification.
 cp -R "$tmp/pages" "$tmp/broken"
 sed -i 's#href="download/index.html"#href="download/nope.html"#' "$tmp/broken/index.html"
