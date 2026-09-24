@@ -164,6 +164,7 @@ include $(LEONOS_SRC)/mk/rootfs.mk
 include $(LEONOS_SRC)/mk/apk.mk
 include $(LEONOS_SRC)/mk/images.mk
 include $(LEONOS_SRC)/mk/rpr.mk
+include $(LEONOS_SRC)/mk/site.mk
 include $(LEONOS_SRC)/mk/run.mk
 include $(LEONOS_SRC)/mk/tests.mk
 
@@ -174,6 +175,7 @@ include $(LEONOS_SRC)/mk/tests.mk
 
 .PHONY: help doctor fetch defconfig olddefconfig menuconfig tools \
 	kernel userland runtime sdk rootfs apk-repo image-vmdk iso installer all \
+	pages site download-page \
 	run run-iso run-installer test test-tools test-build test-long test-smoke \
 	test-legacy clean distclean
 
@@ -222,7 +224,7 @@ all: kernel userland runtime sdk apk-repo image-vmdk iso installer
 
 .PHONY: image-iso release config-sync build-info test-all
 image-iso: iso
-release: all rpr-pages
+release: all pages
 config-sync: $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(LEONOS_COMPONENT_MK)
 build-info: $(BUILD_INFO_HEADER)
 test-all: test test-long test-legacy test-smoke

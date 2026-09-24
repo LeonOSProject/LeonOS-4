@@ -37,14 +37,18 @@ make run
 及镜像工具。Clang 必须包含 x86_64 compiler-rt builtins；仅有头文件不够。
 
 常用目标：`kernel`、`userland`、`runtime`、`sdk`、`rootfs`、`apk-repo`、`image-vmdk`、
-`iso`、`installer`、`rpr-pages`。`all` 构建 SDK 与三类镜像；`release` 再包含本地 RPR 目录，
-不自动上传。`run-iso`、`run-installer` 启动对应镜像，`QEMU_KVM=0` 可使用 TCG。
+`iso`、`installer`、`rpr-pages`、`pages`。`all` 构建 SDK 与三类镜像；`release` 再包含完整
+GitHub Pages 网站，不自动上传。`pages` 依赖 `installer` 与 `rpr-pages`，把安装镜像、RPR
+机器接口与人类可读页面（首页、下载页、包列表、内核页）组装成单一部署产物
+`out/x86_64/release/pages/`，遵循一次构建、一次发布（详见 `docs/RPR.md`）。RPR 与下载页
+共用同一份蓝色简洁静态 HTML/CSS，全站禁止 JavaScript。`rpr-pages` 仍可单独用于本地仅生成
+RPR 子树。`run-iso`、`run-installer` 启动对应镜像，`QEMU_KVM=0` 可使用 TCG。
 
 默认产物在 `out/x86_64/release/`：
 
 - `images/leonos4.vmdk`、`images/leonos4-live.iso`、`images/leonos4-installer.iso`
 - `packages/LeonOS4-Developer-SDK.zip`、`packages/leonos-musl-sdk.tar.gz`
-- `packages/apk/repository/`、`rootfs/manifest.json`、`rpr-pages/`
+- `packages/apk/repository/`、`rootfs/manifest.json`、`rpr-pages/`、`pages/`
 
 `make menuconfig` 编辑所选 `O/config/.config`；`make olddefconfig` 保留选择并补全新项。
 用 `O=out/my-build PROFILE=debug` 隔离不同配置。`V=1` 显示命令，`make --trace` 和
