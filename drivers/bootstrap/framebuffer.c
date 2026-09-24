@@ -600,6 +600,19 @@ full:
     return 0;
 }
 
+/* Kick the host to process queued FIFO commands without waiting for it to
+ * drain.  Writing the SYNC register is the doorbell; reading BUSY in a loop is
+ * the synchronous wait.  On the fast present path we only need the doorbell:
+ * blocking here would pin a core spinning (and serialise every other core's
+ * syscall) for the duration of a frame the host can process asynchronously. */
+static void framebuffer_vmware_kick(void)
+{
+    if (!vmware_svga.present) {
+        return;
+    }
+    vmware_svga_write(VMWARE_SVGA_REG_SYNC, 1u);
+}
+
 static void framebuffer_vmware_sync(void)
 {
     if (!vmware_svga.present) {
@@ -1210,7 +1223,9 @@ void framebuffer_present_region(uint32_t x, uint32_t y, uint32_t width, uint32_t
     if (!framebuffer_vmware_fifo_update(x, y, width, height)) {
         /* A mode switch can invalidate the old FIFO, and a slow host can
          * leave it full.  Drain first, rebuild only when the ring was marked
-         * invalid, then retry this exact damage region once. */
+         * invalid, then retry this exact damage region once.  This is the only
+         * synchronous drain: it runs precisely when the device is applying
+         * backpressure, instead of after every published update. */
         framebuffer_vmware_sync();
         if (!vmware_svga.fifo_present) {
             framebuffer_vmware_fifo_init();
@@ -1219,12 +1234,18 @@ void framebuffer_present_region(uint32_t x, uint32_t y, uint32_t width, uint32_t
             return;
         }
     }
-    /* Always drain the FIFO after publishing an update. Leaving cursor
-     * updates asynchronous allows NEXT_CMD to outrun STOP; once the FIFO
-     * fills, every subsequent cursor blit is dropped and the pointer freezes.
-     * Keep the bounded wait short enough that a slow VMware device cannot
-     * stall the desktop for a full second. */
-    framebuffer_vmware_sync();
+    /* Publish asynchronously. Draining after every update (the previous
+     * behaviour) forced a synchronous SVGA_REG_BUSY wait inside the global
+     * execution transaction on each frame, which pinned one core spinning and
+     * serialised every other core's syscall behind it; that is exactly what a
+     * compositor/Doom present loop must not do. We still ring the doorbell so
+     * the host processes the queued update; the newer SVGA path already kicks
+     * its own doorbell at packet publish, so this only affects the legacy
+     * ring. Backpressure is handled on the failure path above: if NEXT_CMD has
+     * filled the ring, the next update fails, we drain there, and the region
+     * is retried, so the ring cannot silently overrun STOP and freeze the
+     * pointer. */
+    framebuffer_vmware_kick();
 }
 
 void framebuffer_present(void)
