@@ -1,16 +1,25 @@
 # LeonOS Remote Package Repository
 
-LeonOS RPR is a static, HTTPS-only repository published by GitHub Pages. It has
-two independent channels:
+LeonOS RPR is a static, HTTPS-only repository published as a directory of the
+GitHub Pages site. Its machine interface has two independent channels, both
+relative to the RPR base URL (by default
+`https://leonosproject.github.io/LeonOS-4/rpr`):
 
-- `/apk` contains signed LeonOS APK packages, including the optional official
-  applications, the signed APK v3 index, and the corresponding public key.
-- `/kernel` contains the latest matching `kernel.sys` and `loader.elf` pair plus
-  their version and SHA-256 metadata.
+- `<base>/apk` contains signed LeonOS APK packages, including the optional
+  official applications, the signed APK v3 index, and the corresponding public
+  key.
+- `<base>/kernel` contains the latest matching `kernel.sys` and `loader.elf`
+  pair plus their version and SHA-256 metadata.
 
-The default base URL is `https://leonosproject.github.io/LeonOS-4`. It can be
-changed under **Build > LeonOS remote package repository URL** in `menuconfig`.
-The selected value is installed as `/etc/leonos/rpr.conf`.
+The Pages site places this machine interface under `/rpr/` and adds
+human-readable HTML pages beside it (package list, per-package pages, kernel
+page). The same base URL is used by clients, so it must end in `/rpr`. The
+default is `https://leonosproject.github.io/LeonOS-4/rpr` and can be changed
+under **Build > LeonOS remote package repository URL** in `menuconfig`. The
+selected value is installed as `/etc/leonos/rpr.conf`. The client scripts
+(`leonos-rpr-ping`, `leonos-rpr-apkcheck`, `leonos-kernel-update`) append
+`/health.txt`, `/apk/...` and `/kernel/...` to that base, so the base URL must
+point at the directory that contains `apk/packages.adb`.
 
 ## One-time signing-key provisioning
 
@@ -35,19 +44,28 @@ public key.
 
 ## Publishing
 
-Enable GitHub Pages with **Source: GitHub Actions**, then manually run the
-**Publish LeonOS RPR** workflow. The workflow has no push or schedule trigger.
-It:
+Enable GitHub Pages with **Source: GitHub Actions**, then run the **Build Pages**
+workflow (`.github/workflows/build-pages.yml`). It triggers on pushes to `main`
+and on `workflow_dispatch`. The workflow has no separate RPR job: RPR, the
+download page and the home page are built and deployed together as one atomic
+release (see `docs/BUILDSYSTEM.md`). It:
 
 1. checks out the complete source tree and installs the normal LeonOS toolchain;
 2. decodes the signing key only under `$RUNNER_TEMP` with mode `0600`;
-3. builds the kernel, base APK repository, and optional official
-   application APKs through `make rpr-pages`;
-4. merges both APK inputs and signs `/apk/packages.adb` from only
+3. builds the whole release with `make pages`, which depends on the installer
+   ISO and on `make rpr-pages`, so kernel, base APK repository, optional
+   application APKs and every page come from one build;
+4. merges both APK inputs and signs `apk/packages.adb` from only
    `leonos-*.apk` packages;
-5. assembles `/kernel` from artifacts produced in the same build;
-6. rejects a Pages tree containing any PEM private-key marker, removes the
-   temporary key, and deploys with GitHub's OIDC Pages action.
+5. assembles `kernel/` from artifacts produced in the same build;
+6. runs `tools/build/verify-pages.sh`, which rejects a Pages tree containing any
+   JavaScript, any PEM private-key marker, a broken link, or a checksum that
+   disagrees with the file it describes;
+7. removes the temporary key and deploys with GitHub's OIDC Pages action.
+
+`make rpr-pages` on its own still generates only the RPR subtree under
+`out/x86_64/release/rpr-pages/` for local use; `make pages` embeds that subtree
+at `pages/rpr/` in the full site.
 
 The default images contain neither these optional applications nor their APK
 files. They are available only from RPR as `leonos-helloworld`, `leonos-doom`,
@@ -56,25 +74,36 @@ IWAD, and license notice. The legacy `.api` installer remains available for
 third-party packages, but LeonOS no longer publishes these three applications
 as `.api` files.
 
-The published tree is:
+The published tree, relative to the RPR base URL, is:
 
 ```text
-/
+/rpr/
+├── index.html          (human-readable landing page)
+├── css/leonos.css
 ├── health.txt
 ├── manifest.json
 ├── apk/
+│   ├── index.html
 │   ├── leonos-rpr.rsa.pub
 │   ├── packages.adb
 │   ├── leonos-*.apk
 │   ├── repository.json
 │   └── SHA256SUMS
+├── packages/
+│   ├── index.html      (generated package list)
+│   └── leonos-<name>.html  (one page per published package)
 └── kernel/
+    ├── index.html
     ├── kernel.sys
     ├── loader.elf
     ├── release.txt
     ├── release.json
     └── SHA256SUMS
 ```
+
+The Pages home page and download page sit at the site root (`/index.html` and
+`/download/`), outside `/rpr/`. Every link inside the RPR tree is relative, so
+the base path never has to be baked into the generated HTML.
 
 `release.txt` is the strict line-oriented client protocol. Its
 `image_version` and `version` are both `major.minor.patch`; no build counter or

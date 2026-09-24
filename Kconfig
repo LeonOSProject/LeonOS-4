@@ -21,10 +21,12 @@ config INSTALLER_INSTALLED_REQUIRE_LICENSE
 
 config RPR_BASE_URL
     string "LeonOS remote package repository URL"
-    default "https://leonosproject.github.io/LeonOS-4"
+    default "https://leonosproject.github.io/LeonOS-4/rpr"
     help
-      HTTPS base URL of the GitHub Pages repository. The client appends /apk
-      for signed APK metadata and /kernel for kernel and middle-layer releases.
+      HTTPS base URL of the RPR directory inside the GitHub Pages site. The
+      client appends /apk for signed APK metadata and /kernel for kernel and
+      middle-layer releases. The Pages tree publishes the RPR machine interface
+      under /rpr/, so the default ends in /rpr.
 
 config IMAGE_SIZE_MIB
     int "Standalone VMDK image size in MiB (FAT32 ESP plus ext2 root)"
