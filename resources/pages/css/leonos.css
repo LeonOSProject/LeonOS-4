@@ -205,3 +205,44 @@ p.subtitle {
     margin: 4px 0 0 0;
     font-size: 15px;
 }
+
+/* Documentation pages: rendered Markdown uses a leading H1 for the document
+   title plus deeper H2..H4 headings, fenced code, pipe tables (reusing the
+   table rules above), blockquotes and GitHub task lists. Conservative CSS
+   only, matching the rest of the sheet. */
+main h1 {
+    color: #1a4f8a;
+    font-size: 24px;
+    margin: 0 0 14px 0;
+}
+
+main h4 {
+    color: #24527f;
+    font-size: 15px;
+    margin: 16px 0 6px 0;
+}
+
+blockquote {
+    margin: 0 0 14px 0;
+    padding: 4px 14px;
+    border-left: 4px solid #b9c7d8;
+    color: #33404d;
+    background: #f6f8fb;
+}
+
+ul.task {
+    list-style: none;
+    margin-left: 6px;
+}
+
+ul.task li {
+    margin: 0 0 4px 0;
+}
+
+/* Breadcrumb above a rendered document, reused from the package pages. */
+p.breadcrumb {
+    color: #55606b;
+    font-size: 13px;
+    margin: 0 0 16px 0;
+}
+

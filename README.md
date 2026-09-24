@@ -39,9 +39,10 @@ make run
 常用目标：`kernel`、`userland`、`runtime`、`sdk`、`rootfs`、`apk-repo`、`image-vmdk`、
 `iso`、`installer`、`rpr-pages`、`pages`。`all` 构建 SDK 与三类镜像；`release` 再包含完整
 GitHub Pages 网站，不自动上传。`pages` 依赖 `installer` 与 `rpr-pages`，把安装镜像、RPR
-机器接口与人类可读页面（首页、下载页、包列表、内核页）组装成单一部署产物
-`out/x86_64/release/pages/`，遵循一次构建、一次发布（详见 `docs/RPR.md`）。RPR 与下载页
-共用同一份蓝色简洁静态 HTML/CSS，全站禁止 JavaScript。`rpr-pages` 仍可单独用于本地仅生成
+机器接口与人类可读页面（首页、下载页、包列表、内核页、文档）组装成单一部署产物
+`out/x86_64/release/pages/`，遵循一次构建、一次发布（详见 `docs/RPR.md`）。RPR、下载页
+与文档页共用同一份蓝色简洁静态 HTML/CSS，全站禁止 JavaScript；文档页由构建系统扫描
+`docs/` 目录、用纯 awk 把 Markdown 渲染为静态 HTML 生成。`rpr-pages` 仍可单独用于本地仅生成
 RPR 子树。`run-iso`、`run-installer` 启动对应镜像，`QEMU_KVM=0` 可使用 TCG。
 
 默认产物在 `out/x86_64/release/`：

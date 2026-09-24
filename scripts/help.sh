@@ -28,9 +28,10 @@ LeonOS 4 build system (GNU Make + C host tools)
   make iso             live ISO
   make installer       installer ISO
   make rpr-pages       local signed APK/kernel Pages tree (does not publish)
-  make pages           full GitHub Pages tree: home, download/, rpr/ (does not publish)
+  make pages           full GitHub Pages tree: home, download/, rpr/, docs/ (does not publish)
   make site            alias of pages
   make download-page   alias of pages (single atomic output)
+  make docs-page       alias of pages (documentation rendered from docs/)
   make release         all plus pages
   make all             kernel userland runtime sdk apk-repo image-vmdk iso installer
 

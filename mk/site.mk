@@ -6,7 +6,7 @@
 # kernel or APK repository; it only arranges finished outputs into one atomic,
 # deployable site and adds the human-readable pages (plan §19, §29, §31).
 #
-#   make pages      assemble out/<arch>/<profile>/pages/ (home + download + rpr)
+#   make pages      assemble out/<arch>/<profile>/pages/ (home + download + rpr + docs)
 #
 # `site` and `download-page` are provided as the plan's named entry points and
 # are wired to the same atomic assembly: the download page cannot be published
@@ -17,16 +17,24 @@ SITE_CSS     := $(LEONOS_SRC)/resources/pages/css/leonos.css
 SITE_SCRIPTS := $(LEONOS_SRC)/tools/build/site.sh \
                 $(LEONOS_SRC)/tools/build/download-page.sh \
                 $(LEONOS_SRC)/tools/build/home-page.sh \
+                $(LEONOS_SRC)/tools/build/docs-page.sh \
+                $(LEONOS_SRC)/tools/build/md2html.awk \
                 $(LEONOS_SRC)/tools/build/site-common.sh
+# The Documentation section is rendered from the real docs/ tree, so every
+# source document is a prerequisite of the assembled site: a docs edit must
+# regenerate the Pages tree just like an ISO or CSS change would.
+SITE_DOCS    := $(shell find $(LEONOS_SRC)/docs -name '*.md' 2>/dev/null | LC_ALL=C sort) \
+                $(shell find $(LEONOS_SRC)/docs -type f ! -name '*.md' 2>/dev/null | LC_ALL=C sort)
 PAGES        := $(O)/pages
 
 $(PAGES)/.site-complete $(PAGES)/index.html &: \
         $(RPR_PAGES)/.complete $(RPR_PAGES)/manifest.json \
-        $(INSTALLER_ISO) $(BUILD_INFO_HEADER) $(SITE_CSS) $(SITE_SCRIPTS)
+        $(INSTALLER_ISO) $(BUILD_INFO_HEADER) $(SITE_CSS) $(SITE_SCRIPTS) $(SITE_DOCS)
 	$(Q)sh $(LEONOS_SRC)/tools/build/site.sh \
 		$(RPR_PAGES) $(INSTALLER_ISO) $(BUILD_INFO_HEADER) $(SITE_CSS) $(PAGES)
 
-.PHONY: pages site download-page
+.PHONY: pages site download-page docs-page
 pages: $(PAGES)/.site-complete
 site: pages
 download-page: pages
+docs-page: pages
