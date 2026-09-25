@@ -60,7 +60,9 @@ e1000/ac97/es1371）、`kerneldebug.sys`。逐文件枚举以本文目录/计数
 
 ### 1.2 loader.elf
 
-- 源码（2）：`boot/loader/boot.S`、`boot/loader/main.c`；链接脚本 `boot/loader/linker.ld`。
+- 源码（3）：`boot/loader/boot.S`、`boot/loader/main.c`、`boot/loader/string.c`
+  （阶段 3 期间新增：-O0 下聚合拷贝降级为 memset/memcpy libcall 的 freestanding 实现）；
+  链接脚本 `boot/loader/linker.ld`。
 - include：`-I$(O_INCLUDE) -Iinclude/uapi -Iinclude`（无 kernel/ntclks/include）。
 - 头：`leonos/boot_handoff.h`、`leonos/psf_font.h`（→lat15_vga16_psf.inc、layout.h→rootfs.h）。
 - 生成头：`autoconf.h`、`loader_integrity.h`（kernel.sys 的 SHA-256）。
@@ -153,7 +155,7 @@ include/uapi/      （全部 51 头 + README）
 include/leonos/    （§1.1 的 20 头 + lat15_vga16_psf.inc/.psf；其余按阶段 1 分类表拆分后归位）
 mk/{logging,host,toolchain,config,kernel,boot}.mk + resources.mk 的 cjk 规则
 configs/{default.conf,build-version,components.toml(去耦后删),dependencies.lock.json,toolchains/llvm-x86_64.mk}
-Kconfig  Kconfig.components
+Kconfig  Kconfig.components（Kconfig source 必需输入，勿遗漏）
 tools/host/{common,gen,config,version,manifest,assets/leonos-cjk-font.c}
 tools/build/{loader-integrity.sh,kconfig-frontends.sh,fetch.sh}
 scripts/{build-lock.sh,logging.sh}

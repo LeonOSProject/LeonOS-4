@@ -1829,7 +1829,7 @@
     ],
     [
      16,
-     "union leonos_net_control::(unnamed at /home/leon/projects/c/LeonOS-4-ntclks-separation/include/uapi/leonos/net_control.h:18:5) data"
+     "union leonos_net_control::(unnamed at include/uapi/leonos/net_control.h:18:5) data"
     ],
     [
      16,
@@ -2033,7 +2033,7 @@
     ],
     [
      16,
-     "struct leonos_net_control::(unnamed union)::(unnamed at /home/leon/projects/c/LeonOS-4-ntclks-separation/include/uapi/leonos/net_control.h:23:9) connections"
+     "struct leonos_net_control::(unnamed union)::(unnamed at include/uapi/leonos/net_control.h:23:9) connections"
     ],
     [
      16,

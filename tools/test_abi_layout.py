@@ -158,6 +158,9 @@ def collect(structs):
             ["clang", "-fsyntax-only", "-Xclang", "-fdump-record-layouts",
              *INCLUDES, str(source)],
             check=True, capture_output=True, text=True).stdout
+        # Anonymous-member names embed the absolute header path ("unnamed at
+        # /abs/include/..."); normalize so the goldens are location-independent.
+        dump = dump.replace(str(ROOT) + "/", "")
         layout = parse_record_layouts(dump, set(structs))
         missing = sorted(set(structs) - set(layout))
         if missing:
