@@ -110,4 +110,5 @@ tests/long/test-jobs.sh（硬编码内核源路径作 touch 目标）、tests/ho
 - `make test-long`/`make test-smoke`/`make test-legacy` 未在基线执行（长耗时；
   test-smoke 即 QEMU 启动测试，其覆盖已由 VT 套件部分等价；test-legacy 含 Python 参考实现）。
 - debug profile 构建未做（计划要求 release/debug 都保；阶段 3 验证）。
-- 可重现性双路径构建比较未做（阶段 3 验证项）。
+- 可重现性双路径构建比较：已作为阶段 3 验证项完成，见
+  [04-reproducibility-two-path.md](04-reproducibility-two-path.md)。
