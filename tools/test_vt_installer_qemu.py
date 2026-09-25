@@ -21,6 +21,10 @@ def main():
     parser.add_argument('--iso', type=Path, default=ROOT / 'out/x86_64/release/images/leonos4-installer.iso')
     parser.add_argument('--tui', action='store_true')
     parser.add_argument('--install', action='store_true')
+    # The install copy phase runs as one long busybox pass; on slow hosts the
+    # 20-minute default truncates a healthy install at ~85% progress. Override
+    # per run (e.g. --install-timeout 3600) instead of silently stretching it.
+    parser.add_argument('--install-timeout', type=int, default=1200)
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     disk = args.output.resolve() / 'scratch.raw'
@@ -68,7 +72,7 @@ def main():
             probe.key('caps_lock')
             probe.frame('installer-confirm-typed')
             next_page(probe)
-            deadline = time.monotonic() + 1200
+            deadline = time.monotonic() + args.install_timeout
             while time.monotonic() < deadline:
                 visible = ocr(probe.frame('installer-progress'), psm=11)
                 if 'Installation finished' in visible or 'Installation Complete' in visible:
