@@ -26,10 +26,17 @@ or the connection is rejected with `ERROR{code=EPERM}`.
 | 0 | kernel IPC infrastructure | blocking AF_UNIX, socketpair, SCM_RIGHTS, SO_PEERCRED, /dev/shm0, AF_INET fd path | implemented |
 | 1 | windowd | `/run/leonos/windowd.sock` | implemented |
 | 2 | imd | `/run/leonos/input-method.sock` | implemented |
-| 3 | netmand | `/run/leonos/net.sock` | implemented |
-| 4 | authd / sessiond | `/run/leonos/authd.sock`, `/run/leonos/session.sock` | implemented |
-| 5 | devmand / procfs | `/run/leonos/devman.sock`, `/proc` | implemented |
+| 3 | sessiond | `/run/leonos/session.sock` | implemented |
+| 4 | devmand (device-agent) | `/run/leonos/devman.sock` | implemented |
+| 5 | procfs | `/proc` | implemented |
 | 6 | fd-3 removal and cleanup | n/a | implemented |
+
+The four daemons run as independent OpenRC services
+(`system/rootfs/etc/init.d/leonos-{windowd,imd,session,device}`). There is no
+`netmand` or `authd` socket service: network control is a kernel ioctl on AF_INET
+fds (`LEONOS_NET_CONTROL_IOCTL`) with DHCP/NTP lifecycle owned by the
+`leonos-dhcp`/`leonos-ntp` OpenRC services, and accounts are standard
+`/etc/passwd` + `/etc/shadow` files authenticated through PAM.
 
 ## Common message set
 
@@ -65,25 +72,20 @@ fd. Desktop connects with the policy handshake token
 | `DISPLAY_STATE/APPEARANCE_STATE` | publisher/query | gui state structs | policy publishes; app queries |
 | `DISPLAY_REQUEST/APPEARANCE_REQUEST` | app -> windowd -> desktop | gui request structs | policy receives |
 
-## authd (`/run/leonos/authd.sock`)
+## Accounts and authentication (no socket service)
 
-authd runs uid==0 and owns `/etc/leonos/users.db`. All mutating
-operations are gated by SO_PEERCRED: creation requires peer uid 0, updates
-require uid 0 or the same uid, and login never returns a password hash.
+Authentication has no AF_UNIX protocol. Accounts are standard
+`/etc/passwd`/`/etc/shadow` records (Alpine `shadow` packaging) and login,
+password change, and elevation run through the PAM stack: `login.elf` calls
+`leonos_pam_login()`, `su`/`sudo` use the upstream binaries with
+sudoers/PAM policy (the `sudod.elf` askpass helper supports the legacy
+`leonos_sudo_*` libc API), and `pam_leonos_password` is the LeonOS-specific
+verifier module. The `leonos_auth_*` libc wrappers in
+`userland/libc/src/auth_accounts.c` read the passwd database directly with
+`getpwuid`-style calls; mutating operations run the standard tools as root
+or require the caller's own uid.
 
-| Message | Direction | Fields | Permission |
-|---|---|---|---|
-| `HELLO` | client -> authd | `u32 pid` | SO_PEERCRED pid match |
-| `ACK` | authd -> client | `s32 code` | any |
-| `STATUS` | client -> authd | none -> `struct leonos_auth_status` | any |
-| `LIST` | client -> authd | include_disabled, capacity -> count + user array | any |
-| `LOGIN` | client -> authd | username, password -> user | any |
-| `ELEVATE` | client -> authd | admin username/password -> user | peer uid 0 |
-| `CURRENT` | client -> authd | none -> user | peer uid or current session |
-| `LOGOUT` | client -> authd | none | current session |
-| `CREATE/UPDATE/CHANGE_PASSWORD` | client -> authd | authd structs | uid 0 / same uid |
-
-## sessiond (`/run/leonos/session.sock`, hosted by serviced)
+## sessiond (`/run/leonos/session.sock`)
 
 | Message | Direction | Fields | Permission |
 |---|---|---|---|
@@ -95,7 +97,7 @@ require uid 0 or the same uid, and login never returns a password hash.
 | `LIST/SET_ENABLED/REMOVE` | client -> sessiond | startup entry records | uid owner |
 | `LAUNCH_CURRENT` | client -> sessiond | none | current session; child is setuid |
 
-## devmand (`/run/leonos/devman.sock`, hosted by serviced)
+## devmand (`/run/leonos/devman.sock`, the `device-agent.elf` service)
 
 | Message | Direction | Fields | Permission |
 |---|---|---|---|
@@ -121,21 +123,16 @@ require uid 0 or the same uid, and login never returns a password hash.
 storage nodes. They are read through ordinary open/read/readdir and are never
 served through a private ioctl.
 
-## netmand (`/run/leonos/net.sock`, hosted by serviced)
+## Networking (no socket service)
 
-| Message | Direction | Fields | Permission |
-|---|---|---|---|
-| `HELLO` | client -> netmand | `u32 pid` | SO_PEERCRED pid match |
-| `ACK` | netmand -> client | `s32 code` | any |
-| `CONFIG` | client -> netmand | none, response `struct leonos_net_config` | any |
-| `DNS_POLICY` | client -> netmand | `struct leonos_net_dns_policy` | set requires uid==0 (SO_PEERCRED) |
-| `DHCP` | client -> netmand | `struct leonos_net_dhcp` | any; no-device status until NIC exists |
-| `PING` | client -> netmand | `struct leonos_net_ping` | any |
-| `DNS` | client -> netmand | `struct leonos_net_dns` | any |
-| `CONNECTIONS` | client -> netmand | count header + entries | any |
-
-Data-plane sockets (`socket(AF_INET, SOCK_STREAM)`, connect/send/recv/close)
-never use this control socket.
+There is no netmand daemon. Read-only network status queries use the kernel's
+`LEONOS_NET_CONTROL_IOCTL` (`include/uapi/leonos/net_control.h`) on an
+`AF_INET` socket fd, credential-checked in the kernel. Configuration changes
+are lifecycle operations of the OpenRC services `leonos-dhcp` (udhcpc, hook
+publishes `/run/leonos/dhcp-lease`) and `leonos-ntp` (hook publishes
+`/run/leonos/ntp-state`); the `leonos_net_dhcp_renew()`/
+`leonos_time_ntp_sync()` libc helpers restart those services and validate the
+published files.
 
 ## imd (`/run/leonos/input-method.sock`)
 
@@ -163,12 +160,14 @@ credential syscalls, `uname`, and an AF_INET connect probe.
 |---|---|---|---|---|
 | 0 | kernel IPC | `unix_ipc.h/c`, `syscall_socket.c` blocking, `shm.c` | none | none (added syscalls) |
 | 1 | windowd | `windowd.h`, `wind.c`, `apps/windowd/` | `gui_ipc.c`, `gui_ipc.h` | `LEONOS_GUI_IOCTL_*` |
-| 2 | imd | `inputmd.h`, `apps/imd/` | `inputm.c`, `inputm.h` | `LEONOS_INPUTM_IOCTL_*` |
-| 3 | netmand (serviced) | `netmand.h`, `netsock.c`, `serviced/netmand.c` | none (`/dev/net0` entry removed) | `LEONOS_IOCTL_NET_*` |
-| 4 | authd/sessiond | `authd.h`, `sessiond.h`, `apps/authd/`, `serviced/sessiond.c` | none (syscall branches removed) | `LEONOS_AUTH_IOCTL_*`, `LEONOS_STARTUP_IOCTL_*` |
-| 5 | devmand/procfs | `devmand.h`, `procfs.c`, `procsys.c`, `serviced/devmand.c` | none (`/dev/hwinfo`, `/dev/driverctl` removed) | device/driver/system/time/machine/perf/affinity ioctls |
+| 2 | imd | `inputmd.h`, `apps/imd/` | `inputm.c` ioctls, `/dev/input-method` node | `LEONOS_INPUTM_IOCTL_*` |
+| 3 | (no daemon) | `netsock.c` | none; net ioctls replaced by `LEONOS_NET_CONTROL_IOCTL` on AF_INET fds + OpenRC services | `LEONOS_IOCTL_NET_*` |
+| 4 | sessiond | `sessiond.h`, `apps/sessiond/`, `sessiond_client.c` | none (syscall branches removed); authd never shipped — accounts moved to PAM | `LEONOS_AUTH_IOCTL_*`, `LEONOS_STARTUP_IOCTL_*` |
+| 5 | devmand (device-agent) | `devmand.h`, `apps/device-agent/`, `devmand_client.c`, `procfs.c`, `procsys.c` | none (`/dev/hwinfo` removed; `/dev/driverctl` retained as kernel-internal admin ioctl) | device/driver/system/time/machine/perf/affinity ioctls |
 | 6 | n/a | security/ABI/path tools | legacy ACL/signal/text/audio/PTY/kernel-debug branches | remaining private ioctl macros |
 
 Legacy application exports (`leonos_gui_*`, `leonos_auth_*`, `leonos_net_*`,
 `text_input_*`, `leonos_startup_*`, device/driver/system helpers) remain in
-libleonos with unchanged signatures; only their transport changed.
+libleonos with unchanged signatures; only their transport changed (windowd /
+imd / sessiond / devmand sockets, PAM-backed account reads, or AF_INET
+sockets plus the net control ioctl).

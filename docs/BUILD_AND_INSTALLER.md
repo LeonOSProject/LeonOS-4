@@ -135,27 +135,28 @@ runtime `/etc/leonos/license.conf` server override.
 
 ## Main outputs
 
-Common build outputs:
+Common build outputs (under `$(O)`, default `out/x86_64/release`):
 
-- `build/images/leonos4.vmdk`
-- `build/images/leonos4.iso`
-- `build/images/leonos4-installer.iso`
-- `build/install/root.fat`
-- `build/images/esp.fat`
-- `build/images/root.ext2` (default; FAT/exFAT cannot represent the current real symlinks)
+- `images/leonos4.vmdk` / `images/leonos4.raw`
+- `images/leonos4-live.iso`
+- `images/leonos4-installer.iso`
+- `images/installer-root.ext2` (historically `install/root.fat`)
+- `images/root.ext2` (Live / disk root; default ext2 because FAT/exFAT cannot represent the current real symlinks)
+- `stage/esp` (ESP staging directory; esp.fat is generated from it during ISO/VMDK assembly)
 
 The common system staging tree is:
 
-- `build/esp`
+- `stage/esp`
 
 It contains the Alpine-shaped root tree (`bin/`, `sbin/`, `lib/`, `usr/`,
 `etc/leonos/`, `var/lib/leonos/`, `opt/`) plus the ESP-only loader and kernel
 under `leonos/`. Help documents live in
 `usr/share/doc/leonos/`; all application packages live in
 `usr/lib/leonos/apps/`.
-Vim and ncurses are enabled by default. `python3 build.py run vim` builds the
-unmodified static Linux musl Vim and its ncurses dependency from pinned
-submodules. Both `image-vmdk` and `installer` package Vim's runtime and the
+Vim and ncurses are enabled by default. Vim now arrives as the unmodified
+Alpine `vim` APK (pinned in `configs/dependencies.lock.json`), and ncurses is
+built from the pinned submodule via `make upstream-ncurses`. Both `image-vmdk` and
+`installer` package Vim's runtime and the
 ncurses terminfo database. The ncurses tools also embed fallback descriptions
 for LeonOS terminal types (`xterm`, `xterm-256color`, `linux`, `vt100`, `ansi`,
 `screen`, and `screen-256color`), so `clear`, `tput`, and Vim remain usable if

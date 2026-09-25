@@ -40,8 +40,9 @@ nodes are synthesized. `/dev/shm` is a real root-backed directory, mode 1777,
 cleared before userspace on each boot; it is not a tmpfs mount. Directory reads enumerate
 the complete set of device nodes, including `/dev/null`, `/dev/zero`,
 `/dev/tty`, `/dev/console`, `/dev/fb0`, `/dev/input/event0`,
-`/dev/input/event1`, `/dev/input-method`, `/dev/dsp`,
-`/dev/serial0`, `/dev/net0`, and block-device aliases such as `/dev/disk0`.
+`/dev/input/event1`, `/dev/dsp`, `/dev/serial0`, `/dev/ethernet0`, `/dev/gpu`,
+`/dev/rtc`, `/dev/driverctl`, `/dev/kmsg`, `/dev/ptmx`, and block-device
+aliases such as `/dev/disk0`, `/dev/sda`, `/dev/vda`, `/dev/nvme0n1`.
 The corresponding libc APIs open these paths before issuing device ioctls;
 legacy fd 3 calls are translated for older binaries.
 
@@ -54,15 +55,16 @@ rereads are rejected for booted or mounted disks.
 
 `/dev/input/event0` is the Linux evdev keyboard stream and
 `/dev/input/event1` is the mouse stream. Each opened descriptor has its own
-event cursor, so readers do not consume Desktop input. The legacy text-input
-method provider protocol is intentionally separate at `/dev/input-method`;
-it is a temporary GUI service endpoint rather than a hardware device ABI.
+event cursor, so readers do not consume Desktop input. The text-input method
+service no longer has a device node; the retired `/dev/input-method` endpoint
+was replaced by the imd daemon's AF_UNIX socket at
+`/run/leonos/input-method.sock`.
 
 `/dev/dsp` is the Linux OSS-compatible PCM playback node. It accepts
 16-bit little-endian stereo samples through normal `write` calls, supports
 nonblocking mode and `poll(POLLOUT)`, and exposes the supported OSS setup
-ioctls from `<linux/soundcard.h>`. `/dev/audio` and `/dev/audio0` remain
-compatibility aliases for legacy binaries only.
+ioctls from `<linux/soundcard.h>`. `/dev/audio` is a compatibility alias for
+legacy binaries only.
 
 ## Supported Formats
 

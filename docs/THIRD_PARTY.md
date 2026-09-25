@@ -233,7 +233,7 @@ The earlier internal ANSI curses implementation remains an implementation
 detail of existing LeonOS applications; its headers are not the SDK's ncurses
 interface. Licenses ship as `/usr/share/licenses/ncurses/COPYING`, with
 `THIRD_PARTY/NCURSES-COPYING` in the developer SDK.
-`build.py run test-terminal-packages` runs the ncurses binaries and library on
+`python3 tools/test_terminal_packages.py` runs the ncurses binaries and library on
 Linux; guest validation is documented separately.
 
 ## TinyCC and Lua

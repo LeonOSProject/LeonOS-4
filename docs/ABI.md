@@ -79,48 +79,59 @@ full native Linux v6.12 syscall scope.
 
 ## Time Synchronization ABI
 
-`LEONOS_IOCTL_TIME_NTP_SYNC` accepts a `struct leonos_time_sync` from
-`include/leonos/system.h`. The request may leave `server` empty to use
-`pool.ntp.org`; the result returns the selected server, resolved IPv4 address,
-network status, validated Unix seconds, and `valid=1` only after the kernel
-updates its software wall clock. The ioctl is limited to trusted background
-service tasks, so ordinary applications cannot change system time.
+Time synchronization is a userland service, not a kernel ioctl. The libc
+helper `leonos_time_ntp_sync()` in `include/leonos/system.h` restarts the
+root-owned OpenRC service `leonos-ntp`, then polls the fresh notification
+file `/run/leonos/ntp-state` (mode-checked, root-owned, ≤120 s old) and
+confirms an active PLL via `adjtimex(2)` before reporting `valid=1`. The
+result returns the selected server, resolved IPv4 address, network status,
+and validated Unix seconds from `CLOCK_REALTIME`. Ordinary applications
+change system time only through the standard `settimeofday`/`adjtimex`
+syscalls subject to the kernel's permission checks, not through a LeonOS
+private control.
 
 ## Device model
 
 The runtime exposes a synthetic devfs namespace. Common nodes are
 `/dev/null`, `/dev/zero`, `/dev/full`, `/dev/random`, `/dev/urandom`,
-`/dev/tty`, `/dev/console`, `/dev/ptmx` and `/dev/pts/<id>`, `/dev/fb0`, `/dev/dsp`, `/dev/serial0`,
-`/dev/ttyS0`, `/dev/net0`, `/dev/ethernet0`, `/dev/disk0`, `/dev/sda`,
-`/dev/vda`, `/dev/nvme0n1`, `/dev/rtc`, `/dev/kmsg`, and `/dev/input/event0`.
+`/dev/tty` (`tty1`–`tty6`), `/dev/console`, `/dev/kmsg`,
+`/dev/ptmx` and `/dev/pts/<id>`, `/dev/fb0`, `/dev/gpu`, `/dev/dsp` (aliased
+`/dev/audio`), `/dev/serial0` (aliased `/dev/ttyS0`), `/dev/ethernet0`,
+`/dev/rtc`, `/dev/driverctl`, `/dev/shm0`, `/dev/disk0` (aliased `/dev/sda`,
+`/dev/vda`, `/dev/nvme0n1`), and `/dev/input/event0`/`event1`.
 `/dev/stdin`, `/dev/stdout`, and `/dev/stderr` alias the current process
-streams. `/dev/input` and `/dev/pts` are directories and are enumerated
-through normal directory syscalls. Device nodes are synthetic and are not
-stored in the filesystem image.
+streams. `/dev/input`, `/dev/disk`, `/dev/pts`, and `/dev/shm` are
+directories and are enumerated through normal directory syscalls. Device
+nodes are synthetic and are not stored in the filesystem image.
 
-Framebuffer, audio, input, network, disk, PTY, and GUI libc helpers open their
-corresponding `/dev` node and issue the device ABI. PTY users can use the
+Framebuffer, audio, input, disk, and PTY libc helpers open their
+corresponding `/dev` node and issue the device ABI (Linux fbdev, evdev,
+block, and OSS ioctls, plus the LeonOS `LEONOS_FBIOBLIT` and
+`LEONOS_IOCTL_GPU_*` extensions). PTY users can use the
 standard `posix_openpt/openpty/forkpty` functions; master/slave data flows
 through normal `read/write/poll` descriptors. Calls made by old
 applications with the historical descriptor 3 are translated to the matching
 node by libc, so existing binaries continue to work while using the devfs
 namespace. System applications query the complete hardware inventory through
-`LEONOS_IOCTL_DEVICE_LIST`.
+`leonos_device_list()`, which talks to the devmand service over its AF_UNIX
+protocol (`LEONOS_DEVMAND_MSG_DEVICE_LIST`); there is no device-list ioctl.
 
 PCM applications use OSS `/dev/dsp` with `<linux/soundcard.h>`. The current
 device accepts 16-bit little-endian stereo output and provides normal
 `write`, `O_NONBLOCK`, and `poll(POLLOUT)` behavior plus the basic
-`SNDCTL_DSP_*` format and queue ioctls. `/dev/audio` and `/dev/audio0` are
-temporary aliases retained only for binaries that still use the private audio
-request family.
+`SNDCTL_DSP_*` format and queue ioctls. `/dev/audio` is a compatibility
+alias for the same node.
 
 ## Driver Module ABI
 
 Loadable Ring 0 driver modules use the public definitions in
-`include/leonos/driver.h`. `LEONOS_IOCTL_DRIVER_LIST` exposes the discovered
-module filename, ABI version, state, and diagnostic text to all user sessions.
-`LEONOS_IOCTL_DRIVER_CONTROL` accepts load, unload, forced-unload, rescan, and
-boot-enable actions, but the kernel permits it only for administrator tasks.
+`include/leonos/driver.h`. Ordinary applications list and control drivers
+through `system_driver_list()`/`system_driver_control()`
+(`include/leonos/devmgr_service.h`), which send versioned requests to the
+devmand service over its AF_UNIX socket; devmand in turn issues the kernel's
+`LEONOS_DRIVER_CONTROL_IOCTL` on `/dev/driverctl`, and the kernel permits
+control actions only for administrator tasks. There are no legacy
+`LEONOS_IOCTL_DRIVER_*` ioctls.
 
 The kernel loads unsigned ELF64 `ET_REL` files from `/drivers` after the
 root filesystem is mounted. The complete binary format, restricted kernel API,
@@ -169,39 +180,34 @@ for both Metro and Win95; each theme keeps its own palette and persisted
 `metro.color` / `win95.color` value. Its configuration value remains `pink`
 for compatibility.
 
-`LEONOS_GUI_IOCTL_APPEARANCE_STATE` reads the current Desktop-published state.
-Logged-in user tasks may submit `LEONOS_GUI_IOCTL_APPEARANCE_REQUEST`; the
-window server polls and publishes the updated state through the paired
-appearance ioctls, writes the current user's `appearance.conf`, reloads the
-wallpaper, then sends `LEONOS_GUI_APP_EVENT_THEME_CHANGED` to active
+Appearance state travels over the windowd AF_UNIX protocol, not ioctls:
+clients call the libc helpers in `userland/libc/src/wind.c`, which exchange
+`LEONOS_WIN_MSG_APPEARANCE_STATE` and `LEONOS_WIN_MSG_APPEARANCE_REQUEST`
+messages with the window server. Logged-in user tasks may submit an
+appearance request; the window server polls and publishes the updated state
+through the paired messages, writes the current user's `appearance.conf`,
+reloads the wallpaper, then sends `LEONOS_GUI_APP_EVENT_THEME_CHANGED` to active
 application windows. The event carries the theme in `x`, the Metro color
 scheme in `y`, and the Win95 color scheme in `dx`.
 
 ## Authentication ABI
 
 Multi-user state is exposed through `include/leonos/auth.h` and libc wrappers
-in `userland/libc/src/libc.c`.
+in `userland/libc/src/auth_accounts.c`, which read the standard
+`/etc/passwd` and `/etc/shadow` files via `getpwuid`/musl (rooted at the
+target install tree for offline tools).
 
 User-facing roles are:
 
 - `LEONOS_AUTH_ROLE_ADMIN`
 - `LEONOS_AUTH_ROLE_USER`
 
-The account database supports up to `LEONOS_AUTH_MAX_USERS` accounts. Usernames
-are lowercase letters, digits, and `_`; passwords must be non-empty. The current
-v1 password verifier is salted SHA-256 and is meant for this OS stage, not as a
-complete modern password-storage design.
-
-Authentication requests use `ioctl` IDs:
-
-- `LEONOS_AUTH_IOCTL_STATUS`
-- `LEONOS_AUTH_IOCTL_CURRENT`
-- `LEONOS_AUTH_IOCTL_LIST_USERS`
-- `LEONOS_AUTH_IOCTL_LOGIN`
-- `LEONOS_AUTH_IOCTL_LOGOUT`
-- `LEONOS_AUTH_IOCTL_CREATE_USER`
-- `LEONOS_AUTH_IOCTL_UPDATE_USER`
-- `LEONOS_AUTH_IOCTL_CHANGE_PASSWORD`
+Roles are derived from the account UID (`uid == 0` is admin). Usernames are
+lowercase letters, digits, and `_`; passwords must be non-empty. Login and
+password changes go through the standard PAM stack (`linux-pam` with the
+`pam_leonos_password` module); there are no `LEONOS_AUTH_IOCTL_*` requests —
+the private auth ioctl family was removed. The legacy
+`/var/lib/leonos/users.db` v2 record is only probed during account migration.
 
 Task snapshots now include `uid`, `role`, `session_id`, and `username`.
 Children inherit identity and current directory from the parent task.
@@ -281,46 +287,38 @@ over the devmand IPC that `userland/libc/src/devmand_client.c` wraps as
 
 ## Machine Identity ABI
 
-`LEONOS_IOCTL_MACHINE_IDENTITY` returns `struct leonos_machine_identity` from
-`include/leonos/system.h`. The kernel fills stable platform identity from SMBIOS
-System UUID when available and augments it with boot GPT disk and ESP partition
-GUIDs after storage is mounted. License code uses SMBIOS UUID as the primary
-machine binding and falls back to the boot GPT GUID pair when firmware does not
-provide a valid UUID. Network adapter MAC addresses are deliberately excluded
-from the license machine ID so hot-adding or removing e1000 hardware does not
-invalidate an existing activation.
+`leonos_machine_identity()` (`include/leonos/system.h`, implemented in
+`userland/libc/src/procsys.c`) fills `struct leonos_machine_identity` from
+procfs: it reads the SMBIOS system UUID exported at
+`/sys/class/dmi/id/product_uuid` and marks
+`LEONOS_MACHINE_IDENTITY_FLAG_PLATFORM_UUID` when a valid 36-character UUID
+is present. There is no `LEONOS_IOCTL_MACHINE_IDENTITY`; the private ioctl
+was removed in favor of the sysfs view. License code uses the platform UUID
+as the primary machine binding with the boot GPT GUID pair as fallback when
+firmware does not provide a valid UUID. Network adapter MAC addresses are
+deliberately excluded from the license machine ID so hot-adding or removing
+e1000 hardware does not invalidate an existing activation.
 
 ## Network ABI
 
-`include/leonos/net.h` exposes the network ioctl ABI. It covers configuration,
-DHCP renew, DNS A lookups, ICMP ping, a compatibility fixed-buffer
-`leonos_net_http_get` helper, and TCP client sockets.
+Sockets use the standard Linux socket syscalls: the kernel dispatches
+`socket`, `connect`, `accept`/`accept4`, `bind`, `listen`, `send`/`recv`,
+`sendto`/`recvfrom`, `sendmsg`/`recvmsg`, `shutdown`, and option queries to
+the AF_UNIX and AF_INET backends (`syscall_socket_dispatch` in
+`kernel/ntclks/syscall.c`). `include/leonos/net.h` keeps a versioned
+compatibility surface — `leonos_net_config()`, `leonos_net_dhcp_renew()`,
+DNS, ping, TCP helpers — but its libc implementations in
+`userland/libc/src/netsock.c` are ordinary socket-fd clients:
+`leonos_socket_tcp()` is `socket(AF_INET, SOCK_STREAM, 0)` and the
+read-only queries issue `LEONOS_NET_CONTROL_IOCTL` on an `AF_INET` datagram
+fd; there are no `LEONOS_IOCTL_NET_*` request codes.
 
-Runtime DHCP renew mutates the global IPv4 configuration, so
-`LEONOS_IOCTL_NET_DHCP` is restricted to administrators and trusted service
-tasks. The license OOBE has a narrow pre-login exception: `/usr/lib/leonos/apps/oobe/oobe.elf`
-may renew DHCP only while `/var/lib/leonos/oobe.done` is absent. Ordinary users can still
-read network configuration and use DNS, HTTP, ping, and TCP client socket APIs.
-
-Socket requests use:
-
-- `LEONOS_IOCTL_NET_SOCKET_OPEN`
-- `LEONOS_IOCTL_NET_SOCKET_CONNECT`
-- `LEONOS_IOCTL_NET_SOCKET_SEND`
-- `LEONOS_IOCTL_NET_SOCKET_RECV`
-- `LEONOS_IOCTL_NET_SOCKET_CLOSE`
-- `LEONOS_IOCTL_NET_CONNECTIONS`
-
-libc wraps those as `leonos_socket_tcp`, `leonos_socket_connect`,
-`leonos_socket_send`, `leonos_socket_recv`, `leonos_socket_close`, and
-`leonos_net_connections`. A socket is an integer task-owned TCP client handle.
-`connect` accepts a host name or IPv4 literal, resolves DNS A records when
-needed, and returns the selected remote IP and local port. `send` and `recv` are
-synchronous byte-stream operations with per-call timeouts and status fields.
-Connection states exported to userland are `SYN_SENT`, `ESTABLISHED`,
-`TIME_WAIT`, and `CLOSED`. `leonos_net_connections` is filtered by identity:
-administrators and trusted service tasks see all sockets, while normal users
-see only sockets owned by their uid.
+Network lifecycle is an OpenRC service: DHCP renew restarts `leonos-ntp`'s
+companion `leonos-dhcp` (root-owned udhcpc), whose hook publishes the lease
+atomically at `/run/leonos/dhcp-lease`; clients verify the file's ownership
+and mode before trusting it. Connection inventory uses the control ioctl and
+is filtered by identity: administrators and trusted service tasks see all
+sockets, while normal users see only sockets owned by their uid.
 
 `include/leonos/http.h` adds a libc HTTP client on top of those sockets:
 `leonos_http_get`, `leonos_http_request`, and `leonos_http_resolve_url`.
@@ -336,16 +334,17 @@ management are still out of scope for this ABI version.
 
 ## Audio ABI
 
-`include/leonos/audio.h` exposes a bounded, non-blocking PCM submission
-interface backed by autoloaded audio driver modules. `LEONOS_IOCTL_AUDIO_CONFIGURE`
-selects the stream format, `LEONOS_IOCTL_AUDIO_WRITE` submits at most 64 KiB per
-call and may return a short write when the device cannot accept more data, and
-`LEONOS_IOCTL_AUDIO_GET_STATE` returns device and stream state. The initial
-`ac97.drv` supports QEMU's Intel ICH AC'97 controller, while `es1371.drv`
-supports VMware's Ensoniq AudioPCI ES1371 controller. Both accept 16-bit,
-stereo PCM at 8000–48000 Hz. The AC'97 backend keeps a persistent DMA ring and
-reports short writes with `LEONOS_AUDIO_STATUS_WOULD_BLOCK`; callers should
-retain and retry the unwritten tail. `doom.elf` and the built-in `wavplay.elf`
+PCM audio reaches userland through OSS `/dev/dsp` (see the Device model
+section); the private `LEONOS_IOCTL_AUDIO_*` ioctls were removed and the
+`include/leonos/audio.h` wrapper declarations no longer have libc
+implementations. Audio is backed by autoloaded driver modules: `ac97.drv`
+supports QEMU's Intel ICH AC'97 controller, while `es1371.drv` supports
+VMware's Ensoniq AudioPCI ES1371 controller. Both accept 16-bit,
+stereo PCM at 8000–48000 Hz selected with `SNDCTL_DSP_SETFMT`,
+`SNDCTL_DSP_CHANNELS`, and `SNDCTL_DSP_SPEED`. The AC'97 backend keeps a
+persistent DMA ring and reports non-blocking short writes with
+`EAGAIN`/`LEONOS_AUDIO_STATUS_WOULD_BLOCK` semantics; callers should retain
+and retry the unwritten tail. `doom.elf` and the built-in `wavplay.elf`
 test tone use native 48000 Hz output to avoid emulator-side resampling.
 `wavplay.elf` also opens matching PCM WAV files and is the default `.wav`
 handler.
@@ -384,23 +383,20 @@ Current companion applications:
 - `oshlp.elf`: opens LeonOS `.hlp` help containers from `/usr/share/doc/leonos` or any path
   passed by another app. The help viewer uses the current system language as its
   default but language changes inside the window are local to that process.
-- `serviced.elf`: protected background service runtime. Desktop starts it once
-  after the window server is ready. It writes `/run/leonos/services.state`,
-  consumes `/run/leonos/services.cmd`, logs to `/var/log/services.log`, and
-  keeps retrying DHCP while the static fallback is active.
-- `servicemgr.elf`: edits `/etc/leonos/services.cfg`, reads the runtime state file,
-  and queues administrator start/stop/restart commands through
-  `/run/leonos/services.cmd`.
+- `servicemgr.elf`: service manager UI. It lists the OpenRC services
+  (`leonos-desktop`, `leonos-dhcp`, `leonos-session`, `leonos-device`,
+  `leonos-ntp`), reads enabled state from `/etc/runlevels/default/`, and
+  starts/stops/restarts/enables them by running `rcctl.elf` (elevated through
+  the sudo path for non-root callers). The retired `serviced.elf` runtime,
+  `/run/leonos/services.state`, `/run/leonos/services.cmd`, and
+  `/etc/leonos/services.cfg` no longer exist.
 
-The current service keys are `desktop`, `dhcp`, `network_icon`, `rtc_clock`,
-and `ntp_sync`. `desktop` is fixed on. `dhcp` controls whether kernel boot
-network initialization attempts DHCP before keeping the static fallback and is
-also supervised by `serviced.elf` after the desktop starts. `network_icon` and
-`rtc_clock` are read by the desktop taskbar. `ntp_sync` asks the protected
-`serviced.elf` task to resolve `pool.ntp.org`, send an NTP UDP request, and set
-the kernel software wall clock after validating the server reply. It retries
-failed synchronization after five minutes and refreshes a successful sync every
-six hours. This updates the runtime clock only; it does not write the RTC/CMOS.
+Service behaviour is now OpenRC policy: `leonos-dhcp` runs BusyBox `udhcpc`
+with the publishing hook, and `leonos-ntp` runs BusyBox `ntpd` against
+`pool.ntp.org`; its hook publishes `/run/leonos/ntp-state` and `ntpd` steers
+the kernel clock through the standard `adjtimex` PLL. The desktop taskbar
+reads the live network/clock state instead of the old `network_icon` and
+`rtc_clock` toggles.
 ## POSIX/Linux ABI migration status
 
 The public `stat`, `fstat`, and `lstat` symbols use the musl/Linux x86-64

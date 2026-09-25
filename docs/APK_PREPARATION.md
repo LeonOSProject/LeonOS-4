@@ -114,7 +114,7 @@ command help; this does not change transaction semantics.
 The default local signing key is generated once at
 `~/.local/share/leonos/apk-signing/key.pem`, mode 0600, outside the repository.
 Only its public key enters the image. Preserve this private key for subsequent
-updates of images built with it. `LEONOS_APK_SIGNING_KEY` can select a maintained
+updates of images built with it. `APK_SIGNING_KEY` can select a maintained
 release key. A new key is not automatically trusted by an installed system.
 Changing the selected key intentionally requires a separate authenticated key
 rotation or a fresh install; the updater never imports the media's key into
@@ -122,9 +122,9 @@ the target trust store.
 
 ## Build and installation
 
-`python3 build.py run apk-root` builds the normal staging payload, makes signed
+`make apk-repo` builds the normal staging payload, makes signed
 APKv3 packages/index with upstream `apk mkpkg/mkndx`, and installs them into
-`build/apk/root` using upstream `apk add`. When available, host user namespaces
+`$(O)/rootfs/managed` using upstream `apk add`. When available, host user namespaces
 map ownership to root without modifying the host root or requiring sudo. On
 runners that prohibit user namespaces, the build uses the installed `fakeroot`
 compatibility path instead. Normal image targets depend on this managed root.
@@ -265,16 +265,16 @@ program. These are local-fixture results, not promises about public mirror or
 VMware speeds. See `docs/NETWORK_STATUS_2026-09-13.md` for evidence and scope.
 
 ```sh
-python3 build.py run test-apk-distribution
+make test-apk
 python3 tools/test_apk_qemu.py
 python3 tools/test_apk_qemu.py --testing-only
 python3 tools/test_terminal.py
 python3 tools/test_linux_ioctl_cloexec.py
-# Requires current kernel, app:terminal and apk-root build outputs.
+# Requires current kernel, terminal app and apk-repo build outputs.
 python3 tools/test_hyfetch_qemu.py
 python3 tools/test_alpine_runtime_qemu.py
-python3 tools/test_apk_qemu.py --package-cache build/alpine-runtime/cache
-python3 build.py run images-iso
+python3 tools/test_apk_qemu.py --package-cache out/x86_64/release/packages/apk/cache
+make iso
 python3 tools/test_apk_layout.py --images
 ```
 

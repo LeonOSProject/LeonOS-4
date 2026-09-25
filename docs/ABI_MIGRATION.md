@@ -8,18 +8,18 @@ libc，但新应用不得增加对私有硬件入口的依赖。Linux 兼容范�
 
 | 现有接口/实现 | 目标接口 | 当前状态 | 说明 |
 | --- | --- | --- | --- |
-| 文件读写、目录和进程 | POSIX libc + Linux syscall | 进行中 | 标准 `stat/fstat/lstat` 已返回完整 POSIX `struct stat`；第一方内部查询暂用显式命名的 `leonos_*_legacy`；`openat(AT_FDCWD)` 已接入，目录 fd 相对解析仍待完成 |
+| 文件读写、目录和进程 | POSIX libc + Linux syscall | 进行中 | 标准 `stat/fstat/lstat` 已返回完整 POSIX `struct stat`；第一方内部查询暂用显式命名的 `leonos_*_legacy`；`openat(AT_FDCWD)` 已接入，目录 fd 相对解析已实现（非绝对路径经 `dirfd` 解析） |
 | `leonos_pty_*` 和私有 PTY ioctl | Unix98 PTY + `termios`/`TIOCGWINSZ` | 进行中 | libc 已提供 `posix_openpt/openpty/forkpty`；新的程序应使用 `/dev/ptmx`、`/dev/pts/<id>`、`/dev/tty`，旧入口仅作过渡 |
-| `leonos_socket_*` 网络包装 | POSIX socket fd | 进行中 | `AF_UNIX/SOCK_STREAM` 已接入 socket syscall、FD 生命周期和 poll；IPv4 网络仍由过渡层驱动 |
-| `LEONOS_GUI_IOCTL_*` | 版本化 GUI IPC + SDK GUI 库 | 设计完成，迁移中 | GUI 不属于 POSIX，内核 ioctl 仅作为过渡实现 |
+| `leonos_socket_*` 网络包装 | POSIX socket fd | 基础完成 | `AF_UNIX/SOCK_STREAM` 与 `AF_INET` TCP/UDP 均已接入 socket syscall、FD 生命周期和 poll；`leonos_socket_*` 兼容包装直接使用真实 socket fd |
+| `LEONOS_GUI_IOCTL_*` | 版本化 GUI IPC + SDK GUI 库 | 已完成 | 私有 GUI ioctl 已全部删除；应用经 libc `wind.c` 走 windowd AF_UNIX 协议（含外观、窗口、事件），帧缓冲合成使用 `/dev/fb0` 的 `LEONOS_FBIOBLIT` |
 | `leonos_gpu_*`/`LEONOS_IOCTL_GPU_*`（fd 3） | 版本化 GPU SDK + 设备/服务通道 | 迁移中 | 采用方案 A：`leonos_gpu_*` 仅为 fd 3 过渡入口；新 SDK 使用版本化 GPU 客户端 API，删除里程碑见阶段状态 |
 | 帧缓冲私有 ioctl | Linux fbdev UAPI (`/dev/fb0`) | 基础完成 | `/dev/fb0` 支持 mmap 以及 `FBIOGET_VSCREENINFO`、`FBIOGET_FSCREENINFO`、`FBIOPUT_VSCREENINFO`；绘制扩展仍由 GUI 服务负责 |
 | 原始键盘和鼠标输入 | evdev (`/dev/input/event*`) | 基础完成 | `/dev/input/event0` 是键盘、`event1` 是鼠标；独立 FD 游标支持 `read`、`O_NONBLOCK`、`poll` 和常用 `EVIOC*` 查询 |
-| 输入法管理私有 ioctl | 版本化 GUI 文本输入服务 | 迁移中 | 输入法不是硬件事件设备；过渡期改走 `/dev/input-method`，不再借用 `event0`，后续移入 GUI Unix socket 协议 |
+| 输入法管理私有 ioctl | 版本化 GUI 文本输入服务 | 基础完成 | 输入法不是硬件事件设备；私有 ioctl 与过渡节点 `/dev/input-method` 均已删除，libc 改走 imd 守护进程的 `/run/leonos/input-method.sock` Unix socket |
 | 音频私有 ioctl | OSS `/dev/dsp` | 基础完成 | 16-bit little-endian stereo playback，首版不引入 ALSA ABI |
 | 磁盘/分区私有 ioctl | `/dev/*` 块设备 + Linux 风格 ioctl | 基础完成 | BusyBox、installer、gptinit 和 diskmgr 使用 `/dev/diskN[pN]`、`BLK*`、原始对齐 I/O 与 `mount(2)`；旧公开 ioctl 已移除 |
-| `leonos_device_list` | `/dev` 枚举、`stat`、设备服务 IPC | 进行中 | `/dev` devfs 已提供稳定节点，设备列表 ioctl 待淘汰 |
-| 私有 signal ioctl | `rt_sigaction`/`rt_sigprocmask` | 进行中 | 当前只完整支持默认/忽略处置，用户 handler frame 仍待实现 |
+| `leonos_device_list` | `/dev` 枚举、`stat`、设备服务 IPC | 已完成 | `/dev` devfs 提供稳定节点；设备列表 ioctl 已删除，`leonos_device_list()` 走 devmand AF_UNIX 协议（device-agent 服务） |
+| 私有 signal ioctl | `rt_sigaction`/`rt_sigprocmask` | 基础完成 | 用户 handler frame 已实现（`signal_setup_frame` 构造 `linux_rt_sigframe`，`rt_sigreturn` 恢复现场，返回用户态前投递 pending signal） |
 
 ## 统一 UAPI
 
@@ -56,7 +56,7 @@ libc，但新应用不得增加对私有硬件入口的依赖。Linux 兼容范�
 - [x] Unix98 PTY 基础 master/slave fd、标准 winsize/termios ioctl
 - [x] POSIX `stat/fstat/lstat` 结构和错误语义，保留显式 legacy 查询入口
 - [x] `/dev/fb0` 基础 Linux fbdev UAPI 和 framebuffer mmap
-- [ ] `rt_sig*` 用户 handler frame 和完整 Unix98 PTY hangup 语义
+- [x] `rt_sig*` 用户 handler frame、`rt_sigreturn` 恢复和 Unix98 PTY hangup（master 关闭挂断、drain 后 EOF、`TIOCSCTTY` 会话规则）
 - [x] evdev `/dev/input/event*` 原始读写、非阻塞、`poll` 和基础 `EVIOC*` 查询
 - [ ] evdev 独占抓取、热插拔和完整能力/状态位图
 - [x] OSS `/dev/dsp` 音频设备接口：`SNDCTL_DSP_SETFMT`、`CHANNELS`、`SPEED`、能力/缓冲区查询、非阻塞写入和 `poll(POLLOUT)`
@@ -92,5 +92,5 @@ IPv4 网络仍使用现有网络服务过渡接口，待后续迁移。
 `SNDCTL_DSP_GETODELAY` 和 `SNDCTL_DSP_NONBLOCK` 已实现。应用应通过
 `write` 提交 PCM，并用 `poll(POLLOUT)` 或 `EAGAIN` 处理队列饱和。
 
-`/dev/audio` 与 `/dev/audio0` 仅用于仍使用旧私有音频 ioctl 的二进制兼容，
+`/dev/audio` 仅用于二进制兼容，
 新应用和 SDK 示例必须使用 `<linux/soundcard.h>` 与 `/dev/dsp`。

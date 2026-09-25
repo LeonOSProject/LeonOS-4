@@ -14,6 +14,7 @@ exec=notepad.elf
 icon=notepad.bmp
 entry=1
 terminal=0
+system=1
 hidden=0
 open_with=1
 extensions=.txt,.md,.log
