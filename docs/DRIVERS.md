@@ -6,8 +6,10 @@ All driver source code lives in the repository-root `drivers/` directory.
 
 - `drivers/bootstrap`: console, framebuffer, VGA, EFI filesystem, storage, and
   USB UHCI/HID implementations that are linked into `kernel.sys`.
-- `drivers/mouse`, `drivers/serial`, and `drivers/e1000`: loadable driver
-  implementations built as `mouse.drv`, `serial.drv`, and `e1000.drv`.
+- `drivers/mouse`, `drivers/serial`, `drivers/e1000`, `drivers/ac97`, and
+  `drivers/es1371`: loadable driver implementations built as `mouse.drv`,
+  `serial.drv`, `e1000.drv`, `ac97.drv`, and `es1371.drv` (see `DRIVER_NAMES`
+  in `mk/boot.mk`).
 
 The normal image, normal ISO, installer runtime root, and installed ESP place
 loadable modules directly in `/drivers`.

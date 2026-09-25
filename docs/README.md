@@ -18,6 +18,20 @@ when changing the kernel, loader, installer, or user ABI.
   bundled `.hlp` help documents, and current limits.
 - [Drivers](DRIVERS.md): bootstrap drivers, loadable `.drv` modules, ABI, and
   management policy.
+- [Build system](BUILDSYSTEM.md): GNU Make layout, target graph (kernel /
+  userland / runtime / sdk / installer / rpr-pages / pages), incremental and
+  concurrent build rules, and Pages assembly contract.
+- [APK preparation](APK_PREPARATION.md): rootfs-to-APK packaging and the
+  signing pipeline that feeds `make rpr-pages`.
+- [Remote Package Repository](RPR.md): RPR machine interface, `make pages`
+  assembly, GitHub Pages publishing, and how `verify-pages.sh` guards the tree.
+- [EEVDF scheduler](EEVDF_SCHEDULER.md): fair-scheduling rules, per-CPU
+  fairness, SMP state, and known limitations.
+- [Execution lock](EXECUTION_LOCK.md): the global kernel service transaction,
+  the 2026-09-18 read-side anonymous-fault fast path, and the boundaries that
+  still serialise cross-core syscalls.
+- [Desktop performance](DESKTOP_PERFORMANCE.md): compositor refresh path and
+  the framebuffer-present behaviour that gates Doom and Terminal frame rates.
 - [Kernel Debug](KERNEL_DEBUG.md): five-click activation, one-shot boot state,
   `kerneldebug.sys`, and the ostui diagnostic interface.
 - [Boot and Integrity](BOOT_AND_INTEGRITY.md): loader boot flow, SHA-256

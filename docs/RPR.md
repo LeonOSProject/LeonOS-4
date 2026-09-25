@@ -47,25 +47,28 @@ public key.
 Enable GitHub Pages with **Source: GitHub Actions**, then run the **Build Pages**
 workflow (`.github/workflows/build-pages.yml`). It triggers on pushes to `main`
 and on `workflow_dispatch`. The workflow has no separate RPR job: RPR, the
-download page and the home page are built and deployed together as one atomic
-release (see `docs/BUILDSYSTEM.md`). It:
+download page, the home page and the generated Documentation section are built
+and deployed together as one atomic release (see `docs/BUILDSYSTEM.md`). It:
 
 1. checks out the complete source tree and installs the normal LeonOS toolchain;
 2. decodes the signing key only under `$RUNNER_TEMP` with mode `0600`;
 3. builds the whole release with `make pages`, which depends on the installer
    ISO and on `make rpr-pages`, so kernel, base APK repository, optional
-   application APKs and every page come from one build;
+   application APKs and every page come from one build; the Documentation
+   section is rendered from the repository `docs/` tree by `tools/build/md2html.awk`
+   (pure awk: no Python/Node in the production build path);
 4. merges both APK inputs and signs `apk/packages.adb` from only
    `leonos-*.apk` packages;
 5. assembles `kernel/` from artifacts produced in the same build;
 6. runs `tools/build/verify-pages.sh`, which rejects a Pages tree containing any
-   JavaScript, any PEM private-key marker, a broken link, or a checksum that
-   disagrees with the file it describes;
+   JavaScript, any PEM private-key marker, a broken link, a raw Markdown leak
+   under `docs/`, or a checksum that disagrees with the file it describes;
 7. removes the temporary key and deploys with GitHub's OIDC Pages action.
 
 `make rpr-pages` on its own still generates only the RPR subtree under
 `out/x86_64/release/rpr-pages/` for local use; `make pages` embeds that subtree
-at `pages/rpr/` in the full site.
+at `pages/rpr/` and additionally emits the Documentation section at
+`pages/docs/` in the full site.
 
 The default images contain neither these optional applications nor their APK
 files. They are available only from RPR as `leonos-helloworld`, `leonos-doom`,
