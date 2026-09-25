@@ -35,7 +35,7 @@ def main() -> int:
     command = [
         "clang-tidy", "-p", str(database),
         f"--checks={args.checks}",
-        "--header-filter=(boot|drivers|include|kernel|userland|devtools)/.*",
+        "--header-filter=(boot|drivers|include|kernel|userland)/.*",
     ]
     if args.fix:
         command.append("--fix")

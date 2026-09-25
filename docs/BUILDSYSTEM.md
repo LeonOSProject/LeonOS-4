@@ -31,7 +31,7 @@ Kconfig 菜单（Build、Image defaults 等）决定默认配置，configs/compo
 | --- | --- |
 | kernel / loader / drivers | generated/system、generated/boot、generated/drivers |
 | runtime / userland / leonos-pam / leonos-upstream | 运行库、应用、独立上游安装树 |
-| sdk / musl-sdk | packages/LeonOS4-Developer-SDK.zip、leonos-musl-sdk.tar.gz |
+| sdk / musl-sdk | packages/leonos-musl-sdk.tar.gz |
 | rootfs-raw / rootfs / apk-repo | rootfs/raw、managed、manifest.json；packages/apk/repository |
 | image-vmdk | images/leonos4.raw、leonos4.vmdk |
 | iso / image-iso | images/leonos4-live.iso |
@@ -56,8 +56,9 @@ clean 保留 `.config`；distclean 清该树配置。两者都检查所有权、
 
 ## SDK、签名和运行
 
-解压 SDK 后直接 `make`；C 驱动通过自身位置定位 sysroot，支持重定位、动态与 STATIC=1。
-SDK 的可选头/库由 SDK 选择控制，不从旧 devtools 生成物偷取。
+SDK 是可重定位 musl sysroot（`packages/leonos-musl-sdk.tar.gz`）：随包 C 驱动
+`leonos-musl-cc` 按自身位置定位 sysroot，支持重定位、动态与 STATIC=1。
+SDK 的可选头/库由组件选择控制。
 
 APK 使用上游 apk 的真实 mkpkg/mkndx/add，包含数据库和签名。
 默认密钥为 `~/.local/share/leonos/apk-signing/key.pem`（0600），可用 APK_SIGNING_KEY 指定。

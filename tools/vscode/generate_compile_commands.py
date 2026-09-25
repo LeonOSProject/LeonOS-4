@@ -29,10 +29,6 @@ REGION_PATTERNS: dict[str, tuple[str, ...]] = {
         "userland/**/*.c", "userland/**/*.cpp", "userland/**/*.cc",
         "userland/**/*.cxx", "userland/**/*.S",
     ),
-    "devtools": (
-        "devtools/examples/**/*.c", "devtools/examples/**/*.cpp",
-        "devtools/examples/**/*.cc", "devtools/examples/**/*.cxx",
-    ),
 }
 
 
@@ -63,8 +59,7 @@ def include_flags(root: Path, region: str) -> list[str]:
             root / "third_party/stardustui",
         ]
     else:
-        paths = [root / "devtools/include", root / "devtools/examples",
-                 root / "include",
+        paths = [root / "include",
                  root / "build/include", root / "userland/libc/include",
                  root / "build/musl/sysroot/include"]
     return [f"-I{path.relative_to(root).as_posix()}" for path in paths if path.is_dir()]
@@ -130,8 +125,6 @@ def source_region(root: Path, source: Path, selected: str) -> str:
         return "libc"
     if source.is_relative_to(root / "kernel") or source.is_relative_to(root / "drivers"):
         return "kernel"
-    if source.is_relative_to(root / "devtools"):
-        return "devtools"
     return "userland" if selected == "all" else selected
 
 

@@ -1,8 +1,8 @@
 # VS Code development support
 
 The C/C++ configurations in `.vscode/c_cpp_properties.json` are split by
-compilation boundary: kernel, UEFI loader, LeonOS libc, ordinary userland, and
-the exported devtools SDK.  They all consume the generated database at
+compilation boundary: kernel, UEFI loader, LeonOS libc, and ordinary
+userland.  They all consume the generated database at
 `build/vscode/compile_commands.json`, so completion and diagnostics follow the
 same target flags as the build graph.
 

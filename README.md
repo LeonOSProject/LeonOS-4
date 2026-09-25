@@ -48,7 +48,7 @@ RPR 子树。`run-iso`、`run-installer` 启动对应镜像，`QEMU_KVM=0` 可�
 默认产物在 `out/x86_64/release/`：
 
 - `images/leonos4.vmdk`、`images/leonos4-live.iso`、`images/leonos4-installer.iso`
-- `packages/LeonOS4-Developer-SDK.zip`、`packages/leonos-musl-sdk.tar.gz`
+- `packages/leonos-musl-sdk.tar.gz`
 - `packages/apk/repository/`、`rootfs/manifest.json`、`rpr-pages/`、`pages/`
 
 `make menuconfig` 编辑所选 `O/config/.config`；`make olddefconfig` 保留选择并补全新项。
@@ -80,7 +80,6 @@ RPR 子树。`run-iso`、`run-installer` 启动对应镜像，`QEMU_KVM=0` 可�
 - `Makefile` 与 `mk/`：GNU Make 构建入口和依赖规则。
 - `tools/host/`、`tools/build/`：C 数据工具和短上游构建适配器。
 - `configs/`：组件清单、默认配置和可提交的构建 profile。
-- `devtools/`：面向应用开发的 SDK 头文件、库、链接脚本、示例和文档。
 - `docs/`：架构、ABI、构建、文件系统、安全和工具文档。
 - `drivers/`：可加载的 Ring-0 驱动及其构建输入；`drivers/bootstrap/storage/` 实现文件系统、启动挂载和 `LEONACL.SYS` 权限元数据。
 - `include/`：内核与用户态共用的公共 C 头文件；生成头文件位于 `include/generated/`。

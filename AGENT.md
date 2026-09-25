@@ -56,7 +56,6 @@ installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
 | `configs/` | 动态组件清单、可提交 build profile 与默认配置。 |
 | `tools/` | 构建、Kconfig 同步、镜像、安装器、SDK、资源生成和验证脚本。 |
 | `mk/`、`tools/host/`、`tools/build/` | Make 依赖规则、C 工具及上游适配器。 |
-| `devtools/` | 开发 SDK 输入（公共头文件、库、示例、文档、链接脚本）。 |
 | `docs/` | 架构、ABI、构建、文件系统、驱动、安全等项目文档。 |
 | `third_party/` | 通过 Git submodule 引入的上游源码；见 `.gitmodules`。 |
 | `build/` | 可再生产物与 staging 输出；不可作为手写源码的唯一来源。 |
@@ -89,8 +88,9 @@ installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
 2. `kernel/ntclks/`：编号、用户范围检查、权限检查、实现和错误路径。
 3. `userland/libc/include/` 与 `userland/libc/src/`：声明、包装和实现。
 4. 使用该 API 的系统应用、窗口服务器及相关测试程序。
-5. `devtools/include/`：SDK 内对应公共头文件必须同步。
-6. SDK 库、示例、文档和 `LeonOS4-Developer-SDK.zip` 的打包规则。
+5. `configs/header-export.list` 白名单与 `headers_install` 导出：SDK/用户态只消费
+   导出结果，由 `tools/test_header_export.py` 校验；不维护手工 ABI 镜像副本。
+6. `packages/leonos-musl-sdk.tar.gz` 装配规则与归属/许可证文本。
 7. `docs/ABI.md`、`docs/SYSCALLS.md` 或对应专题文档。
 
 公开结构应采用定宽类型，校验用户提供的指针、容量、长度、枚举值和版本。
@@ -282,7 +282,7 @@ int subsystem_handle(const struct request *request, struct result *out_result);
 ## 9. 文档、日志和交付质量
 
 - 新功能、公开 API、构建开关、镜像布局或第三方移植发生变化时，更新相关
-  `docs/`、`devtools/docs/`、SDK 说明、示例和归属/许可证文本。文档只能描述
+  `docs/`、SDK 说明、示例和归属/许可证文本。文档只能描述
   已确认存在的接口；计划中的接口必须明确标为计划。
 - 日志应使用稳定前缀（例如 `[ntclks]`、`[desktop.elf]`、`[tls]`），包含足够的
   阶段、返回码和状态来定位问题，但不能泄露令牌、密码、Cookie、私钥或请求体。

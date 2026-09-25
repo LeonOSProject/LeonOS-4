@@ -410,12 +410,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         return self_test()
     root = (args.root or Path(__file__).resolve().parents[1]).resolve()
     image = locate_default(root, args.image, ("build/esp",))
-    sdk = locate_default(root, args.sdk, ("devtools", "LeonOS4-Developer-SDK.zip"))
+    # The checked-in devtools kit and LeonOS4-Developer-SDK.zip are gone; an SDK
+    # is only license-checked when an artifact is given explicitly.
+    sdk = args.sdk
     installer = locate_default(root, args.installer, ("build/install", "build/installer-iso"))
     excluded = tuple(args.excluded) if args.excluded else DEFAULT_EXCLUDED_CREDITS
     findings = check_submodules(root)
     findings += check_image(image)
-    findings += check_sdk(sdk)
+    if sdk:
+        findings += check_sdk(sdk if sdk.is_absolute() else root / sdk)
     # Installer ESP is an image staging tree; acknowledgement source is always
     # checked independently so docs containing the same names cannot confuse it.
     findings += check_image(installer, "installer-license")
