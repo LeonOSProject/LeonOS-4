@@ -36,8 +36,9 @@ Kconfig 与 configs/components.toml 区分 BUILD、IMAGE、ENTRY、SDK、API；r
 | image-vmdk | images/leonos4.raw、leonos4.vmdk |
 | iso / image-iso | images/leonos4-live.iso |
 | installer | images/leonos4-installer.iso |
-| rpr-pages | rpr-pages/，只生成本地网站 |
-| all / release | all 含 SDK 和三类镜像；release 再含 RPR |
+| rpr-pages | rpr-pages/，只生成本地 RPR 机器接口与人类页面（apk/、kernel/、packages/、css/） |
+| pages | pages/，完整 GitHub Pages 部署树（首页、download/、rpr/、docs/）；依赖 installer 与 rpr-pages，docs/ 由构建系统扫描 `docs/` 目录并用 awk 渲染 Markdown 为无 JS 静态 HTML |
+| all / release | all 含 SDK 和三类镜像；release 再含完整 pages/，仍不自动上传 |
 
 ## 增量、并发和诊断
 

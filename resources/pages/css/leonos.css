@@ -1,0 +1,248 @@
+/*
+ * LeonOS 4 static site stylesheet.
+ *
+ * Constraints (plan §10, §11): simple, technical, kernel.org-inspired but not
+ * copied. Blue accent on a white background, near-black text, square-ish
+ * corners, no animation, no JavaScript, no client-side rendering. To stay
+ * readable on old browsers this file uses only conservative CSS: block and
+ * table layout, width/max-width, margin/padding, border, background, color and
+ * basic font properties. It deliberately avoids CSS grid, flexbox, custom
+ * variables, clamp(), transitions and animations.
+ */
+
+body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    color: #1a1a1a;
+    font-family: "Segoe UI", Tahoma, Verdana, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.page {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 0 16px 32px 16px;
+}
+
+header.site {
+    margin: 0;
+    padding: 18px 0 12px 0;
+    border-bottom: 3px solid #1a4f8a;
+}
+
+header.site h1 {
+    margin: 0;
+    color: #1a4f8a;
+    font-size: 26px;
+    font-weight: bold;
+}
+
+nav.site {
+    padding: 10px 0;
+    border-bottom: 1px solid #d7dde5;
+    font-size: 15px;
+}
+
+nav.site a {
+    color: #1a5fa8;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+nav.site a:hover {
+    text-decoration: underline;
+}
+
+main {
+    display: block;
+    padding: 20px 0 8px 0;
+}
+
+section {
+    display: block;
+    margin: 0 0 24px 0;
+}
+
+h2 {
+    color: #1a4f8a;
+    font-size: 19px;
+    margin: 0 0 10px 0;
+    border-bottom: 1px solid #d7dde5;
+    padding-bottom: 4px;
+}
+
+h3 {
+    color: #24527f;
+    font-size: 16px;
+    margin: 18px 0 8px 0;
+}
+
+p, ul, ol, dl, table {
+    margin: 0 0 14px 0;
+}
+
+a {
+    color: #1a5fa8;
+    text-decoration: underline;
+}
+
+ul {
+    margin-left: 22px;
+    padding: 0;
+}
+
+code, pre, samp {
+    font-family: "Consolas", "DejaVu Sans Mono", monospace;
+    font-size: 13px;
+    background: #f2f5f9;
+    color: #16304a;
+}
+
+code {
+    padding: 1px 4px;
+    border: 1px solid #d7dde5;
+}
+
+pre {
+    margin: 0 0 14px 0;
+    padding: 10px 12px;
+    border: 1px solid #d7dde5;
+    overflow: auto;
+    white-space: pre-wrap;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0 0 14px 0;
+    font-size: 14px;
+}
+
+caption {
+    text-align: left;
+    font-weight: bold;
+    padding: 0 0 6px 0;
+    color: #24527f;
+}
+
+th, td {
+    border: 1px solid #cfd7e0;
+    padding: 6px 8px;
+    text-align: left;
+    vertical-align: top;
+}
+
+th {
+    background: #e8eef6;
+    color: #16304a;
+}
+
+tr:nth-child(even) td {
+    background: #f6f8fb;
+}
+
+/* Definition list used on single-package and kernel pages. */
+dl.meta {
+    margin: 0 0 14px 0;
+}
+
+dl.meta dt {
+    float: left;
+    clear: left;
+    width: 120px;
+    margin: 0;
+    padding: 3px 0;
+    color: #24527f;
+    font-weight: bold;
+}
+
+dl.meta dd {
+    margin: 0 0 0 120px;
+    padding: 3px 0;
+}
+
+.clear {
+    clear: both;
+}
+
+/* A plain button-like link for the primary Download action, no gradient or
+   animation, just a solid blue block. */
+a.button {
+    display: inline-block;
+    margin: 4px 8px 4px 0;
+    padding: 8px 14px;
+    background: #1a4f8a;
+    color: #ffffff;
+    text-decoration: none;
+    border: 1px solid #14406f;
+    font-weight: bold;
+}
+
+a.button:hover {
+    background: #245f9e;
+    text-decoration: none;
+}
+
+footer.site {
+    margin-top: 28px;
+    padding: 12px 0 0 0;
+    border-top: 1px solid #d7dde5;
+    color: #55606b;
+    font-size: 13px;
+}
+
+.hash {
+    word-break: break-all;
+    font-family: "Consolas", "DejaVu Sans Mono", monospace;
+    font-size: 12px;
+    color: #33404d;
+}
+
+p.subtitle {
+    color: #445;
+    margin: 4px 0 0 0;
+    font-size: 15px;
+}
+
+/* Documentation pages: rendered Markdown uses a leading H1 for the document
+   title plus deeper H2..H4 headings, fenced code, pipe tables (reusing the
+   table rules above), blockquotes and GitHub task lists. Conservative CSS
+   only, matching the rest of the sheet. */
+main h1 {
+    color: #1a4f8a;
+    font-size: 24px;
+    margin: 0 0 14px 0;
+}
+
+main h4 {
+    color: #24527f;
+    font-size: 15px;
+    margin: 16px 0 6px 0;
+}
+
+blockquote {
+    margin: 0 0 14px 0;
+    padding: 4px 14px;
+    border-left: 4px solid #b9c7d8;
+    color: #33404d;
+    background: #f6f8fb;
+}
+
+ul.task {
+    list-style: none;
+    margin-left: 6px;
+}
+
+ul.task li {
+    margin: 0 0 4px 0;
+}
+
+/* Breadcrumb above a rendered document, reused from the package pages. */
+p.breadcrumb {
+    color: #55606b;
+    font-size: 13px;
+    margin: 0 0 16px 0;
+}
+
