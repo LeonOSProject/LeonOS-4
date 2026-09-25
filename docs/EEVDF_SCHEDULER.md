@@ -26,11 +26,17 @@ LeonOS 当前时钟抢占为 100 Hz，所以请求长度选用 10 ms；没有宣
 红黑树、PELT、调度组、CPU capacity/NUMA、CFS bandwidth、实时调度类或
 `RUN_TO_PARITY` 特性。现有 Linux ABI 对不支持的调度策略继续拒绝。
 
-当前生产代码在 `arch/x86_64/smp.c` 设置 `SMP_USER_SCHEDULER_ENABLED=0`，
-原因是此前 AP 用户态并发存在任务所有权和回收崩溃风险。本次保留该限制。
-**配置 2/4 个虚拟 CPU 不等于 LeonOS 已启用 2/4 个调度 CPU。**
-每 CPU 选择和迁移有确定性的主机测试，但本次来宾测试实际 active CPU 为 1，
-不能据此声称 AP 并发已验证；启用 AP 需要单独完成上下文切换/回收同步审计。
+当前生产代码在 `arch/x86_64/smp.c` 已启用 AP 用户态调度：`smp_release_aps()` 在 BSP
+完成首轮用户态 timer tick 之后置位 `smp_scheduler_started`，此后每个 AP 在
+`smp_ap_entry` 的永久循环里调用 `userland_schedule_from_frame(NULL)` 并 `arch_enter_user_frame`
+进入 Ring 3。配置 N 个 vCPU 时，N 个 CPU 都可以选取和运行用户任务。
+
+**限制仍然存在**：设备 IRQ 目前全部路由到 BSP，AP 只接收 LAPIC 定时器 vector `0x40`
+用于抢占（见 `smp_ap_entry` 里的注释"No device IRQ is routed to an AP"）；系统调用的
+全局执行锁（`lock.c` 中的 `kernel_execution_lock_irqsave`）串行化几乎所有内核态服务，
+所以多核有效并行度仍受这把 ticket 锁限制。拆分锁粒度或至少把设备 IRQ 分派到 AP 是
+后续独立工作。每 CPU 选择和迁移有确定性的主机测试；启用 AP 前上下文切换/回收同步
+审计已在 `smp_release_aps` 的"等待 BSP 完成首轮用户 tick"机制下补做。
 
 ## 验证
 

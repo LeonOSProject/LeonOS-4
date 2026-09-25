@@ -64,7 +64,7 @@ The kernel-side numbers and errno constants are in:
 | 8 | `lseek` | `lseek` | Supports files and directory cursors. |
 | 9 | `mmap` | `mmap` | Supports private anonymous/file mappings and writable `/dev/fb0` framebuffer mappings. |
 | 11 | `munmap` | `munmap` | Supports whole and partial unmapping of existing VMAs. |
-| 16 | `ioctl` | `ioctl` | Multiplexes GUI, filesystem, system, installer, text, device, and PTY APIs. |
+| 16 | `ioctl` | `ioctl` | Device-ABI extension point: Linux fbdev/block/evdev/OSS/termios requests, `LEONOS_FBIOBLIT`, GPU extensions on `/dev/gpu`, net control on an AF_INET fd, and driver control on `/dev/driverctl`. |
 | 24 | `sched_yield` | `sched_yield` | Yields the current task if another task can run. |
 | 35 | `nanosleep` | `sleep_ms` | libc passes milliseconds; kernel also accepts a Linux-like timespec pointer. |
 | 39 | `getpid` | `getpid` | Returns the current scheduler PID. |
@@ -82,8 +82,9 @@ The kernel-side numbers and errno constants are in:
 
 ## GPU Calls
 
-GPU extensions use syscall 16 (`ioctl`) with the existing logical device
-descriptor 3. The commands in `include/leonos/gpu.h` are `LEONOS_IOCTL_GPU_INFO`
+GPU extensions use syscall 16 (`ioctl`) on a descriptor opened for
+`/dev/gpu` (legacy fd 3 calls are translated to that node by libc). The
+commands in `include/leonos/gpu.h` are `LEONOS_IOCTL_GPU_INFO`
 (`0x4c475001`), `CREATE` (`0x4c475002`), `RENDER` (`0x4c475003`), `DESTROY`
 (`0x4c475004`) and `DIAGNOSTICS` (`0x4c475005`). DIAGNOSTICS returns the latest
 device render-failure snapshot only to its owner. Requests carry exact structure
@@ -116,7 +117,7 @@ Seek modes are:
 - `LEONOS_SEEK_END`
 
 Directory reads return one `struct leonos_dir_entry` per successful `read`.
-The higher-level `LEONOS_IOCTL_LIST_DIR` ioctl can also list a directory into a
+The higher-level `leonos_list_dir()` libc helper can also list a directory into a
 caller-provided array.
 
 ## Memory Calls
@@ -189,87 +190,48 @@ implementation.
 
 ## Ioctl Groups
 
-`ioctl(fd, request, arg)` is the extension point for APIs that do not yet have
-dedicated syscall numbers. Current request groups:
+`ioctl(fd, request, arg)` is the extension point for device ABIs. The
+private LeonOS ioctl multiplexers (auth, GUI windows, appearance, system info,
+device list, audio, network sockets, text layout, PTY, signal) have been
+removed; those services now use Linux UAPI device ioctls, standard syscalls,
+or AF_UNIX service protocols. What the kernel still accepts, keyed by the
+`/dev` node the descriptor was opened on:
 
-All libc wrappers now open a matching synthetic `/dev` node before issuing an
-ioctl (`/dev/fb0`, `/dev/input-method`, `/dev/dsp`, `/dev/net0`,
-`/dev/disk0`, `/dev/ptmx`, or `/dev/tty`). The kernel still accepts the legacy fd 3 control
-channel for ABI compatibility with older binaries.
+- `/dev/fb0`: Linux fbdev `FBIOGET_VSCREENINFO`, `FBIOGET_FSCREENINFO`,
+  `FBIOPUT_VSCREENINFO`, `FBIOPAN_DISPLAY`, plus the LeonOS presentation
+  extensions `LEONOS_FBIOGET_CAPABILITIES`, `LEONOS_FBIOUPDATE_REGION`, and
+  `LEONOS_FBIOBLIT` (the blit request windowd uses to compose; it is
+  restricted to the active graphical VT owner).
+- `/dev/gpu`: the GPU ABI above (`LEONOS_IOCTL_GPU_*`).
+- `/dev/driverctl`: `LEONOS_DRIVER_CONTROL_IOCTL` with a fixed-size
+  `struct leonos_driver_control`; administrator tasks only. Ordinary clients
+  go through devmand instead (`system_driver_list()`/
+  `system_driver_control()`).
+- `/dev/diskN` and partition nodes: Linux `BLKGETSIZE64`, `BLKGETSIZE`,
+  `BLKSSZGET`, `BLKROGET`, `BLKROSET`, `BLKRRPART`.
+- `/dev/input/event0` and `event1`: Linux `struct input_event` records via
+  `read(2)`; the kernel implements `EVIOCGVERSION`, `EVIOCGID`, `EVIOCGNAME`,
+  `EVIOCGPHYS`, `EVIOCGBIT`, `EVIOCGKEY`, and no-op `EVIOCGRAB`, plus
+  `O_NONBLOCK` and `poll(POLLIN)`. Text-input methods are the imd daemon's
+  AF_UNIX service at `/run/leonos/input-method.sock`, not a device node.
+- `/dev/dsp` (aliased `/dev/audio`): OSS requests from `<linux/soundcard.h>` —
+  set `AFMT_S16_LE`, two channels and the desired 8-48 kHz rate with
+  `SNDCTL_DSP_*`, then use `write(2)`. The subset includes format/rate/channel
+  setup, `GETFMTS`, `GETCAPS`, `GETBLKSIZE`, `GETOSPACE`, `GETODELAY`,
+  `NONBLOCK`, and `poll(POLLOUT)`.
+- `/dev/ptmx`, `/dev/pts/<id>`, `/dev/tty`: standard Linux termios ioctls
+  (`TCGETS`/`TCSETS`, `TIOCGWINSZ`, `TIOCSCTTY`, `TIOCGPGRP`, `TIOCSPGRP`,
+  `TIOCGSID`, `TIOCNOTTY`, `TIOCSPTLCK`, `TIOCGPTLCK`); PTY users call
+  `posix_openpt/openpty/forkpty`.
+- AF_INET socket fds: `LEONOS_NET_CONTROL_IOCTL` with a versioned
+  `struct leonos_net_control` for read-only network status queries; see
+  Networking below.
 
-- Authentication and users: `include/leonos/auth.h`
-- GUI and framebuffer: `userland/libc/include/leonos/gui.h`
-- Filesystem and installer storage: `include/leonos/fs.h`
-- System, performance, and RTC time: `include/leonos/system.h`
-- Device inventory: `include/leonos/device.h`
-- PCM audio playback: `include/leonos/audio.h`
-- Minimal networking: `include/leonos/net.h`
-- Text layout and Unicode services: `include/leonos/text.h`
-- PTY creation, I/O, and spawn: `include/leonos/pty.h`
-- Minimal signal dispositions: `include/leonos/signal.h`
-
-Raw input uses `read(2)` rather than LeonOS request codes: `/dev/input/event0`
-and `/dev/input/event1` return Linux `struct input_event` records. The kernel
-implements `EVIOCGVERSION`, `EVIOCGID`, `EVIOCGNAME`, `EVIOCGPHYS`,
-`EVIOCGBIT`, `EVIOCGKEY`, and no-op `EVIOCGRAB`, plus `O_NONBLOCK` and
-`poll(POLLIN)`. Text-input methods remain a separate transition service at
-`/dev/input-method` until the GUI socket protocol replaces it.
-
-PCM playback uses the OSS `/dev/dsp` interface rather than a LeonOS request
-code. Include `<linux/soundcard.h>`, set `AFMT_S16_LE`, two channels and the
-desired 8-48 kHz rate with `SNDCTL_DSP_*`, then use `write(2)`. The initial
-subset includes format/rate/channel setup, `GETFMTS`, `GETCAPS`,
-`GETBLKSIZE`, `GETOSPACE`, `GETODELAY`, `NONBLOCK`, and `poll(POLLOUT)`.
-`/dev/audio0` is only a compatibility endpoint for old private audio ioctl
-clients.
-
-Important requests include:
-
-- `LEONOS_AUTH_IOCTL_STATUS`, `LEONOS_AUTH_IOCTL_CURRENT`,
-  `LEONOS_AUTH_IOCTL_LIST_USERS`, `LEONOS_AUTH_IOCTL_LOGIN`,
-  `LEONOS_AUTH_IOCTL_LOGOUT`, `LEONOS_AUTH_IOCTL_CREATE_USER`,
-  `LEONOS_AUTH_IOCTL_UPDATE_USER`, `LEONOS_AUTH_IOCTL_CHANGE_PASSWORD`
-- `LEONOS_GUI_IOCTL_FB_INFO`, `LEONOS_GUI_IOCTL_FB_FILL`,
-  `LEONOS_GUI_IOCTL_FB_RECT`, `LEONOS_GUI_IOCTL_FB_TEXT`,
-  `LEONOS_GUI_IOCTL_FB_PIXEL`, `LEONOS_GUI_IOCTL_FB_BLIT`,
-  `LEONOS_GUI_IOCTL_FB_CAPS`, `LEONOS_GUI_IOCTL_FB_SET_MODE`. `FB_SET_MODE` is restricted to the Desktop
-  window server. `leonos_fb_capabilities` reports whether `LEONOS_FB_CAP_MODE_SET` is
-  available, the backend, maximum dimensions, and usable video-memory bytes.
-- `LEONOS_GUI_IOCTL_CREATE_WINDOW`, `LEONOS_GUI_IOCTL_PRESENT_WINDOW`,
-  `LEONOS_GUI_IOCTL_FETCH_WINDOW`, `LEONOS_GUI_IOCTL_WINDOW_EVENT`,
-  `LEONOS_GUI_IOCTL_WAIT_WINDOW_EVENT`
-- `LEONOS_GUI_IOCTL_APPEARANCE_STATE`, `LEONOS_GUI_IOCTL_APPEARANCE_REQUEST`,
-  `LEONOS_GUI_IOCTL_POLL_APPEARANCE_REQUEST`,
-  `LEONOS_GUI_IOCTL_PUBLISH_APPEARANCE_STATE`. Appearance requests carry the
-  theme, independent Metro and Win95 basic color scheme IDs, wallpaper display
-  mode, and wallpaper path. They are accepted from logged-in user tasks; the
-  Desktop window server is the sole state publisher, saves the current user's
-  personalization file, and broadcasts `LEONOS_GUI_APP_EVENT_THEME_CHANGED` to
-  clients.
-- `LEONOS_GUI_IOCTL_TASKS`, `LEONOS_GUI_IOCTL_TASK_KILL`
-- `LEONOS_IOCTL_LIST_DIR`
-- `LEONOS_IOCTL_SYSTEM_INFO`, `LEONOS_IOCTL_PERF_INFO`,
-  `LEONOS_IOCTL_TIME_INFO`, `LEONOS_IOCTL_MACHINE_IDENTITY`
-- `LEONOS_IOCTL_DEVICE_LIST`
-- `LEONOS_IOCTL_AUDIO_CONFIGURE`, `LEONOS_IOCTL_AUDIO_WRITE`,
-  `LEONOS_IOCTL_AUDIO_GET_STATE`
-- `LEONOS_IOCTL_NET_CONFIG`, `LEONOS_IOCTL_NET_DHCP`,
-  `LEONOS_IOCTL_NET_DNS`, `LEONOS_IOCTL_NET_PING`,
-  `LEONOS_IOCTL_NET_HTTP_GET`
-- `LEONOS_IOCTL_NET_SOCKET_OPEN`, `LEONOS_IOCTL_NET_SOCKET_CONNECT`,
-  `LEONOS_IOCTL_NET_SOCKET_SEND`, `LEONOS_IOCTL_NET_SOCKET_RECV`,
-  `LEONOS_IOCTL_NET_SOCKET_CLOSE`, `LEONOS_IOCTL_NET_CONNECTIONS`
-- Block storage uses `/dev/diskN` and `/dev/diskNpN` with `BLKGETSIZE64`,
-  `BLKSSZGET`, `BLKRRPART`, aligned `read`/`write`/`lseek`, and
-  `mount(2)`/`umount2(2)`. The former LeonOS disk-management ioctl ABI is
-  removed from the public SDK and syscall dispatcher.
-- `LEONOS_TEXT_IOCTL_LAYOUT_UTF8`
-- `LEONOS_PTY_IOCTL_CREATE`, `LEONOS_PTY_IOCTL_SELF`,
-  `LEONOS_PTY_IOCTL_READ_OUTPUT`, `LEONOS_PTY_IOCTL_WRITE_INPUT`,
-  `LEONOS_PTY_IOCTL_SPAWN`
-- `LEONOS_SIGNAL_IOCTL_ACTION` provides the `SIG_DFL` and `SIG_IGN`
-  dispositions used by `signal()` and `sigaction()`; arbitrary handlers and
-  signal masks are not supported.
+The legacy fd 3 control channel is translated by libc to the matching
+`/dev` node for older binaries. System inventory (`leonos_device_list()`),
+auth (`include/leonos/auth.h` over `/etc/passwd` + PAM), signals
+(`rt_sigaction`/`rt_sigprocmask`), and appearance (windowd messages) are
+service/libc APIs without any ioctl request codes.
 
 ## Networking
 
@@ -294,43 +256,44 @@ The TCP client socket ABI is wrapped as:
 IPv4 values are host-order packed addresses. For example, `10.0.2.2` is
 `0x0a000202`.
 
-The kernel currently supports a polling Intel e1000 MMIO driver, ARP, IPv4,
-ICMP Echo, a small DHCP client, UDP transmit/receive for DHCP/DNS, DNS A record
-lookups, a small ARP cache, active-open TCP client sockets, and a compatibility
-`HTTP/1.0` GET helper over TCP. Boot starts with the QEMU user-network fallback so
-early networking is usable, then automatically tries DHCP three times unless
-`/etc/leonos/services.cfg` contains `dhcp=0`. If DHCP succeeds, the active config
-switches to the lease; if it fails or is disabled, the fallback remains active:
+The kernel supports a polling Intel e1000 MMIO driver, ARP, IPv4,
+ICMP Echo, UDP transmit/receive for DNS, DNS A record lookups, a small ARP
+cache, and active-open TCP client sockets over standard socket syscalls. At
+boot the kernel brings the interface up with no address; IPv4 configuration
+comes exclusively from the userspace `leonos-dhcp` OpenRC service (BusyBox
+`udhcpc -f -i eth0`). Its hook applies the address with `ifconfig`/`route`
+(the kernel records it through the standard `SIOCSIF*` ioctls) and publishes
+the lease atomically at `/run/leonos/dhcp-lease`; libc merges that file into
+`leonos_net_config()` results as the DHCP source. If DHCP never succeeds the
+interface simply stays unconfigured. QEMU user-network guests normally
+receive `10.0.2.15/24` with gateway `10.0.2.2` from the built-in lease
+server.
 
-- guest IPv4: `10.0.2.15/24`
-- gateway: `10.0.2.2`
-- DNS: `10.0.2.3`
-
-`netctl.elf` can still issue `leonos_net_dhcp_renew` after the desktop is
-running to manually renew or recover a lease when the caller is an
-administrator. Non-admin users may read network status and use DNS/HTTP/socket
-APIs, but DHCP renew changes the global IPv4 configuration and returns
-`EPERM` unless the caller is an administrator or trusted service task. The only
-pre-login exception is `/usr/lib/leonos/apps/oobe/oobe.elf` while `/var/lib/leonos/oobe.done` is
-absent, so the license screen can expose a narrow `Renew DHCP` recovery button.
+`netctl.elf` can still request a renew after the desktop is
+running; `leonos_net_dhcp_renew()` restarts the `leonos-dhcp` service through
+`rcctl.elf`, which the libc elevates via the sudo path for non-root callers.
+Non-admin users may read network status and use DNS/HTTP/socket APIs. The
+kernel-side `LEONOS_NET_CONTROL_DHCP` operation returns `EOPNOTSUPP` (the
+in-kernel DHCP client was removed); lease renewal is purely the OpenRC
+service.
 `netctl.elf` also queries `leonos_net_connections` and displays TCP client
 sockets in `SYN_SENT`, `ESTABLISHED`, `TIME_WAIT`, or `CLOSED`. Administrators
 and trusted service tasks see the full socket table; normal users see only
 connections owned by their uid.
 
-`serviced.elf` now runs as a protected service task started by the desktop. It
-uses the same `leonos_net_config` and `leonos_net_dhcp_renew` wrappers to keep
-retrying DHCP in the background when `/etc/leonos/services.cfg` has `dhcp=1` and the
-kernel is still using the static fallback. It publishes status to
-`/run/leonos/services.state` for `servicemgr.elf`.
+Background DHCP is handled by the OpenRC service `leonos-dhcp` (root-owned
+udhcpc); `leonos_net_dhcp_renew()` restarts it via `rcctl`-style
+`leonos_openrc_run("leonos-dhcp", "restart")` and then reads the lease the
+hook publishes at `/run/leonos/dhcp-lease`. The legacy `serviced.elf`
+background retry loop and `/run/leonos/services.state` are gone; the desktop
+`servicemgr` surfaces service state instead.
 
-`leonos_socket_tcp` returns an integer socket handle owned by the current task.
-`leonos_socket_connect` accepts a host name or IPv4 literal, resolves DNS A
-records when needed, tries each returned address, and records the selected
-remote IP and local port. `leonos_socket_send` and `leonos_socket_recv` are
-synchronous TCP byte-stream calls with per-call timeouts and explicit network
-status fields. `leonos_socket_close` moves established connections through
-`TIME_WAIT` before the kernel garbage-collects the socket record.
+`leonos_socket_tcp()` is a thin wrapper over `socket(AF_INET, SOCK_STREAM, 0)`
+and returns a real socket fd. `leonos_socket_connect` accepts a host name or
+IPv4 literal, resolves DNS A records when needed, tries each returned address,
+and records the selected remote IP and local port. `leonos_socket_send` and
+`leonos_socket_recv` adapt the socket fd to the legacy status-record shape
+with per-call timeouts. Closing uses standard `close(2)` on the fd.
 
 `include/leonos/http.h` provides the higher-level userland HTTP client:
 `leonos_http_get`, `leonos_http_request`, and `leonos_http_resolve_url`.
@@ -339,17 +302,17 @@ transfer responses, exposes response headers, content type, body length, final
 URL, redirect count, and truncation flags. It sends plain `HTTP/1.1` for
 `http://`, and uses Mbed TLS 2.28.8 for TLS 1.2, CA-chain, hostname, and clock
 validation of `https://`. `httpget.elf` and `browser.elf` use this library for
-both schemes. The older `leonos_net_http_get` ioctl remains as a compatibility
-helper for small diagnostic callers.
+both schemes. The older fixed-buffer `leonos_net_http_get` helper remains as a
+compatibility wrapper for small diagnostic callers.
 
 `downloadmgr.elf` also uses the HTTP client. It is currently fixed-buffer and
 reports oversized responses through the truncation flag instead of streaming
 large files incrementally.
 
-The network ioctls return `0` when the request structure was processed. Per
-operation results are reported in the structure `status` field. Timeouts are
-bounded by the kernel even if a larger value is requested; socket, HTTP, DNS,
-and DHCP paths currently cap requested waits at 10000 ms.
+The `LEONOS_NET_CONTROL_IOCTL` requests return `0` when the control structure
+was processed. Per operation results are reported in the structure `status`
+field. Timeouts are bounded by the kernel even if a larger value is requested;
+socket, HTTP, DNS, and DHCP paths currently cap requested waits at 10000 ms.
 
 ## Authentication and Authorization
 
@@ -358,12 +321,14 @@ The authentication ABI is defined in `include/leonos/auth.h`. libc exposes:
 - `leonos_auth_status`
 - `leonos_auth_current`
 - `leonos_auth_list_users`
-- `leonos_auth_login`
+- `leonos_auth_users_alloc`
 - `leonos_auth_logout`
 - `leonos_auth_create_user`
 - `leonos_auth_update_user`
-- `leonos_auth_change_password`
 
+Interactive login runs through the standard PAM stack in `login.elf`
+(`pam_leonos_password` verifies `/etc/shadow`), not through a libc
+`leonos_auth_login` wrapper.
 Successful login updates the current desktop session identity in the scheduler:
 `uid`, `role`, `session_id`, `username`, and `home` are attached to the desktop
 task and inherited by child applications. Logout clears the session identity and

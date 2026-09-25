@@ -78,9 +78,9 @@ static uint8_t cpu_snapshot_valid;
 static uint32_t cpu_percent;
 static uint32_t mem_percent;
 static uint8_t perf_valid;
-static uint8_t perf_cpu_history[TASKMGR_PERF_HISTORY];
 static uint8_t perf_mem_history[TASKMGR_PERF_HISTORY];
 static uint8_t perf_gpu_history[TASKMGR_PERF_HISTORY];
+static uint8_t perf_core_history[LEONOS_PERF_MAX_CPUS][TASKMGR_PERF_HISTORY];
 static struct taskmgr_gpu_sample gpu_sample;
 static uint32_t perf_history_head;
 static uint32_t perf_history_count;
@@ -113,15 +113,11 @@ static uint32_t view_w = TASKMGR_W;
 static uint32_t view_h = TASKMGR_H;
 static char status_text[96] = "Ready";
 
-static void perf_history_push(uint32_t cpu, uint32_t memory)
+static void perf_history_push(uint32_t memory)
 {
-    if (cpu > 100U) {
-        cpu = 100U;
-    }
     if (memory > 100U) {
         memory = 100U;
     }
-    perf_cpu_history[perf_history_head] = (uint8_t)cpu;
     perf_mem_history[perf_history_head] = (uint8_t)memory;
     perf_gpu_history[perf_history_head] = gpu_sample.valid
                                             ? (uint8_t)gpu_sample.percent
@@ -475,6 +471,7 @@ static void refresh_performance(void)
     uint64_t delta_total;
     uint64_t delta_busy;
     uint32_t cpu_count;
+    uint32_t core_slot;
     int gpu_result = gpu_sdk_info(&next_gpu);
     if (taskmgr_gpu_sample_update(&gpu_sample, gpu_result < 0 ? 0 : &next_gpu)) {
         for (uint32_t i = 0; i < TASKMGR_PERF_HISTORY; ++i) {
@@ -508,11 +505,14 @@ static void refresh_performance(void)
         mem_percent = 100;
     }
     /* All plots advance together; unavailable GPU samples leave a gap. */
-    perf_history_push(cpu_percent, mem_percent);
+    perf_history_push(mem_percent);
     cpu_count = next.cpu_count;
     if (cpu_count > LEONOS_PERF_MAX_CPUS) {
         cpu_count = LEONOS_PERF_MAX_CPUS;
     }
+    /* perf_history_push already advanced the head; every core shares this
+     * same ring slot so the per-core lines stay aligned with the CPU plot. */
+    core_slot = (perf_history_head + TASKMGR_PERF_HISTORY - 1U) % TASKMGR_PERF_HISTORY;
     for (uint32_t i = 0; i < LEONOS_PERF_MAX_CPUS; ++i) {
         uint64_t old_cpu_total = last_cpu_busy_ticks[i] + last_cpu_idle_ticks[i];
         uint64_t new_cpu_total = next.cpus[i].busy_ticks + next.cpus[i].idle_ticks;
@@ -520,6 +520,8 @@ static void refresh_performance(void)
         uint64_t cpu_delta_busy;
         if (i >= cpu_count || !next.cpus[i].online) {
             cpu_percent_by_core[i] = 0;
+            /* Offline cores have no signal to plot; leave a gap. */
+            perf_core_history[i][core_slot] = TASKMGR_PERF_MISSING;
         } else if (cpu_snapshot_valid && old_cpu_total && new_cpu_total > old_cpu_total) {
             cpu_delta_total = new_cpu_total - old_cpu_total;
             cpu_delta_busy = next.cpus[i].busy_ticks >= last_cpu_busy_ticks[i]
@@ -527,11 +529,15 @@ static void refresh_performance(void)
             cpu_percent_by_core[i] = cpu_delta_total
                                          ? (uint32_t)((cpu_delta_busy * 100ULL) / cpu_delta_total)
                                          : 0;
+            perf_core_history[i][core_slot] = (uint8_t)cpu_percent_by_core[i];
         } else if (!cpu_snapshot_valid) {
             cpu_percent_by_core[i] = new_cpu_total
                                          ? (uint32_t)((next.cpus[i].busy_ticks * 100ULL) /
                                                       new_cpu_total)
                                          : 0;
+            perf_core_history[i][core_slot] = (uint8_t)cpu_percent_by_core[i];
+        } else {
+            perf_core_history[i][core_slot] = (uint8_t)cpu_percent_by_core[i];
         }
         if (cpu_percent_by_core[i] > 100) {
             cpu_percent_by_core[i] = 100;
@@ -838,59 +844,62 @@ static void draw_perf_segment(struct leonos_ui_surface *ui, int32_t x0, int32_t 
     }
 }
 
-static void draw_perf_graph(struct leonos_ui_surface *ui, uint32_t x, uint32_t y,
-                            uint32_t w, uint32_t h, const char *title,
-                            const char *current, const uint8_t *history, uint32_t color)
+/* KDE-style CPU graph: every core is drawn as its own colored polyline in
+ * one shared coordinate system.  The first entries are pairwise maximally
+ * distinct so small machines get obvious per-core colors; machines with
+ * more cores than palette entries cycle.  Colors are mid-brightness so
+ * every line stays readable on the white plot background. */
+#define TASKMGR_CORE_PALETTE_SIZE 32U
+static const uint32_t core_palette[TASKMGR_CORE_PALETTE_SIZE] = {
+    0x00B81C1C, 0x001CB89E, 0x00000080, 0x007AB800,
+    0x009E1CB8, 0x0000B81F, 0x00B8A753, 0x003737B8,
+    0x00B87A00, 0x005C8039, 0x00006699, 0x006D1380,
+    0x00804000, 0x00B8005C, 0x005396B8, 0x00B85396,
+    0x00158000, 0x0074B853, 0x00008040, 0x00800000,
+    0x00800040, 0x00B8B800, 0x005C00B8, 0x003DB800,
+    0x0000B85C, 0x008553B8, 0x00B86237, 0x001F00B8,
+    0x00398068, 0x00263580, 0x006A8000, 0x00803939,
+};
+
+static uint32_t core_color(uint32_t core)
 {
-    uint32_t plot_x;
-    uint32_t plot_y;
-    uint32_t plot_w;
-    uint32_t plot_h;
-    uint32_t grid_color = leonos_ui_color(LEONOS_UI_COLOR_BORDER);
-    uint32_t muted_color = leonos_ui_color(LEONOS_UI_COLOR_MUTED);
-    uint32_t text_color = history ? LEONOS_UI_BLACK : muted_color;
-    uint32_t count;
-    if (w < 96U || h < 32U || (h < 48U && w < 280U)) {
-        return;
-    }
+    return core_palette[core % TASKMGR_CORE_PALETTE_SIZE];
+}
+
+struct perf_plot_rect {
+    uint32_t x;
+    uint32_t y;
+    uint32_t w;
+    uint32_t h;
+};
+
+static struct perf_plot_rect perf_plot_rect_at(uint32_t x, uint32_t y,
+                                               uint32_t w, uint32_t h)
+{
+    struct perf_plot_rect plot;
     if (h < 64U && w >= 280U) {
         uint32_t label_w = w / 2U;
-        leonos_ui_text_clipped(ui, x + 8U, y + 6U, label_w - 62U, title,
-                               text_color, LEONOS_UI_WHITE);
-        leonos_ui_text_clipped(ui, x + label_w - 48U, y + 6U, 44U, current,
-                               text_color, LEONOS_UI_WHITE);
-        plot_x = x + label_w;
-        plot_y = y + 4U;
-        plot_w = w - label_w - 8U;
-        plot_h = h - 8U;
+        plot.x = x + label_w;
+        plot.y = y + 4U;
+        plot.w = w - label_w - 8U;
+        plot.h = h - 8U;
     } else {
-        leonos_ui_text_clipped(ui, x + 8U, y + 6U, w - 76U, title,
-                               text_color, LEONOS_UI_WHITE);
-        leonos_ui_text_clipped(ui, x + w - 60U, y + 6U, 52U, current,
-                               text_color, LEONOS_UI_WHITE);
-        plot_x = x + 8U;
-        plot_y = y + 26U;
-        plot_w = w - 16U;
-        plot_h = h - 34U;
+        plot.x = x + 8U;
+        plot.y = y + 26U;
+        plot.w = w - 16U;
+        plot.h = h - 34U;
     }
-    leonos_ui_inset(ui, plot_x, plot_y, plot_w, plot_h, LEONOS_UI_WHITE);
-    if (plot_w < 4U || plot_h < 4U) {
-        return;
-    }
-    for (uint32_t step = 1U; step < 4U; ++step) {
-        uint32_t gy = plot_y + ((plot_h - 1U) * step) / 4U;
-        leonos_ui_rect(ui, plot_x + 1U, gy, plot_w - 2U, 1U, grid_color);
-    }
-    if (plot_h >= 40U) {
-        leonos_ui_text_clipped(ui, plot_x + 3U, plot_y + 2U, 34U, "100%",
-                               muted_color, LEONOS_UI_WHITE);
-        leonos_ui_text_clipped(ui, plot_x + 3U,
-                               plot_y + plot_h - LEONOS_FONT_H - 2U,
-                               34U, "0%", muted_color, LEONOS_UI_WHITE);
-    }
+    return plot;
+}
 
-    count = perf_history_count;
-    if (!count || !history) {
+/* Draw one history ring as a polyline; TASKMGR_PERF_MISSING samples leave
+ * gaps exactly like the single-series graphs. */
+static void draw_perf_history_line(struct leonos_ui_surface *ui,
+                                   const struct perf_plot_rect *plot,
+                                   const uint8_t *history, uint32_t color)
+{
+    uint32_t count = perf_history_count;
+    if (!count) {
         return;
     }
     for (uint32_t i = 0; i < count; ++i) {
@@ -903,11 +912,11 @@ static void draw_perf_graph(struct leonos_ui_surface *ui, uint32_t x, uint32_t y
          * fills, samples enter at the right; after it fills, advancing the
          * head shifts every point one slot to the left like Task Manager. */
         uint32_t slot = TASKMGR_PERF_HISTORY - count + i;
-        uint32_t px = plot_x + 1U +
-                      (slot * (plot_w - 3U)) / (TASKMGR_PERF_HISTORY - 1U);
+        uint32_t px = plot->x + 1U +
+                      (slot * (plot->w - 3U)) / (TASKMGR_PERF_HISTORY - 1U);
         uint32_t value = history[history_index] > 100U ? 100U : history[history_index];
-        uint32_t py = plot_y + plot_h - 2U -
-                      (value * (plot_h - 3U)) / 100U;
+        uint32_t py = plot->y + plot->h - 2U -
+                      (value * (plot->h - 3U)) / 100U;
         if (i) {
             uint32_t previous_index = (perf_history_head + TASKMGR_PERF_HISTORY - count + i - 1U) %
                                        TASKMGR_PERF_HISTORY;
@@ -917,16 +926,94 @@ static void draw_perf_graph(struct leonos_ui_surface *ui, uint32_t x, uint32_t y
             }
             uint32_t previous_value = history[previous_index] > 100U ? 100U : history[previous_index];
             uint32_t previous_slot = TASKMGR_PERF_HISTORY - count + i - 1U;
-            uint32_t previous_x = plot_x + 1U +
-                                  (previous_slot * (plot_w - 3U)) /
+            uint32_t previous_x = plot->x + 1U +
+                                  (previous_slot * (plot->w - 3U)) /
                                       (TASKMGR_PERF_HISTORY - 1U);
-            uint32_t previous_y = plot_y + plot_h - 2U -
-                                  (previous_value * (plot_h - 3U)) / 100U;
+            uint32_t previous_y = plot->y + plot->h - 2U -
+                                  (previous_value * (plot->h - 3U)) / 100U;
             draw_perf_segment(ui, (int32_t)previous_x, (int32_t)previous_y,
                               (int32_t)px, (int32_t)py, color);
         }
         leonos_ui_pixel(ui, px, py, color);
     }
+}
+
+static void draw_perf_graph_frame(struct leonos_ui_surface *ui, uint32_t x, uint32_t y,
+                                  uint32_t w, uint32_t h, const char *title,
+                                  const char *current, int available,
+                                  struct perf_plot_rect *plot)
+{
+    uint32_t grid_color = leonos_ui_color(LEONOS_UI_COLOR_BORDER);
+    uint32_t muted_color = leonos_ui_color(LEONOS_UI_COLOR_MUTED);
+    uint32_t text_color = available ? LEONOS_UI_BLACK : muted_color;
+    if (h < 64U && w >= 280U) {
+        uint32_t label_w = w / 2U;
+        leonos_ui_text_clipped(ui, x + 8U, y + 6U, label_w - 62U, title,
+                               text_color, LEONOS_UI_WHITE);
+        leonos_ui_text_clipped(ui, x + label_w - 48U, y + 6U, 44U, current,
+                               text_color, LEONOS_UI_WHITE);
+    } else {
+        leonos_ui_text_clipped(ui, x + 8U, y + 6U, w - 76U, title,
+                               text_color, LEONOS_UI_WHITE);
+        leonos_ui_text_clipped(ui, x + w - 60U, y + 6U, 52U, current,
+                               text_color, LEONOS_UI_WHITE);
+    }
+    *plot = perf_plot_rect_at(x, y, w, h);
+    leonos_ui_inset(ui, plot->x, plot->y, plot->w, plot->h, LEONOS_UI_WHITE);
+    if (plot->w < 4U || plot->h < 4U) {
+        return;
+    }
+    for (uint32_t step = 1U; step < 4U; ++step) {
+        uint32_t gy = plot->y + ((plot->h - 1U) * step) / 4U;
+        leonos_ui_rect(ui, plot->x + 1U, gy, plot->w - 2U, 1U, grid_color);
+    }
+    if (plot->h >= 40U) {
+        leonos_ui_text_clipped(ui, plot->x + 3U, plot->y + 2U, 34U, "100%",
+                               muted_color, LEONOS_UI_WHITE);
+        leonos_ui_text_clipped(ui, plot->x + 3U,
+                               plot->y + plot->h - LEONOS_FONT_H - 2U,
+                               34U, "0%", muted_color, LEONOS_UI_WHITE);
+    }
+}
+
+static void draw_perf_graph_core(struct leonos_ui_surface *ui, uint32_t x, uint32_t y,
+                                 uint32_t w, uint32_t h, const char *title,
+                                 const char *current, uint32_t core_count)
+{
+    struct perf_plot_rect plot;
+    if (w < 96U || h < 32U || (h < 48U && w < 280U)) {
+        return;
+    }
+    draw_perf_graph_frame(ui, x, y, w, h, title, current, 1, &plot);
+    if (plot.w < 4U || plot.h < 4U || !perf_history_count) {
+        return;
+    }
+    if (core_count > LEONOS_PERF_MAX_CPUS) {
+        core_count = LEONOS_PERF_MAX_CPUS;
+    }
+    /* Core 0 first so later lines overdraw earlier ones; each core keeps
+     * its stable palette color regardless of the draw order. */
+    for (uint32_t core = 0; core < core_count; ++core) {
+        draw_perf_history_line(ui, &plot, perf_core_history[core], core_color(core));
+    }
+    /* The color-to-core mapping is shown by the swatches in the per-core
+     * usage list below the graphs; an in-plot legend cannot fit 32+
+     * entries at these sizes. */
+}
+
+static void draw_perf_graph(struct leonos_ui_surface *ui, uint32_t x, uint32_t y,
+                            uint32_t w, uint32_t h, const char *title,
+                            const char *current, const uint8_t *history, uint32_t color)
+{
+    struct perf_plot_rect plot;
+    if (w < 96U || h < 32U || (h < 48U && w < 280U)) {
+        return;
+    }
+    draw_perf_graph_frame(ui, x, y, w, h, title, current, history != 0, &plot);
+    if (!history || plot.w < 4U || plot.h < 4U) {
+        return;
+    }
+    draw_perf_history_line(ui, &plot, history, color);
 }
 
 static void draw_performance(struct leonos_ui_surface *ui)
@@ -975,9 +1062,12 @@ static void draw_performance(struct leonos_ui_surface *ui)
         uint32_t color;
         if (i == 0U) {
             title = T("CPU Usage");
-            history = perf_cpu_history;
-            color = leonos_ui_color(LEONOS_UI_COLOR_ACCENT);
             format_percent(value, sizeof(value), cpu_percent);
+            /* KDE-style: one colored line per core in a shared plot; the
+             * header still shows the aggregate utilization. */
+            draw_perf_graph_core(ui, x, graph_y, graph_w, graph_h, title,
+                                 value, perf_info.cpu_count);
+            continue;
         } else if (i == 1U) {
             title = graph_h < 64U ? "RAM" : T("Memory Usage");
             history = perf_mem_history;
@@ -1041,7 +1131,9 @@ static void draw_performance(struct leonos_ui_surface *ui)
             core_label[0] = 0;
             append_text(core_label, &pos, sizeof(core_label), "CPU ");
             append_dec(core_label, &pos, sizeof(core_label), i);
-            leonos_ui_text_clipped(ui, x, row_y + 2U, 46U, core_label,
+            /* Swatch matches this core's line color in the CPU graph. */
+            leonos_ui_rect(ui, x, row_y + 5U, 6U, 8U, core_color(i));
+            leonos_ui_text_clipped(ui, x + 10U, row_y + 2U, 36U, core_label,
                                    LEONOS_UI_BLACK, LEONOS_UI_WHITE);
             leonos_ui_progress(ui, progress_x, row_y, progress_w, 18U,
                                cpu_percent_by_core[i], 100U);

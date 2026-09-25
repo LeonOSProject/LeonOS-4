@@ -32,10 +32,12 @@ environment and available resource limits, then set GID and UID and abort if
 dropping privileges fails. The retired authentication socket is not created.
 
 Python and GCC/binutils are optional during a fresh install. Availability comes
-from the actual payload. `/install/components.list` is generated from
-`tools/leonos_layout.py` and lists owned directories, command links, examples
-and licenses. Counting and copying use the same selection filter. Updates
-preserve accounts and update these components only when already installed.
+from the actual payload: the installer stages the APK-managed root, treats the
+APK database (`/lib/apk/db/installed` and the repository) as the component
+inventory, and uses each package manifest's `system=1` marker to separate
+mandatory packages from optional ones. Counting and copying use the same
+selection filter. Updates preserve accounts and update these components only
+when already installed.
 
 Populated AUS2/older private account databases are rejected before update;
 passwords are never silently reset or converted. Retain the old disk/backup,

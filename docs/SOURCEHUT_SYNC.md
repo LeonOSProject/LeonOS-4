@@ -16,7 +16,7 @@ Add these repository secrets under **Settings > Secrets and variables > Actions*
 | Secret | Value |
 |---|---|
 | `SOURCEHUT_SSH_PRIVATE_KEY` | The complete private SSH key authorized on the SourceHut account that owns the repository. Keep the `BEGIN`/`END` lines. |
-| `SOURCEHUT_REPOSITORY` | The SourceHut SSH URL, for example `git@git.sr.ht:~your-user/LeonOS-4`. |
+| `SOURCEHUT_REPOSITORIES` | One or more SourceHut SSH URLs, one per line, for example `git@git.sr.ht:~your-user/LeonOS-4`. |
 
 Create a dedicated deploy key when possible, for example:
 

@@ -9,9 +9,10 @@ is a separate script, explicitly not GNU `grub-install`.
 
 Both production root targets have built successfully:
 
-- `build/live/root.ext2`: normal Live root.
-- `build/install/root.fat`: ext2 despite its historical filename; contains the
-  installer runtime root and the installed-system payload at `/install/root`.
+- `out/x86_64/release/images/root.ext2`: normal Live root.
+- `out/x86_64/release/images/installer-root.ext2`: ext2 root containing the
+  installer runtime root and the installed-system payload at `/install/root`
+  (historically named `root.fat`).
 
 Actual embedded tool/library bytes and compatibility links are checked with
 `debugfs`, not inferred from staging success. The seven previously failing
@@ -101,15 +102,16 @@ under `/usr/share/licenses`; build commands and hashes are recorded under
 
 | Commands | Canonical location | Owner |
 | --- | --- | --- |
-| fdisk, sfdisk, blkid, fsck, runuser | `/usr/sbin` | util-linux via `esp:auth` |
-| mount, umount, lsblk | `/bin` | util-linux via `esp:auth` |
-| mkfs.ext2, fsck.ext2, mkfs.fat, fsck.fat, mkfs.exfat, fsck.exfat | `/usr/sbin` | official filesystem packages via `esp:storage` |
-| leonos-grub-installer | `/usr/sbin` | project shell script via `esp:storage` |
+| fdisk, sfdisk, blkid, fsck, runuser | `/usr/sbin` | util-linux via `storage-util-linux` ownership transfer |
+| mount, umount, lsblk | `/bin` | util-linux via `storage-util-linux` ownership transfer |
+| mkfs.ext2, fsck.ext2, mkfs.fat, fsck.fat, mkfs.exfat, fsck.exfat | `/usr/sbin` | official filesystem packages via `storage-filesystems` ownership transfer |
+| leonos-grub-installer | `/usr/sbin` | project shell script staged by `tools/build/rootfs-stage.sh` |
 | sync, shell and selected standard applets | `/bin/busybox` | official BusyBox |
 | find, xargs | `/usr/bin` | official Alpine `findutils` APK |
 
 `tools/storage_tools.py` declares package outputs and old `/sbin` aliases.
-`esp:layout-links` runs after producers and replaces stale BusyBox storage links.
+`tools/build/rootfs-stage.sh` stages the layout and its compatibility links
+after the producers, replacing stale BusyBox storage links.
 `mkfs.vfat`/`mkfs.fat32` resolve to `mkfs.fat`; `fsck.vfat`/`fsck.fat32` resolve to
 `fsck.fat`. These are path aliases, not translations of the private CLI. Use
 upstream options: in particular **FAT32 requires `-F 32`**, including when using
@@ -149,18 +151,16 @@ mount implementation. This task does not redesign or validate that workflow.
 ## Verification
 
 ```sh
-python3 build.py run images-iso
-python3 build.py run installer-root
-python3 build.py run desktop-live-root
-python3 tools/test_upstream_tools.py -v
+make iso
+make installer
 python3 tools/test_auth_source_integrity.py -v
 python3 tools/test_storage_payload.py -v
 python3 tools/test_upstream_tools_runtime.py -v
 python3 tools/test_storage_upstream_runtime.py -v
-LEONOS_STORAGE_TEST_ROOT=build/esp LEONOS_UPSTREAM_TEST_ROOT=build/esp \
+LEONOS_STORAGE_TEST_ROOT=out/x86_64/release/stage/esp LEONOS_UPSTREAM_TEST_ROOT=out/x86_64/release/stage/esp \
   python3 tools/test_storage_upstream_runtime.py -v
-python3 tools/test_storage_upstream_guest.py --root build/install/root.fat --smp 2
-python3 tools/test_storage_upstream_guest.py --root build/live/root.ext2 --smp 1
+python3 tools/test_storage_upstream_guest.py --root out/x86_64/release/images/installer-root.ext2 --smp 2
+python3 tools/test_storage_upstream_guest.py --root out/x86_64/release/images/root.ext2 --smp 1
 python3 tools/test_upstream_tools_images.py -v
 python3 tools/test_regular_file_io.py
 python3 tools/test_tmpfs.py
@@ -170,9 +170,8 @@ python3 tools/test_storage_mkdir_mount.py
 python3 tools/test_storage_rename.py
 python3 tools/test_storage_metadata.py
 python3 tools/test_init_power.py
-python3 tools/test_file_runtime.py
-python3 tools/test_storage_upstream_guest.py --root build/live/root.ext2 --power reboot
-python3 tools/test_storage_upstream_guest.py --root build/live/root.ext2 --power poweroff
+python3 tools/test_storage_upstream_guest.py --root out/x86_64/release/images/root.ext2 --power reboot
+python3 tools/test_storage_upstream_guest.py --root out/x86_64/release/images/root.ext2 --power poweroff
 ```
 
 Host reference tests execute the actual target ELFs with explicit target library

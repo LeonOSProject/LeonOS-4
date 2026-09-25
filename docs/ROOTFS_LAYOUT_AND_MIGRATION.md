@@ -91,7 +91,8 @@ fsync 和 rename，启动时即导出系统身份，避免 OOBE 前 root 查询�
 
 ## 构建、动态链接和安装
 
-`esp:rootfs` 独立于字体生成，所有写入 staging 的生产步骤先等待目录骨架。
+rootfs staging 在 images 管线中先于 installer staging 完成（`$(ROOTFS_RAW_STAMP)`
+是 installer stage 的前置），所有写入 staging 的生产步骤先等待目录骨架。
 链接阶段最后统一处理标准链接和命令入口。普通磁盘、Live 与安装器使用同一张
 目录表、相同的 ext2 生成器。`fakeroot` 只在子进程中为 mke2fs 提供 root:root
 视图，不改变宿主工作区文件所有者；硬链接、符号链接及模式保持原样。
@@ -144,7 +145,8 @@ clang `-fsyntax-only` 与差异空白检查；没有运行回归测试，没有�
 - stat 正确报告 synthetic symlink、block 类型及 proc/devfs 设备号，statx 同步
   major/minor。尚未全面修复块设备 rdev、所有字符设备号与挂载设备身份的 Linux 关系。
 
-验证入口：`python3 build.py run test-linux-rootfs`。宿主 ASan/UBSan 执行真实
+验证入口：宿主 rootfs 测试已并入 `make test`（C 单元测试与 `tests/build/`
+Shell check 契约）。宿主 ASan/UBSan 执行真实
 mount 渲染、procfs、UTS、权限与安装器 GPT 读取代码；覆盖短读、转义、目录类型、
 坏参数、重复 UUID 和 I/O 失败。保留任务管理器消费者回归；两处旧测试接线按已经完成的
 musl 迁移修正（声明 fixture 函数，forkpty 检查指向实际 musl provider）。

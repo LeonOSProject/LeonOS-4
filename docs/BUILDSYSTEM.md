@@ -22,14 +22,14 @@ ext2fs 头文件/库和镜像工具。fetch 校验锁定摘要，是唯一联网
 默认 `O=out/x86_64/release`；`ARCH=x86_64 PROFILE=debug|release` 选择配置隔离。
 `make O=out/custom menuconfig` 编辑该树 `config/.config`；olddefconfig 保留设置并补充新项，
 defconfig 重置为 configs/default.conf。可以复制 `.config` 保存配置，再 olddefconfig。
-Kconfig 与 configs/components.toml 区分 BUILD、IMAGE、ENTRY、SDK、API；required 组件强制开启。
+Kconfig 菜单（Build、Image defaults 等）决定默认配置，configs/components.toml 用 stage/entry/sdk/api 字段区分组件归属；required 组件强制开启。
 
 生成文件只写 O。`SOURCE_DATE_EPOCH` 默认为提交时间，仅用于时间元数据与可复现打包；
 版本为 `major.minor.patch`，没有构建号覆盖或计数器，提交身份另存 LEONOS_SOURCE_ID。
 
 | 目标 | 输出 |
 | --- | --- |
-| kernel / loader / drivers | generated/system、generated/drivers、loader |
+| kernel / loader / drivers | generated/system、generated/boot、generated/drivers |
 | runtime / userland / leonos-pam / leonos-upstream | 运行库、应用、独立上游安装树 |
 | sdk / musl-sdk | packages/LeonOS4-Developer-SDK.zip、leonos-musl-sdk.tar.gz |
 | rootfs-raw / rootfs / apk-repo | rootfs/raw、managed、manifest.json；packages/apk/repository |
@@ -61,7 +61,7 @@ SDK 的可选头/库由 SDK 选择控制，不从旧 devtools 生成物偷取。
 
 APK 使用上游 apk 的真实 mkpkg/mkndx/add，包含数据库和签名。
 默认密钥为 `~/.local/share/leonos/apk-signing/key.pem`（0600），可用 APK_SIGNING_KEY 指定。
-新版本 `1.<SOURCE_DATE_EPOCH>.<content-id>-r0` 排在旧 `0.<time_ns>-r0` 之后。
+默认版本号 `2.<SOURCE_DATE_EPOCH>-r0` 排在旧 gen-1/gen-0 媒体之后。
 正式发行需要递增 epoch 或显式递增 APK_BUILD_VERSION；同一提交的脏工作区不保证内容哈希排序。
 本地 world 请求保持未锁定，升级可替换系统包；外部包与受保护配置保留。
 
@@ -74,7 +74,7 @@ APK 使用上游 apk 的真实 mkpkg/mkndx/add，包含数据库和签名。
 - test：C 单元测试及 ASan/UBSan、Shell 构建契约。
 - test-long：生产 execve、并行/中断恢复、缺失 stage 恢复；需要较多磁盘临时空间。
 - test-legacy：明确选择的既有 Python OS 主机回归，不参与生产构建。
-- test-smoke：三种介质的真实 QEMU 启动；必须出现 kernel boot complete 与 PID 1 标记。
+- test-smoke：三种介质的真实 QEMU 启动；必须出现 `[ntclks] boot complete:` 与 `[ntclks] PID 1 path=` 标记。
 
 可用 `TMPDIR=$PWD/out/test-tmp` 避免 tmpfs 太小。结果以 verification.md 最新记录为准；
 生成镜像或通过主机测试均不能替代来宾安装/升级验收。历史参考 Python 的保留边界见 legacy-removal.md。

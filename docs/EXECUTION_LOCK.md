@@ -54,7 +54,10 @@ QEMU 测试校验独立进程及共享地址空间线程的内存内容，并记
 此前成功构建约 1468 秒，但本次后段同时生成安装 ISO，且旧记录计时范围不同，
 所以不将两者视为严格的提速百分比测量。
 
-后续 EEVDF 调度调查补充：上述 QEMU 配置虽为 2 vCPU，但来宾启动日志显示
-`SMP topology CPUs=1 ... (AP scheduler disabled)`。因此上述来宾数据是双进程、
-单实际调度 CPU 的测量，主要验证缺页路径与取消逐页强制调度的收益；
-读侧真正重叠由主机并发锁测试覆盖，不能将该来宾结果称为多核并行收益。
+EEVDF 后续调查补充：上述 QEMU 配置为 2 vCPU，且当前 `arch/x86_64/smp.c` 已经启用
+AP 用户态调度（`smp_release_aps` 在 BSP 完成首轮用户 tick 后置位 `smp_scheduler_started`，
+AP 从 `smp_ap_entry` 循环进入 Ring 3）。但**设备 IRQ 仍全部路由到 BSP，AP 只跑 LAPIC
+定时抢占**；系统调用的全局执行锁 `kernel_execution_lock_irqsave` 是 FIFO ticket 锁
+并在持锁/等锁期间关本核中断，所以两个"能跑用户任务"的 CPU 在跨核 syscall 上仍被
+串行化。上述 8192-页缺页微基准主要在**取消逐页强制调度**这一层生效，读侧并发由
+主机并发锁测试覆盖；不要把这些数据当作多核并行加速的量化证明。

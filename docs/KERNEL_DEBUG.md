@@ -39,10 +39,12 @@ contains it, keyboard interrupt delivery or the kernel is not responding.
 
 ## API diagnostics
 
-The first menu item runs the registered syscall and ioctl probes. The current
-registry covers 41 syscall entries and 120 ioctl entries (161 entries total),
-including process, filesystem, memory, IPC, terminal, GUI, device, and
-security interfaces. Results are shown in pages of 16 entries so the report
+The first menu item runs the registered syscall probes. The current
+registry covers 41 syscall entries spanning file, memory, process, and
+IPC interfaces. The ioctl probe list is empty because the private ioctl
+multiplexers were removed in favor of windowd AF_UNIX IPC, Linux UAPI
+device ioctls, and procfs/devmand.
+Results are shown in pages of 16 entries so the report
 remains readable on a small console. Each entry reports its API kind, name,
 outcome, and minimum/average/maximum TSC cycles when it was executed; the
 final summary reports executed, skipped, failed, and total counts.

@@ -68,7 +68,7 @@ Upstream litehtml is checked out as:
 
 - submodule path: `third_party/litehtml`
 - upstream URL: `https://github.com/litehtml/litehtml.git`
-- current recorded commit: `932439c91afb04dbce30903673292e3bf2da01dc`
+- current recorded commit: `b9e89f0b9494ff9a5f008800af35503efabddf59`
 
 The current upstream tree is C++ and depends heavily on STL types and library
 facilities such as strings, vectors, maps, smart pointers, variants, algorithms,
@@ -84,7 +84,8 @@ should remain useful when the full C++ litehtml container becomes available.
 
 To integrate real litehtml, do these in order:
 
-1. Add a userland C++ build mode in `tools/gen_ninja.py`.
+1. Add a userland C++ build mode to the GNU Make build system
+   (`mk/userland.mk` and the component graph).
 2. Provide a minimal C++ runtime surface for constructors, destructors,
    allocation, exceptions-disabled builds, and required ABI helpers.
 3. Port or provide an STL subset/libc++ profile that satisfies litehtml.

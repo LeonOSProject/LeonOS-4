@@ -32,7 +32,14 @@ static void serial_putc(char ch)
     if (!serial_ready) {
         return;
     }
-    (void)serial_transmit_empty;
+    /* Wait for the transmitter-holding-register to empty before writing the
+     * next byte.  Writing unconditionally drops bytes whenever the host drains
+     * COM1 slower than the guest produces them (boot logs, console spam).  The
+     * wait is bounded so a wedged or absent 16550 can never block the caller
+     * that may be running with interrupts masked on the execution transaction. */
+    for (uint32_t spins = 0u; spins < 100000u && !serial_transmit_empty(); ++spins) {
+        __asm__ volatile("pause" : : : "memory");
+    }
     kernel_api->outb(COM1, (uint8_t)ch);
 }
 

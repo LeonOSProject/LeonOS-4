@@ -15,6 +15,27 @@ host scheduling, the selected virtual GPU, and application rendering still
 determine the observed rate. `glxgears`' counter measures submitted frames and
 must not be used alone as scanout evidence.
 
+## 2026-09-24: asynchronous present
+
+The legacy `framebuffer_present_region` fallback path always finished by
+calling `framebuffer_vmware_sync`, which rings the `VMWARE_SVGA_REG_SYNC`
+doorbell **and** spins reading `SVGA_REG_BUSY` until the host has drained the
+FIFO. Because `LEONOS_FBIOBLIT` executes inside the kernel's global execution
+transaction with local interrupts masked, that busy-wait pinned one core per
+frame and serialised every other core's syscall behind the same ticket lock.
+Under multi-core desktop load the loop was the dominant cost of a compositor
+present and the visible cause of CPU-0 saturation when running Doom or a
+Terminal repaint burst.
+
+`framebuffer_present_region` now publishes the update and only rings the
+doorbell (a new `framebuffer_vmware_kick` helper, non-blocking). The full
+synchronous drain runs exclusively when `framebuffer_vmware_fifo_update`
+reports FIFO backpressure, at which point waiting is required before retrying
+the exact damage region. The newer SVGA backend already rings its own doorbell
+inside `svga_fifo_packet_locked`, so the change strictly reduces the work done
+under the execution lock on that path too. The global execution lock itself is
+unchanged; reducing its scope across subsystems remains separate work.
+
 For a compositor sample, create `/etc/leonos/desktop-profile` in the guest and
 restart the desktop. It logs `[desktop-perf] frames=... elapsed_ms=...
 paint_ms=... inputm_ms=...` every five seconds. The profile is disabled by
