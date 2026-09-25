@@ -10,6 +10,9 @@
 | `01-header-classification.md` | 阶段 0/1：头文件逐声明分类（UAPI/runtime/boot/module/private/resource） |
 | `02-migration-manifest.md` | 阶段 0/2：源文件迁移映射（当前路径 → 目标所有者 → 消费者） |
 | `03-permission-matrix.md` | 阶段 0/4：Desktop/windowd 身份与权限判定调用矩阵、负例测试挂钩点 |
+| `04-reproducibility-two-path.md` | 阶段 3：双路径可重现性比较结果与建议修复 |
+| `05-phase2-standalone-checkout.md` | 阶段 2：独立内核 checkout 的验证证据 |
+| `06-handover-2026-09-25.md` | **交接文档**（授权边界、进度、证据、下一步、风险） |
 
 原始命令输出与日志保存在任务工作目录
 `/home/leon/build/ntclks-sep/logs/`（仓库外），报告中给出相对引用。
