@@ -19,7 +19,7 @@ if [ -n "${UPSTREAM_DEPS-}" ]; then
  expected=$("$UPSTREAM_DEPS" --lock "$src/configs/dependencies.lock.json" --id "$source_id" --print commit)
  [ "$(git -C "$src/third_party/$source_id" rev-parse HEAD)" = "$expected" ] || { echo "$pkg: source revision mismatch" >&2; exit 1; }
 fi
-flags="--target=x86_64-linux-musl ${UPSTREAM_CFLAGS:--O2} -std=gnu11 -ffreestanding -fno-stack-protector -fPIC -ffunction-sections -fdata-sections -nostdinc -isystem $resource/include -I$musl/include -I$src/userland/libc/include -I$src/include -I$src/include/uapi -I$includes -I$work/generated -I$source -DLEONOS_USE_MUSL -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L"
+flags="--target=x86_64-linux-musl ${UPSTREAM_CFLAGS:--O2} -std=gnu11 -ffreestanding -fno-stack-protector -fPIC -ffunction-sections -fdata-sections -nostdinc -isystem $resource/include -I$musl/include -I$src/userland/libc/include -I$src/include -I${UPSTREAM_UAPI:-$src/include/uapi} -I$includes -I$work/generated -I$source -DLEONOS_USE_MUSL -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L"
 compile() { "$cc" $flags "$@"; }
 shared() { name=$1; shift; "$ld" ${UPSTREAM_LDFLAGS-} -shared --no-undefined --hash-style=both -z max-page-size=0x1000 -soname "$name" -o "$output/$name.tmp" "$@" -L "$musl/lib" -l:libmimalloc.so.3 "$runtime" -lc; mv "$output/$name.tmp" "$output/$name"; }
 staticlib() { name=$1; shift; rm -f "$output/$name.tmp"; "$ar" rcs "$output/$name.tmp" "$@"; mv "$output/$name.tmp" "$output/$name"; }

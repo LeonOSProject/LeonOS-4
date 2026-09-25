@@ -42,14 +42,14 @@ LEONOS_SIG_app-$(1)-cc := cc=$(TARGET_CC)|identity=$$(shell $(TARGET_CC) --versi
 LEONOS_SIG_app-$(1)-ld := ld=$(TARGET_LD)|identity=$$(shell $(TARGET_LD) --version 2>/dev/null | head -n1)|flags=$(USERLAND_LINK_FLAGS) $(USERLAND_LDFLAGS)|sources=$$(USERLAND_SOURCES_$(1))|libs=$(5) $$(USERLAND_LIBS_$(2))
 $$(if $$(LEONOS_PASSIVE),,$$(eval $$(call LEONOS_SIGNATURE_RULE,app-$(1)-cc)))
 $$(if $$(LEONOS_PASSIVE),,$$(eval $$(call LEONOS_SIGNATURE_RULE,app-$(1)-ld)))
-$(O_OBJ)/app-$(1)/%.c.o: $(LEONOS_SRC)/%.c $(4) $(MUSL_STAMP) $(PNG_CONFIG) $$(USERLAND_DEPS_$(2)) $(O_META)/app-$(1)-cc.sig
+$(O_OBJ)/app-$(1)/%.c.o: $(LEONOS_SRC)/%.c $(4) $(MUSL_STAMP) $(PNG_CONFIG) $(HEADER_EXPORT_MANIFEST) $$(USERLAND_DEPS_$(2)) $(O_META)/app-$(1)-cc.sig
 	$$(Q)mkdir -p $$(dir $$@)
 	$$(call LEONOS_LOG,CC,$$<)
 	$$(Q)$$(TARGET_CC) $$(USERLAND_FLAGS) $$(USERLAND_CFLAGS) $$(USERLAND_EXTRA_$(2)) -include $(4) -MMD -MP -MF $$@.d -MT $$@ -c $$< -o $$@.tmp
 	$$(Q)mv $$@.tmp $$@
-$(O_OBJ)/app-$(1)/%.S.o: $(LEONOS_SRC)/%.S $(4) $(O_META)/app-$(1)-cc.sig
+$(O_OBJ)/app-$(1)/%.S.o: $(LEONOS_SRC)/%.S $(4) $(HEADER_EXPORT_MANIFEST) $(O_META)/app-$(1)-cc.sig
 	$$(Q)mkdir -p $$(dir $$@)
-	$$(Q)$$(TARGET_CC) --target=$$(TRIPLE_USER) -fPIC -I$(LEONOS_SRC)/include/uapi -MMD -MP -MF $$@.d -MT $$@ -c $$< -o $$@.tmp
+	$$(Q)$$(TARGET_CC) --target=$$(TRIPLE_USER) -fPIC -I$$(HEADER_EXPORT_INCLUDE) -MMD -MP -MF $$@.d -MT $$@ -c $$< -o $$@.tmp
 	$$(Q)mv $$@.tmp $$@
 $(3): $$(USERLAND_OBJECTS_$(1)) $(5) $$(USERLAND_LIBS_$(2)) $(USERLAND_CRT) $(MUSL_SYSROOT)/lib/libc.so $(MUSL_SYSROOT)/lib/libmimalloc.so.3 $(O_META)/app-$(1)-ld.sig
 	$$(Q)mkdir -p $$(dir $$@)
