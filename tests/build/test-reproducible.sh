@@ -59,10 +59,11 @@ fi
 pass 'both output trees build from scratch'
 
 # Every product, not just the image: a generated header that drifts would change
-# what the next rebuild recompiles.
+# what the next rebuild recompiles. The kernel side is compared through the
+# sub-build tree (ntclks/) and the products the adapter publishes.
 for product in include/generated/autoconf.h \
-        include/generated/build_info.h obj/kernel/sources.list \
-        generated/system/kernel.unstripped generated/system/kernel.sys \
+        include/generated/build_info.h ntclks/obj/kernel/sources.list \
+        ntclks/generated/system/kernel.unstripped generated/system/kernel.sys \
         generated/system/kernel.debug; do
     checks=$((checks + 1))
     if [ ! -f "$first/$product" ]; then

@@ -11,8 +11,14 @@ RPR_INPUTS := $(wildcard $(LEONOS_SRC)/third_party/rime-pinyin-simp/* $(LEONOS_S
 $(RPR_APP_PACKAGES) &: $(addprefix $(USERLAND_DIR)/,helloworld.elf doom.elf doomlauncher.elf oschinpt.elf) $(OSCHINPT_INDEX) $(BUILD_INFO_HEADER) $(RPR_INPUTS) $(APK_MANIFEST) $(LEONOS_SRC)/tools/build/rpr-apps.sh
 	$(Q)sh $(LEONOS_SRC)/tools/build/rpr-apps.sh $(LEONOS_SRC) $(O) $(BUILD_INFO_HEADER) $(OSCHINPT_INDEX) $(UPSTREAM_APK) '$(APK_SIGNING_KEY)' $(RPR_APPS) $(SOURCE_DATE_EPOCH)
 RPR_PAGES := $(O)/rpr-pages
-$(RPR_PAGES)/.complete $(RPR_PAGES)/manifest.json &: $(RPR_APP_PACKAGES) $(APK_MANIFEST) $(APK_REPOSITORY)/packages.adb $(LEONOS_KERNEL_SYS) $(LOADER_ELF) $(BUILD_INFO_HEADER) $(LEONOS_SRC)/tools/build/rpr-pages.sh
-	$(Q)SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) sh $(LEONOS_SRC)/tools/build/rpr-pages.sh $(APK_REPOSITORY) $(RPR_APPS) $(LEONOS_KERNEL_SYS) $(LOADER_ELF) $(BUILD_INFO_HEADER) $(UPSTREAM_APK) '$(APK_SIGNING_KEY)' $(RPR_PAGES)
+# Kernel release metadata comes from the ntclks sub-build: $(NTCLKS_DEST)/manifest.txt
+# records the per-artifact sha256 of exactly the products the kernel checkout
+# installed, and the kernel's configs/build-version carries the release version.
+# Neither is listed as a rebuild trigger: the published products are (their
+# adapter rule rewrites both before this recipe can run), and a release.txt must
+# not be re-emitted when neither the bytes nor the version moved.
+$(RPR_PAGES)/.complete $(RPR_PAGES)/manifest.json &: $(RPR_APP_PACKAGES) $(APK_MANIFEST) $(APK_REPOSITORY)/packages.adb $(LEONOS_KERNEL_SYS) $(LOADER_ELF) $(LEONOS_SRC)/tools/build/rpr-pages.sh
+	$(Q)SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) sh $(LEONOS_SRC)/tools/build/rpr-pages.sh $(APK_REPOSITORY) $(RPR_APPS) $(LEONOS_KERNEL_SYS) $(LOADER_ELF) $(NTCLKS_DEST)/manifest.txt $(NTCLKS_DIR)/configs/build-version $(UPSTREAM_APK) '$(APK_SIGNING_KEY)' $(RPR_PAGES)
 	$(Q)sh $(LEONOS_SRC)/tools/build/stage-inventory.sh write $(RPR_PAGES) $(O_META)/rpr-pages.files
 $(O_META)/rpr-pages-present.sig: FORCE
 	$(Q)sh $(LEONOS_SRC)/tools/build/stage-inventory.sh check $(RPR_PAGES) $(O_META)/rpr-pages.files $@

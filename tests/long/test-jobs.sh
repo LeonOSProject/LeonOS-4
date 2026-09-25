@@ -14,6 +14,9 @@ export LC_ALL
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 
+# The kernel checkout under test (env-overridable, see tests/build/test-incremental.sh).
+ntclks=${NTCLKS_DIR:-$repo_root/kernel/ntclks}
+
 work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-jobs.XXXXXX") || exit 1
 failures=0
 checks=0
@@ -45,7 +48,7 @@ rounds=3
 # different names, and a comparison that includes them measures the test fixture
 # rather than the work Make chose to do.
 snapshot() {
-    find "$1/obj/kernel" -name '*.o' -printf '%P %T@\n' 2>/dev/null | LC_ALL=C sort
+    find "$1/ntclks/obj/kernel" -name '*.o' -printf '%P %T@\n' 2>/dev/null | LC_ALL=C sort
 }
 
 changed_between() {
@@ -55,9 +58,9 @@ changed_between() {
 
 # The three invalidations are deliberately different action classes: one ordinary
 # source, one header with dozens of consumers, and the linker script, which must
-# relink without recompiling anything.
-touch_targets="kernel/ntclks/futex.c kernel/ntclks/include/ntclks/types.h
-kernel/ntclks/arch/x86_64/linker.ld"
+# relink without recompiling anything. They live in the kernel checkout.
+touch_targets="$ntclks/kernel/ntclks/futex.c $ntclks/kernel/ntclks/include/ntclks/types.h
+$ntclks/kernel/ntclks/arch/x86_64/linker.ld"
 
 printf '=== A08: -j1 and -j8 from clean output directories ===\n'
 for level in $jobs; do
@@ -94,7 +97,7 @@ for level in $jobs; do
     fi
     # The signature legitimately contains -I$(O)/include, so normalise the tree
     # path before comparing: what must agree is the tool, its identity and flags.
-    sed "s#$tree#<O>#g" "$tree/meta/kernel-cc.sig" >"$work/sig-j$level" 2>/dev/null ||
+    sed "s#$tree#<O>#g" "$tree/ntclks/meta/kernel-cc.sig" >"$work/sig-j$level" 2>/dev/null ||
         : >"$work/sig-j$level"
 done
 
@@ -116,7 +119,7 @@ printf '\n=== A08: the same invalidations at both job levels, three rounds ===\n
 # is stable. The cheap pair is also two different action classes: one object, and
 # a relink with no recompilation at all.
 heavy_targets=$touch_targets
-light_targets="kernel/ntclks/futex.c kernel/ntclks/arch/x86_64/linker.ld"
+light_targets="$ntclks/kernel/ntclks/futex.c $ntclks/kernel/ntclks/arch/x86_64/linker.ld"
 for round in 1 2 3; do
     if [ "$round" = 1 ]; then
         round_targets=$heavy_targets
@@ -132,7 +135,7 @@ for round in 1 2 3; do
     done
     sleep 1
     for target in $round_targets; do
-        touch "$repo_root/$target"
+        touch "$target"
     done
     for level in $jobs; do
         tree=$work/j$level
@@ -164,7 +167,7 @@ done
 
 printf '\n=== A08: comparable output content ===\n'
 for product in generated/system/kernel.sys generated/system/kernel.debug \
-        generated/system/kernel.unstripped obj/kernel/sources.list \
+        ntclks/generated/system/kernel.unstripped ntclks/obj/kernel/sources.list \
         include/generated/autoconf.h include/generated/build_info.h; do
     a=$work/j1/$product
     b=$work/j8/$product
@@ -193,7 +196,7 @@ cp "$victim/generated/system/kernel.sys" "$good"
 snapshot "$victim" >"$work/before-interrupt"
 rm -f "$victim/generated/system/kernel.sys"
 for target in $touch_targets; do
-    touch "$repo_root/$target"
+    touch "$target"
 done
 # A fixed sleep is a guess: this tree recompiles 82 objects in a few seconds on a
 # fast machine, and an interrupt that arrives after the link proves nothing. Wait
@@ -209,7 +212,7 @@ make -s O="$victim" -j2 SOURCE_DATE_EPOCH=$epoch kernel \
 victim_pid=$!
 waited=0
 while [ "$waited" -lt 200 ]; do
-    if [ -n "$(find "$victim/obj/kernel" -name '*.o' -newer "$work/interrupt-trigger" \
+    if [ -n "$(find "$victim/ntclks/obj/kernel" -name '*.o' -newer "$work/interrupt-trigger" \
             -print -quit 2>/dev/null)" ]; then
         break
     fi
@@ -250,7 +253,7 @@ fi
 
 # Whatever the interruption left behind, the tracked sources must be intact.
 for target in $touch_targets; do
-    [ -f "$repo_root/$target" ] || fail 'interrupted build leaves the tracked sources intact' "$target missing"
+    [ -f "$target" ] || fail 'interrupted build leaves the tracked sources intact' "$target missing"
 done
 
 printf '\n%s: %d checks, %d failures\n' 'test-jobs' "$checks" "$failures"

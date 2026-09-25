@@ -14,12 +14,37 @@
 # <a href> / <link href> still resolves, because the base path is never baked
 # into the output (plan §25).
 set -eu
-[ "$#" = 8 ] || exit 2
-repository=$1 apps=$2 kernel=$3 loader=$4 build=$5 apk=$6 key=$7 output=$8
+[ "$#" = 9 ] || exit 2
+repository=$1 apps=$2 kernel=$3 loader=$4 manifest=$5 version_src=$6 apk=$7 key=$8 output=$9
 [ ! -L "$key" ] && [ -f "$key" ] && [ "$(stat -c %a "$key")" = 600 ] || { echo 'private signing key must be a regular 0600 file' >&2; exit 1; }
-version=$(sed -n 's/^#define LEONOS_KERNEL_VERSION "\([0-9.]*\)"$/\1/p' "$build")
+version=$(sed -n 's/^release_version=//p' "$version_src" | head -n1)
 printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo 'invalid release version' >&2; exit 1; }
 image=$version
+
+# The pairing hashes are read from the kernel install manifest, which records
+# what the kernel checkout actually built and installed; each is then checked
+# against the bytes this script is about to publish. The loader is published
+# alongside the kernel because the boot handoff layout is compiled into both
+# images (RPR format_version=2 updates them as one unit), so advertising a hash
+# that is not the shipped file's would break the update contract.
+manifest_hash() {
+    hash=$(awk -v name="$1" 'NF == 2 && $2 == name { print $1; exit }' "$manifest")
+    printf '%s\n' "$hash" | grep -Eq '^[0-9a-f]{64}$' || {
+        echo "kernel manifest has no sha256 for $1" >&2
+        exit 1
+    }
+    printf '%s\n' "$hash"
+}
+kernel_hash=$(manifest_hash kernel.sys)
+loader_hash=$(manifest_hash loader.elf)
+[ "$kernel_hash" = "$(sha256sum "$kernel" | cut -d' ' -f1)" ] || {
+    echo 'kernel.sys does not match the kernel manifest' >&2
+    exit 1
+}
+[ "$loader_hash" = "$(sha256sum "$loader" | cut -d' ' -f1)" ] || {
+    echo 'loader.elf does not match the kernel manifest' >&2
+    exit 1
+}
 
 # Generators share escaping, page chrome and size formatting from one file so
 # the RPR and download/home pages stay visually identical and no logic is
@@ -60,8 +85,6 @@ done
 } > "$work/site/apk/repository.json"
 cp "$kernel" "$work/site/kernel/kernel.sys"
 cp "$loader" "$work/site/kernel/loader.elf"
-kernel_hash=$(sha256sum "$kernel" | cut -d' ' -f1)
-loader_hash=$(sha256sum "$loader" | cut -d' ' -f1)
 cat > "$work/site/kernel/release.txt" <<RELEASE
 format_version=2
 image_version=$image

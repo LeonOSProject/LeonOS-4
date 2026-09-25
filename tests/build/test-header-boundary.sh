@@ -14,6 +14,9 @@ export LC_ALL
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 
+# The kernel checkout under test (env-overridable, see test-incremental.sh).
+ntclks=${NTCLKS_DIR:-$repo_root/kernel/ntclks}
+
 work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-header-boundary.XXXXXX") || exit 1
 O="$work/out"
 failures=0
@@ -21,8 +24,9 @@ checks=0
 
 cleanup() {
     [ -n "${KEEP_WORK:-}" ] || rm -rf "$work"
-    # Restore the working tree: tests append marker comments to live sources.
-    for changed in kernel/ntclks/include/ntclks/sched.h include/uapi/leonos/fs_abi.h; do
+    # Restore the checkout: tests append marker comments to live sources.
+    for changed in "$ntclks/kernel/ntclks/include/ntclks/sched.h" \
+                   "$ntclks/include/uapi/leonos/fs_abi.h"; do
         if [ -f "$changed.bak" ]; then mv "$changed.bak" "$changed"; fi
     done
 }
@@ -66,8 +70,8 @@ build "$work/0.log" defconfig headers_install runtime
     || fail "export tree missing" "$(find "$O/kernel-export" -type f | head)"
 
 # 1. Kernel-private header change must not recompile the userland runtime.
-cp kernel/ntclks/include/ntclks/sched.h kernel/ntclks/include/ntclks/sched.h.bak
-printf '\n/* header-boundary probe */\n' >> kernel/ntclks/include/ntclks/sched.h
+cp "$ntclks/kernel/ntclks/include/ntclks/sched.h" "$ntclks/kernel/ntclks/include/ntclks/sched.h.bak"
+printf '\n/* header-boundary probe */\n' >> "$ntclks/kernel/ntclks/include/ntclks/sched.h"
 advance_clock
 build "$work/1.log" runtime
 if [ "$(cc_actions "$work/1.log")" -eq 0 ]; then
@@ -76,11 +80,11 @@ else
     fail "kernel-private header change recompiled userland objects:" \
         "$(grep -E '^  CC ' "$work/1.log" | head)"
 fi
-mv kernel/ntclks/include/ntclks/sched.h.bak kernel/ntclks/include/ntclks/sched.h
+mv "$ntclks/kernel/ntclks/include/ntclks/sched.h.bak" "$ntclks/kernel/ntclks/include/ntclks/sched.h"
 
 # 2. UAPI content change must reinstall the export and recompile consumers.
-cp include/uapi/leonos/fs_abi.h include/uapi/leonos/fs_abi.h.bak
-printf '\n/* header-boundary probe */\n' >> include/uapi/leonos/fs_abi.h
+cp "$ntclks/include/uapi/leonos/fs_abi.h" "$ntclks/include/uapi/leonos/fs_abi.h.bak"
+printf '\n/* header-boundary probe */\n' >> "$ntclks/include/uapi/leonos/fs_abi.h"
 advance_clock
 build "$work/2.log" runtime
 if [ "$(install_actions "$work/2.log")" -ge 1 ] && [ "$(cc_actions "$work/2.log")" -ge 1 ]; then
@@ -89,7 +93,7 @@ else
     fail "UAPI content change did not propagate" \
         "INSTALL=$(install_actions "$work/2.log") CC=$(cc_actions "$work/2.log")"
 fi
-mv include/uapi/leonos/fs_abi.h.bak include/uapi/leonos/fs_abi.h
+mv "$ntclks/include/uapi/leonos/fs_abi.h.bak" "$ntclks/include/uapi/leonos/fs_abi.h"
 
 # 3. A forced reinstall with unchanged content must not touch installed files
 #    (content-stable publishing; otherwise every build rebuilds userland).
