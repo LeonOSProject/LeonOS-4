@@ -6,6 +6,7 @@
 #include <leonos/stdio.h>
 #include <leonos/syscall.h>
 #include <string.h>
+#include <unistd.h>
 #include <leonos/layout.h>
 
 #define OSCHINPT_ID "oschinpt"

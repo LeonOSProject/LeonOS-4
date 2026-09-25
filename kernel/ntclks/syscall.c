@@ -38,17 +38,17 @@ static int copy_user_string_fixed(char *dst, uint32_t cap, uint64_t user_ptr,
 
 #include <ntclks/version.h>
 
-#include <leonos/device.h>
-#include <leonos/audio.h>
+#include <leonos/device_abi.h>
+#include <leonos/audio_abi.h>
 #include <leonos/driver.h>
-#include <leonos/auth.h>
-#include <leonos/fs.h>
+#include <leonos/auth_abi.h>
+#include <leonos/fs_abi.h>
 #include <leonos/fb.h>
-#include <leonos/net.h>
-#include <leonos/pty.h>
-#include <leonos/signal.h>
-#include <leonos/system.h>
-#include <leonos/startup.h>
+#include <leonos/net_abi.h>
+#include <leonos/pty_abi.h>
+#include <leonos/signal_abi.h>
+#include <leonos/system_abi.h>
+#include <leonos/startup_abi.h>
 #include <leonos/text.h>
 #include <linux/tty.h>
 #include <linux/vt.h>

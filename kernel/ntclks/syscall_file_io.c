@@ -1,7 +1,7 @@
 #include <ntclks/syscall_internal.h>
 #include <ntclks/syscall.h>
 #include <ntclks/time.h>
-#include <leonos/fs.h>
+#include <leonos/fs_abi.h>
 #include <linux/errno.h>
 
 /* Linux caps a transfer at MAX_RW_COUNT, not at the transport's DMA size.

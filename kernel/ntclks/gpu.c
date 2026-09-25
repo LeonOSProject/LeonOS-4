@@ -4,7 +4,7 @@
 #include <ntclks/sched.h>
 #include <ntclks/svga.h>
 #include <ntclks/usercopy.h>
-#include <leonos/gpu.h>
+#include <leonos/gpu_abi.h>
 
 /**
  * @brief Recognize the versioned GPU ioctl requests.

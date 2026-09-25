@@ -21,7 +21,7 @@ LeonOS 4 build system (GNU Make + C host tools)
   make runtime         normal/installer shared and static runtime libraries
   make leonos-pam      Linux-PAM and LeonOS password-policy module
   make musl-sdk        relocatable musl SDK subset and tar.gz archive
-  make sdk             developer SDK (relocatable, no Python wrappers)
+  make sdk             alias of musl-sdk (built from build output)
   make rootfs          staged root filesystem
   make apk-repo        signed local package repository
   make image-vmdk      bootable disk image

@@ -13,8 +13,8 @@
 #include <ntclks/time.h>
 #include <ntclks/permissions.h>
 #include <ntclks/pty.h>
-#include <leonos/fs.h>
-#include <leonos/net.h>
+#include <leonos/fs_abi.h>
+#include <leonos/net_abi.h>
 #include <linux/socket.h>
 #include <linux/errno.h>
 #include <linux/time.h>

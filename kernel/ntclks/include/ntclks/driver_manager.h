@@ -6,7 +6,7 @@
 #define NTCLKS_DRIVER_MANAGER_H
 
 #include <leonos/driver.h>
-#include <leonos/audio.h>
+#include <leonos/audio_abi.h>
 #include <ntclks/mouse.h>
 #include <ntclks/types.h>
 

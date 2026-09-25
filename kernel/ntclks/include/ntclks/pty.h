@@ -7,7 +7,7 @@
 
 #include <ntclks/types.h>
 #include <ntclks/storage.h>
-#include <leonos/pty.h>
+#include <leonos/pty_abi.h>
 #include <linux/tty.h>
 
 int pty_lookup_path(const char *path, struct storage_node *node);

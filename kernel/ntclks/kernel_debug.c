@@ -3,17 +3,17 @@
  * Owns the persistent flag, validates the staged ET_REL payload, and runs the
  * built-in diagnostic menu before normal Ring-3 startup.
  */
-#include <leonos/kernel_debug.h>
-#include <leonos/audio.h>
-#include <leonos/auth.h>
-#include <leonos/device.h>
+#include <leonos/kernel_debug_abi.h>
+#include <leonos/audio_abi.h>
+#include <leonos/auth_abi.h>
+#include <leonos/device_abi.h>
 #include <leonos/driver.h>
-#include <leonos/fs.h>
-#include <leonos/inputm.h>
-#include <leonos/net.h>
-#include <leonos/pty.h>
-#include <leonos/startup.h>
-#include <leonos/system.h>
+#include <leonos/fs_abi.h>
+#include <leonos/inputm_abi.h>
+#include <leonos/net_abi.h>
+#include <leonos/pty_abi.h>
+#include <leonos/startup_abi.h>
+#include <leonos/system_abi.h>
 #include <leonos/text.h>
 #include <ntclks/console.h>
 #include <ntclks/heap.h>

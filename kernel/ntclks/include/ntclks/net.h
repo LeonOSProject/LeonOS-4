@@ -5,8 +5,8 @@
 #ifndef NTCLKS_NET_H
 #define NTCLKS_NET_H
 
-#include <leonos/net.h>
-#include <leonos/system.h>
+#include <leonos/net_abi.h>
+#include <leonos/system_abi.h>
 #include <ntclks/types.h>
 
 struct task;

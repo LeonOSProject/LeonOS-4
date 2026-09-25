@@ -12,7 +12,7 @@
 #include <ntclks/types.h>
 #include <ntclks/eevdf.h>
 #include <ntclks/heap.h>
-#include <leonos/auth.h>
+#include <leonos/auth_abi.h>
 #include <leonos/elf_abi.h>
 #include <linux/resource.h>
 #include <linux/time.h>

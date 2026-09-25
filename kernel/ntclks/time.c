@@ -2,7 +2,7 @@
  * LeonOS kernel timekeeping: provides ticks, clocks, and timer services.
  * Coordinates scheduler wakeups, elapsed time, and periodic device polling.
  */
-#include <leonos/system.h>
+#include <leonos/system_abi.h>
 #include <ntclks/console.h>
 #include <ntclks/sched.h>
 #include <ntclks/time.h>

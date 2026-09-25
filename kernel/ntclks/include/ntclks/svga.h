@@ -2,7 +2,7 @@
 #ifndef NTCLKS_SVGA_H
 #define NTCLKS_SVGA_H
 #include <ntclks/types.h>
-#include <leonos/gpu.h>
+#include <leonos/gpu_abi.h>
 
 typedef uint64_t svga_handle;
 #define SVGA_INVALID_HANDLE 0ULL

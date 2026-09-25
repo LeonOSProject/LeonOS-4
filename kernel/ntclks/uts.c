@@ -2,7 +2,7 @@
 #include <ntclks/uts.h>
 #include <ntclks/lock.h>
 #include <ntclks/storage.h>
-#include <leonos/fs.h>
+#include <leonos/fs_abi.h>
 
 static struct kernel_spinlock uts_lock = KERNEL_SPINLOCK_INIT;
 static char uts_hostname[65] = "leonos";

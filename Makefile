@@ -151,6 +151,7 @@ include $(LEONOS_SRC)/mk/host.mk
 include $(LEONOS_SRC)/mk/toolchain.mk
 include $(LEONOS_SRC)/mk/config.mk
 include $(LEONOS_SRC)/mk/kernel.mk
+include $(LEONOS_SRC)/mk/headers.mk
 include $(LEONOS_SRC)/mk/boot.mk
 include $(LEONOS_SRC)/mk/third-party.mk
 include $(LEONOS_SRC)/mk/pam.mk
@@ -173,7 +174,7 @@ include $(LEONOS_SRC)/mk/tests.mk
 # Source inventories are inputs, never implicit host executable targets.
 .SUFFIXES:
 
-.PHONY: help doctor fetch defconfig olddefconfig menuconfig tools \
+.PHONY: help doctor fetch defconfig olddefconfig menuconfig tools headers_install \
 	kernel userland runtime sdk rootfs apk-repo image-vmdk iso installer all \
 	pages site download-page \
 	run run-iso run-installer test test-tools test-build test-long test-smoke \

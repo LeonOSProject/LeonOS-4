@@ -6,7 +6,7 @@
 #define NTCLKS_ELF_H
 
 #include <ntclks/types.h>
-#include <leonos/fs.h>
+#include <leonos/fs_abi.h>
 
 struct address_space;
 struct storage_node;

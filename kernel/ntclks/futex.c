@@ -3,7 +3,7 @@
 #include <ntclks/lock.h>
 #include <ntclks/usercopy.h>
 #include <ntclks/time.h>
-#include <leonos/system.h>
+#include <leonos/system_abi.h>
 #include <linux/futex.h>
 #include <linux/errno.h>
 #include <linux/time.h>

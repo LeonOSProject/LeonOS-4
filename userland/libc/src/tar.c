@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #define LEONOS_TAR_IO_BUFFER_SIZE (32U * 1024U)
 #define LEONOS_TAR_PROGRESS_INTERVAL (256U * 1024U)

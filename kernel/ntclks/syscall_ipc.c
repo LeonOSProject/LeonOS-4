@@ -9,7 +9,7 @@
 #include <ntclks/heap.h>
 #include <ntclks/wait.h>
 #include <ntclks/futex.h>
-#include <leonos/fs.h>
+#include <leonos/fs_abi.h>
 
 /* A 64-stage shell pipeline owns 63 pipes simultaneously.  Keep an extra
  * ring sentinel byte so the advertised 4096-byte capacity is usable. */

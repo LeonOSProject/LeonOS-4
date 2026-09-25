@@ -1,6 +1,6 @@
 /* Read-only Linux sysfs inventory. Attributes describe measured hardware and
  * actual kernel objects; no writable control files or DRM ioctls are implied. */
-#include <leonos/fs.h>
+#include <leonos/fs_abi.h>
 #include <ntclks/framebuffer.h>
 #include <ntclks/inventory.h>
 #include <ntclks/pci.h>

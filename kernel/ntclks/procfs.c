@@ -12,7 +12,7 @@
 #include <ntclks/inventory.h>
 #include <ntclks/text_stream.h>
 #include <ntclks/pty.h>
-#include <leonos/fs.h>
+#include <leonos/fs_abi.h>
 #include <linux/capability.h>
 
 #define PROCFS_PATH_MAX LEONOS_FS_PATH_LEN

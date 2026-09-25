@@ -1,13 +1,15 @@
 #!/bin/sh
 # Build a relocatable musl SDK from new-chain artifacts only.
 set -eu
-[ "$#" = 9 ] || { echo 'usage: musl-sdk.sh SRC SYSROOT RUNTIME ARCHIVE PAM AUTH DRIVER STAGE EPOCH' >&2; exit 2; }
-src=$1 sysroot=$2 runtime=$3 archive=$4 pam=$5 auth=$6 driver=$7 stage=$8 epoch=$9
+[ "$#" = 10 ] || { echo 'usage: musl-sdk.sh SRC SYSROOT RUNTIME ARCHIVE PAM AUTH DRIVER STAGE EPOCH EXPORT' >&2; exit 2; }
+src=$1 sysroot=$2 runtime=$3 archive=$4 pam=$5 auth=$6 driver=$7 stage=$8 epoch=$9 export=${10}
 mkdir -p "$(dirname "$stage")"
 tmp=$(mktemp -d "$stage.new.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 cp -a "$sysroot/include" "$sysroot/lib" "$sysroot/share" "$tmp/"
-cp -a "$src/include/uapi/." "$tmp/include/"
+# UAPI comes from the kernel header export (headers_install), never from the
+# kernel-owned source tree: the SDK must consume installed ABI, not sources.
+cp -a "$export/." "$tmp/include/"
 mkdir -p "$tmp/include/leonos" "$tmp/bin"
 cp -a "$src/include/leonos/." "$src/userland/libc/include/leonos/." "$tmp/include/leonos/"
 cp -a "$pam/usr/include/security" "$tmp/include/"

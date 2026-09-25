@@ -18,7 +18,7 @@
 #include <ntclks/time.h>
 #include <leonos/layout.h>
 
-#include <leonos/device.h>
+#include <leonos/device_abi.h>
 
 #define ETH_TYPE_IPV4 0x0800u
 #define ETH_TYPE_ARP 0x0806u

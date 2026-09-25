@@ -7,7 +7,7 @@
 #define NTCLKS_KERNEL_DEBUG_H
 
 #include <leonos/boot_handoff.h>
-#include <leonos/kernel_debug.h>
+#include <leonos/kernel_debug_abi.h>
 #include <ntclks/types.h>
 
 #define LEONOS_KERNEL_DEBUG_MODULE_ABI 1U

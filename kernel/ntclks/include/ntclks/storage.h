@@ -6,8 +6,8 @@
 #define NTCLKS_STORAGE_H
 
 #include <leonos/boot_handoff.h>
-#include <leonos/fs.h>
-#include <leonos/system.h>
+#include <leonos/fs_abi.h>
+#include <leonos/system_abi.h>
 #include <ntclks/types.h>
 #include <linux/stat.h>
 #include <linux/statfs.h>

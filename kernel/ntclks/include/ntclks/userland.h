@@ -5,8 +5,8 @@
 #ifndef NTCLKS_USERLAND_H
 #define NTCLKS_USERLAND_H
 
-#include <leonos/fs.h>
-#include <leonos/auth.h>
+#include <leonos/fs_abi.h>
+#include <leonos/auth_abi.h>
 #include <ntclks/multiboot2.h>
 #include <ntclks/trap.h>
 #include <ntclks/types.h>

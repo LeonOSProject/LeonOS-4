@@ -3,6 +3,7 @@
 #include <leonos/syscall.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <linux/soundcard.h>
 
 #define WAVPLAY_BUFFER_BYTES 4096U

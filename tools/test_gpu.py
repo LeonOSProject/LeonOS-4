@@ -22,9 +22,11 @@ class GpuAbiTests(unittest.TestCase):
                 ], cwd=ROOT, check=True)
                 subprocess.run([executable], cwd=ROOT, check=True, timeout=30)
 
-    def test_sdk_header_matches(self):
-        self.assertEqual((ROOT / "include/leonos/gpu.h").read_bytes(),
-                         (ROOT / "devtools/include/leonos/gpu.h").read_bytes())
+    def test_sdk_header_single_source(self):
+        # SDK ABI headers come from the headers_install export; the old
+        # hand-maintained devtools/include mirrors must not come back.
+        self.assertFalse((ROOT / "devtools/include/leonos").exists())
+        self.assertFalse((ROOT / "devtools/include/linux").exists())
 
     def test_taskmgr_sampling(self):
         with tempfile.TemporaryDirectory(prefix="leonos-gpu-sampler-") as tmp:

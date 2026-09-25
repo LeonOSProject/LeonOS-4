@@ -23,12 +23,12 @@
 #include <linux/rseq.h>
 #include <linux/errno.h>
 #include <linux/time.h>
-#include <leonos/signal.h>
+#include <leonos/signal_abi.h>
 #include <linux/signal.h>
 #include <linux/capability.h>
 #include <linux/securebits.h>
-#include <leonos/auth.h>
-#include <leonos/system.h>
+#include <leonos/auth_abi.h>
+#include <leonos/system_abi.h>
 #include <stdint.h>
 
 

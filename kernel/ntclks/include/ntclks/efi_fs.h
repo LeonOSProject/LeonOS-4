@@ -5,7 +5,7 @@
 #ifndef NTCLKS_EFI_FS_H
 #define NTCLKS_EFI_FS_H
 
-#include <leonos/fs.h>
+#include <leonos/fs_abi.h>
 #include <ntclks/types.h>
 
 /**

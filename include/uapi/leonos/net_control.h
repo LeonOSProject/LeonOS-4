@@ -1,6 +1,6 @@
 #ifndef LEONOS_UAPI_NET_CONTROL_H
 #define LEONOS_UAPI_NET_CONTROL_H
-#include <leonos/net.h>
+#include <leonos/net_abi.h>
 #include <linux/ioctl.h>
 
 /* LeonOS management extension on an AF_INET socket. Application data uses
