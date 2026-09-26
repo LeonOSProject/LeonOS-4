@@ -76,7 +76,7 @@ test_linux_abi_contract 全过。
 | `kernel/ntclks/net_packet.c` | `net/net_packet.c` |
 | `kernel/ntclks/net_udp.c` | `net/net_udp.c` |
 
-状态：**待实施**。
+状态：**已完成**（NTCLKS `03f2aa3`：4 文件 + SOURCE_DIRS；主仓四处白盒探针 include 与 ABI_PRIVATE_INVENTORY 21 处同步；docs/security 与NETWORK_STATUS 历史记录按 §3 不回改）。验证：G4_KERNEL_EXIT=0、NTCLKS make test 0、test_network 与 test_openrc_network 退出码 0。
 
 ### G5 exec（4 文件）
 

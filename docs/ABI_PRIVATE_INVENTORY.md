@@ -51,8 +51,8 @@ LEONOS_FS_TYPE_DEVICE:
   - docs/ABI_PRIVATE_INVENTORY.md
   - kernel/ntclks/drivers/bootstrap/storage/storage_vfs.c
   - kernel/ntclks/include/uapi/leonos/fs_abi.h
-  - kernel/ntclks/kernel/ntclks/net_packet.c
-  - kernel/ntclks/kernel/ntclks/net_udp.c
+  - kernel/ntclks/net/net_packet.c
+  - kernel/ntclks/net/net_udp.c
   - kernel/ntclks/kernel/ntclks/pty.c
   - kernel/ntclks/kernel/ntclks/signalfd.c
   - kernel/ntclks/kernel/ntclks/syscall.c
@@ -144,12 +144,12 @@ LEONOS_NET_AF_INET:
   - docs/ABI_PRIVATE_INVENTORY.md
   - include/leonos/net.h
   - include/leonos/net_service.h
-  - kernel/ntclks/kernel/ntclks/net.c
+  - kernel/ntclks/net/net.c
   - userland/runtime/include/leonos/net_service.h
 LEONOS_NET_CONTROL_IOCTL:
   - docs/NETWORK_STATUS_2026-09-13.md
   - kernel/ntclks/include/uapi/leonos/net_control.h
-  - kernel/ntclks/kernel/ntclks/net_control.c
+  - kernel/ntclks/net/net_control.c
   - tools/tests/netmand_client_test.c
   - tools/tests/network_guest_test.c
   - userland/runtime/src/netsock.c
@@ -161,7 +161,7 @@ LEONOS_NET_STATUS_NO_DEVICE:
   - docs/ABI_PRIVATE_INVENTORY.md
   - include/leonos/net.h
   - include/leonos/net_service.h
-  - kernel/ntclks/kernel/ntclks/net.c
+  - kernel/ntclks/net/net.c
   - userland/runtime/include/leonos/net_service.h
 LEONOS_PTY_IOCTL:
   - tools/check_abi_migration.py
@@ -884,9 +884,9 @@ leonos_net_config:
   - include/leonos/net_service.h
   - kernel/ntclks/include/uapi/leonos/net_control.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
-  - kernel/ntclks/kernel/ntclks/net.c
-  - kernel/ntclks/kernel/ntclks/net_packet.c
-  - kernel/ntclks/kernel/ntclks/net_udp.c
+  - kernel/ntclks/net/net.c
+  - kernel/ntclks/net/net_packet.c
+  - kernel/ntclks/net/net_udp.c
   - tools/tests/net_packet_test.c
   - tools/tests/netmand_client_test.c
   - tools/tests/network_guest_test.c
@@ -905,7 +905,7 @@ leonos_net_connection_info:
   - include/leonos/net.h
   - include/leonos/net_service.h
   - kernel/ntclks/include/uapi/leonos/net_control.h
-  - kernel/ntclks/kernel/ntclks/net.c
+  - kernel/ntclks/net/net.c
   - userland/runtime/include/leonos/net_service.h
   - userland/runtime/src/netsock.c
 leonos_net_connection_list:
@@ -917,8 +917,8 @@ leonos_net_connection_list:
   - include/leonos/net.h
   - include/leonos/net_service.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
-  - kernel/ntclks/kernel/ntclks/net.c
-  - kernel/ntclks/kernel/ntclks/net_control.c
+  - kernel/ntclks/net/net.c
+  - kernel/ntclks/net/net_control.c
   - userland/runtime/include/leonos/net_service.h
 leonos_net_connections:
   - devtools/components/tcc/runtime/include/leonos/net.h
@@ -931,7 +931,7 @@ leonos_net_connections:
   - userland/runtime/src/netsock.c
 leonos_net_control:
   - kernel/ntclks/include/uapi/leonos/net_control.h
-  - kernel/ntclks/kernel/ntclks/net_control.c
+  - kernel/ntclks/net/net_control.c
   - tools/tests/netmand_client_test.c
   - tools/tests/network_guest_test.c
   - userland/runtime/src/netsock.c
@@ -946,7 +946,7 @@ leonos_net_dhcp:
   - include/leonos/net_service.h
   - kernel/ntclks/include/uapi/leonos/net_control.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
-  - kernel/ntclks/kernel/ntclks/net.c
+  - kernel/ntclks/net/net.c
   - tools/tests/netmand_client_test.c
   - tools/tests/network_guest_test.c
   - userland/runtime/include/leonos/net_service.h
@@ -971,7 +971,7 @@ leonos_net_dns:
   - include/leonos/net.h
   - include/leonos/net_service.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
-  - kernel/ntclks/kernel/ntclks/net.c
+  - kernel/ntclks/net/net.c
   - userland/runtime/include/leonos/net_service.h
   - userland/runtime/src/netsock.c
 leonos_net_dns_policy:
@@ -985,7 +985,7 @@ leonos_net_dns_policy:
   - include/leonos/net_service.h
   - kernel/ntclks/include/uapi/leonos/net_control.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
-  - kernel/ntclks/kernel/ntclks/net.c
+  - kernel/ntclks/net/net.c
   - userland/runtime/include/leonos/net_service.h
   - userland/runtime/src/netsock.c
 leonos_net_dns_resolve:
@@ -1014,7 +1014,7 @@ leonos_net_http_get:
   - include/leonos/net.h
   - include/leonos/net_service.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
-  - kernel/ntclks/kernel/ntclks/net.c
+  - kernel/ntclks/net/net.c
   - userland/runtime/include/leonos/net_service.h
   - userland/runtime/src/netsock.c
 leonos_net_ping:
@@ -1029,7 +1029,7 @@ leonos_net_ping:
   - include/leonos/net_service.h
   - kernel/ntclks/include/uapi/leonos/net_control.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
-  - kernel/ntclks/kernel/ntclks/net.c
+  - kernel/ntclks/net/net.c
   - userland/runtime/include/leonos/net_service.h
   - userland/runtime/src/net_service.c
   - userland/runtime/src/netsock.c
@@ -1049,7 +1049,7 @@ leonos_net_socket_close:
   - include/leonos/net.h
   - include/leonos/net_service.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
-  - kernel/ntclks/kernel/ntclks/net.c
+  - kernel/ntclks/net/net.c
   - kernel/ntclks/kernel/ntclks/syscall_socket.c
   - userland/runtime/include/leonos/net_service.h
 leonos_net_socket_connect:
@@ -1061,7 +1061,7 @@ leonos_net_socket_connect:
   - include/leonos/net.h
   - include/leonos/net_service.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
-  - kernel/ntclks/kernel/ntclks/net.c
+  - kernel/ntclks/net/net.c
   - userland/runtime/include/leonos/net_service.h
   - userland/runtime/src/libc.c
   - userland/runtime/src/netsock.c
@@ -1074,7 +1074,7 @@ leonos_net_socket_io:
   - include/leonos/net.h
   - include/leonos/net_service.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
-  - kernel/ntclks/kernel/ntclks/net.c
+  - kernel/ntclks/net/net.c
   - kernel/ntclks/kernel/ntclks/syscall_socket.c
   - tools/tests/socket_batch_unix_test.c
   - tools/tests/tcp_state_test.c
@@ -1088,7 +1088,7 @@ leonos_net_socket_open:
   - include/leonos/net.h
   - include/leonos/net_service.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
-  - kernel/ntclks/kernel/ntclks/net.c
+  - kernel/ntclks/net/net.c
   - kernel/ntclks/kernel/ntclks/syscall_socket.c
   - userland/runtime/include/leonos/net_service.h
 leonos_pty_create:
