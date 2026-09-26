@@ -122,7 +122,7 @@ LEONOS_IPC_SOCK_DEVICE:
   - userland/runtime/src/devmand_client.c
 LEONOS_KERNEL_DEBUG_BENCH_IOCTL:
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/kerneldebug/kerneldebug.c
+  - kernel/ntclks/debug/kerneldebug.c
   - kernel/ntclks/kernel/ntclks/include/ntclks/kernel_debug.h
   - kernel/ntclks/kernel/ntclks/kernel_debug.c
 LEONOS_KERNEL_DEBUG_IOCTL:

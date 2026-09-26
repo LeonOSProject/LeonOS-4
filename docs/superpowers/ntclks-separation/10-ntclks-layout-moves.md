@@ -129,7 +129,10 @@ boot.mk 独立编译为 ET_REL 模块；为避免双编译，**不**加入 KERNE
 沿 boot.mk 单独规则）。更正：kerneldebug.c 是 boot.mk 单独编译的 ET_REL 模块
 （非内核对象），故只改 boot.mk 依赖路径，不入 KERNEL_SOURCE_DIRS。
 
-状态：**待实施**。
+状态：**已完成**（NTCLKS `092efe4`：1 文件 + boot.mk 依赖路径 + README；
+主仓 `docs/ABI_PRIVATE_INVENTORY.md` 一处源路径同步）。验证：
+NTCLKS make all 0（kerneldebug.sys 由 debug/kerneldebug.c 产出）、
+NTCLKS make test 0、主仓 make kernel 0、test-kernel-adapter 24 checks 0 failures。
 
 ## 2. 每组测试节奏（诚实声明）
 
