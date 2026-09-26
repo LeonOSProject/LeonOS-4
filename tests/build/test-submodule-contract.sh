@@ -102,20 +102,29 @@ else
     exit 1
 fi
 # Record a committed kernel gitlink in the fixture whatever the parent's own
-# commit state is, then check out a different published SHA below it.
+# commit state is, then check out a different published SHA below it. When the
+# clone's HEAD already records the same pin the re-registered index entry
+# matches HEAD exactly and a commit would be empty: the pin is already the
+# committed state the fixture needs, so only commit a real difference.
 git -C "$clone" rm -r -q --cached kernel >/dev/null 2>&1 || true
 rm -rf "$clone/kernel"
 pin=$(git -C "$repo_root/kernel/ntclks" rev-parse HEAD)
 other=$(git -C "$repo_root/kernel/ntclks" rev-parse HEAD~1 2>/dev/null || true)
 git -C "$clone" -c user.name=fixture -c user.email=fixture@example.invalid \
     update-index --add --cacheinfo "160000,$pin,$gitlink_path" || exit 1
-git -C "$clone" -c user.name=fixture -c user.email=fixture@example.invalid \
-    commit -q -m 'fixture: record kernel gitlink' || exit 1
+if ! git -C "$clone" diff --cached --quiet; then
+    git -C "$clone" -c user.name=fixture -c user.email=fixture@example.invalid \
+        commit -q -m 'fixture: record kernel gitlink' || exit 1
+fi
 # The fixture must exercise the tree under test, including changes not yet
 # committed: sync the guard and its wiring into the fixture (same idea as the
-# source copies in test-kernel-adapter.sh fixtures).
+# source copies in test-kernel-adapter.sh fixtures). The adapter's parse guard
+# in mk/kernel.mk is part of that wiring: it must not shadow the release
+# guard's dual-SHA refusal for an initialized checkout at another published
+# SHA.
 cp "$repo_root/tools/build/ntclks-release-guard.sh" "$clone/tools/build/" || exit 1
 cp "$repo_root/mk/rpr.mk" "$clone/mk/rpr.mk" || exit 1
+cp "$repo_root/mk/kernel.mk" "$clone/mk/kernel.mk" || exit 1
 cp "$repo_root/Makefile" "$clone/Makefile" || exit 1
 if [ -z "${other:-}" ]; then
     printf 'skip - gitlink mismatch case: the kernel repository has no older\n'
@@ -156,8 +165,10 @@ if [ -n "${other:-}" ] && { [ -d "$clone/kernel/ntclks/.git" ] || [ -f "$clone/k
     # agree again: the guard must NOT refuse this (rollback pinning works).
     git -C "$clone" -c user.name=fixture -c user.email=fixture@example.invalid \
         update-index --cacheinfo "160000,$other,$gitlink_path" || exit 1
-    git -C "$clone" -c user.name=fixture -c user.email=fixture@example.invalid \
-        commit -q -m 'fixture: roll kernel gitlink back' || exit 1
+    if ! git -C "$clone" diff --cached --quiet; then
+        git -C "$clone" -c user.name=fixture -c user.email=fixture@example.invalid \
+            commit -q -m 'fixture: roll kernel gitlink back' || exit 1
+    fi
     if sh "$repo_root/tools/build/ntclks-release-guard.sh" "$clone" \
             "$clone/kernel/ntclks" "$gitlink_path" >"$work/rollback.log" 2>&1; then
         pass "a consistent older kernel pin passes the release guard"
