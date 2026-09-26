@@ -23,6 +23,10 @@ NTCLKS_DIR ?= $(LEONOS_SRC)/kernel/ntclks
 # A checkout that has not been initialized must fail once, clearly, naming
 # NTCLKS_DIR -- a non-recursive clone otherwise died in `find` noise and a
 # missing-tool cascade long before the adapter's recipe guard could speak.
+# Initialized is judged the way tools/build/ntclks-release-guard.sh judges it
+# (a .git marker): a checkout at some other published SHA is initialized but
+# may carry no root Makefile (history extract), and release flows must reach
+# the release guard to name both SHAs instead of tripping this parse error.
 # Goals that must keep working before any submodule exists are exempt, so a
 # fresh machine can still run `make doctor` / `make fetch` to set up.
 ntclks_init_exempt_goals := help doctor fetch
@@ -33,7 +37,7 @@ else ifeq ($(words $(filter $(ntclks_init_exempt_goals),$(MAKECMDGOALS))),$(word
 ntclks_init_exempt := 1
 endif
 ifeq ($(ntclks_init_exempt),)
-ifeq ($(wildcard $(NTCLKS_DIR)/Makefile),)
+ifeq ($(wildcard $(NTCLKS_DIR)/Makefile)$(wildcard $(NTCLKS_DIR)/.git),)
 $(error ntclks adapter: kernel checkout not found: $(NTCLKS_DIR)/Makefile \
 (NTCLKS_DIR=$(NTCLKS_DIR)); run `git submodule update --init --recursive` and \
 `make -C kernel/ntclks fetch`, or point NTCLKS_DIR at an existing checkout)
@@ -90,7 +94,7 @@ NTCLKS_TOOL_PASSTHRU := $(strip $(foreach tool,CC CXX AR RANLIB LD OBJCOPY STRIP
 # userland build is gated on the header export, not on kernel.sys.
 $(NTCLKS_PUBLISHED) &: FORCE $(LEONOS_EMIT) | $(O)/kernel-export/manifest.txt
 	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0 ;; esac; \
-	if [ ! -f '$(NTCLKS_DIR)/Makefile' ]; then \
+	if [ ! -f '$(NTCLKS_DIR)/Makefile' ] && [ ! -e '$(NTCLKS_DIR)/.git' ]; then \
 	    printf '%s\n' \
 	        'ntclks adapter: kernel checkout not found: $(NTCLKS_DIR)/Makefile' \
 	        '' \
