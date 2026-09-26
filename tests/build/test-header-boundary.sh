@@ -6,7 +6,9 @@
 #   2. a UAPI content change must reinstall the export and recompile its
 #      userland consumers;
 #   3. headers_install must not churn mtimes when nothing changed (otherwise
-#      every build would silently rebuild all of userland).
+#      every build would silently rebuild all of userland);
+#   4. the probe markers must leave the shared checkout byte-for-byte as they
+#      were (a leaked marker dirties the tree for every later test).
 set -u
 LC_ALL=C
 export LC_ALL
@@ -17,18 +19,55 @@ cd "$repo_root" || exit 1
 # The kernel checkout under test (env-overridable, see test-incremental.sh).
 ntclks=${NTCLKS_DIR:-$repo_root/kernel/ntclks}
 
+# Probe files live in the shared checkout, so runs must not interleave: two
+# instances racing on the same files restore each other's half-written state
+# into the tree and the loser's marker stays behind forever. The lock is keyed
+# by checkout path and user, and lives in /tmp so runs with different TMPDIR
+# values still serialize on one checkout.
+probe_lock=/tmp/leonos-header-boundary-probe-$(id -u)-$(printf '%s' "$ntclks" | cksum | cut -d' ' -f1).lock
+exec 9>"$probe_lock" || exit 1
+if ! flock -n 9; then
+    printf 'FAIL - another header-boundary run on %s is in flight\n' "$ntclks"
+    exit 1
+fi
+
+probe_sched="$ntclks/kernel/ntclks/include/ntclks/sched.h"
+probe_fsabi="$ntclks/include/uapi/leonos/fs_abi.h"
+
+# A run killed between marker append and restore leaves the marker behind for
+# every later test to trip over (the release gate treats the checkout as dirty).
+# Refuse to compound it: name the file and how to restore it.
+for changed in "$probe_sched" "$probe_fsabi"; do
+    if [ -f "$changed" ] && tail -n 1 "$changed" | grep -q 'header-boundary probe'; then
+        printf 'FAIL - %s still carries a probe marker from an interrupted run\n' "$changed"
+        printf '       restore it (git -C %s checkout -- <file>) and rerun\n' "$ntclks"
+        exit 1
+    fi
+done
+
 work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-header-boundary.XXXXXX") || exit 1
 O="$work/out"
 failures=0
 checks=0
 
+# Baselines: restored byte-for-byte at the end and checked. Backups stay in
+# $work, never beside the probed sources: an in-tree .bak is itself dirt and
+# races with any other writer of the same file. Restores copy without -p on
+# purpose: the un-probe is a content change and Make must see it as one (a
+# preserved old mtime hides the restore from the export's freshness checks and
+# the change surfaces later as phantom churn).
+backup_dir=$work/probe-backup
+mkdir -p "$backup_dir" || exit 1
+cp "$probe_sched" "$backup_dir/sched.h" || exit 1
+cp "$probe_fsabi" "$backup_dir/fs_abi.h" || exit 1
+probe_sched_sum=$(sha256sum "$probe_sched" | cut -d' ' -f1)
+probe_fsabi_sum=$(sha256sum "$probe_fsabi" | cut -d' ' -f1)
+
 cleanup() {
+    # Restore the checkout first: tests append marker comments to live sources.
+    [ -f "$backup_dir/sched.h" ] && cp "$backup_dir/sched.h" "$probe_sched"
+    [ -f "$backup_dir/fs_abi.h" ] && cp "$backup_dir/fs_abi.h" "$probe_fsabi"
     [ -n "${KEEP_WORK:-}" ] || rm -rf "$work"
-    # Restore the checkout: tests append marker comments to live sources.
-    for changed in "$ntclks/kernel/ntclks/include/ntclks/sched.h" \
-                   "$ntclks/include/uapi/leonos/fs_abi.h"; do
-        if [ -f "$changed.bak" ]; then mv "$changed.bak" "$changed"; fi
-    done
 }
 trap cleanup EXIT INT TERM
 
@@ -70,8 +109,7 @@ build "$work/0.log" defconfig headers_install runtime
     || fail "export tree missing" "$(find "$O/kernel-export" -type f | head)"
 
 # 1. Kernel-private header change must not recompile the userland runtime.
-cp "$ntclks/kernel/ntclks/include/ntclks/sched.h" "$ntclks/kernel/ntclks/include/ntclks/sched.h.bak"
-printf '\n/* header-boundary probe */\n' >> "$ntclks/kernel/ntclks/include/ntclks/sched.h"
+printf '\n/* header-boundary probe */\n' >> "$probe_sched"
 advance_clock
 build "$work/1.log" runtime
 if [ "$(cc_actions "$work/1.log")" -eq 0 ]; then
@@ -80,11 +118,10 @@ else
     fail "kernel-private header change recompiled userland objects:" \
         "$(grep -E '^  CC ' "$work/1.log" | head)"
 fi
-mv "$ntclks/kernel/ntclks/include/ntclks/sched.h.bak" "$ntclks/kernel/ntclks/include/ntclks/sched.h"
+cp "$backup_dir/sched.h" "$probe_sched"
 
 # 2. UAPI content change must reinstall the export and recompile consumers.
-cp "$ntclks/include/uapi/leonos/fs_abi.h" "$ntclks/include/uapi/leonos/fs_abi.h.bak"
-printf '\n/* header-boundary probe */\n' >> "$ntclks/include/uapi/leonos/fs_abi.h"
+printf '\n/* header-boundary probe */\n' >> "$probe_fsabi"
 advance_clock
 build "$work/2.log" runtime
 if [ "$(install_actions "$work/2.log")" -ge 1 ] && [ "$(cc_actions "$work/2.log")" -ge 1 ]; then
@@ -93,7 +130,7 @@ else
     fail "UAPI content change did not propagate" \
         "INSTALL=$(install_actions "$work/2.log") CC=$(cc_actions "$work/2.log")"
 fi
-mv "$ntclks/include/uapi/leonos/fs_abi.h.bak" "$ntclks/include/uapi/leonos/fs_abi.h"
+cp "$backup_dir/fs_abi.h" "$probe_fsabi"
 
 # 3. A forced reinstall with unchanged content must not touch installed files
 #    (content-stable publishing; otherwise every build rebuilds userland).
@@ -111,6 +148,17 @@ if cmp -s "$before" "$after"; then
 else
     fail "installed mtimes churned without content change" \
         "$(diff "$before" "$after" | head)"
+fi
+
+# 5. The probes must be gone from the shared checkout: a leaked marker leaves
+#    the tree dirty for every later test and for the release gate.
+if [ "$(sha256sum "$probe_sched" | cut -d' ' -f1)" = "$probe_sched_sum" ] &&
+   [ "$(sha256sum "$probe_fsabi" | cut -d' ' -f1)" = "$probe_fsabi_sum" ]; then
+    pass "probe sources restored byte-for-byte"
+else
+    fail "probe sources restored byte-for-byte" \
+        "sched.h:  $(sha256sum "$probe_sched" | cut -d' ' -f1) want $probe_sched_sum" \
+        "fs_abi.h: $(sha256sum "$probe_fsabi" | cut -d' ' -f1) want $probe_fsabi_sum"
 fi
 
 printf '%s checks, %s failures\n' "$checks" "$failures"
