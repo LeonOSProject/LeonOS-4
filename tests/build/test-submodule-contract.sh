@@ -10,11 +10,12 @@
 #      refuses release builds with a message naming both SHAs -- simulated in a
 #      scratch clone, never the real worktree;
 #   4. old-SHA rollback: a scratch clone whose gitlink consistently pins an
-#      older published kernel SHA passes the release guard. The full
-#      rollback-BUILD case is not testable today: only 5cc9621 is a complete
-#      kernel snapshot on the remote, the older published commits are history
-#      extracts without a root Makefile/third_party (verified via
-#      `git ls-tree <older>`, and called out when this case runs).
+#      older published kernel SHA passes the release guard. Since 3430c76 the
+#      pinned pair (HEAD / HEAD~1) are two complete kernel snapshots, so cases
+#      3-4 exercise a real dual-SHA pin; a full rollback-BUILD at the older
+#      pin is still outside this contract test (the fixture clone has no fetch
+#      cache; boot-time kernel update rollback is covered by the §5.8 guest
+#      tests instead).
 set -u
 LC_ALL=C
 export LC_ALL
