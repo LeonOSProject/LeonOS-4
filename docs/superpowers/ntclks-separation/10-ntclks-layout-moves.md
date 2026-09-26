@@ -111,7 +111,11 @@ test_gpu（4/4）/test_linux_ioctl_cloexec（38 checks）/test_runtime_responsiv
 
 构建旋钮：`KERNEL_SOURCE_DIRS` 的 `kernel/ostui` → `drivers/console`。
 
-状态：**待实施**。
+状态：**已完成**（NTCLKS `1a4a036`：1 文件 + SOURCE_DIRS + README 目录描述；
+主仓 `tools/vscode/generate_compile_commands.py` kernel 区域 glob 同步——
+顺带补齐 G1–G5 移出旧子树后该 glob 静默失收的 arch/mm/fs/net/kernel/exec）。
+验证：G6_KERNEL_EXIT=0（新对象落位 drivers/console/ostui.c.o）、NTCLKS make test 0、
+生成器 --region kernel 写出 108 TUs 退出 0。ostui.c 全角头 include，源中立无引用修复。
 
 ### G7 debug（1 文件）
 

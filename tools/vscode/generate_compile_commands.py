@@ -17,8 +17,11 @@ from pathlib import Path
 REGION_PATTERNS: dict[str, tuple[str, ...]] = {
     "kernel": (
         "kernel/ntclks/kernel/ntclks/**/*.c", "kernel/ntclks/kernel/ntclks/**/*.S",
-        "kernel/ntclks/kernel/ostui/**/*.c", "kernel/ntclks/drivers/bootstrap/**/*.c",
+        "kernel/ntclks/kernel/exec/**/*.c", "kernel/ntclks/drivers/console/**/*.c",
+        "kernel/ntclks/drivers/bootstrap/**/*.c",
         "kernel/ntclks/drivers/bootstrap/**/*.S",
+        "kernel/ntclks/arch/**/*.c", "kernel/ntclks/arch/**/*.S",
+        "kernel/ntclks/mm/**/*.c", "kernel/ntclks/fs/**/*.c", "kernel/ntclks/net/**/*.c",
     ),
     "loader": ("kernel/ntclks/boot/loader/**/*.c", "kernel/ntclks/boot/loader/**/*.S"),
     "libc": (
