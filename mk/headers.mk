@@ -19,6 +19,12 @@ HEADER_EXPORT_MANIFEST := $(HEADER_EXPORT_ROOT)/manifest.txt
 
 HEADER_EXPORT_ENTRIES := $(shell sed -e 's/\#.*//' -e '/^[[:space:]]*$$/d' $(HEADER_EXPORT_LIST))
 
+# The published header files themselves. The recipe below writes them as side
+# effects of the manifest; they are declared as real targets further down so
+# make orders consumer rebuilds correctly.
+HEADER_EXPORT_INSTALLED := $(addprefix $(HEADER_EXPORT_INCLUDE)/, \
+	$(patsubst include/uapi/%,%,$(HEADER_EXPORT_ENTRIES)))
+
 # The sub-build's own export tree; the checkout exports the same whitelist into
 # its O before this side publishes it.
 NTCLKS_EXPORT_INCLUDE := $(NTCLKS_O)/kernel-export/include
@@ -70,6 +76,19 @@ $(HEADER_EXPORT_MANIFEST): FORCE $(LEONOS_EMIT)
 	  | (cd '$(HEADER_EXPORT_INCLUDE)' && xargs -r rm -f); \
 	rm -f '$(HEADER_EXPORT_ROOT)/present.tmp' '$(HEADER_EXPORT_ROOT)/want.tmp'; \
 	find '$(HEADER_EXPORT_INCLUDE)' -mindepth 1 -type d -empty -delete
+
+# Ordering edge for the published headers. The publish recipe above writes
+# these files as side effects of the manifest, so make has no edge connecting
+# the two: a consumer's depfile prerequisite was stat'ed before the publish
+# recipe finished whenever prerequisites were considered in parallel, and a
+# UAPI content change then looked "older" than the objects -- nothing
+# recompiled (reproduces deterministically with MAKEFLAGS=-j12). Declaring
+# each installed header as ordered after the manifest makes the edge
+# explicit: a header node is only examined once the publish recipe has run,
+# under any job count. The empty recipe keeps implicit rules away and does
+# not touch mtimes, so the content-stable publish above still guarantees that
+# an unchanged export rebuilds nothing.
+$(HEADER_EXPORT_INSTALLED): $(HEADER_EXPORT_MANIFEST) ;
 
 .PHONY: headers_install
 headers_install: $(HEADER_EXPORT_MANIFEST)
