@@ -16,9 +16,29 @@
 
 # The kernel checkout. Since phase 5 the default path is the kernel/ntclks
 # git submodule (github.com/LeonOSProject/NTCLKS); when it is not initialized
-# the adapter fails at recipe time with instructions instead of at parse time
-# (see the rule below).
+# the adapter refuses with instructions instead of letting parse-time
+# inventories and config generation bury the cause in follow-on errors (see
+# the guard below and the recipe guards).
 NTCLKS_DIR ?= $(LEONOS_SRC)/kernel/ntclks
+# A checkout that has not been initialized must fail once, clearly, naming
+# NTCLKS_DIR -- a non-recursive clone otherwise died in `find` noise and a
+# missing-tool cascade long before the adapter's recipe guard could speak.
+# Goals that must keep working before any submodule exists are exempt, so a
+# fresh machine can still run `make doctor` / `make fetch` to set up.
+ntclks_init_exempt_goals := help doctor fetch
+ntclks_init_exempt :=
+ifeq ($(MAKECMDGOALS),)
+ntclks_init_exempt := 1
+else ifeq ($(words $(filter $(ntclks_init_exempt_goals),$(MAKECMDGOALS))),$(words $(MAKECMDGOALS)))
+ntclks_init_exempt := 1
+endif
+ifeq ($(ntclks_init_exempt),)
+ifeq ($(wildcard $(NTCLKS_DIR)/Makefile),)
+$(error ntclks adapter: kernel checkout not found: $(NTCLKS_DIR)/Makefile \
+(NTCLKS_DIR=$(NTCLKS_DIR)); run `git submodule update --init --recursive` and \
+`make -C kernel/ntclks fetch`, or point NTCLKS_DIR at an existing checkout)
+endif
+endif
 # Sub-build output directory: the checkout writes everything under O.
 NTCLKS_O ?= $(O)/ntclks
 # DESTDIR for the sub-make's `install`; the published products are copied out
