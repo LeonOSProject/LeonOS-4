@@ -51,3 +51,8 @@ UNVERIFIED（M14 kill 拒绝仅死代码可达——矩阵已订正，SERVICE �
   子进程 code=127。拉起环境为 `leonos_environment_build` 向量（旧为近空环境）。
 - 测试工具遗留（未做）：`tools/test_linux_ioctl_cloexec.py`/`test_linux_inventory.py`
   的证据过滤仍引用已退役的 `[ntclks] …` 内核字符串；其宿主断言不受影响。
+  **订正（2026-09-27）**：ioctl_cloexec 的证据过滤已由 0d629ee 改引现行
+  `[desktop] autospawn …` 串；test_linux_inventory.py 的 `[ntclks] mm initialized`/
+  `SMP topology` 解析经查**仍为现行内核串**（mm.c、smp.c），本条对
+  test_linux_inventory 的表述不成立、该文件无需改动。ioctl_cloexec 另有一处
+  M5 钩子断言已改指 `userland/apps/desktop/autospawn.c` 现权威（0229a14）。
