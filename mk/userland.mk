@@ -78,7 +78,7 @@ installer-userland: $(O)/userland-installer-policy/desktop.elf $(O)/userland-ins
 DYNLINKERROR_OBJ := $(O_OBJ)/dynlinkerror/main.o
 LEONOS_SIG_dynlinkerror := cc=$(TARGET_CC)|ld=$(TARGET_LD)|flags=$(USERLAND_FLAGS) $(USERLAND_CFLAGS) $(USERLAND_LDFLAGS)|builtins=$(RUNTIME_BUILTINS)
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,dynlinkerror)))
-$(DYNLINKERROR_OBJ): $(LEONOS_SRC)/userland/apps/dynlinkerror/main.c $(AUTOCONF_H) $(MUSL_STAMP) $(PNG_CONFIG) $(O_META)/dynlinkerror.sig
+$(DYNLINKERROR_OBJ): $(LEONOS_SRC)/userland/apps/dynlinkerror/main.c $(AUTOCONF_H) $(MUSL_STAMP) $(PNG_CONFIG) $(HEADER_EXPORT_MANIFEST) $(O_META)/dynlinkerror.sig
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(TARGET_CC) $(USERLAND_FLAGS) $(USERLAND_CFLAGS) -include $(AUTOCONF_H) -MMD -MP -MF $@.d -MT $@ -c $< -o $@.tmp
 	$(Q)mv $@.tmp $@

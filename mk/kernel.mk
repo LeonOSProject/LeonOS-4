@@ -81,7 +81,7 @@ $(NTCLKS_PUBLISHED) &: FORCE $(LEONOS_EMIT) | $(O)/kernel-export/manifest.txt
 	    exit 1; \
 	fi; \
 	exec $(MAKE) -C '$(NTCLKS_DIR)' O='$(NTCLKS_O)' ARCH='$(ARCH)' \
-	    PROFILE='$(PROFILE)' SOURCE_DATE_EPOCH='$(SOURCE_DATE_EPOCH)' \
+	    PROFILE='$(PROFILE)' SOURCE_DATE_EPOCH='$(or $(SOURCE_DATE_EPOCH),0)' \
 	    $(NTCLKS_TOOL_PASSTHRU) all install DESTDIR='$(NTCLKS_DEST)'
 	$(Q)set -eu; \
 	test -f $(NTCLKS_DEST)/manifest.txt || { \

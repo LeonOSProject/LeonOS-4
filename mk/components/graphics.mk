@@ -12,7 +12,7 @@ PORTABLEGL_OBJ := $(O_OBJ)/portablegl/leonos_pgl.o
 PORTABLEGL_FLAGS := $(filter-out -fPIE,$(USERLAND_FLAGS)) -std=c99 -Wno-unused-parameter -I$(LEONOS_SRC)/third_party/portablegl -I$(LEONOS_SRC)/userland/portablegl
 LEONOS_SIG_portablegl := cc=$(TARGET_CC)|flags=$(PORTABLEGL_FLAGS)|ld=$(TARGET_LD)|ar=$(TARGET_AR)|policy=$(LEONOS_LINK_POLICY_FLAGS)
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,portablegl)))
-$(PORTABLEGL_OBJ): $(LEONOS_SRC)/userland/portablegl/leonos_pgl.c $(AUTOCONF_H) $(MUSL_STAMP) $(O_META)/portablegl.sig
+$(PORTABLEGL_OBJ): $(LEONOS_SRC)/userland/portablegl/leonos_pgl.c $(AUTOCONF_H) $(MUSL_STAMP) $(HEADER_EXPORT_MANIFEST) $(O_META)/portablegl.sig
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(TARGET_CC) $(PORTABLEGL_FLAGS) -include $(AUTOCONF_H) -MMD -MP -MF $@.d -MT $@ -c $< -o $@.tmp
 	$(Q)mv $@.tmp $@
@@ -34,7 +34,7 @@ LEONOS_SIG_stardustui-cc := cxx=$(TARGET_CXX)|identity=$(if $(LEONOS_PASSIVE),de
 LEONOS_SIG_stardustui-ar := ar=$(TARGET_AR)|sources=$(STARDUSTUI_SOURCES)
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,stardustui-cc)))
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,stardustui-ar)))
-$(O_OBJ)/stardustui/%.cpp.o: $(LEONOS_SRC)/%.cpp $(AUTOCONF_H) $(MUSL_STAMP) $(PNG_CONFIG) $(O_META)/stardustui-cc.sig
+$(O_OBJ)/stardustui/%.cpp.o: $(LEONOS_SRC)/%.cpp $(AUTOCONF_H) $(MUSL_STAMP) $(PNG_CONFIG) $(HEADER_EXPORT_MANIFEST) $(O_META)/stardustui-cc.sig
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(TARGET_CXX) $(STARDUSTUI_FLAGS) -include $(AUTOCONF_H) -MMD -MP -MF $@.d -MT $@ -c $< -o $@.tmp
 	$(Q)mv $@.tmp $@

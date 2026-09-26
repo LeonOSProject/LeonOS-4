@@ -34,7 +34,7 @@ endif
 V ?= 0
 CPUS ?=
 MEMORY ?=
-SOURCE_DATE_EPOCH ?= $(shell git -C $(LEONOS_SRC) show -s --format=%ct HEAD)
+SOURCE_DATE_EPOCH ?= $(shell git -C $(LEONOS_SRC) show -s --format=%ct HEAD 2>/dev/null || echo 0)
 TOOLCHAIN ?= $(LEONOS_SRC)/configs/toolchains/llvm-x86_64.mk
 
 O := $(patsubst %/,%,$(O))

@@ -39,7 +39,7 @@ resource=$("$cc" -print-resource-dir)
 "$cc" --target="$target" --sysroot="$sysroot" --gcc-toolchain=/nonexistent \
     -fuse-ld=lld --rtlib=compiler-rt --unwindlib=none -O2 -fPIC -shared \
     -nostdinc -isystem "$sysroot/include" -isystem "$resource/include" \
-    -I"$tmp/usr/include" -I"$src/include/uapi" -I"$src/include" \
+    -I"$tmp/usr/include" -I"${UPSTREAM_UAPI:-$src/include/uapi}" -I"$src/include" \
     -ffile-prefix-map="$src"=. -Wl,-z,relro,-z,now,--no-undefined \
     "$src/userland/pam/pam_leonos_password.c" "$src/userland/libc/src/auth_password.c" \
     -L"$tmp/lib" -lpam -o "$tmp/lib/security/pam_leonos_password.so"

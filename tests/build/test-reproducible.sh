@@ -36,8 +36,10 @@ build_into() {
     mkdir -p "$1" || return 1
     # Different output paths, including a different depth from the source root,
     # so an accidentally embedded build directory shows up as a hash difference.
+    # build-info is explicit since the kernel adapter: the version header is
+    # parent-owned (rpr/site/app packages) and no longer rides the kernel link.
     SOURCE_DATE_EPOCH="$epoch" \
-        make -s O="$1" -j"$(nproc)" kernel >"$1.log" 2>&1
+        make -s O="$1" -j"$(nproc)" kernel build-info >"$1.log" 2>&1
 }
 
 first=$work/one/out
