@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class GpuAbiTests(unittest.TestCase):
     def test_syscall_and_copyout(self):
         for name, source in (("gpu_syscall", "kernel/ntclks/kernel/ntclks/gpu.c"),
-                             ("gpu_usercopy", "kernel/ntclks/kernel/ntclks/user/usercopy.c")):
+                             ("gpu_usercopy", "kernel/ntclks/kernel/exec/usercopy.c")):
             with self.subTest(name=name), tempfile.TemporaryDirectory(prefix="leonos-gpu-") as tmp:
                 executable = str(Path(tmp) / name)
                 subprocess.run([
@@ -34,7 +34,8 @@ class GpuAbiTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-O1", "-g", "-Wall", "-Wextra", "-Werror",
                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer", "-Iinclude",
-                "tools/tests/taskmgr_gpu_sample_test.c", "-o", executable,
+                "-Ikernel/ntclks/include/uapi",
+                    "tools/tests/taskmgr_gpu_sample_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=30)
 

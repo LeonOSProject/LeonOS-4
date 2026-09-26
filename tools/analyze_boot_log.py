@@ -89,7 +89,7 @@ DIRECT_RULES = (
         "用户态没有可用的根文件系统",
         "内核无法找到可供用户态加载的块设备根文件系统。",
         "检查磁盘控制器、ext2 根分区、ESP/FAT32 启动分区、挂载策略和虚拟机磁盘连接。",
-        "kernel/ntclks/kernel/ntclks/user/userland.c:636",
+        "kernel/ntclks/kernel/exec/userland.c:636",
     ),
     Rule(
         "USERLAND-LOAD", "错误", "用户态启动",
@@ -97,7 +97,7 @@ DIRECT_RULES = (
         "关键用户态程序未能加载",
         "init.elf 或 desktop.elf 在创建任务时失败，桌面启动无法完成。",
         "先查看前后是否有 ELF 验证、动态解释器或文件查找错误；再检查镜像中对应程序是否完整。",
-        "kernel/ntclks/kernel/ntclks/user/userland.c:654",
+        "kernel/ntclks/kernel/exec/userland.c:654",
     ),
     Rule(
         "ELF-HEADER", "错误", "ELF 装载",
@@ -105,7 +105,7 @@ DIRECT_RULES = (
         "ELF 头部读取或验证失败",
         "程序或动态解释器不是当前 LeonOS 接受的完整 x86_64 ELF，或 ABI note、程序头和段约束未通过。",
         "用 readelf 检查 ELF 类型、PT_INTERP、ABI note 和段权限；确认镜像未截断且构建产物来自当前工具链。",
-        "kernel/ntclks/kernel/ntclks/user/elf.c:848",
+        "kernel/ntclks/kernel/exec/elf.c:848",
     ),
     Rule(
         "ELF-INTERPRETER", "错误", "动态链接",
@@ -113,7 +113,7 @@ DIRECT_RULES = (
         "动态 ELF 缺少解释器",
         "动态应用声明的 ELF 解释器无法从系统镜像读取。",
         "检查日志中的解释器路径；musl 镜像应包含 /lib/ld-musl-x86_64.so.1，并检查读取权限与完整性。",
-        "kernel/ntclks/kernel/ntclks/user/elf.c:892",
+        "kernel/ntclks/kernel/exec/elf.c:892",
     ),
     Rule(
         "ELF-ABI", "错误", "动态链接",
@@ -121,7 +121,7 @@ DIRECT_RULES = (
         "动态应用与解释器 ABI 主版本不匹配",
         "检测到旧私有 ABI 程序与解释器不匹配。",
         "使用当前 musl SDK 从源码重建应用，避免混用旧私有 ABI 输出。",
-        "kernel/ntclks/kernel/ntclks/user/elf.c:904",
+        "kernel/ntclks/kernel/exec/elf.c:904",
     ),
     Rule(
         "ELF-MAP", "错误", "ELF 装载",
@@ -129,7 +129,7 @@ DIRECT_RULES = (
         "用户程序映射到地址空间失败",
         "内核在 ELF 验证、段映射、私有地址空间或启动参数准备阶段失败。",
         "结合相邻的 ELF 细节日志检查段布局、VMA 容量、页权限、解释器和镜像文件内容。",
-        "kernel/ntclks/kernel/ntclks/user/userland.c:417",
+        "kernel/ntclks/kernel/exec/userland.c:417",
     ),
     Rule(
         "DYNLINK-MISSING", "错误", "动态链接",
@@ -153,7 +153,7 @@ DIRECT_RULES = (
         "ASLR 正在使用弱熵源",
         "系统仍会随机化布局，但当前启动没有获得 RDRAND 硬件熵。",
         "在支持硬件熵的 CPU/虚拟机上启用 RDRAND，或检查启动时序和输入熵是否正常累积。",
-        "kernel/ntclks/kernel/ntclks/user/elf.c:156",
+        "kernel/ntclks/kernel/exec/elf.c:156",
     ),
     Rule(
         "POWER-ACPI", "警告", "电源管理",

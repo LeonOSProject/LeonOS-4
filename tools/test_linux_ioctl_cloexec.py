@@ -99,10 +99,15 @@ def test_kernel_dispatch_contract() -> None:
     assert macro(sched_h, "TASK_FILE_FLAG_EPOLL") == 0x00200000
     assert macro(sched_h, "TASK_FILE_FLAG_PATH") != macro(sched_h, "TASK_FILE_FLAG_EPOLL")
     assert "LINUX_O_PATH" in syscall_c and "TASK_FILE_FLAG_PATH" in syscall_c
-    # Diagnostic guest hooks used by the ISO produced by --guest.
-    userland = read("kernel/ntclks/kernel/ntclks/user/userland.c")
-    for hook in ("autospawn=ioctlcloexec", "autospawn=python315"):
-        assert hook in userland, f"missing diagnostic hook {hook}"
+    # Diagnostic guest hooks used by the ISO produced by --guest. Since the
+    # stage-4 M5 migration the spawn authority is the desktop autospawn table
+    # (exact-token "autospawn=<name>" parsed from /proc/cmdline), not the
+    # kernel; the hook names must stay registered there.
+    autospawn = read("userland/apps/desktop/autospawn.c")
+    assert 'strncmp(token, "autospawn=", 10)' in autospawn, \
+        "autospawn must match exact cmdline tokens, not substrings"
+    for hook in ("ioctlcloexec", "python315"):
+        assert f'{{"{hook}",' in autospawn, f"missing diagnostic hook {hook}"
     print("  kernel dispatch: generic FIOCLEX/FIONCLEX + O_PATH rule precede device dispatch")
 
 

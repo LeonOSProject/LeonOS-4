@@ -88,10 +88,20 @@ test_linux_abi_contract 全过。
 | `kernel/ntclks/user/userland.c` | `kernel/exec/userland.c` |
 
 注：§4.3"user 中机制放 exec，策略另拆"——本组把 user/ 整体归 exec 位；
-策略/机制拆分是后续重构，不在本组。引用修复：`tools/test_service_marker.py`、
-`tools/test_linux_ioctl_cloexec.py`（userland.c 路径）。
+策略/机制拆分是后续重构，不在本组。引用修复（15 处路径 → `kernel/ntclks/kernel/exec/`）：
+`tools/test_service_marker.py`、`tools/test_linux_ioctl_cloexec.py`、
+`tools/test_linux_abi_contract.py`、`tools/test_gpu.py`、`tools/analyze_boot_log.py`、
+`tools/tests/signal_address_space_test.c`、`tools/tests/elf_interpreter_test.c`、
+`docs/SUDOERS_PAM_STATUS.md`。另修两处既有 UAPI 单源迁移遗留（stage-5b 类）：
+`tools/test_gpu.py` test_taskmgr_sampling 与 `userland/apps/glxgears/tests/run_host_tests.sh`
+补 `-Ikernel/ntclks/include/uapi`（同文件 test_syscall_and_copyout 先例）；
+`tools/test_linux_ioctl_cloexec.py` 诊断钩子断言改指 M5 迁移后的真实权威
+`userland/apps/desktop/autospawn.c` 拉起表（并加 exact-token 解析检查，断言不放松）。
 
-状态：**待实施**。
+状态：**已完成**（NTCLKS `035aa54`：4 文件 + SOURCE_DIRS + kernel/exec；主仓 8 文件
+路径引用 + 2 处 UAPI include + 1 处钩子权威订正）。验证：G5_KERNEL_EXIT=0、
+NTCLKS make test 0、test_service_marker/test_linux_abi_contract/test_linux_memory/
+test_gpu（4/4）/test_linux_ioctl_cloexec（38 checks）/test_runtime_responsiveness 退出码 0。
 
 ### G6 console（1 文件）
 

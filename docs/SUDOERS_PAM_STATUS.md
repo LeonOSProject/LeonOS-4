@@ -338,7 +338,7 @@ the integration section and current matrix below describe the final source.
   fork/clone, and defers over-limit UID changes to exec. Other resources still
   return ENOSYS; complete pam_limits enforcement is not established.
 - AT_UID/AT_EUID/AT_GID/AT_EGID/AT_SECURE already exist in
-  `kernel/ntclks/kernel/ntclks/user/userland.c:prepare_user_exec_stack`. AT_SECURE currently
+  `kernel/ntclks/kernel/exec/userland.c:prepare_user_exec_stack`. AT_SECURE currently
   includes exec capability transitions and unequal IDs. Ordinary exec now resets
   saved/fs IDs and applies bounding/ambient/securebits/NNP transitions; actual
   held ext2 ELF set-ID transitions and nosuid are now implemented and the five-case

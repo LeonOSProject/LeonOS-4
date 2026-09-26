@@ -9,7 +9,7 @@
 #define NTCLKS_KERNEL_DIRECT_MAP_BASE 0
 #include "../../kernel/ntclks/kernel/ntclks/signal.c"
 #include "../../kernel/ntclks/kernel/ntclks/signal_queue.c"
-#include "../../kernel/ntclks/kernel/ntclks/user/usercopy_task.c"
+#include "../../kernel/ntclks/kernel/exec/usercopy_task.c"
 #include "../../kernel/ntclks/kernel/ntclks/syscall_socket_batch.c"
 
 #define STACK_ADDRESS 0x0f400000ULL
