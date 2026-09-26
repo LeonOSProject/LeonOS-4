@@ -179,15 +179,24 @@ m1c 转绿的**原因**是"无标记副本不授予"，名字不再是信任输�
 
 ### 4.4 staging 与镜像链改动（主仓）
 
-1. rootfs-stage.sh plan 增 gid 维度（或专用 record 字段），对三服务镜像
-   fchown 60001/60002；`leonos-stage` 清单输出真 gid（:310-311 硬编码改为
-   plan 值），`--check` 兼容。
-2. installer-stage.sh：安装器 runtime 的 desktop.elf 同标记（安装器会话同样
-   走 M1 授予点）。
-3. `system/rootfs/etc/group` 增 §4.1 两行。
-4. **盘点断言**（`make test` 的 python 测试，非生产链）：rootfs/安装器清单中
-   携带角色 gid 的文件集合恰好等于 {desktop.elf, windowd.elf, imd.elf} 三个
-   路径，防标记扩散；并断言 /etc/group 数值与夹具常量一致。
+（实施时订正两处机制表述：属主施加点是 **images.sh 的 fakeroot chown**，
+不是 leonos-stage 的 fchown——leonos-stage 无特权、只登记清单；python 工具
+测试**不在 `make test` 内**，走 tools python 批。）
+
+1. rootfs-stage.sh plan 增第 7 列 gid（缺省 0）；`leonos-stage` 清单输出真
+   gid（硬编码 `"gid":0` 改为 plan 值），`--check` 兼容。三服务镜像在 plan
+   处记 60001/60002。
+2. **属主施加点**：tools/build/images.sh 在 fakeroot 毯式 `chown -h 0:0` 之后
+   按路径键重施角色 gid（含 `/install/root` 装载副本）。安装器链**无需**改
+   动：installer-stage.sh 的 installer-policy 覆写走同一路径键；guest 安装器
+   复制时 `fchown(src.st_uid, src.st_gid)` 透传属主，已核对
+   userland/apps/installer/main.c。
+3. `system/rootfs/etc/group` 与 `system/test-accounts/group` 各增 §4.1 两行
+   （live/disk 测试镜像整组替换 group 文件，两处都要）。
+4. **盘点断言**（`tools/test_service_marker.py`，python 工具批，非生产链、
+   非 `make test`）：内核常量、rootfs-stage 映射、images.sh 重施列表、
+   /etc/group 数值四层一致；构建后以 `--manifest` 断言携带角色 gid 的文件
+   集合恰好等于 {desktop.elf, windowd.elf, imd.elf} 三个路径，防标记扩散。
 
 ### 4.5 语义变化披露（诚实边界）
 
