@@ -8,7 +8,7 @@ out = ROOT / "build/tmpfs-host"
 out.mkdir(parents=True, exist_ok=True)
 subprocess.run(["clang", "-g", "-O1", "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
                 "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
-                "tools/tests/tmpfs_test.c", "kernel/ntclks/kernel/ntclks/tmpfs.c", "-o", str(out / "tmpfs-test")],
+                "tools/tests/tmpfs_test.c", "kernel/ntclks/fs/tmpfs.c", "-o", str(out / "tmpfs-test")],
                cwd=ROOT, check=True)
 subprocess.run([str(out / "tmpfs-test")], cwd=ROOT, check=True)
 subprocess.run(["cc", "-O2", "-Wall", "-Wextra", "-DTMPFS_MMAP_STANDALONE",

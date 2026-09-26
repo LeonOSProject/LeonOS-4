@@ -65,7 +65,7 @@ test_linux_abi_contract 全过。
 注：`drivers/bootstrap/storage*` 存储 facade **本阶段整体保留**（§4.3
 "第一阶段整体保留 facade，后续按真实依赖拆分"）。
 
-状态：**待实施**。
+状态：**已完成**（NTCLKS `c48d841`：5 文件 + SOURCE_DIRS + storage_sidecar 注释；主仓 13 文件 17 处路径修复（含 ABI_PRIVATE_INVENTORY/SYSCALLS/KERNEL_USERSPACE_BOUNDARIES/ABI 四活文档）、storage_mkdir_mount_test 与procfs_directories_test 各补一桩（pty_lookup_vt_path 自 NTCLKS 5f26cab、userland_boot_cmdline 自归一化快照即缺，均为既有缺口，桩按文件既有约定：pty 类 abort()、cmdline 契约空串）。验证：G3_KERNEL_EXIT=0、NTCLKS make test 0、五个宿主消费方测试全过（tmpfs/storage_rename/storage_mkdir_mount/storage_metadata/procfs_taskmgr）。
 
 ### G4 net（4 文件）
 

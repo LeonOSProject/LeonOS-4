@@ -26,6 +26,8 @@ void page_cache_invalidate_node(const struct storage_node *node)
 uint32_t smp_cpu_count(void) { return 1; }
 int pty_lookup_path(const char *path, struct storage_node *node)
 { (void)path; (void)node; abort(); }
+int pty_lookup_vt_path(const char *path, struct storage_node *node)
+{ (void)path; (void)node; abort(); }
 /* RAM-backed ext2 must never touch the physical controller or other codecs. */
 void kernel_spin_lock(struct kernel_spinlock *lock) { (void)lock; assert(0); }
 void kernel_spin_unlock(struct kernel_spinlock *lock) { (void)lock; assert(0); }

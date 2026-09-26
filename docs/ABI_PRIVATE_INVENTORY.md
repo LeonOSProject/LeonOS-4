@@ -331,7 +331,7 @@ leonos_driver_info:
   - include/leonos/devmgr_service.h
   - include/leonos/driver.h
   - kernel/ntclks/kernel/ntclks/driver_manager.c
-  - kernel/ntclks/kernel/ntclks/procfs.c
+  - kernel/ntclks/fs/procfs.c
   - userland/apps/device-agent/main.c
   - userland/runtime/include/leonos/devmgr_service.h
   - userland/runtime/src/devmand_client.c
@@ -359,7 +359,7 @@ leonos_driver_list:
   - include/leonos/driver.h
   - kernel/ntclks/kernel/ntclks/driver_manager.c
   - kernel/ntclks/kernel/ntclks/include/ntclks/driver_manager.h
-  - kernel/ntclks/kernel/ntclks/procfs.c
+  - kernel/ntclks/fs/procfs.c
   - tools/tests/procfs_directories_test.c
   - userland/runtime/include/leonos/devmgr_service.h
   - userland/runtime/src/devmand_client.c
@@ -783,7 +783,7 @@ leonos_install_disk:
   - docs/ABI_PRIVATE_INVENTORY.md
   - kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
   - kernel/ntclks/kernel/ntclks/include/ntclks/storage.h
-  - kernel/ntclks/kernel/ntclks/sysfs.c
+  - kernel/ntclks/fs/sysfs.c
   - tools/tests/linux_inventory_test.c
 leonos_mouse_clear_regions:
   - devtools/components/tcc/runtime/include/leonos/mouse.h

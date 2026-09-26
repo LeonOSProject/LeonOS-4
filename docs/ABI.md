@@ -211,7 +211,7 @@ the private auth ioctl family was removed. The legacy
 
 Task snapshots now include `uid`, `role`, `session_id`, and `username`.
 Children inherit identity and current directory from the parent task.
-File access decisions are made in the kernel: `kernel/ntclks/kernel/ntclks/permissions.c`
+File access decisions are made in the kernel: `kernel/ntclks/fs/permissions.c`
 compares a task's filesystem UID/GID and role against the permission value the
 storage layer reports for the path. Protected service work is gated by kernel
 task flags (`TASK_FLAG_SERVICE`, `TASK_FLAG_WINDOW_SERVER`) and by
@@ -270,7 +270,7 @@ The full ownership map is in
 ## Path resolution
 
 Path normalization lives in the kernel: `fs_permissions_resolve()` and
-`fs_permissions_resolve_flags()` in `kernel/ntclks/kernel/ntclks/permissions.c` combine the
+`fs_permissions_resolve_flags()` in `kernel/ntclks/fs/permissions.c` combine the
 task's current directory with the input, walk components and symlinks, and check
 directory search permission on the way. Whether the final symlink is followed is
 decided by the syscall the caller made (for example `O_NOFOLLOW`); more than 40

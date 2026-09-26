@@ -29,11 +29,11 @@ class ProcfsTaskmgrTests(unittest.TestCase):
             subprocess.run([executable], check=True, timeout=10)
 
     def test_proc_pid_paths_start_after_proc_slash(self):
-        source = (ROOT / "kernel/ntclks/kernel/ntclks/procfs.c").read_text()
+        source = (ROOT / "kernel/ntclks/fs/procfs.c").read_text()
         self.assertIn("const char *p = path + 6;", source)
 
     def test_procfs_exports_cpu_runtime_stats(self):
-        source = (ROOT / "kernel/ntclks/kernel/ntclks/procfs.c").read_text()
+        source = (ROOT / "kernel/ntclks/fs/procfs.c").read_text()
         libc = (ROOT / "userland/runtime/src/procsys.c").read_text()
         self.assertIn('proc_text_eq(path, "/proc/stat")', source)
         self.assertIn('ps_read_file("/proc/stat"', libc)

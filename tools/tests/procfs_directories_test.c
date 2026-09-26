@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "../../kernel/ntclks/kernel/ntclks/procfs.c"
+#include "../../kernel/ntclks/fs/procfs.c"
 
 static struct task current = {.pid = 42, .name = "test", .uid = 1000};
 static struct task foreign = {.pid = 43, .name = "foreign", .uid = 2000};
@@ -38,6 +38,7 @@ static const struct leonos_system_info fixture_system = {
 };
 const struct leonos_system_info *ntclks_system_info(void) { return &fixture_system; }
 
+const char *userland_boot_cmdline(void) { return ""; }
 void linux_uts_names(char host[65], char domain[65])
 { strcpy(host, "fixture-host"); strcpy(domain, "(none)"); }
 int storage_read_mounts(uint64_t offset, void *buffer, uint32_t capacity, uint32_t *out)
