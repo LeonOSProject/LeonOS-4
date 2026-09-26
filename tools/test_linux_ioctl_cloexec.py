@@ -461,8 +461,8 @@ def write_evidence(host_output: str, host: dict, guest_text: str | None,
         for index, line in enumerate(serial_lines):
             if any(marker in line for marker in (
                     "[ioctl-clex]", "Hello from Python", "Numbers:", "Sum:", "Fibonacci:",
-                    "name=python3.15 code=", "[ntclks] ioctl CLOEXEC regression",
-                    "[ntclks] Python 3.15 script runner", "5451")):
+                    "name=python3.15 code=", "[desktop] autospawn ioctlcloexec",
+                    "[desktop] autospawn python315", "5451")):
                 lines.append(line.strip())
                 # Keep the syscall-trace result line that follows a FIOCLEX call.
                 if "5451" in line and index + 1 < len(serial_lines):
