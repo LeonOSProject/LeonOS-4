@@ -200,6 +200,18 @@ if [ -z "$(printf '%s\n' "$second" | tr -d '[:space:]')" ]; then
 else
     fail 'no-op build emits no compile, link, image or generate action'
     printf '%s\n' "$second" | sed 's/^/       | /'
+    # Name the trigger instead of leaving an undiagnosable flake: the version
+    # chain is build_info.h <- {configs/build-version, leonos-version,
+    # version.sig} and a churn here is one of those reading as newer.
+    printf '       | version.sig: %s\n' \
+        "$(cat "$ntclks_o/meta/version.sig" 2>/dev/null || echo missing)"
+    for suspect in "$ntclks_o/include/generated/build_info.h" \
+                   "$ntclks_o/meta/version.sig" \
+                   "$ntclks_o/host/bin/leonos-version" \
+                   "$ntclks/configs/build-version"; do
+        printf '       | %s\n' "$(stat -c 'mtime=%Y size=%s' "$suspect" 2>/dev/null \
+            | sed "s|^|$suspect |")"
+    done
 fi
 expect_same "$before" "$after" 'no-op build leaves every object and product mtime unchanged'
 
