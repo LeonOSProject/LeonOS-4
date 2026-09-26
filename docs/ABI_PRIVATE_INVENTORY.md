@@ -34,8 +34,8 @@ LEONOS_DRIVER_KIND_AUDIO:
   - devtools/components/tcc/runtime/include/leonos/driver.h
   - devtools/include/leonos/driver.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/ac97/ac97.c
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/es1371/es1371.c
+  - kernel/ntclks/drivers/ac97/ac97.c
+  - kernel/ntclks/drivers/es1371/es1371.c
   - include/leonos/driver.h
 LEONOS_ENOTEMPTY:
   - docs/ABI_PRIVATE_INVENTORY.md
@@ -49,8 +49,8 @@ LEONOS_FS_TYPE_DEVICE:
   - devtools/docs/SYSCALLS.md
   - devtools/include/leonos/fs_abi.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/storage/storage_vfs.c
-  - kernel/ntclks/kernel/ntclks/include/uapi/leonos/fs_abi.h
+  - kernel/ntclks/drivers/bootstrap/storage/storage_vfs.c
+  - kernel/ntclks/include/uapi/leonos/fs_abi.h
   - kernel/ntclks/kernel/ntclks/net_packet.c
   - kernel/ntclks/kernel/ntclks/net_udp.c
   - kernel/ntclks/kernel/ntclks/pty.c
@@ -148,7 +148,7 @@ LEONOS_NET_AF_INET:
   - userland/runtime/include/leonos/net_service.h
 LEONOS_NET_CONTROL_IOCTL:
   - docs/NETWORK_STATUS_2026-09-13.md
-  - kernel/ntclks/kernel/ntclks/include/uapi/leonos/net_control.h
+  - kernel/ntclks/include/uapi/leonos/net_control.h
   - kernel/ntclks/kernel/ntclks/net_control.c
   - tools/tests/netmand_client_test.c
   - tools/tests/network_guest_test.c
@@ -188,8 +188,8 @@ leonos_audio_format:
   - devtools/include/leonos/audio.h
   - devtools/include/leonos/driver.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/ac97/ac97.c
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/es1371/es1371.c
+  - kernel/ntclks/drivers/ac97/ac97.c
+  - kernel/ntclks/drivers/es1371/es1371.c
   - include/leonos/audio.h
   - include/leonos/driver.h
   - kernel/ntclks/kernel/ntclks/driver_manager.c
@@ -206,8 +206,8 @@ leonos_audio_state:
   - devtools/include/leonos/audio.h
   - devtools/include/leonos/driver.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/ac97/ac97.c
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/es1371/es1371.c
+  - kernel/ntclks/drivers/ac97/ac97.c
+  - kernel/ntclks/drivers/es1371/es1371.c
   - include/leonos/audio.h
   - include/leonos/driver.h
   - kernel/ntclks/kernel/ntclks/driver_manager.c
@@ -251,42 +251,42 @@ leonos_device_list:
   - userland/runtime/src/devmgr_service.c
 leonos_disk_gpt_initialize:
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
+  - kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
   - kernel/ntclks/kernel/ntclks/include/ntclks/storage.h
 leonos_disk_partition:
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
+  - kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
   - kernel/ntclks/kernel/ntclks/include/ntclks/storage.h
 leonos_disk_partition_create:
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
+  - kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
   - kernel/ntclks/kernel/ntclks/include/ntclks/storage.h
 leonos_disk_partition_delete:
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
+  - kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
   - kernel/ntclks/kernel/ntclks/include/ntclks/storage.h
 leonos_disk_partition_edit:
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
+  - kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
   - kernel/ntclks/kernel/ntclks/include/ntclks/storage.h
 leonos_disk_partition_format:
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
+  - kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
   - kernel/ntclks/kernel/ntclks/include/ntclks/storage.h
 leonos_disk_partition_mount:
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
+  - kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
   - kernel/ntclks/kernel/ntclks/include/ntclks/storage.h
 leonos_disk_partition_unmount:
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
+  - kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
   - kernel/ntclks/kernel/ntclks/include/ntclks/storage.h
 leonos_driver_audio_ops:
   - devtools/components/tcc/runtime/include/leonos/driver.h
   - devtools/include/leonos/driver.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/ac97/ac97.c
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/es1371/es1371.c
+  - kernel/ntclks/drivers/ac97/ac97.c
+  - kernel/ntclks/drivers/es1371/es1371.c
   - include/leonos/driver.h
   - kernel/ntclks/kernel/ntclks/driver_manager.c
 leonos_driver_control:
@@ -309,14 +309,14 @@ leonos_driver_e1000_info:
   - devtools/components/tcc/runtime/include/leonos/driver.h
   - devtools/include/leonos/driver.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/e1000/e1000.c
+  - kernel/ntclks/drivers/e1000/e1000.c
   - include/leonos/driver.h
   - kernel/ntclks/kernel/ntclks/driver_manager.c
 leonos_driver_e1000_ops:
   - devtools/components/tcc/runtime/include/leonos/driver.h
   - devtools/include/leonos/driver.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/e1000/e1000.c
+  - kernel/ntclks/drivers/e1000/e1000.c
   - include/leonos/driver.h
   - kernel/ntclks/kernel/ntclks/driver_manager.c
   - tools/tests/e1000_init_test.c
@@ -340,11 +340,11 @@ leonos_driver_kernel_api:
   - devtools/include/leonos/driver.h
   - docs/ABI_PRIVATE_INVENTORY.md
   - docs/DRIVERS.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/ac97/ac97.c
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/e1000/e1000.c
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/es1371/es1371.c
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/mouse/mouse.c
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/serial/serial.c
+  - kernel/ntclks/drivers/ac97/ac97.c
+  - kernel/ntclks/drivers/e1000/e1000.c
+  - kernel/ntclks/drivers/es1371/es1371.c
+  - kernel/ntclks/drivers/mouse/mouse.c
+  - kernel/ntclks/drivers/serial/serial.c
   - include/leonos/driver.h
   - kernel/ntclks/kernel/ntclks/driver_manager.c
   - tools/tests/e1000_init_test.c
@@ -369,34 +369,34 @@ leonos_driver_module:
   - devtools/include/leonos/driver.h
   - docs/ABI_PRIVATE_INVENTORY.md
   - docs/DRIVERS.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/ac97/ac97.c
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/e1000/e1000.c
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/es1371/es1371.c
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/mouse/mouse.c
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/serial/serial.c
+  - kernel/ntclks/drivers/ac97/ac97.c
+  - kernel/ntclks/drivers/e1000/e1000.c
+  - kernel/ntclks/drivers/es1371/es1371.c
+  - kernel/ntclks/drivers/mouse/mouse.c
+  - kernel/ntclks/drivers/serial/serial.c
   - include/leonos/driver.h
   - kernel/ntclks/kernel/ntclks/driver_manager.c
 leonos_driver_mouse_ops:
   - devtools/components/tcc/runtime/include/leonos/driver.h
   - devtools/include/leonos/driver.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/mouse/mouse.c
+  - kernel/ntclks/drivers/mouse/mouse.c
   - include/leonos/driver.h
   - kernel/ntclks/kernel/ntclks/driver_manager.c
 leonos_driver_mouse_state:
   - devtools/components/tcc/runtime/include/leonos/driver.h
   - devtools/include/leonos/driver.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/mouse/mouse.c
+  - kernel/ntclks/drivers/mouse/mouse.c
   - include/leonos/driver.h
   - kernel/ntclks/kernel/ntclks/driver_manager.c
 leonos_driver_pci_device:
   - devtools/components/tcc/runtime/include/leonos/driver.h
   - devtools/include/leonos/driver.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/ac97/ac97.c
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/e1000/e1000.c
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/es1371/es1371.c
+  - kernel/ntclks/drivers/ac97/ac97.c
+  - kernel/ntclks/drivers/e1000/e1000.c
+  - kernel/ntclks/drivers/es1371/es1371.c
   - include/leonos/driver.h
   - kernel/ntclks/kernel/ntclks/driver_manager.c
   - tools/tests/e1000_init_test.c
@@ -404,7 +404,7 @@ leonos_driver_serial_ops:
   - devtools/components/tcc/runtime/include/leonos/driver.h
   - devtools/include/leonos/driver.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/serial/serial.c
+  - kernel/ntclks/drivers/serial/serial.c
   - include/leonos/driver.h
   - kernel/ntclks/kernel/ntclks/driver_manager.c
 leonos_gpu_context:
@@ -413,7 +413,7 @@ leonos_gpu_context:
   - devtools/include/leonos/gpu.h
   - devtools/include/leonos/gpu_sdk.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/svga/render.c
+  - kernel/ntclks/drivers/bootstrap/svga/render.c
   - include/leonos/gpu.h
   - include/leonos/gpu_sdk.h
   - kernel/ntclks/kernel/ntclks/gpu.c
@@ -449,8 +449,8 @@ leonos_gpu_diagnostics:
   - devtools/include/leonos/gpu_sdk.h
   - docs/ABI.md
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/svga/device.h
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/svga/render.c
+  - kernel/ntclks/drivers/bootstrap/svga/device.h
+  - kernel/ntclks/drivers/bootstrap/svga/render.c
   - include/leonos/gpu.h
   - include/leonos/gpu_sdk.h
   - kernel/ntclks/kernel/ntclks/gpu.c
@@ -465,7 +465,7 @@ leonos_gpu_draw:
   - devtools/include/leonos/gpu.h
   - devtools/include/leonos/gpu_sdk.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/svga/render.c
+  - kernel/ntclks/drivers/bootstrap/svga/render.c
   - include/leonos/gpu.h
   - include/leonos/gpu_sdk.h
   - kernel/ntclks/kernel/ntclks/gpu.c
@@ -479,7 +479,7 @@ leonos_gpu_frame:
   - devtools/include/leonos/gpu.h
   - devtools/include/leonos/gpu_sdk.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/svga/render.c
+  - kernel/ntclks/drivers/bootstrap/svga/render.c
   - include/leonos/gpu.h
   - include/leonos/gpu_sdk.h
   - kernel/ntclks/kernel/ntclks/gpu.c
@@ -495,7 +495,7 @@ leonos_gpu_info:
   - devtools/include/leonos/gpu_sdk.h
   - docs/ABI.md
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/svga/render.c
+  - kernel/ntclks/drivers/bootstrap/svga/render.c
   - include/leonos/gpu.h
   - include/leonos/gpu_sdk.h
   - kernel/ntclks/kernel/ntclks/gpu.c
@@ -518,7 +518,7 @@ leonos_gpu_vertex:
   - devtools/include/leonos/gpu.h
   - devtools/include/leonos/gpu_sdk.h
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/svga/render.c
+  - kernel/ntclks/drivers/bootstrap/svga/render.c
   - include/leonos/gpu.h
   - include/leonos/gpu_sdk.h
   - kernel/ntclks/kernel/ntclks/gpu.c
@@ -781,7 +781,7 @@ leonos_inputm_unregister:
   - userland/runtime/src/inputm.c
 leonos_install_disk:
   - docs/ABI_PRIVATE_INVENTORY.md
-  - kernel/ntclks/kernel/ntclks/kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
+  - kernel/ntclks/drivers/bootstrap/storage/storage_disk.c
   - kernel/ntclks/kernel/ntclks/include/ntclks/storage.h
   - kernel/ntclks/kernel/ntclks/sysfs.c
   - tools/tests/linux_inventory_test.c
@@ -882,7 +882,7 @@ leonos_net_config:
   - docs/unix-ipc-protocol.md
   - include/leonos/net.h
   - include/leonos/net_service.h
-  - kernel/ntclks/kernel/ntclks/include/uapi/leonos/net_control.h
+  - kernel/ntclks/include/uapi/leonos/net_control.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
   - kernel/ntclks/kernel/ntclks/net.c
   - kernel/ntclks/kernel/ntclks/net_packet.c
@@ -904,7 +904,7 @@ leonos_net_connection_info:
   - docs/ABI_PRIVATE_INVENTORY.md
   - include/leonos/net.h
   - include/leonos/net_service.h
-  - kernel/ntclks/kernel/ntclks/include/uapi/leonos/net_control.h
+  - kernel/ntclks/include/uapi/leonos/net_control.h
   - kernel/ntclks/kernel/ntclks/net.c
   - userland/runtime/include/leonos/net_service.h
   - userland/runtime/src/netsock.c
@@ -930,7 +930,7 @@ leonos_net_connections:
   - userland/runtime/src/net_service.c
   - userland/runtime/src/netsock.c
 leonos_net_control:
-  - kernel/ntclks/kernel/ntclks/include/uapi/leonos/net_control.h
+  - kernel/ntclks/include/uapi/leonos/net_control.h
   - kernel/ntclks/kernel/ntclks/net_control.c
   - tools/tests/netmand_client_test.c
   - tools/tests/network_guest_test.c
@@ -944,7 +944,7 @@ leonos_net_dhcp:
   - docs/unix-ipc-protocol.md
   - include/leonos/net.h
   - include/leonos/net_service.h
-  - kernel/ntclks/kernel/ntclks/include/uapi/leonos/net_control.h
+  - kernel/ntclks/include/uapi/leonos/net_control.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
   - kernel/ntclks/kernel/ntclks/net.c
   - tools/tests/netmand_client_test.c
@@ -983,7 +983,7 @@ leonos_net_dns_policy:
   - docs/unix-ipc-protocol.md
   - include/leonos/net.h
   - include/leonos/net_service.h
-  - kernel/ntclks/kernel/ntclks/include/uapi/leonos/net_control.h
+  - kernel/ntclks/include/uapi/leonos/net_control.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
   - kernel/ntclks/kernel/ntclks/net.c
   - userland/runtime/include/leonos/net_service.h
@@ -1027,7 +1027,7 @@ leonos_net_ping:
   - docs/unix-ipc-protocol.md
   - include/leonos/net.h
   - include/leonos/net_service.h
-  - kernel/ntclks/kernel/ntclks/include/uapi/leonos/net_control.h
+  - kernel/ntclks/include/uapi/leonos/net_control.h
   - kernel/ntclks/kernel/ntclks/include/ntclks/net.h
   - kernel/ntclks/kernel/ntclks/net.c
   - userland/runtime/include/leonos/net_service.h
