@@ -21,7 +21,7 @@ DEAD=定义但无内核内调用者）。目标：为"会话/测试 autospawn �
 | M11 | `syscall_device.c:22-36` | `CAP_SYS_MODULE` | 驱动装载/卸载/重扫 | drvmgr | 机制 | 无 cap → EPERM |
 | M12 | `syscall.c:6776-6811` | controlling tty 或 `CAP_SYS_TTY_CONFIG` | VT 切换、KDSETMODE | login.elf、desktop | 机制 | 非本会话进程 `VT_ACTIVATE` → EPERM |
 | M13 | `pty.c:1012-1035` | session leader；steal 需 `CAP_SYS_ADMIN` | controlling TTY | shell/terminal | 机制 | steal 无 cap → 失败 |
-| M14 | `sched.c:2524-2540/2976-3000/3032-3052` | `TASK_FLAG_SERVICE` | kill/挂断/登出免疫 | windowd、imd、desktop | 机制（**权威来自 M1 名字检查**） | 杀 windowd → -1；杀其 fork 子 → 成功 |
+| M14 | `sched.c:2524-2540/2976-3000/3032-3052` | `TASK_FLAG_SERVICE` | kill/挂断/登出免疫 | windowd、imd、desktop | 机制（**权威来自 M1 名字检查**） | ⚠️ **2026-09-25 负例实测订正**：`kill(2)` 路径（`kernel_signal_queue_task_info`/`LINUX_SYS_KILL`）无服务门禁；`sched_kill_user_task` 唯一调用者是死代码 F3（`auth_kill_session_tasks_for_logout`，syscall.c:2724），`sched_kill_user_tasks_for_pty/_for_logout` 零调用者——"杀服务 → -1"今日仅死代码可达。负例套件以冒充者可杀性 + `/proc` 标志位直接锁定；test_vt_qemu 中 root 可杀 desktop 与此一致 |
 | M15 | `net.c:3194-3209` | role/SERVICE/owner_uid | 连接列表可见性 | netctl、taskmgr | 机制 | 普通用户只见自己的 socket |
 | M16 | `input.c:483-536` | pid + grab token | evdev 独占 | windowd、apps | 机制（已是所有权制） | ungrab 他人设备 → 无效 |
 | M17 | `syscall_socket.c:1087-1107` | SCM_CREDENTIALS 分字段 cap | 真实 ucred | sessiond、windowd 客户端 | 机制 | 伪造 uid → EPERM |
@@ -83,7 +83,10 @@ marker + flock 会话权威（`userland/libc/src/pam_session.c:51-80`）。
    (c) **大小写变体路径 → 当前会授予（此负例先写、先失败）**；(d) desktop 的 fork 子 → 无 SERVICE。
 2. **exec 不继承不应保留的特权**——hook `userland.c:1142` + M4：desktop exec `/bin/sh`
    丢 SERVICE/WINDOW_SERVER；setid 过渡清 ambient+AT_SECURE；no_new_privs 阻提权。
-3. **服务免疫边界**——sched.c:2534/2992/3044：service 免疫、同 pty/session 非 service 被杀。
+3. **服务免疫边界**——⚠️ 订正（2026-09-25 负例实测）：`sched_kill_user_task`（sched.c:2534）
+   的服务免疫仅死代码可达（唯一调用者 F3 块）；`sched_kill_user_tasks_for_pty/_for_logout`
+   零调用者。普通 `kill(2)` 无服务门禁，"杀 windowd → -1"不成立。替代设计时以
+   B5（网络可见性）与 B6（会话身份）为 SERVICE 标志的**活**消费者，免疫三函数视为待清死代码。
 4. **块设备**——syscall.c:1899/1948/4797/4921/5844/6641：非 admin -EACCES；installer-root 旁路仅 uid==0。
 5. **SCM_CREDENTIALS 伪造**——syscall_socket.c:1087-1107：伪造 → -EPERM/-ESRCH。
 6. **sessiond 跨用户**——sessiond/main.c:170-172,255-258：-EACCES / 断连。
@@ -97,8 +100,9 @@ marker + flock 会话权威（`userland/libc/src/pam_session.c:51-80`）。
    反之只留路径匹配、去掉 root-owned/非可写/root-executor 条件，可写镜像即可冒充合成器。
 2. **A13 的父子关系是测试契约**：autospawn 以 desktop 为父、继承 uid/session；
    迁 init/sessiond 后父/uid/session 变化会破坏测试假设（含"退出码落串口日志"）。
-3. **SERVICE 语义宽于 daemon**：B2-B5 四个消费者 + B6"窗口服务器保留会话身份"细微语义
-   必须逐一复刻。
+3. **SERVICE 语义宽于 daemon**：B5（网络可见性）与 B6（窗口服务器保留会话身份）是**活**消费
+   者；B2-B4（kill/挂断/登出免疫）经 2026-09-25 负例实测为死代码可达（见 M14 订正），替代
+   时按"免疫函数清退"处理而非"复刻"。
 4. **角色机制残余但承重磁盘 IO**：M10 当前等价"除 installer-root uid0 外全拒"；
    任何指向用户态决定的 role 的"清理"都会重开裸盘访问。
 5. 大小写不敏感路径比较（A2）在 ext2 上可别名。
