@@ -16,10 +16,11 @@ before the tests exist):
   M10     raw block device reads (/dev/disk0) denied without the installer
           root bypass, for non-root and for installed-system root
   M17     forged SCM_CREDENTIALS over a unix socket rejected
-  M1(c)   case-variant path impersonation is a KNOWN WEAKNESS today: the check
-          asserts the desired behavior and reports
-          "xfail - known weakness: case-variant path impersonation
-          (03-permission-matrix M1(c))" instead of failing the suite
+  M1(c)   case-variant path impersonation: authority rides on the inode's
+          role gid (phase 5.7 equivalent replacement, 09-m1-authority-design-
+          review.md), so an unmarked copy at a look-alike path must not be
+          tagged; the check keeps its Xfail reporting path as the standing
+          rule if a grant ever reappears
 
 Observables: every check runs a tiny probe ELF (tools/tests/
 privilege_negatives_probe.c, compiled with the LeonOS musl SDK and injected
@@ -61,10 +62,13 @@ SERVICE_BITS = 0x1 | 0x8
 
 DESKTOP_DIR = "/usr/lib/leonos/apps/desktop"
 DESKTOP_PATH = f"{DESKTOP_DIR}/desktop.elf"
-# Case-variant names on case-sensitive ext2: distinct inodes, but M1's
-# path_eq_ignore_case still matches them (03-permission-matrix M1(c)).
+# M1 grants on the image inode's role gid (kernel LEONOS_GID_*), never on the
+# path name (03-permission-matrix M1(c) fixed in phase 5.7). Fixture isolation:
+# the writable copy carries the role gid so MODE is the only rejection reason,
+# the case-variant copy is explicitly unmarked (gid 0) so it must stay inert.
+WINDOW_SERVER_GID = 60001
 WRITABLE_COPY = f"{DESKTOP_DIR}/Desktop.elf"    # user-writable copy (mode 0777)
-CASEVARIANT_COPY = f"{DESKTOP_DIR}/DESKTOP.ELF"  # root-owned 0755 (xfail target)
+CASEVARIANT_COPY = f"{DESKTOP_DIR}/DESKTOP.ELF"  # root-owned 0755, unmarked
 
 M14_UNVERIFIED_REASON = (
     "not assertable in-guest today: kill(2)/signal delivery has no "
@@ -154,24 +158,29 @@ def tagged(fields, label):
 # --------------------------------------------------------------------------
 
 def check_m1b_root_userwritable_copy(guest):
-    """M1(b): root exec of a user-writable copy at a service-looking path."""
+    """M1(b): root exec of a user-writable copy at a service-looking path.
+
+    The copy carries the role gid, so the image's group/world-writable bit is
+    the only reason for the refusal (condition isolation).
+    """
     guest.sh(f"{WRITABLE_COPY} flags m1b", "PR m1b ")
     flags = untagged(guest.one("m1b"), "root exec of user-writable copy")
     return f"LeonOSFlags={flags:#x} (no SERVICE for mode&0022 image)"
 
 
 def check_m1c_case_variant(guest):
-    """M1(c): root-owned non-writable case-variant path must NOT be tagged.
+    """M1(c): root-owned non-writable case-variant copy must NOT be tagged.
 
-    Today it IS tagged (case-insensitive path match) - a known weakness. The
-    desired behavior is asserted; the observed weak behavior is reported xfail.
+    Authority rides on the inode's role gid (phase 5.7), so an unmarked copy is
+    inert no matter what its path looks like. The Xfail path is retained as the
+    standing rule if the behavior regresses to a grant.
     """
     guest.sh(f"{CASEVARIANT_COPY} flags m1c", "PR m1c ")
     fields = guest.one("m1c")
     flags = num(fields, "flags")
     if flags & SERVICE_BITS:
         raise Xfail(f"case-variant exec still granted LeonOSFlags={flags:#x}")
-    return f"LeonOSFlags={flags:#x} (weakness fixed: no grant)"
+    return f"LeonOSFlags={flags:#x} (no grant: unmarked inode, path is not authority)"
 
 
 def check_m10_root_rawdisk(guest):
@@ -185,21 +194,28 @@ def check_m10_root_rawdisk(guest):
 
 
 def swap_probe_in(guest):
-    """Put the probe at the exact desktop path (backup kept in /tmp)."""
+    """Put the probe at the exact desktop path (backup kept in /tmp).
+
+    The role gid is re-applied explicitly so the positive control does not bet
+    on cp(1) preserving the destination inode's gid.
+    """
     guest.sh(f"cp {DESKTOP_PATH} /tmp/desktop-stock.elf && cp /tmp/pp {DESKTOP_PATH}"
-             f" && chmod 0755 {DESKTOP_PATH} && echo PRIV-SWAP-OK >/dev/ttyS0",
+             f" && chmod 0755 {DESKTOP_PATH} && chgrp {WINDOW_SERVER_GID} {DESKTOP_PATH}"
+             f" && echo PRIV-SWAP-OK >/dev/ttyS0",
              "PRIV-SWAP-OK")
 
 
 def restore_stock(guest):
     guest.sh(f"cp /tmp/desktop-stock.elf {DESKTOP_PATH}"
-             f" && chmod 0755 {DESKTOP_PATH} && echo PRIV-RESTORE-OK >/dev/ttyS0",
+             f" && chmod 0755 {DESKTOP_PATH} && chgrp {WINDOW_SERVER_GID} {DESKTOP_PATH}"
+             f" && echo PRIV-RESTORE-OK >/dev/ttyS0",
              "PRIV-RESTORE-OK")
 
 
 def check_m1_positive_control(guest):
-    """Positive control: root exec of root-owned non-writable exact path
-    still receives TASK_FLAG_SERVICE|TASK_FLAG_WINDOW_SERVER (M1 grant)."""
+    """Positive control: root exec of the role-marked image (root-owned,
+    non-writable, gid 60001) still receives
+    TASK_FLAG_SERVICE|TASK_FLAG_WINDOW_SERVER (M1 grant)."""
     guest.sh(f"{DESKTOP_PATH} flags m1pos", "PR m1pos ")
     flags = tagged(guest.one("m1pos"), "exec at exact desktop path")
     return f"LeonOSFlags={flags:#x} (SERVICE|WINDOW_SERVER granted)"
@@ -412,9 +428,13 @@ def prepare_scratch(image, output, probe):
         f"write {probe} {WRITABLE_COPY}",
         "set_inode_field %s mode 0100777" % WRITABLE_COPY,
         "set_inode_field %s uid 0" % WRITABLE_COPY,
+        # Role gid on the writable copy: writability is the only rejection gate.
+        "set_inode_field %s gid %d" % (WRITABLE_COPY, WINDOW_SERVER_GID),
         f"write {probe} {CASEVARIANT_COPY}",
         "set_inode_field %s mode 0100755" % CASEVARIANT_COPY,
         "set_inode_field %s uid 0" % CASEVARIANT_COPY,
+        # Explicitly unmarked (gid 0): an untagged copy must stay inert.
+        "set_inode_field %s gid 0" % CASEVARIANT_COPY,
     ]
     for command in commands:
         subprocess.run(["debugfs", "-w", "-R", command, str(filesystem)], check=True,
