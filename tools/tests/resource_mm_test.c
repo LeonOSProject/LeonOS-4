@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
-#include "../../kernel/ntclks/syscall_mm.c"
+#include "../../kernel/ntclks/kernel/ntclks/syscall_mm.c"
 
 uint32_t sched_task_vma_capacity(const struct task *task) { (void)task; return SCHED_TASK_VMA_MAX; }
 struct task_vma *sched_task_vma_at(struct task *task, uint32_t index) { return &task->vmas[index]; }

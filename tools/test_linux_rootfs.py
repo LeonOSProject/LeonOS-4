@@ -32,7 +32,7 @@ class RootfsInterfaces(unittest.TestCase):
             executable = root / "gpt-reader"
             subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                             "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                            "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
+                            "-Ikernel/ntclks/include", "-Ikernel/ntclks/include/uapi", "-idirafter", "userland/runtime/include",
                             "tools/tests/rootfs_gpt_test.c", "-o", executable], cwd=ROOT, check=True)
             subprocess.run([executable, image, str(partitions[0]), str(partitions[1])], check=True, timeout=20)
 
@@ -43,7 +43,7 @@ class RootfsInterfaces(unittest.TestCase):
                     executable = Path(directory) / name
                     subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                                     "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                                    "-Iinclude", "-Iinclude/uapi", "-Ikernel/ntclks/include",
+                                    "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
                                     f"tools/tests/{name}_test.c", "-o", executable], cwd=ROOT, check=True)
                     subprocess.run([executable], cwd=ROOT, check=True, timeout=20)
 

@@ -22,7 +22,7 @@ FORBIDDEN_KERNEL_RE = re.compile(
     r"[A-Z0-9_]*\b"
 )
 
-KERNEL_ROOTS = ("kernel/ntclks", "drivers/bootstrap")
+KERNEL_ROOTS = ("kernel/ntclks/kernel/ntclks", "kernel/ntclks/drivers/bootstrap")
 PEERCRED_PATHS = (
     "userland/apps/windowd/main.c",
     "userland/apps/device-agent/main.c",

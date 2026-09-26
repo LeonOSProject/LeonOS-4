@@ -8,8 +8,8 @@ binary = ROOT / "build/exec-script-test"
 binary.parent.mkdir(parents=True, exist_ok=True)
 subprocess.run([
     "clang", "-std=c11", "-g", "-O1", "-ffunction-sections", "-fdata-sections",
-    "-fsanitize=address,undefined", "-fno-sanitize-recover=all", "-Iinclude", "-Iinclude/uapi",
-    "-Ikernel/ntclks/include", "-Wl,--gc-sections",
+    "-fsanitize=address,undefined", "-fno-sanitize-recover=all", "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi",
+    "-Ikernel/ntclks/kernel/ntclks/include", "-Wl,--gc-sections",
     "tools/tests/exec_script_test.c", "-o", str(binary),
 ], cwd=ROOT, check=True)
 subprocess.run([str(binary)], check=True, timeout=30)

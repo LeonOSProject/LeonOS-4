@@ -35,11 +35,11 @@ $(HEADER_EXPORT_MANIFEST): FORCE $(LEONOS_EMIT)
 	    printf '%s\n' \
 	        'ntclks adapter: kernel checkout not found: $(NTCLKS_DIR)/Makefile' \
 	        '' \
-	        'The exported headers come from the standalone ntclks checkout' \
-	        '(kernel/userland separation phase 3). Mount or initialize the' \
-	        'checkout at NTCLKS_DIR (default: $(LEONOS_SRC)/kernel/ntclks, the' \
-	        'tracked kernel sources until phase 5), or point NTCLKS_DIR at an' \
-	        'existing checkout, e.g. NTCLKS_DIR=/path/to/ntclks or NTCLKS_DIR=.' >&2; \
+	        'The exported headers come from the ntclks kernel checkout (the' \
+	        'kernel/ntclks git submodule since phase 5). Initialize it with' \
+	        '`git submodule update --init --recursive` and run' \
+	        '`make -C kernel/ntclks fetch`, or point NTCLKS_DIR at an existing' \
+	        'checkout, e.g. NTCLKS_DIR=/path/to/ntclks or NTCLKS_DIR=.' >&2; \
 	    exit 1; \
 	fi; \
 	exec $(MAKE) -C '$(NTCLKS_DIR)' O='$(NTCLKS_O)' ARCH='$(ARCH)' \

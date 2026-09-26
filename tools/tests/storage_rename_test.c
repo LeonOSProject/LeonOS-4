@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../drivers/bootstrap/storage/storage_internal.h"
+#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_internal.h"
 
 static FILE *disk;
 static struct task *writer;
@@ -77,9 +77,9 @@ static int storage_select_node_volume(const struct storage_node *node, struct st
 { *previous = g_active_volume; return node->volume_id == g_storage.volume_id ? 0 : -2; }
 static void storage_restore_volume(struct storage_volume *previous) { g_active_volume = previous; }
 
-#include "../../drivers/bootstrap/storage/storage_ext2_cache.c"
-#include "../../drivers/bootstrap/storage/storage_inode.c"
-#include "../../drivers/bootstrap/storage/storage_ext2.c"
+#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_ext2_cache.c"
+#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_inode.c"
+#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_ext2.c"
 
 static void test_held_inode(void)
 {

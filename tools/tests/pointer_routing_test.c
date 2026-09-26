@@ -14,9 +14,9 @@ static int windowd_vt_active(void);
 #undef main
 #undef WINDOWD_VT_TEST
 #undef syscall3
-#include "../../kernel/ntclks/input.c"
+#include "../../kernel/ntclks/kernel/ntclks/input.c"
 #include "../../userland/runtime/src/ui_input.c"
-#include "../../kernel/ntclks/arch/x86_64/keyboard_led.h"
+#include "../../kernel/ntclks/kernel/ntclks/arch/x86_64/keyboard_led.h"
 
 static uint64_t read_cursor;
 static struct leonos_input_event delivered[128];

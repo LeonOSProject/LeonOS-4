@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../kernel/ntclks/net_packet.c"
+#include "../../kernel/ntclks/kernel/ntclks/net_packet.c"
 static struct task current;
 static struct task_file description;
 static uint8_t sent[1514];

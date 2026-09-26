@@ -10,10 +10,10 @@ If a host stalls while it still references guest memory, the driver preserves
 those pages and the FIFO until a later initialization/shutdown retry can finish
 retirement. FIFO waits remain bounded.
 
-The public ring-0 API is declared in `kernel/ntclks/include/ntclks/svga.h`.
-The implementation lives in `drivers/bootstrap/svga/` and uses the vendored
-Linux VMware protocol headers in `drivers/bootstrap/svga/protocol/`, with
-the required GB wire extensions in `drivers/bootstrap/svga/gb_protocol.h`.
+The public ring-0 API is declared in `kernel/ntclks/kernel/ntclks/include/ntclks/svga.h`.
+The implementation lives in `kernel/ntclks/drivers/bootstrap/svga/` and uses the vendored
+Linux VMware protocol headers in `kernel/ntclks/drivers/bootstrap/svga/protocol/`, with
+the required GB wire extensions in `kernel/ntclks/drivers/bootstrap/svga/gb_protocol.h`.
 
 ## glxgears and Task Manager
 

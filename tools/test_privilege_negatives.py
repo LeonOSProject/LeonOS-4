@@ -56,7 +56,7 @@ from test_vt_qemu import wait_text
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# TASK_FLAG_SERVICE | TASK_FLAG_WINDOW_SERVER (kernel/ntclks/include/ntclks/sched.h).
+# TASK_FLAG_SERVICE | TASK_FLAG_WINDOW_SERVER (kernel/ntclks/kernel/ntclks/include/ntclks/sched.h).
 SERVICE_BITS = 0x1 | 0x8
 
 DESKTOP_DIR = "/usr/lib/leonos/apps/desktop"
@@ -68,11 +68,11 @@ CASEVARIANT_COPY = f"{DESKTOP_DIR}/DESKTOP.ELF"  # root-owned 0755 (xfail target
 
 M14_UNVERIFIED_REASON = (
     "not assertable in-guest today: kill(2)/signal delivery has no "
-    "TASK_FLAG_SERVICE gate (kernel/ntclks/signal.c kernel_signal_queue_task_info, "
-    "kernel/ntclks/syscall_process.c LINUX_SYS_KILL); the documented refusal "
+    "TASK_FLAG_SERVICE gate (kernel/ntclks/kernel/ntclks/signal.c kernel_signal_queue_task_info, "
+    "kernel/ntclks/kernel/ntclks/syscall_process.c LINUX_SYS_KILL); the documented refusal "
     "'kill windowd -> -1' lives only in sched_kill_user_task "
-    "(kernel/ntclks/sched/sched.c:2527), whose sole caller "
-    "auth_kill_session_tasks_for_logout (kernel/ntclks/syscall.c:2724, F3) is "
+    "(kernel/ntclks/kernel/ntclks/sched/sched.c:2527), whose sole caller "
+    "auth_kill_session_tasks_for_logout (kernel/ntclks/kernel/ntclks/syscall.c:2724, F3) is "
     "dead code, and sched_kill_user_tasks_for_pty/_for_logout have no callers. "
     "Impersonator killability is pinned by the m1-* checks instead.")
 

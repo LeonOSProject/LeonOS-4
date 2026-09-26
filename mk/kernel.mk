@@ -14,9 +14,10 @@
 # cheap. Publishing goes through leonos-emit, so an unchanged product never
 # moves mtime and never rebuilds its consumers.
 
-# The kernel checkout. Until Phase 5 the default path still holds the old
-# tracked kernel sources without a Makefile; the adapter then fails at recipe
-# time with instructions instead of at parse time (see the rule below).
+# The kernel checkout. Since phase 5 the default path is the kernel/ntclks
+# git submodule (github.com/LeonOSProject/NTCLKS); when it is not initialized
+# the adapter fails at recipe time with instructions instead of at parse time
+# (see the rule below).
 NTCLKS_DIR ?= $(LEONOS_SRC)/kernel/ntclks
 # Sub-build output directory: the checkout writes everything under O.
 NTCLKS_O ?= $(O)/ntclks
@@ -73,11 +74,11 @@ $(NTCLKS_PUBLISHED) &: FORCE $(LEONOS_EMIT) | $(O)/kernel-export/manifest.txt
 	    printf '%s\n' \
 	        'ntclks adapter: kernel checkout not found: $(NTCLKS_DIR)/Makefile' \
 	        '' \
-	        'The kernel products are built by the standalone ntclks checkout' \
-	        '(kernel/userland separation phase 3). Mount or initialize the' \
-	        'checkout at NTCLKS_DIR (default: $(LEONOS_SRC)/kernel/ntclks, the' \
-	        'tracked kernel sources until phase 5), or point NTCLKS_DIR at an' \
-	        'existing checkout, e.g. NTCLKS_DIR=/path/to/ntclks or NTCLKS_DIR=.' >&2; \
+	        'The kernel products are built by the ntclks kernel checkout (the' \
+	        'kernel/ntclks git submodule since phase 5). Initialize it with' \
+	        '`git submodule update --init --recursive` and run' \
+	        '`make -C kernel/ntclks fetch`, or point NTCLKS_DIR at an existing' \
+	        'checkout, e.g. NTCLKS_DIR=/path/to/ntclks or NTCLKS_DIR=.' >&2; \
 	    exit 1; \
 	fi; \
 	exec $(MAKE) -C '$(NTCLKS_DIR)' O='$(NTCLKS_O)' ARCH='$(ARCH)' \

@@ -137,6 +137,8 @@ jobs:
           # component/Kconfig synchronizer, so removed symbols cannot leak
           # into a fresh CI checkout from a stale workspace configuration.
           make fetch
+          # kernel/ntclks submodule cache (unifont); its cache/ is untracked
+          make -C kernel/ntclks fetch
           make defconfig
 
           set_config() {

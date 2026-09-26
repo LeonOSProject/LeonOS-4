@@ -126,7 +126,7 @@ served through a private ioctl.
 ## Networking (no socket service)
 
 There is no netmand daemon. Read-only network status queries use the kernel's
-`LEONOS_NET_CONTROL_IOCTL` (`include/uapi/leonos/net_control.h`) on an
+`LEONOS_NET_CONTROL_IOCTL` (`kernel/ntclks/include/uapi/leonos/net_control.h`) on an
 `AF_INET` socket fd, credential-checked in the kernel. Configuration changes
 are lifecycle operations of the OpenRC services `leonos-dhcp` (udhcpc, hook
 publishes `/run/leonos/dhcp-lease`) and `leonos-ntp` (hook publishes

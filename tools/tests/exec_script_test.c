@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../kernel/ntclks/syscall.c"
+#include "../../kernel/ntclks/kernel/ntclks/syscall.c"
 
 static bool fail_allocation;
 bool user_range_ok(uint64_t address, uint64_t size) { return address != 0 || size == 0; }

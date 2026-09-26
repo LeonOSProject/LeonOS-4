@@ -19,8 +19,8 @@ def check_image(directory, features, block_size, ram_root=False):
         subprocess.run(["debugfs", "-w", "-R", command, disk], check=True, capture_output=True)
     subprocess.run(["cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g", "-fsanitize=address,undefined",
                     "-fno-omit-frame-pointer", "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                    "-Iinclude", "-Iinclude/uapi", "-Ikernel/ntclks/include",
-                    "tools/tests/storage_rename_test.c", "kernel/ntclks/tmpfs.c", "-o", executable], cwd=ROOT, check=True)
+                    "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
+                    "tools/tests/storage_rename_test.c", "kernel/ntclks/kernel/ntclks/tmpfs.c", "-o", executable], cwd=ROOT, check=True)
     subprocess.run([executable, disk, *(("--ram-root",) if ram_root else ())], check=True)
     content = subprocess.check_output(["debugfs", "-R", "cat /target", disk])
     assert content == b"new", content

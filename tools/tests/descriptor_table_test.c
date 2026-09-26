@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "../../kernel/ntclks/syscall.c"
+#include "../../kernel/ntclks/kernel/ntclks/syscall.c"
 
 static int fail_allocation;
 static unsigned pty_references;

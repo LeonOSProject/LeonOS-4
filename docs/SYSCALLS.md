@@ -49,7 +49,7 @@ The public userland numbers and wrappers are in:
 
 The kernel-side numbers and errno constants are in:
 
-- `kernel/ntclks/include/ntclks/syscall.h`
+- `kernel/ntclks/kernel/ntclks/include/ntclks/syscall.h`
 
 ## Implemented Syscall Table
 
@@ -335,7 +335,7 @@ task and inherited by child applications. Logout clears the session identity and
 kills ordinary user tasks in the session, then desktop returns to `login.elf`.
 
 The kernel makes every file, task-kill, user-management, and installer-storage
-decision itself in `kernel/ntclks/permissions.c`, against the permissions the
+decision itself in `kernel/ntclks/kernel/ntclks/permissions.c`, against the permissions the
 storage layer reports: the `LEONACL.SYS` sidecar on exFAT and FAT32, native
 inode fields on ext2 and tmpfs, and fixed modes for PTY and device nodes. The
 mapping is:

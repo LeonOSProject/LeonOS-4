@@ -8,7 +8,7 @@ root = Path(__file__).resolve().parents[1]
 with tempfile.TemporaryDirectory(prefix="leonos-time-") as tmp:
     output = Path(tmp) / "time"
     subprocess.run(["cc", "-std=c11", "-g", "-O1", "-fsanitize=address,undefined",
-                    "-fno-pie", "-no-pie", "-Iinclude", "-Iinclude/uapi",
-                    "-Ikernel/ntclks/include", "tools/tests/nanosleep_state_test.c",
+                    "-fno-pie", "-no-pie", "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi",
+                    "-Ikernel/ntclks/kernel/ntclks/include", "tools/tests/nanosleep_state_test.c",
                     "-o", output], cwd=root, check=True)
     subprocess.run([output], cwd=root, check=True, timeout=20)

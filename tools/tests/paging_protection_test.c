@@ -5,7 +5,7 @@
 
 /* Exercise the real page-table implementation; only physical allocation and
  * privileged CPU operations are replaced by host fixtures. */
-#include "../../kernel/ntclks/arch/x86_64/paging.c"
+#include "../../kernel/ntclks/kernel/ntclks/arch/x86_64/paging.c"
 
 static struct { uint64_t address; unsigned refs; } pages[1024];
 

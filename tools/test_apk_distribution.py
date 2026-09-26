@@ -68,7 +68,7 @@ class DistributionTests(unittest.TestCase):
             key = distribution.signing_key(work / "signing/key.pem")
             output = work / "managed"
             distribution.build_distribution(source, output, work / "packages", apk, key)
-            header = (ROOT / "include/uapi/leonos/rootfs.h").read_text()
+            header = (ROOT / "kernel/ntclks/include/uapi/leonos/rootfs.h").read_text()
             desktop_path = re.search(r'#define LEONOS_DEFAULT_PATH "([^"]+)"', header).group(1)
             login_defs = (ROOT / "system/rootfs/etc/login.defs").read_text()
             tty_path = re.search(r'^ENV_PATH PATH=(.+)$', login_defs, re.MULTILINE).group(1)

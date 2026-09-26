@@ -1,8 +1,8 @@
 /* Execute the real inventory parsers and namespace against hardware fixtures. */
 #define TEST_REAL_INVENTORY
-#include "../../kernel/ntclks/cpuinfo.c"
-#include "../../kernel/ntclks/platform.c"
-#include "../../kernel/ntclks/sysfs.c"
+#include "../../kernel/ntclks/kernel/ntclks/cpuinfo.c"
+#include "../../kernel/ntclks/kernel/ntclks/platform.c"
+#include "../../kernel/ntclks/kernel/ntclks/sysfs.c"
 #define main proc_fixture_main
 #include "procfs_directories_test.c"
 #undef main

@@ -2,7 +2,7 @@
 MUSL_SDK := $(O)/sdk/leonos-musl-sdk
 MUSL_SDK_ARCHIVE := $(O_PACKAGES)/leonos-musl-sdk.tar.gz
 SDK_EPOCH := $(or $(SOURCE_DATE_EPOCH),$(shell git -C $(LEONOS_SRC) show -s --format=%ct HEAD))
-SDK_INPUT_HEADERS := $(shell find $(LEONOS_SRC)/include/uapi $(LEONOS_SRC)/include/leonos $(LEONOS_SRC)/userland/runtime/include/leonos -type f -name '*.h' | LC_ALL=C sort)
+SDK_INPUT_HEADERS := $(shell find $(NTCLKS_DIR)/include/uapi $(LEONOS_SRC)/include/leonos $(LEONOS_SRC)/userland/runtime/include/leonos -type f -name '*.h' | LC_ALL=C sort)
 LEONOS_SIG_sdk := epoch=$(SDK_EPOCH)|headers=$(SDK_INPUT_HEADERS)|driver=$(LEONOS_SDK_DRIVER)
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,sdk)))
 

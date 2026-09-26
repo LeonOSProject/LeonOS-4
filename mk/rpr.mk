@@ -11,6 +11,17 @@ RPR_INPUTS := $(wildcard $(LEONOS_SRC)/third_party/rime-pinyin-simp/* $(LEONOS_S
 $(RPR_APP_PACKAGES) &: $(addprefix $(USERLAND_DIR)/,helloworld.elf doom.elf doomlauncher.elf oschinpt.elf) $(OSCHINPT_INDEX) $(BUILD_INFO_HEADER) $(RPR_INPUTS) $(APK_MANIFEST) $(LEONOS_SRC)/tools/build/rpr-apps.sh
 	$(Q)sh $(LEONOS_SRC)/tools/build/rpr-apps.sh $(LEONOS_SRC) $(O) $(BUILD_INFO_HEADER) $(OSCHINPT_INDEX) $(UPSTREAM_APK) '$(APK_SIGNING_KEY)' $(RPR_APPS) $(SOURCE_DATE_EPOCH)
 RPR_PAGES := $(O)/rpr-pages
+# --- release guard (design §8: 开发构建可 dirty，发布构建必须拒绝) -----------
+# Release artifacts (rpr-pages and `make release`) must come from a clean
+# kernel/ntclks submodule exactly at the gitlink committed in HEAD. The plain
+# `all`/`kernel` targets are deliberately NOT gated. The check runs first as a
+# prerequisite of the phony `rpr-pages`/`release` aliases (serial make fails
+# fast, before anything is built) and again as the first line of the producing
+# recipe, so -j and direct goal invocations cannot publish from a bad tree.
+NTCLKS_RELEASE_GUARD_CMD = sh $(LEONOS_SRC)/tools/build/ntclks-release-guard.sh '$(LEONOS_SRC)' '$(NTCLKS_DIR)' 'kernel/ntclks'
+.PHONY: ntclks-release-guard
+ntclks-release-guard:
+	$(Q)$(NTCLKS_RELEASE_GUARD_CMD)
 # Kernel release metadata comes from the ntclks sub-build: $(NTCLKS_DEST)/manifest.txt
 # records the per-artifact sha256 of exactly the products the kernel checkout
 # installed, and the kernel's configs/build-version carries the release version.
@@ -18,6 +29,7 @@ RPR_PAGES := $(O)/rpr-pages
 # adapter rule rewrites both before this recipe can run), and a release.txt must
 # not be re-emitted when neither the bytes nor the version moved.
 $(RPR_PAGES)/.complete $(RPR_PAGES)/manifest.json &: $(RPR_APP_PACKAGES) $(APK_MANIFEST) $(APK_REPOSITORY)/packages.adb $(LEONOS_KERNEL_SYS) $(LOADER_ELF) $(LEONOS_SRC)/tools/build/rpr-pages.sh
+	$(Q)$(NTCLKS_RELEASE_GUARD_CMD)
 	$(Q)SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) sh $(LEONOS_SRC)/tools/build/rpr-pages.sh $(APK_REPOSITORY) $(RPR_APPS) $(LEONOS_KERNEL_SYS) $(LOADER_ELF) $(NTCLKS_DEST)/manifest.txt $(NTCLKS_DIR)/configs/build-version $(UPSTREAM_APK) '$(APK_SIGNING_KEY)' $(RPR_PAGES)
 	$(Q)sh $(LEONOS_SRC)/tools/build/stage-inventory.sh write $(RPR_PAGES) $(O_META)/rpr-pages.files
 $(O_META)/rpr-pages-present.sig: FORCE
@@ -25,5 +37,5 @@ $(O_META)/rpr-pages-present.sig: FORCE
 $(RPR_PAGES)/.complete $(RPR_PAGES)/manifest.json: $(O_META)/rpr-pages-present.sig $(LEONOS_SRC)/tools/build/stage-inventory.sh
 .PHONY: rpr-apps rpr-pages
 rpr-apps: $(RPR_APP_PACKAGES)
-rpr-pages: $(RPR_PAGES)/.complete $(RPR_PAGES)/manifest.json
+rpr-pages: ntclks-release-guard $(RPR_PAGES)/.complete $(RPR_PAGES)/manifest.json
 tools: $(LEONOS_OSCHINPT_INDEX)

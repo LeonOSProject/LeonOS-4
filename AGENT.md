@@ -30,7 +30,7 @@ LeonOS 4 是面向 x86_64、UEFI 启动的操作系统项目。正常系统使�
 ```text
 UEFI/GRUB
   -> boot/ loader.elf
-  -> kernel/ntclks (kernel.sys, Ring 0)
+  -> kernel/ntclks 子仓产物 kernel.sys（Ring 0）
   -> userland init.elf
   -> desktop.elf（窗口服务器）
   -> 登录 / OOBE / 服务 / 普通桌面应用
@@ -45,9 +45,8 @@ installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
 
 | 路径 | 职责 |
 | --- | --- |
-| `boot/` | UEFI loader、GRUB 配置、早期显示和完整性装载。 |
-| `kernel/ntclks/` | 内核：调度、内存、ELF 进程、syscall、GUI IPC、网络、驱动管理、权限判定，以及 `lib/` 下的内核内部工具。 |
-| `drivers/` | 可加载 Ring-0 驱动模块及其打包输入；`bootstrap/storage/` 还实现文件系统与 `LEONACL.SYS` 权限元数据。 |
+| `boot/` | GRUB 配置与 EFI 模块；loader 源码在内核子仓 `boot/loader/`。 |
+| `kernel/ntclks/` | 内核子仓（gitlink，github.com/LeonOSProject/NTCLKS）：内核核心（调度、内存、ELF 进程、syscall、GUI IPC、网络、驱动管理、权限判定与 `lib/` 内部工具）、`drivers/`、`boot/loader/`、`include/uapi` 与内核侧 `include/leonos/`，内部保持原始嵌套布局。首次使用执行 `git submodule update --init --recursive`，并在子仓内 `make fetch`（其缓存不入库）。 |
 | `userland/runtime/` | LeonOS libc、syscall 包装、UI/字体、网络/HTTP/TLS、PTY 等公共实现。 |
 | `userland/apps/` | Ring-3 系统与桌面应用；`desktop/` 是窗口服务器，其他应用为它的客户端。 |
 | `userland/{busybox,cmd,stardustui}/` | 第三方软件的 LeonOS 端口、适配层与构建输入。 |
@@ -66,8 +65,8 @@ installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
   `syscall`；参数使用 `rax/rdi/rsi/rdx/r10/r8/r9`，负返回值为
   `-errno`。已实现接口才可视为可用，未知 syscall 返回 `-ENOSYS`。
 - 内核负责用户指针与长度验证、页表/进程资源、硬件和最终授权。
-- 内核内部能力按职责直接落在 `kernel/ntclks/`（含 `lib/` 工具）和
-  `drivers/bootstrap/storage/`（文件系统与 `LEONACL.SYS` 权限元数据），全部编译进
+- 内核内部能力按职责直接落在内核子仓的 `kernel/ntclks/kernel/ntclks/`（含 `lib/` 工具）和
+  `kernel/ntclks/drivers/bootstrap/storage/`（文件系统与 `LEONACL.SYS` 权限元数据），全部编译进
   kernel.sys；不存在跨模块 callback 表或第二个启动镜像。用户态与内核之间只有
   syscall/ioctl ABI 和 GUI IPC。职责归属与旧数据格式的兼容策略见
   `docs/KERNEL_USERSPACE_BOUNDARIES.md`。
@@ -75,7 +74,7 @@ installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
   的私有像素内存。应用提交自己的缓冲内容；不要把窗口服务器内部 buffer
   当作公共 ABI。
 - 来宾运行路径使用 Unix 根目录格式，例如 `/usr/lib/leonos/apps/desktop/desktop.elf`；
-  仓库源码路径（`system/`、`drivers/`、`docs/`）是构建输入，不等于来宾路径。
+  仓库源码路径（`system/`、`kernel/ntclks/drivers/`、`docs/`）是构建输入，不等于来宾路径。
   现行 rootfs 契约见 `docs/ROOTFS_LAYOUT_AND_MIGRATION.md`。
   相对路径依赖任务当前目录；路径统一使用 Unix 根目录语义。
 
@@ -85,7 +84,7 @@ installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
 都要逐项检查以下闭环，不能只修改一处：
 
 1. `include/leonos/*.h`：公共定义、常量、结构布局、权限语义和返回值。
-2. `kernel/ntclks/`：编号、用户范围检查、权限检查、实现和错误路径。
+2. `kernel/ntclks/kernel/ntclks/`（内核子仓）：编号、用户范围检查、权限检查、实现和错误路径。
 3. `userland/runtime/include/` 与 `userland/runtime/src/`：声明、包装和实现。
 4. 使用该 API 的系统应用、窗口服务器及相关测试程序。
 5. `configs/header-export.list` 白名单与 `headers_install` 导出：SDK/用户态只消费
@@ -255,7 +254,7 @@ make test-smoke
 
 ## 8. 代码注释规范
 
-`kernel/ntclks/` 中的每个函数定义和公共函数声明必须紧贴
+`kernel/ntclks/kernel/ntclks/`（内核子仓）中的每个函数定义和公共函数声明必须紧贴
 Doxygen 风格块注释。C 与汇编预处理源统一使用 `/** ... */`，格式如下：
 
 ```c

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ntclks/lock.h>
-#include "../../kernel/ntclks/syscall_mm.c"
+#include "../../kernel/ntclks/kernel/ntclks/syscall_mm.c"
 
 static unsigned char file_bytes[8192];
 static uint64_t mapped;

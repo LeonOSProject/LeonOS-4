@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../kernel/ntclks/arch/x86_64/paging.c"
-#include "../../kernel/ntclks/syscall_mm.c"
+#include "../../kernel/ntclks/kernel/ntclks/arch/x86_64/paging.c"
+#include "../../kernel/ntclks/kernel/ntclks/syscall_mm.c"
 
 static unsigned allocated;
 static bool fail_alloc;

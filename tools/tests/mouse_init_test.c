@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../../drivers/mouse/mouse.c"
+#include "../../kernel/ntclks/drivers/mouse/mouse.c"
 
 static uint8_t aux_next;
 static uint8_t ack_pending;

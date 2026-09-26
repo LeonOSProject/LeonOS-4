@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../drivers/bootstrap/storage.c"
+#include "../../kernel/ntclks/drivers/bootstrap/storage.c"
 
 static int test_fail_cache_alloc;
 void *kernel_malloc(size_t size) { return malloc(size); }

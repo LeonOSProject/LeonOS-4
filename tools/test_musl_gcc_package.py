@@ -55,7 +55,7 @@ def verify(root: Path) -> None:
             (work / "header.c").write_text(f"#include <{header}>\n")
             run("cpp", "header.c", "-o", "header.i")
         subprocess.run(["cc", "-D_GNU_SOURCE", "-O1", "-g", "-fsanitize=address,undefined",
-                        "-I" + str(ROOT / "include"), "-I" + str(ROOT / "include/uapi"),
+                        "-I" + str(ROOT / "include"), "-I" + str(ROOT / "kernel/ntclks/include/uapi"),
                         str(ROOT / "tools/tests/installer_directory_test.c"),
                         "-o", str(work / "installer-directory")], check=True)
         subprocess.run([work / "installer-directory"], check=True)

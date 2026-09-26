@@ -23,19 +23,35 @@ ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tools/tests/abi_layout_golden.json"
 
 # Headers that hold user/kernel wire contracts (pre- and post-split).
+# Paths are relative to the repository root: the UAPI surface and the
+# kernel-side leonos heads now live in the ntclks submodule
+# (kernel/ntclks/...); the runtime/forwarder heads stay in include/leonos.
 WIRE_HEADERS = [
-    "uapi/leonos/auth_user.h", "uapi/leonos/fs_abi.h", "uapi/leonos/net_control.h",
-    "uapi/leonos/rootfs.h", "uapi/leonos/syscall_abi.h",
-    "leonos/audio.h", "leonos/auth.h", "leonos/boot_handoff.h", "leonos/device.h",
-    "leonos/driver.h", "leonos/elf_abi.h", "leonos/gpu.h", "leonos/inputm.h",
-    "leonos/kernel_debug.h", "leonos/net.h", "leonos/pty.h", "leonos/signal.h",
-    "leonos/startup.h", "leonos/system.h",
+    "kernel/ntclks/include/uapi/leonos/auth_user.h",
+    "kernel/ntclks/include/uapi/leonos/fs_abi.h",
+    "kernel/ntclks/include/uapi/leonos/net_control.h",
+    "kernel/ntclks/include/uapi/leonos/rootfs.h",
+    "kernel/ntclks/include/uapi/leonos/syscall_abi.h",
+    "include/leonos/audio.h", "include/leonos/auth.h",
+    "kernel/ntclks/include/leonos/boot_handoff.h", "include/leonos/device.h",
+    "kernel/ntclks/include/leonos/driver.h", "kernel/ntclks/include/leonos/elf_abi.h",
+    "include/leonos/gpu.h", "include/leonos/inputm.h",
+    "include/leonos/kernel_debug.h", "include/leonos/net.h", "include/leonos/pty.h",
+    "include/leonos/signal.h",
+    "include/leonos/startup.h", "include/leonos/system.h",
     # split targets, once they exist
-    "uapi/leonos/audio_abi.h", "uapi/leonos/auth_abi.h", "uapi/leonos/device_abi.h",
-    "uapi/leonos/driver_abi.h", "uapi/leonos/gpu_abi.h", "uapi/leonos/inputm_abi.h",
-    "uapi/leonos/kernel_debug_abi.h", "uapi/leonos/net_abi.h",
-    "uapi/leonos/startup_abi.h", "uapi/leonos/system_abi.h",
-    "uapi/leonos/pty_abi.h", "uapi/leonos/signal_abi.h",
+    "kernel/ntclks/include/uapi/leonos/audio_abi.h",
+    "kernel/ntclks/include/uapi/leonos/auth_abi.h",
+    "kernel/ntclks/include/uapi/leonos/device_abi.h",
+    "kernel/ntclks/include/uapi/leonos/driver_abi.h",
+    "kernel/ntclks/include/uapi/leonos/gpu_abi.h",
+    "kernel/ntclks/include/uapi/leonos/inputm_abi.h",
+    "kernel/ntclks/include/uapi/leonos/kernel_debug_abi.h",
+    "kernel/ntclks/include/uapi/leonos/net_abi.h",
+    "kernel/ntclks/include/uapi/leonos/startup_abi.h",
+    "kernel/ntclks/include/uapi/leonos/system_abi.h",
+    "kernel/ntclks/include/uapi/leonos/pty_abi.h",
+    "kernel/ntclks/include/uapi/leonos/signal_abi.h",
 ]
 
 # Numeric constants whose value is ABI (ioctl/magic/version/enum encodings).
@@ -59,15 +75,19 @@ CONSTANTS = [
     "LEONOS_FS_TYPE_FILE", "LEONOS_FS_TYPE_DIR",
 ]
 
-INCLUDES = ["-I", str(ROOT / "include/uapi"), "-I", str(ROOT / "include"),
-            "-I", str(ROOT / "userland/runtime/include"), "-I", str(ROOT / "include/uapi")]
+# The submodule include dir comes first so <leonos/driver.h> resolves to the
+# kernel-owned full module-API copy, not the parent's trimmed runtime copy.
+INCLUDES = ["-I", str(ROOT / "kernel/ntclks/include"),
+            "-I", str(ROOT / "kernel/ntclks/include/uapi"),
+            "-I", str(ROOT / "include"),
+            "-I", str(ROOT / "userland/runtime/include")]
 
 
 def wire_header_paths():
     """Existing wire headers; optional split targets are skipped until present."""
     paths = []
     for relative in WIRE_HEADERS:
-        path = ROOT / "include" / relative
+        path = ROOT / relative
         if path.is_file():
             paths.append(path)
     return paths

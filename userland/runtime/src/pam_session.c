@@ -4,7 +4,7 @@
 #include <grp.h>
 #include <leonos/pam_session.h>
 #include <leonos/ui.h>
-#include <uapi/leonos/rootfs.h>
+#include <leonos/rootfs.h>
 #include <pwd.h>
 #include <security/pam_appl.h>
 #include <signal.h>

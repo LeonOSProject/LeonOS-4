@@ -22,7 +22,7 @@ COMMON_FLAGS = [
     "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
     "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
     "-Wall", "-Wextra", "-Werror",
-    "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
+    "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-idirafter", "userland/runtime/include",
     "-Iuserland/apps/authd",
 ]
 

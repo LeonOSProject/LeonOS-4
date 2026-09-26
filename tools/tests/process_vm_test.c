@@ -8,8 +8,8 @@
 #include <linux/capability.h>
 #undef NTCLKS_KERNEL_DIRECT_MAP_BASE
 #define NTCLKS_KERNEL_DIRECT_MAP_BASE 0
-#include "../../kernel/ntclks/arch/x86_64/paging.c"
-#include "../../kernel/ntclks/syscall_process_vm.c"
+#include "../../kernel/ntclks/kernel/ntclks/arch/x86_64/paging.c"
+#include "../../kernel/ntclks/kernel/ntclks/syscall_process_vm.c"
 
 static struct task caller, target;
 static unsigned allocations, faults;

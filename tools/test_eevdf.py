@@ -11,7 +11,7 @@ with tempfile.TemporaryDirectory(prefix="leonos-eevdf-") as tmp:
         subprocess.run(["cc", "-std=c11", "-O2", "-g", "-Wall", "-Wextra",
                     "-fsanitize=address,undefined", "-fno-pie", "-no-pie",
                     "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                    "-Iinclude", "-Iinclude/uapi", "-Ikernel/ntclks/include",
+                    "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
                     f"tools/tests/{name}_test.c", "-o", binary],
                    cwd=ROOT, check=True)
         subprocess.run([binary], check=True, timeout=30)

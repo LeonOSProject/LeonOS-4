@@ -225,7 +225,9 @@ all: kernel userland runtime sdk apk-repo image-vmdk iso installer
 
 .PHONY: image-iso release config-sync build-info test-all
 image-iso: iso
-release: all pages
+# `release` is gated by the ntclks release guard (mk/rpr.mk): release builds
+# must come from a clean kernel/ntclks submodule at the committed gitlink.
+release: ntclks-release-guard all pages
 config-sync: $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(LEONOS_COMPONENT_MK)
 build-info: $(BUILD_INFO_HEADER)
 test-all: test test-long test-legacy test-smoke

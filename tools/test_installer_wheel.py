@@ -13,7 +13,7 @@ def main():
     subprocess.run([
         "clang", "-std=c11", "-g", "-O1", "-Wall", "-Wextra", "-Werror",
         "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
-        "-Iinclude", "-Iinclude/uapi", "tools/tests/installer_wheel_test.c",
+        "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "tools/tests/installer_wheel_test.c",
         "userland/auth/standard_accounts.c", "userland/auth/account_store.c",
         "userland/runtime/src/auth_password.c", "-pthread", "-lcrypt", "-o", str(binary),
     ], cwd=ROOT, check=True)

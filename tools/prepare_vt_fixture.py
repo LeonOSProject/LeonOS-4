@@ -12,7 +12,7 @@ def prepare(source, output, text_only=False):
     output.mkdir(parents=True, exist_ok=False)
     probe = output / 'vt-probe'
     compiler = ROOT / 'out/x86_64/release/sdk/leonos-musl-sdk/bin/leonos-musl-cc'
-    subprocess.run([str(compiler), '-D_GNU_SOURCE', '-static', '-Iinclude', '-Iinclude/uapi',
+    subprocess.run([str(compiler), '-D_GNU_SOURCE', '-static', '-Iinclude', '-Ikernel/ntclks/include/uapi',
                     'tools/tests/vt_guest_test.c', '-o', str(probe)], cwd=ROOT, check=True)
     disk = output / 'disk.raw'
     subprocess.run(['cp', '--reflink=auto', '--sparse=always', str(source), str(disk)], check=True)

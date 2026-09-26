@@ -14,7 +14,7 @@ class RuntimeResponsivenessTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Iinclude/uapi",
+                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Ikernel/ntclks/include", "-Ikernel/ntclks/include/uapi",
                 "tools/tests/wind_framebuffer_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -25,7 +25,7 @@ class RuntimeResponsivenessTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Iinclude/uapi",
+                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Ikernel/ntclks/include", "-Ikernel/ntclks/include/uapi",
                 "tools/tests/wind_surface_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -36,9 +36,9 @@ class RuntimeResponsivenessTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-Iinclude", "-Iinclude/uapi", "-Ikernel/ntclks/include",
-                "tools/tests/signal_address_space_test.c", "kernel/ntclks/syscall_sysv_sem.c",
-                "kernel/ntclks/syscall_locks.c", "-o", executable,
+                "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
+                "tools/tests/signal_address_space_test.c", "kernel/ntclks/kernel/ntclks/syscall_sysv_sem.c",
+                "kernel/ntclks/kernel/ntclks/syscall_locks.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
 

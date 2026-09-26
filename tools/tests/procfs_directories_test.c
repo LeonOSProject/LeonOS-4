@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "../../kernel/ntclks/procfs.c"
+#include "../../kernel/ntclks/kernel/ntclks/procfs.c"
 
 static struct task current = {.pid = 42, .name = "test", .uid = 1000};
 static struct task foreign = {.pid = 43, .name = "foreign", .uid = 2000};

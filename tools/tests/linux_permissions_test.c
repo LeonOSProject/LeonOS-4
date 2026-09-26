@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../../kernel/ntclks/permissions.c"
+#include "../../kernel/ntclks/kernel/ntclks/permissions.c"
 
 static struct fixture {
     const char *path;

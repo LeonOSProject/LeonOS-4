@@ -231,7 +231,7 @@ gaps already recorded below. Older leonos4.iso/raw/vmdk images have not been
 regenerated for this integration and must not be used as the new delivery.
 
 CPU evidence correction: historical LeonOS commands requested `-smp 2`, but
-`kernel/ntclks/arch/x86_64/smp.c` sets `SMP_USER_SCHEDULER_ENABLED` to zero.
+`kernel/ntclks/kernel/ntclks/arch/x86_64/smp.c` sets `SMP_USER_SCHEDULER_ENABLED` to zero.
 Their serial logs report one online CPU, including credentials guest02 and
 tty-session guest09. Every such result below is single-CPU, including musl's
 thread coordination tests. Actual LeonOS SMP synchronization and validation
@@ -318,7 +318,7 @@ of an active broker or pending policy activation here describes that baseline;
 the integration section and current matrix below describe the final source.
 
 - `include/leonos/auth_db.h` in the prompt is actually
-  `include/uapi/leonos/auth_db.h`.
+  `kernel/ntclks/include/uapi/leonos/auth_db.h`.
 - `syscall_process.c` already implements saved and filesystem ID fields,
   capget/capset and dumpable changes. Their existence does not establish Linux
   semantics: initially setuid/setgid used real UID privilege checks, and capset
@@ -338,7 +338,7 @@ the integration section and current matrix below describe the final source.
   fork/clone, and defers over-limit UID changes to exec. Other resources still
   return ENOSYS; complete pam_limits enforcement is not established.
 - AT_UID/AT_EUID/AT_GID/AT_EGID/AT_SECURE already exist in
-  `kernel/ntclks/user/userland.c:prepare_user_exec_stack`. AT_SECURE currently
+  `kernel/ntclks/kernel/ntclks/user/userland.c:prepare_user_exec_stack`. AT_SECURE currently
   includes exec capability transitions and unequal IDs. Ordinary exec now resets
   saved/fs IDs and applies bounding/ambient/securebits/NNP transitions; actual
   held ext2 ELF set-ID transitions and nosuid are now implemented and the five-case

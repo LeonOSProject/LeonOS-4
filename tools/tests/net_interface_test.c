@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "../../kernel/ntclks/net.c"
+#include "../../kernel/ntclks/kernel/ntclks/net.c"
 
 static struct task current;
 struct task *sched_current_task(void) { return &current; }

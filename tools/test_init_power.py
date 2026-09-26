@@ -9,6 +9,6 @@ with tempfile.TemporaryDirectory(prefix="init-power-") as directory:
     binary = Path(directory) / "init-power"
     subprocess.run(["cc", "-std=gnu11", "-O1", "-g", "-ffunction-sections", "-fdata-sections",
                     "-Wl,--gc-sections", "-fsanitize=address,undefined",
-                    "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
+                    "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-idirafter", "userland/runtime/include",
                     "tools/tests/init_power_test.c", "-o", str(binary)], cwd=ROOT, check=True)
     subprocess.run([str(binary)], check=True, timeout=10)

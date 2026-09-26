@@ -23,7 +23,7 @@ libc，但新应用不得增加对私有硬件入口的依赖。Linux 兼容范�
 
 ## 统一 UAPI
 
-内核和用户态共同使用 `include/uapi/linux` 下的定义，禁止在模块内重复
+内核和用户态共同使用 `kernel/ntclks/include/uapi/linux` 下的定义，禁止在模块内重复
 声明 syscall 编号、evdev/fbdev/tty 结构或 ioctl 编码。当前目录包括：
 
 - `linux/syscall.h`：x86_64 syscall 编号和 `SYS_*` 别名

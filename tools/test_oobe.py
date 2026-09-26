@@ -21,7 +21,7 @@ class OobeTests(unittest.TestCase):
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Iinclude/uapi",
+                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Ikernel/ntclks/include", "-Ikernel/ntclks/include/uapi",
                 "tools/tests/authd_input_test.c", *AUTH_SOURCES, *AUTH_FLAGS,
                 "-o", executable,
             ], cwd=ROOT, check=True)
@@ -33,7 +33,7 @@ class OobeTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
-                "-Iinclude", "-Iinclude/uapi",
+                "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi",
                 "tools/tests/authd_accounts_test.c", *AUTH_SOURCES, *AUTH_FLAGS,
                 "-o", executable,
             ], cwd=ROOT, check=True)
@@ -45,7 +45,7 @@ class OobeTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
+                "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-idirafter", "userland/runtime/include",
                 "tools/tests/oobe_network_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -56,7 +56,7 @@ class OobeTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
+                "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-idirafter", "userland/runtime/include",
                 "tools/tests/oobe_startup_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -67,7 +67,7 @@ class OobeTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Iinclude/uapi",
+                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Ikernel/ntclks/include", "-Ikernel/ntclks/include/uapi",
                 "tools/tests/oobe_auth_boot_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             for scenario in ("stale", "missing", "denied", "database-formats"):
@@ -80,7 +80,7 @@ class OobeTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
+                "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-idirafter", "userland/runtime/include",
                 "tools/tests/oobe_window_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -92,7 +92,7 @@ class OobeTests(unittest.TestCase):
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ftrivial-auto-var-init=zero",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Iinclude/uapi",
+                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Ikernel/ntclks/include", "-Ikernel/ntclks/include/uapi",
                 "tools/tests/oobe_inputm_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             for scenario in ("list", "state", "active", "context", "notify", "denied"):

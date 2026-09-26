@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
-#include "../../kernel/ntclks/mm/mm.c"
+#include "../../kernel/ntclks/kernel/ntclks/mm/mm.c"
 
 void console_printf(const char *format, ...) { (void)format; }
 const struct framebuffer *framebuffer_get(void) { static struct framebuffer fb; return &fb; }

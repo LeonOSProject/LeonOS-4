@@ -21,7 +21,7 @@ def run(command,**kwargs):
 def host():
     executable=WORK/'inventory-host'
     run(['cc','-std=c11','-O1','-g','-fsanitize=address,undefined','-ffunction-sections','-fdata-sections','-Wl,--gc-sections',
-         '-Iinclude','-Iinclude/uapi','-Ikernel/ntclks/include','tools/tests/linux_inventory_test.c','-o',executable])
+         '-Iinclude','-Ikernel/ntclks/include/uapi','-Ikernel/ntclks/kernel/ntclks/include','tools/tests/linux_inventory_test.c','-o',executable])
     run([executable])
 
 def guest(args):

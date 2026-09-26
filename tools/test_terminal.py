@@ -17,7 +17,7 @@ class TerminalTests(unittest.TestCase):
         subprocess.run([
             "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
             "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-            "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
+            "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-idirafter", "userland/runtime/include",
             "tools/tests/terminal_session_test.c", "-lutil",
             "-o", cls.executable,
         ], cwd=ROOT, check=True)

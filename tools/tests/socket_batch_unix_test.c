@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../kernel/ntclks/syscall_socket.c"
-#include "../../kernel/ntclks/syscall_socket_batch.c"
+#include "../../kernel/ntclks/kernel/ntclks/syscall_socket.c"
+#include "../../kernel/ntclks/kernel/ntclks/syscall_socket_batch.c"
 
 static struct task current;
 static struct unix_socket peers[2];

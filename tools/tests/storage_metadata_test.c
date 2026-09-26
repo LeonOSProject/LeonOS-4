@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../drivers/bootstrap/storage/storage_internal.h"
+#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_internal.h"
 
 static FILE *disk;
 static unsigned locked;
@@ -47,8 +47,8 @@ static int fat32_read_fat_entry(uint32_t cluster, uint32_t *out)
 static int exfat_bitmap_get_cached(uint32_t cluster, uint8_t *out)
 { *out = cluster != 3 && cluster != 5; return read_error; }
 
-#include "../../drivers/bootstrap/storage/storage_permissions.c"
-#include "../../drivers/bootstrap/storage/storage_statfs.c"
+#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_permissions.c"
+#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_statfs.c"
 
 int main(int argc, char **argv)
 {

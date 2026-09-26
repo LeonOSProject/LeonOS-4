@@ -14,7 +14,7 @@ def main():
     binary = work / "pam-login-case.elf"
     subprocess.run([*recipe["compiler"], "-g", "-O1", "-Wall", "-Wextra", "-Werror",
                     "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections,--export-dynamic",
-                    "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
+                    "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-idirafter", "userland/runtime/include",
                     "-I" + str(stage / "usr/include"), "tools/tests/pam_login_case_test.c",
                     "userland/auth/standard_accounts.c", "userland/auth/account_store.c",
                     "userland/runtime/src/auth_password.c", "-L" + str(stage / "lib"),

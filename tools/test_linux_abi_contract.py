@@ -19,8 +19,8 @@ def macro(text: str, name: str) -> int:
 
 
 def test_linux_numbers_and_flags() -> None:
-    syscall = read("include/uapi/linux/syscall.h")
-    fcntl = read("include/uapi/linux/fcntl.h")
+    syscall = read("kernel/ntclks/include/uapi/linux/syscall.h")
+    fcntl = read("kernel/ntclks/include/uapi/linux/fcntl.h")
     assert macro(syscall, "__NR_pause") == 34
     assert macro(syscall, "__NR_arch_prctl") == 158
     assert macro(syscall, "__NR_set_tid_address") == 218
@@ -32,9 +32,9 @@ def test_linux_numbers_and_flags() -> None:
 
 def test_native_syscall_entry_and_stack_protocol() -> None:
     syscall_asm = read("userland/runtime/src/syscall.S")
-    boot_asm = read("kernel/ntclks/arch/x86_64/boot.S")
-    gdt = read("kernel/ntclks/arch/x86_64/gdt.c")
-    userland = read("kernel/ntclks/user/userland.c")
+    boot_asm = read("kernel/ntclks/kernel/ntclks/arch/x86_64/boot.S")
+    gdt = read("kernel/ntclks/kernel/ntclks/arch/x86_64/gdt.c")
+    userland = read("kernel/ntclks/kernel/ntclks/user/userland.c")
     assert "syscall" in syscall_asm and "int $0x80" not in syscall_asm
     assert "x86_64_syscall_entry" in boot_asm
     assert "X86_IA32_EFER" in gdt and "read_msr(X86_IA32_EFER) | 1ULL" in gdt
@@ -42,10 +42,10 @@ def test_native_syscall_entry_and_stack_protocol() -> None:
 
 
 def test_contract_fixes_are_present() -> None:
-    syscall_h = read("kernel/ntclks/include/ntclks/syscall.h")
-    process = read("kernel/ntclks/syscall_process.c")
-    syscall = read("kernel/ntclks/syscall.c")
-    ipc = read("kernel/ntclks/syscall_ipc.c")
+    syscall_h = read("kernel/ntclks/kernel/ntclks/include/ntclks/syscall.h")
+    process = read("kernel/ntclks/kernel/ntclks/syscall_process.c")
+    syscall = read("kernel/ntclks/kernel/ntclks/syscall.c")
+    ipc = read("kernel/ntclks/kernel/ntclks/syscall_ipc.c")
     assert "LINUX_SYS_PAUSE" in syscall_h
     assert "LINUX_SYS_NICE __NR_nice" not in syscall_h
     assert "SIG_BLOCK=0" in process or "SIG_BLOCK" in process

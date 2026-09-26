@@ -43,3 +43,6 @@
 [submodule "third_party/kconfig-frontends"]
 	path = third_party/kconfig-frontends
 	url = https://github.com/movidius/kconfig-frontends.git
+[submodule "kernel/ntclks"]
+	path = kernel/ntclks
+	url = https://github.com/LeonOSProject/NTCLKS.git

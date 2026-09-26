@@ -33,6 +33,8 @@ make run
 ```
 
 `make fetch` 是唯一联网阶段，校验 `configs/dependencies.lock.json` 中的摘要。
+`kernel/ntclks` 子仓另有独立缓存：`git submodule update --init --recursive` 会初始化它
+及其嵌套子仓，首次构建前还需在子仓内执行一次 `make fetch`。
 构建缺缓存时会报错，不会暗中下载。`make doctor` 实际检查目标编译、compiler-rt
 及镜像工具。Clang 必须包含 x86_64 compiler-rt builtins；仅有头文件不够。
 
@@ -76,14 +78,13 @@ RPR 子树。`run-iso`、`run-installer` 启动对应镜像，`QEMU_KVM=0` 可�
 根目录中的主要源码、构建输入和工具按职责组织如下：
 
 - `arch/`：各架构相关说明和预留代码（当前主要支持 x86_64）。
-- `boot/`：GRUB 配置、启动汇编和早期 loader 源代码。
+- `boot/`：GRUB 配置与 EFI 模块；loader 源码在内核子仓 `boot/loader/`。
 - `Makefile` 与 `mk/`：GNU Make 构建入口和依赖规则。
 - `tools/host/`、`tools/build/`：C 数据工具和短上游构建适配器。
 - `configs/`：组件清单、默认配置和可提交的构建 profile。
 - `docs/`：架构、ABI、构建、文件系统、安全和工具文档。
-- `drivers/`：可加载的 Ring-0 驱动及其构建输入；`drivers/bootstrap/storage/` 实现文件系统、启动挂载和 `LEONACL.SYS` 权限元数据。
-- `include/`：内核与用户态共用的公共 C 头文件；生成头文件位于 `include/generated/`。
-- `kernel/ntclks/`：LeonOS 内核，包括调度、内存、ELF、系统调用、GUI IPC、网络和权限判定。
+- `include/`：公共 C 头文件（`leonos/`）与生成头（`generated/`）；UAPI 头在内核子仓 `include/uapi/`。
+- `kernel/ntclks/`：内核子仓（gitlink，github.com/LeonOSProject/NTCLKS），含 LeonOS 内核核心、`drivers/`、`boot/loader/` 与 `include/uapi`；首次使用执行 `git submodule update --init --recursive` 并在其中 `make fetch`。
 - `los2w/`：宿主机上的 LeonOS/Windows 兼容工具和模拟器代码。
 - `system/`：镜像中 staging 的系统配置、字体、证书、壁纸、图标和其他资源。
 - `test/`：测试输入和测试资源。
@@ -97,7 +98,7 @@ RPR 子树。`run-iso`、`run-installer` 启动对应镜像，`QEMU_KVM=0` 可�
 
 ## 代码注释规范
 
-内核 `kernel/ntclks/` 的每个函数定义和公共函数
+内核子仓 `kernel/ntclks/kernel/ntclks/` 的每个函数定义和公共函数
 声明都必须使用 Doxygen 风格注释。C、C++ 和汇编预处理源均采用以下块注释形式，
 以便 Doxygen 读取：
 

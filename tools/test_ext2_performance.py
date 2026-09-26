@@ -22,7 +22,7 @@ def main():
                         "-O", "none,filetype", "-F", image, "32768"], check=True)
         subprocess.run(["cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                         "-fsanitize=address,undefined", "-ffunction-sections", "-fdata-sections",
-                        "-Wl,--gc-sections", "-Iinclude", "-Iinclude/uapi", "-Ikernel/ntclks/include",
+                        "-Wl,--gc-sections", "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
                         "tools/tests/ext2_performance_test.c", "-o", executable], cwd=ROOT, check=True)
         output = subprocess.check_output([executable, image], cwd=ROOT, text=True, timeout=180)
         result = [json.loads(line) for line in output.splitlines()]
