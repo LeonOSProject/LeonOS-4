@@ -39,5 +39,5 @@ leonos_app_registry_resolve("notepad", path, sizeof(path));
 leonos_app_registry_default_for_extension(".txt", path, sizeof(path));
 ```
 
-The public SDK header is `userland/libc/include/leonos/app.h`; it ships in the
+The public SDK header is `userland/runtime/include/leonos/app.h`; it ships in the
 relocatable musl SDK assembled by `make sdk`.

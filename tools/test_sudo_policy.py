@@ -22,13 +22,13 @@ COMMON_FLAGS = [
     "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
     "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
     "-Wall", "-Wextra", "-Werror",
-    "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/libc/include",
+    "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
     "-Iuserland/apps/authd",
 ]
 
 SUITES = (
     ("sudo-result", ["tools/tests/sudo_result_test.c"]),
-    ("sudo-password", ["tools/tests/sudo_password_test.c", "userland/libc/src/sudo_client.c"]),
+    ("sudo-password", ["tools/tests/sudo_password_test.c", "userland/runtime/src/sudo_client.c"]),
     ("sudod-paths", ["tools/tests/sudod_paths_test.c"]),
     ("sudo-policy", ["tools/tests/sudo_policy_test.c"]),
     ("authd-sudo", ["tools/tests/authd_sudo_test.c",
@@ -36,12 +36,12 @@ SUITES = (
     ("sudo-spawn", ["tools/tests/sudo_spawn_test.c",
                     "userland/apps/authd/authd_sudo.c"]),
     ("sudo-client", ["tools/tests/sudo_client_test.c",
-                     "userland/libc/src/sudo_client.c", "userland/libc/src/authd_client.c",
-                     "userland/libc/src/unix_ipc.c"]),
+                     "userland/runtime/src/sudo_client.c", "userland/runtime/src/authd_client.c",
+                     "userland/runtime/src/unix_ipc.c"]),
     ("sudo-security", ["tools/tests/sudo_security_test.c",
                        "userland/apps/authd/authd_sudo.c",
                        "userland/apps/authd/accounts.c",
-                       "userland/libc/src/auth_password.c",
+                       "userland/runtime/src/auth_password.c",
                        *[f"third_party/mbedtls/library/{name}.c" for name in
                          ("md", "pkcs5", "sha1", "sha256", "sha512", "platform_util", "aes")]]),
 )

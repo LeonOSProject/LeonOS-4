@@ -26,7 +26,7 @@
 
 #define SUDOD_RESULT_MAGIC 0x524f4453u /* 'SDOR' */
 
-/* Wire layout shared with userland/libc/src/sudo_client.c. Both sides read the
+/* Wire layout shared with userland/runtime/src/sudo_client.c. Both sides read the
  * same bytes; keep them in step when either changes. The public ABI headers
  * deliberately do not carry this: it is private to the broker. */
 struct sudod_result {

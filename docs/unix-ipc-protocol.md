@@ -81,7 +81,7 @@ password change, and elevation run through the PAM stack: `login.elf` calls
 sudoers/PAM policy (the `sudod.elf` askpass helper supports the legacy
 `leonos_sudo_*` libc API), and `pam_leonos_password` is the LeonOS-specific
 verifier module. The `leonos_auth_*` libc wrappers in
-`userland/libc/src/auth_accounts.c` read the passwd database directly with
+`userland/runtime/src/auth_accounts.c` read the passwd database directly with
 `getpwuid`-style calls; mutating operations run the standard tools as root
 or require the caller's own uid.
 

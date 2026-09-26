@@ -21,7 +21,7 @@ with tempfile.TemporaryDirectory(prefix="leonos-power-") as directory:
     subprocess.run([
         "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
         "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-        "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/libc/include",
+        "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
         "tools/tests/power_controls_test.c", "-o", controls,
     ], cwd=ROOT, check=True)
     subprocess.run([controls], cwd=ROOT, check=True, timeout=10)
@@ -29,7 +29,7 @@ with tempfile.TemporaryDirectory(prefix="leonos-power-") as directory:
     subprocess.run([
         "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
         "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-        "-idirafter", "userland/libc/include", "-idirafter", "include", "-Iinclude/uapi",
+        "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Iinclude/uapi",
         "tools/tests/authd_power_test.c", "-o", daemon,
     ], cwd=ROOT, check=True)
     subprocess.run([daemon], cwd=ROOT, check=True, timeout=10)
@@ -37,7 +37,7 @@ with tempfile.TemporaryDirectory(prefix="leonos-power-") as directory:
     subprocess.run([
         "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
         "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-        "-idirafter", "userland/libc/include", "-idirafter", "include", "-Iinclude/uapi",
+        "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Iinclude/uapi",
         "tools/tests/authd_power_client_test.c", "-o", client,
     ], cwd=ROOT, check=True)
     subprocess.run([client], cwd=ROOT, check=True, timeout=10)

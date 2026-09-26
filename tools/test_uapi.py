@@ -9,7 +9,7 @@ from generate_linux_syscalls import header
 ROOT = Path(__file__).resolve().parents[1]
 assert (ROOT / "include/uapi/linux/syscall.h").read_text() == header()
 numeric_syscall = re.compile(r"^\s*#\s*define\s+(?:SYS_|__NR_|LINUX_SYS_)\w+\s+(?:0x[\da-fA-F]+|\d+)\b", re.M)
-for relative in ("kernel/ntclks/include/ntclks/syscall.h", "userland/libc/include/leonos/syscall.h"):
+for relative in ("kernel/ntclks/include/ntclks/syscall.h", "userland/runtime/include/leonos/syscall.h"):
     assert not numeric_syscall.search((ROOT / relative).read_text()), relative
 headers = sorted((ROOT / "include/uapi").rglob("*.h"))
 for language, compiler in (("c", "clang"), ("c++", "clang++")):

@@ -41,7 +41,7 @@ resource=$("$cc" -print-resource-dir)
     -nostdinc -isystem "$sysroot/include" -isystem "$resource/include" \
     -I"$tmp/usr/include" -I"${UPSTREAM_UAPI:-$src/include/uapi}" -I"$src/include" \
     -ffile-prefix-map="$src"=. -Wl,-z,relro,-z,now,--no-undefined \
-    "$src/userland/pam/pam_leonos_password.c" "$src/userland/libc/src/auth_password.c" \
+    "$src/userland/pam/pam_leonos_password.c" "$src/userland/runtime/src/auth_password.c" \
     -L"$tmp/lib" -lpam -o "$tmp/lib/security/pam_leonos_password.so"
 mkdir -p "$tmp/share/licenses/linux-pam"
 cp "$work/src/$directory/Copyright" "$tmp/share/licenses/linux-pam/LICENSE"

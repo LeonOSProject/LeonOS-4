@@ -17,7 +17,7 @@ int fixture_getpwuid_r(uid_t uid, struct passwd *record, char *buffer, size_t si
 #define close fixture_close
 #define getpwuid_r fixture_getpwuid_r
 #define leonos_readdir fixture_readdir
-#include "../../userland/libc/src/procsys.c"
+#include "../../userland/runtime/src/procsys.c"
 #undef open
 #undef read
 #undef close

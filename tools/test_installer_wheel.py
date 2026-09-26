@@ -15,7 +15,7 @@ def main():
         "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
         "-Iinclude", "-Iinclude/uapi", "tools/tests/installer_wheel_test.c",
         "userland/auth/standard_accounts.c", "userland/auth/account_store.c",
-        "userland/libc/src/auth_password.c", "-pthread", "-lcrypt", "-o", str(binary),
+        "userland/runtime/src/auth_password.c", "-pthread", "-lcrypt", "-o", str(binary),
     ], cwd=ROOT, check=True)
     subprocess.run([
         "bwrap", "--unshare-user", "--uid", "0", "--gid", "0",

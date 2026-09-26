@@ -22,8 +22,8 @@ REGION_PATTERNS: dict[str, tuple[str, ...]] = {
     ),
     "loader": ("boot/loader/**/*.c", "boot/loader/**/*.S"),
     "libc": (
-        "userland/libc/src/**/*.c", "userland/libc/src/**/*.S",
-        "userland/libc/src/**/*.cpp",
+        "userland/runtime/src/**/*.c", "userland/runtime/src/**/*.S",
+        "userland/runtime/src/**/*.cpp",
     ),
     "userland": (
         "userland/**/*.c", "userland/**/*.cpp", "userland/**/*.cc",
@@ -49,7 +49,7 @@ def include_flags(root: Path, region: str) -> list[str]:
         paths = common
     elif region in {"libc", "userland"}:
         paths = common + [
-            root / "userland/libc/include",
+            root / "userland/runtime/include",
             root / "build/musl/sysroot/include",
             root / "third_party/mbedtls/include",
             root / "third_party/zlib",
@@ -60,7 +60,7 @@ def include_flags(root: Path, region: str) -> list[str]:
         ]
     else:
         paths = [root / "include",
-                 root / "build/include", root / "userland/libc/include",
+                 root / "build/include", root / "userland/runtime/include",
                  root / "build/musl/sysroot/include"]
     return [f"-I{path.relative_to(root).as_posix()}" for path in paths if path.is_dir()]
 
@@ -117,11 +117,11 @@ def output_path(root: Path, source: Path) -> Path:
 
 
 def source_region(root: Path, source: Path, selected: str) -> str:
-    # A source can match multiple broad patterns (notably userland/libc).
+    # A source can match multiple broad patterns (notably userland/runtime).
     # Keep the most specific region first so its flags and headers win.
     if source.is_relative_to(root / "boot/loader"):
         return "loader"
-    if source.is_relative_to(root / "userland/libc") or source.is_relative_to(root / "third_party/mbedtls"):
+    if source.is_relative_to(root / "userland/runtime") or source.is_relative_to(root / "third_party/mbedtls"):
         return "libc"
     if source.is_relative_to(root / "kernel") or source.is_relative_to(root / "drivers"):
         return "kernel"

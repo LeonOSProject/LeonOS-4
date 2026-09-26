@@ -110,7 +110,7 @@ msgstr " 源码已截断"
 msgid " while pinging "
 msgstr "，目标 "
 
-#: userland/libc/src/ui.c:1767
+#: userland/runtime/src/ui.c:1767
 msgid "(none)"
 msgstr "(无)"
 
@@ -278,7 +278,7 @@ msgstr "所有应用"
 msgid "All are selected by default."
 msgstr "默认全部勾选。"
 
-#: userland/libc/src/ui.c:715
+#: userland/runtime/src/ui.c:715
 msgid "All files (*.*)"
 msgstr "所有文件 (*.*)"
 
@@ -306,7 +306,7 @@ msgstr "保留 Alpine 软件包及本地配置。"
 msgid "Alpine packages and local configuration are retained. Boot files are updated after the package transaction succeeds."
 msgstr "保留 Alpine 软件包和本地配置，软件包事务成功后再更新启动文件。"
 
-#: userland/libc/src/ui.c:1779
+#: userland/runtime/src/ui.c:1779
 msgid "Always use this app"
 msgstr "始终使用此应用"
 
@@ -642,11 +642,11 @@ msgstr "选择安装模式"
 msgid "Choose UI Style"
 msgstr "选择界面样式"
 
-#: userland/libc/src/ui.c:1759
+#: userland/runtime/src/ui.c:1759
 msgid "Choose a default program for this file type:"
 msgstr "选择此文件类型的默认程序:"
 
-#: userland/libc/src/ui.c:1760
+#: userland/runtime/src/ui.c:1760
 msgid "Choose a program to open this file:"
 msgstr "选择用于打开此文件的程序:"
 
@@ -1146,7 +1146,7 @@ msgstr "默认运行级别已更新"
 msgid "Default wallpaper restored"
 msgstr "已恢复默认壁纸"
 
-#: userland/libc/src/ui.c:1770
+#: userland/runtime/src/ui.c:1770
 msgid "Default:"
 msgstr "默认:"
 
@@ -1502,7 +1502,7 @@ msgstr "结束任务"
 msgid "End Task failed"
 msgstr "结束任务失败"
 
-#: userland/libc/src/ui.c:1012
+#: userland/runtime/src/ui.c:1012
 msgid "Enter a file name in "
 msgstr "请在以下位置输入文件名："
 
@@ -1542,7 +1542,7 @@ msgstr "现有系统检测失败"
 msgid "Extension"
 msgstr "扩展名"
 
-#: userland/libc/src/ui.c:1765
+#: userland/runtime/src/ui.c:1765
 msgid "Extension:"
 msgstr "扩展名:"
 
@@ -1606,11 +1606,11 @@ msgstr "文件已打开"
 msgid "File loaded, truncated"
 msgstr "文件已打开，内容被截断"
 
-#: userland/libc/src/ui.c:1121
+#: userland/runtime/src/ui.c:1121
 msgid "File name:"
 msgstr "文件名："
 
-#: userland/libc/src/ui.c:1004
+#: userland/runtime/src/ui.c:1004
 msgid "File not found "
 msgstr "找不到文件："
 
@@ -1622,19 +1622,19 @@ msgstr "文件系统"
 msgid "File system:"
 msgstr "文件系统:"
 
-#: userland/libc/src/ui.c:1017
+#: userland/runtime/src/ui.c:1017
 msgid "File type must match "
 msgstr "文件类型必须匹配："
 
-#: userland/libc/src/ui.c:1762
+#: userland/runtime/src/ui.c:1762
 msgid "File:"
 msgstr "文件:"
 
-#: userland/libc/src/ui.c:1128
+#: userland/runtime/src/ui.c:1128
 msgid "Files of type:"
 msgstr "文件类型："
 
-#: userland/libc/src/ui.c:1094
+#: userland/runtime/src/ui.c:1094
 msgid "Files:"
 msgstr "文件："
 
@@ -2294,7 +2294,7 @@ msgstr "已请求登录启动权限"
 msgid "Logo unavailable"
 msgstr "Logo 不可用"
 
-#: userland/libc/src/ui.c:1076
+#: userland/runtime/src/ui.c:1076
 msgid "Look in:"
 msgstr "查找范围："
 
@@ -2790,7 +2790,7 @@ msgstr "打开方式仅用于文件"
 msgid "Open With..."
 msgstr "打开方式..."
 
-#: userland/libc/src/ui.c:991
+#: userland/runtime/src/ui.c:991
 msgid "Open dir failed "
 msgstr "打开目录失败："
 
@@ -2818,7 +2818,7 @@ msgstr "打开输入法设置"
 msgid "OpenRC graphical session"
 msgstr "OpenRC 图形会话"
 
-#: userland/libc/src/ui.c:998
+#: userland/runtime/src/ui.c:998
 msgid "Opened "
 msgstr "已打开："
 
@@ -2858,7 +2858,7 @@ msgstr "其它"
 msgid "Other Users"
 msgstr "其他用户"
 
-#: userland/libc/src/ui.c:1031
+#: userland/runtime/src/ui.c:1031
 msgid "Overwrite canceled for "
 msgstr "已取消覆盖："
 
@@ -3138,7 +3138,7 @@ msgstr "程序或路径不存在。"
 msgid "Programs to replace"
 msgstr "要替换的程序"
 
-#: userland/libc/src/ui.c:1783
+#: userland/runtime/src/ui.c:1783
 msgid "Programs:"
 msgstr "程序:"
 
@@ -3198,7 +3198,7 @@ msgstr "就绪"
 msgid "Ready "
 msgstr "就绪 "
 
-#: userland/libc/src/ui.c:1254
+#: userland/runtime/src/ui.c:1254
 msgid "Ready in "
 msgstr "准备就绪："
 
@@ -3578,7 +3578,7 @@ msgstr "请先选择驱动"
 msgid "Select a file"
 msgstr "请选择一个文件"
 
-#: userland/libc/src/ui.c:979
+#: userland/runtime/src/ui.c:979
 msgid "Select a file in "
 msgstr "请在以下位置选择文件："
 
@@ -3638,7 +3638,7 @@ msgstr "选项已更改"
 msgid "Selection changed; operation cancelled"
 msgstr "选择已变更；操作已取消"
 
-#: userland/libc/src/ui.c:1122
+#: userland/runtime/src/ui.c:1122
 msgid "Selection:"
 msgstr "选择："
 
@@ -3690,7 +3690,7 @@ msgstr "会话"
 msgid "Session IPC"
 msgstr "会话 IPC"
 
-#: userland/libc/src/ui.c:1819
+#: userland/runtime/src/ui.c:1819
 msgid "Set Default"
 msgstr "设为默认"
 
@@ -4206,7 +4206,7 @@ msgstr "主题样式已更改"
 msgid "This document has no body."
 msgstr "此文档没有正文。"
 
-#: userland/libc/src/ui.c:1028
+#: userland/runtime/src/ui.c:1028
 msgid "This file already exists. Replace it?"
 msgstr "文件已存在。是否替换？"
 
@@ -4422,7 +4422,7 @@ msgstr "更新失败"
 msgid "Update completed successfully"
 msgstr "更新成功完成"
 
-#: userland/libc/src/ui.c:1776
+#: userland/runtime/src/ui.c:1776
 msgid "Update default program"
 msgstr "更新默认程序"
 

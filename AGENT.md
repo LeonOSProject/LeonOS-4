@@ -48,7 +48,7 @@ installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
 | `boot/` | UEFI loader、GRUB 配置、早期显示和完整性装载。 |
 | `kernel/ntclks/` | 内核：调度、内存、ELF 进程、syscall、GUI IPC、网络、驱动管理、权限判定，以及 `lib/` 下的内核内部工具。 |
 | `drivers/` | 可加载 Ring-0 驱动模块及其打包输入；`bootstrap/storage/` 还实现文件系统与 `LEONACL.SYS` 权限元数据。 |
-| `userland/libc/` | LeonOS libc、syscall 包装、UI/字体、网络/HTTP/TLS、PTY 等公共实现。 |
+| `userland/runtime/` | LeonOS libc、syscall 包装、UI/字体、网络/HTTP/TLS、PTY 等公共实现。 |
 | `userland/apps/` | Ring-3 系统与桌面应用；`desktop/` 是窗口服务器，其他应用为它的客户端。 |
 | `userland/{busybox,cmd,stardustui}/` | 第三方软件的 LeonOS 端口、适配层与构建输入。 |
 | `include/leonos/` | 公共 C ABI 头文件；修改公开 ABI 时优先检查这里。 |
@@ -86,7 +86,7 @@ installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
 
 1. `include/leonos/*.h`：公共定义、常量、结构布局、权限语义和返回值。
 2. `kernel/ntclks/`：编号、用户范围检查、权限检查、实现和错误路径。
-3. `userland/libc/include/` 与 `userland/libc/src/`：声明、包装和实现。
+3. `userland/runtime/include/` 与 `userland/runtime/src/`：声明、包装和实现。
 4. 使用该 API 的系统应用、窗口服务器及相关测试程序。
 5. `configs/header-export.list` 白名单与 `headers_install` 导出：SDK/用户态只消费
    导出结果，由 `tools/test_header_export.py` 校验；不维护手工 ABI 镜像副本。
@@ -117,7 +117,7 @@ UI 修改必须横向检查，而不是只改一个应用。典型关联范围�
 
 - `userland/apps/desktop/`：窗口管理、桌面、任务栏、开始菜单、状态栏、
   覆盖层、主题广播、图标和壁纸。
-- `userland/libc/src/ui*.c` 及公开 UI 头文件：控件、布局、绘制、文字输入、
+- `userland/runtime/src/ui*.c` 及公开 UI 头文件：控件、布局、绘制、文字输入、
   文件选择、窗口协议、主题状态与字体。
 - 所有受影响内置应用：窗口尺寸、焦点、键鼠、文本编辑、主题变化事件、
   图标/快捷方式和高 DPI/分辨率边界。

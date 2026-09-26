@@ -17,7 +17,7 @@ static int test_gettimeofday(struct timeval *value, void *zone)
 }
 
 #define gettimeofday test_gettimeofday
-#include "../../userland/libc/src/procsys.c"
+#include "../../userland/runtime/src/procsys.c"
 #undef gettimeofday
 
 unsigned long leonos_uptime_ms(void) { return 123456; }

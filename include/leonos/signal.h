@@ -8,7 +8,7 @@
  */
 #include <leonos/signal_abi.h>
 
-/* Defined in userland/libc/src/syscall.S. The kernel never names the symbol:
+/* Defined in userland/runtime/src/syscall.S. The kernel never names the symbol:
  * it records the address a signal setup passes as the handler restorer. */
 void leonos_rt_sigreturn_trampoline(void);
 

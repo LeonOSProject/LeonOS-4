@@ -10,7 +10,7 @@ PAM_INPUTS := $(PAM_PORT)/Makefile $(PAM_PORT)/configure.sh $(PAM_PORT)/install.
 LEONOS_SIG_pam := compiler=$(TARGET_CC)|target=$(TRIPLE_USER)|identity=$(shell $(TARGET_CC) --version 2>/dev/null | head -n1)
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,pam)))
 
-$(PAM_STAMP) $(PAM_LIB) $(PAM_HEADER) $(PAM_LEONOS_MODULE) &: $(AUTH_STAMP) $(LEONOS_AUTH_ARTIFACTS) $(MUSL_STAMP) $(LEONOS_LOCK) $(PAM_INPUTS) $(HEADER_EXPORT_MANIFEST) $(LEONOS_SRC)/tools/build/pam-stage.sh $(O_META)/pam.sig $(LEONOS_SRC)/userland/pam/pam_leonos_password.c $(LEONOS_SRC)/userland/libc/src/auth_password.c $(LEONOS_SRC)/include/leonos/auth.h
+$(PAM_STAMP) $(PAM_LIB) $(PAM_HEADER) $(PAM_LEONOS_MODULE) &: $(AUTH_STAMP) $(LEONOS_AUTH_ARTIFACTS) $(MUSL_STAMP) $(LEONOS_LOCK) $(PAM_INPUTS) $(HEADER_EXPORT_MANIFEST) $(LEONOS_SRC)/tools/build/pam-stage.sh $(O_META)/pam.sig $(LEONOS_SRC)/userland/pam/pam_leonos_password.c $(LEONOS_SRC)/userland/runtime/src/auth_password.c $(LEONOS_SRC)/include/leonos/auth.h
 	$(Q)mkdir -p $(dir $(PAM_STAMP)) $(O_LOGS)
 	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0;; esac; UPSTREAM_UAPI='$(abspath $(HEADER_EXPORT_INCLUDE))' sh $(LEONOS_SRC)/tools/build/pam-stage.sh $(LEONOS_SRC) $(abspath $(LEONOS_DEPS_TOOL)) $(LEONOS_LOCK) $(LEONOS_CACHE) \
 	 $(abspath $(PAM_WORK)) $(abspath $(PAM_ROOT)) $(abspath $(MUSL_SYSROOT)) $(abspath $(AUTH_ROOT)) $(TARGET_CC) $(TRIPLE_USER) \

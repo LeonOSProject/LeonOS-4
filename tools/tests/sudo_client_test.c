@@ -11,7 +11,7 @@
 #include <leonos/authd.h>
 #include <leonos/sudo.h>
 #include <leonos/unix_ipc.h>
-#include "../../userland/libc/src/authd_client_internal.h"
+#include "../../userland/runtime/src/authd_client_internal.h"
 
 /* The transport and client are real. A protocol peer runs at the host user's
  * UID; only the server-UID check is substituted, never password decisions. */

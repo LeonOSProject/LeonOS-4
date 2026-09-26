@@ -68,7 +68,7 @@ libc，但新应用不得增加对私有硬件入口的依赖。Linux 兼容范�
 ## GPU Rendering 子集
 
 GPU 渲染不属于 POSIX。当前 `syscall_gpu_dispatch()` 只识别 `LINUX_SYS_IOCTL`，
-没有新增 syscall 编号；`userland/libc/src/gpu.c` 的 `leonos_gpu_*` 兼容入口使用
+没有新增 syscall 编号；`userland/runtime/src/gpu.c` 的 `leonos_gpu_*` 兼容入口使用
 fd 3 控制通道，属于迁移表中的过渡实现（方案 A）。内核上下文按进程隔离，
 请求结构以 `size/version` 开头。应用应使用后续发布的版本化 GPU SDK 客户端
 函数；`leonos_gpu_*` 在应用消费者清零、严格检查启用并提升 GPU ABI 版本后删除。

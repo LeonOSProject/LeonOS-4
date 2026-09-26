@@ -11,7 +11,7 @@ cp -a "$sysroot/include" "$sysroot/lib" "$sysroot/share" "$tmp/"
 # kernel-owned source tree: the SDK must consume installed ABI, not sources.
 cp -a "$export/." "$tmp/include/"
 mkdir -p "$tmp/include/leonos" "$tmp/bin"
-cp -a "$src/include/leonos/." "$src/userland/libc/include/leonos/." "$tmp/include/leonos/"
+cp -a "$src/include/leonos/." "$src/userland/runtime/include/leonos/." "$tmp/include/leonos/"
 cp -a "$pam/usr/include/security" "$tmp/include/"
 cp "$auth/usr/include/crypt.h" "$tmp/include/"
 cp -P "$pam"/lib/libpam*.so* "$auth"/lib/libcrypt.so* "$tmp/lib/"

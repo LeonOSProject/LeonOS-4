@@ -14,7 +14,7 @@ class InstallerInputTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=gnu11", "-O1", "-g", "-fsanitize=address,undefined",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-idirafter", "include", "-Iinclude/uapi", "-idirafter", "userland/libc/include",
+                "-idirafter", "include", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
                 "tools/tests/installer_mount_transition_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -36,7 +36,7 @@ class InstallerInputTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-idirafter", "userland/libc/include", "-idirafter", "include", "-Iinclude/uapi",
+                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Iinclude/uapi",
                 "tools/tests/blockdev_errno_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -47,8 +47,8 @@ class InstallerInputTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g", "-include", "string.h",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-idirafter", "userland/libc/include", "-idirafter", "include", "-Iinclude/uapi",
-                "tools/tests/window_resize_test.c", "userland/libc/src/unix_ipc.c", "-o", executable,
+                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Iinclude/uapi",
+                "tools/tests/window_resize_test.c", "userland/runtime/src/unix_ipc.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
 
@@ -58,7 +58,7 @@ class InstallerInputTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-idirafter", "userland/libc/include", "-idirafter", "include", "-Iinclude/uapi",
+                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Iinclude/uapi",
                 "tools/tests/windowd_announce_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -69,8 +69,8 @@ class InstallerInputTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-Wall", "-Wextra", "-Werror",
                 "-O1", "-g", "-include", "sys/un.h",
-                "-idirafter", "userland/libc/include",
-                "tools/tests/unix_ipc_disconnect_test.c", "userland/libc/src/unix_ipc.c",
+                "-idirafter", "userland/runtime/include",
+                "tools/tests/unix_ipc_disconnect_test.c", "userland/runtime/src/unix_ipc.c",
                 "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -82,7 +82,7 @@ class InstallerInputTests(unittest.TestCase):
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
                 "-Iinclude", "-Iinclude/uapi", "-Ikernel/ntclks/include",
-                "-idirafter", "userland/libc/include",
+                "-idirafter", "userland/runtime/include",
                 "tools/tests/pointer_routing_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -93,8 +93,8 @@ class InstallerInputTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-Wall", "-Wextra", "-Werror",
                 "-O1", "-g", "-include", "sys/un.h",
-                "-idirafter", "userland/libc/include",
-                "tools/tests/unix_ipc_frame_test.c", "userland/libc/src/unix_ipc.c",
+                "-idirafter", "userland/runtime/include",
+                "tools/tests/unix_ipc_frame_test.c", "userland/runtime/src/unix_ipc.c",
                 "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -105,8 +105,8 @@ class InstallerInputTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-Wall", "-Wextra", "-Werror",
                 "-O1", "-g", "-fsanitize=address,undefined", "-include", "sys/un.h",
-                "-idirafter", "userland/libc/include",
-                "tools/tests/unix_ipc_partial_send_test.c", "userland/libc/src/unix_ipc.c",
+                "-idirafter", "userland/runtime/include",
+                "tools/tests/unix_ipc_partial_send_test.c", "userland/runtime/src/unix_ipc.c",
                 "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -117,7 +117,7 @@ class InstallerInputTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-idirafter", "userland/libc/include", "-idirafter", "include", "-Iinclude/uapi",
+                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Iinclude/uapi",
                 "tools/tests/wind_reply_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)

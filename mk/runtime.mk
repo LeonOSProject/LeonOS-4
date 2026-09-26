@@ -15,7 +15,7 @@ RUNTIME_ZLIB_NAMES := adler32 compress crc32 deflate infback inffast inflate inf
 RUNTIME_PNG_NAMES := png pngerror pngget pngmem pngpread pngread pngrio pngrtran pngrutil \
  pngset pngtrans pngwio pngwrite pngwtran pngwutil
 RUNTIME_SOURCES := $(sort $(patsubst $(LEONOS_SRC)/%,%,$(wildcard \
- $(LEONOS_SRC)/userland/libc/src/*.c $(LEONOS_SRC)/userland/libc/src/*.S \
+ $(LEONOS_SRC)/userland/runtime/src/*.c $(LEONOS_SRC)/userland/runtime/src/*.S \
  $(LEONOS_SRC)/userland/auth/*.c)) \
  $(addprefix third_party/mbedtls/library/,$(addsuffix .c,$(RUNTIME_MBEDTLS_NAMES))) \
  $(addprefix third_party/zlib/,$(addsuffix .c,$(RUNTIME_ZLIB_NAMES))) \
@@ -26,7 +26,7 @@ RUNTIME_FLAGS := --target=$(TRIPLE_USER) $(LEONOS_OPTIMIZATION_FLAGS) -std=c11 \
  -ffreestanding -fno-stack-protector -fPIC -ffunction-sections -fdata-sections \
  -Wall -Wextra -DLEONOS_USE_MUSL -D_GNU_SOURCE -mno-avx -mno-avx2 \
  -I$(HEADER_EXPORT_INCLUDE) -I$(PAM_ROOT)/usr/include -I$(AUTH_ROOT)/usr/include -I$(MUSL_SYSROOT)/include \
- -I$(LEONOS_SRC)/userland/libc/include \
+ -I$(LEONOS_SRC)/userland/runtime/include \
  -I$(O_INCLUDE) -I$(LEONOS_SRC)/include -I$(LEONOS_SRC)/third_party/mbedtls/include \
  -I$(LEONOS_SRC)/third_party/zlib -I$(LEONOS_SRC)/third_party/libpng \
  -I$(O_INCLUDE)/libpng -DMBEDTLS_CONFIG_FILE='"leonos_mbedtls_config.h"' \

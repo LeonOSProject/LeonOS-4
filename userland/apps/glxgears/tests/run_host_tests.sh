@@ -11,7 +11,7 @@ compile_test() {
         -I"$repo_root/include" -I"$repo_root/include/uapi" -I"$repo_root/third_party/portablegl" \
         -I"$repo_root/userland/apps/glxgears" \
         -I"$generated_dir" \
-        -idirafter "$repo_root/userland/libc/include" \
+        -idirafter "$repo_root/userland/runtime/include" \
         "$repo_root/userland/apps/glxgears/tests/$1.c" \
         -Wl,--gc-sections -lm -o "$test_dir/$1"
 }

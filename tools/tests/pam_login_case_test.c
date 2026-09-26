@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <crypt.h>
 #include <sys/wait.h>
-#include "../../userland/libc/src/pam_session.c"
+#include "../../userland/runtime/src/pam_session.c"
 
 static int fault = ENOSYS;
 static unsigned dialogs;

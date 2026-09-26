@@ -5,7 +5,7 @@ w=$(mktemp -d)
 trap 'rm -rf "$w"' EXIT
 
 mkdir -p "$w/src/include/uapi" "$w/src/include/leonos" \
-    "$w/src/userland/libc/include/leonos" "$w/src/third_party/zlib" \
+    "$w/src/userland/runtime/include/leonos" "$w/src/third_party/zlib" \
     "$w/src/third_party/libpng" "$w/sysroot/include" "$w/sysroot/lib" \
     "$w/sysroot/share/licenses/musl" "$w/pam/usr/include/security" \
     "$w/pam/lib/pkgconfig" "$w/pam/share/licenses/linux-pam" \

@@ -10,6 +10,6 @@ with tempfile.TemporaryDirectory(prefix="leonos-apiapp-") as temporary:
     binary = Path(temporary) / "apiapp-authorization"
     subprocess.run([str(compiler), "-static", "-O1", "-g", "-Wall", "-Wextra",
                     "-DLEONOS_USE_MUSL", "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                    "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/libc/include",
+                    "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
                     "tools/tests/apiapp_authorization_test.c", "-o", str(binary)], cwd=ROOT, check=True)
     subprocess.run([str(binary)], check=True, timeout=15)

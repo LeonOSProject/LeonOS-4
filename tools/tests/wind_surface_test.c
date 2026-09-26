@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <sys/un.h>
 
-#include "../../userland/libc/src/wind.c"
+#include "../../userland/runtime/src/wind.c"
 
 int leonos_ipc_flush(int fd) { (void)fd; return 0; }
 

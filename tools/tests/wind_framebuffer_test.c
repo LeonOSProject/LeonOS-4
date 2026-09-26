@@ -4,7 +4,7 @@
 
 #define mmap test_mmap
 #define munmap test_munmap
-#include "../../userland/libc/src/wind.c"
+#include "../../userland/runtime/src/wind.c"
 #undef mmap
 #undef munmap
 

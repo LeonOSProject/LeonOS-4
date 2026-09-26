@@ -119,29 +119,29 @@ $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,host-cc-sanitised)))
 -include $(shell find $(O_HOST)/obj/tests $(O_HOST)/obj/tests-sanitised -name '*.o.d' 2>/dev/null)
 .PHONY: test test-tools test-build test-long
 
-$(O_HOST)/obj/tests/host/test_locale_conf.c.o: $(LEONOS_SRC)/tests/host/test_locale_conf.c $(LEONOS_SRC)/userland/libc/src/locale_conf.h $(O_META)/host-cc.sig
+$(O_HOST)/obj/tests/host/test_locale_conf.c.o: $(LEONOS_SRC)/tests/host/test_locale_conf.c $(LEONOS_SRC)/userland/runtime/src/locale_conf.h $(O_META)/host-cc.sig
 	$(Q)mkdir -p $(@D)
 	$(call LEONOS_LOG,HOSTCC,$<)
-	$(Q)$(HOSTCC) $(LEONOS_STRICT_WARNINGS) $(HOST_CFLAGS) -I$(LEONOS_SRC)/userland/libc/src $(LEONOS_HOST_INCLUDES) -MMD -MF $@.d -c $< -o $@
+	$(Q)$(HOSTCC) $(LEONOS_STRICT_WARNINGS) $(HOST_CFLAGS) -I$(LEONOS_SRC)/userland/runtime/src $(LEONOS_HOST_INCLUDES) -MMD -MF $@.d -c $< -o $@
 
-$(O_HOST)/obj/tests/host/userland/locale_conf.c.o: $(LEONOS_SRC)/userland/libc/src/locale_conf.c $(LEONOS_SRC)/userland/libc/src/locale_conf.h $(O_META)/host-cc.sig
+$(O_HOST)/obj/tests/host/userland/locale_conf.c.o: $(LEONOS_SRC)/userland/runtime/src/locale_conf.c $(LEONOS_SRC)/userland/runtime/src/locale_conf.h $(O_META)/host-cc.sig
 	$(Q)mkdir -p $(@D)
 	$(call LEONOS_LOG,HOSTCC,$<)
-	$(Q)$(HOSTCC) $(LEONOS_STRICT_WARNINGS) $(HOST_CFLAGS) -I$(LEONOS_SRC)/userland/libc/src $(LEONOS_HOST_INCLUDES) -MMD -MF $@.d -c $< -o $@
+	$(Q)$(HOSTCC) $(LEONOS_STRICT_WARNINGS) $(HOST_CFLAGS) -I$(LEONOS_SRC)/userland/runtime/src $(LEONOS_HOST_INCLUDES) -MMD -MF $@.d -c $< -o $@
 
 $(O_HOST)/tests/test_locale_conf: $(O_HOST)/obj/tests/host/test_locale_conf.c.o $(O_HOST)/obj/tests/host/userland/locale_conf.c.o
 	$(Q)mkdir -p $(@D)
 	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(HOST_LDFLAGS) $^ -o $@
 
-$(O_HOST)/obj/tests-sanitised/host/test_locale_conf.c.o: $(LEONOS_SRC)/tests/host/test_locale_conf.c $(LEONOS_SRC)/userland/libc/src/locale_conf.h $(O_META)/host-cc-sanitised.sig
+$(O_HOST)/obj/tests-sanitised/host/test_locale_conf.c.o: $(LEONOS_SRC)/tests/host/test_locale_conf.c $(LEONOS_SRC)/userland/runtime/src/locale_conf.h $(O_META)/host-cc-sanitised.sig
 	$(Q)mkdir -p $(@D)
 	$(call LEONOS_LOG,HOSTCC,$<)
-	$(Q)$(HOSTCC) $(LEONOS_STRICT_WARNINGS) $(LEONOS_SANITISE) -g -O1 -I$(LEONOS_SRC)/userland/libc/src $(LEONOS_HOST_INCLUDES) -MMD -MF $@.d -c $< -o $@
+	$(Q)$(HOSTCC) $(LEONOS_STRICT_WARNINGS) $(LEONOS_SANITISE) -g -O1 -I$(LEONOS_SRC)/userland/runtime/src $(LEONOS_HOST_INCLUDES) -MMD -MF $@.d -c $< -o $@
 
-$(O_HOST)/obj/tests-sanitised/host/userland/locale_conf.c.o: $(LEONOS_SRC)/userland/libc/src/locale_conf.c $(LEONOS_SRC)/userland/libc/src/locale_conf.h $(O_META)/host-cc-sanitised.sig
+$(O_HOST)/obj/tests-sanitised/host/userland/locale_conf.c.o: $(LEONOS_SRC)/userland/runtime/src/locale_conf.c $(LEONOS_SRC)/userland/runtime/src/locale_conf.h $(O_META)/host-cc-sanitised.sig
 	$(Q)mkdir -p $(@D)
 	$(call LEONOS_LOG,HOSTCC,$<)
-	$(Q)$(HOSTCC) $(LEONOS_STRICT_WARNINGS) $(LEONOS_SANITISE) -g -O1 -I$(LEONOS_SRC)/userland/libc/src $(LEONOS_HOST_INCLUDES) -MMD -MF $@.d -c $< -o $@
+	$(Q)$(HOSTCC) $(LEONOS_STRICT_WARNINGS) $(LEONOS_SANITISE) -g -O1 -I$(LEONOS_SRC)/userland/runtime/src $(LEONOS_HOST_INCLUDES) -MMD -MF $@.d -c $< -o $@
 
 $(O_HOST)/tests-sanitised/test_locale_conf: $(O_HOST)/obj/tests-sanitised/host/test_locale_conf.c.o $(O_HOST)/obj/tests-sanitised/host/userland/locale_conf.c.o
 	$(Q)mkdir -p $(@D)

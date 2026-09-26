@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from test_installer_setup import CRYPTO
 
-AUTH_SOURCES = ["userland/apps/authd/accounts.c", "userland/libc/src/auth_password.c", *CRYPTO]
-AUTH_FLAGS = ["-Ithird_party/mbedtls/include", "-idirafter", "userland/libc/include",
+AUTH_SOURCES = ["userland/apps/authd/accounts.c", "userland/runtime/src/auth_password.c", *CRYPTO]
+AUTH_FLAGS = ["-Ithird_party/mbedtls/include", "-idirafter", "userland/runtime/include",
               "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
               '-DMBEDTLS_CONFIG_FILE="leonos_mbedtls_config.h"']
 
@@ -21,7 +21,7 @@ class OobeTests(unittest.TestCase):
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-idirafter", "userland/libc/include", "-idirafter", "include", "-Iinclude/uapi",
+                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Iinclude/uapi",
                 "tools/tests/authd_input_test.c", *AUTH_SOURCES, *AUTH_FLAGS,
                 "-o", executable,
             ], cwd=ROOT, check=True)
@@ -45,7 +45,7 @@ class OobeTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/libc/include",
+                "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
                 "tools/tests/oobe_network_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -56,7 +56,7 @@ class OobeTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/libc/include",
+                "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
                 "tools/tests/oobe_startup_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -67,7 +67,7 @@ class OobeTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-idirafter", "userland/libc/include", "-idirafter", "include", "-Iinclude/uapi",
+                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Iinclude/uapi",
                 "tools/tests/oobe_auth_boot_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             for scenario in ("stale", "missing", "denied", "database-formats"):
@@ -80,7 +80,7 @@ class OobeTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/libc/include",
+                "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
                 "tools/tests/oobe_window_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
@@ -92,7 +92,7 @@ class OobeTests(unittest.TestCase):
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-ftrivial-auto-var-init=zero",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-idirafter", "userland/libc/include", "-idirafter", "include", "-Iinclude/uapi",
+                "-idirafter", "userland/runtime/include", "-idirafter", "include", "-Iinclude/uapi",
                 "tools/tests/oobe_inputm_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             for scenario in ("list", "state", "active", "context", "notify", "denied"):

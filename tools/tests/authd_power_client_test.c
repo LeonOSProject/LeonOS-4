@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <sys/un.h>
-#include "../../userland/libc/src/authd_client.c"
+#include "../../userland/runtime/src/authd_client.c"
 
 static unsigned connections, sends, closes;
 static uint32_t server_uid;

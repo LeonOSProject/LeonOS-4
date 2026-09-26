@@ -14,7 +14,7 @@ class ProcfsTaskmgrTests(unittest.TestCase):
             executable = str(Path(directory) / "procsys")
             subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                             "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                            "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/libc/include",
+                            "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/runtime/include",
                             "tools/tests/procsys_status_test.c", "-o", executable],
                            cwd=ROOT, check=True)
             subprocess.run([executable], check=True, timeout=10)
@@ -34,7 +34,7 @@ class ProcfsTaskmgrTests(unittest.TestCase):
 
     def test_procfs_exports_cpu_runtime_stats(self):
         source = (ROOT / "kernel/ntclks/procfs.c").read_text()
-        libc = (ROOT / "userland/libc/src/procsys.c").read_text()
+        libc = (ROOT / "userland/runtime/src/procsys.c").read_text()
         self.assertIn('proc_text_eq(path, "/proc/stat")', source)
         self.assertIn('ps_read_file("/proc/stat"', libc)
 

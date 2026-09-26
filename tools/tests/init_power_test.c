@@ -3,7 +3,7 @@
 #include <signal.h>
 #include <sys/reboot.h>
 #include <sys/wait.h>
-#include "../../userland/libc/src/auth_accounts.c"
+#include "../../userland/runtime/src/auth_accounts.c"
 static int last_signal, sends;
 uid_t geteuid(void) { return 0; }
 int kill(pid_t pid, int sig) { assert(pid == 1); last_signal = sig; ++sends; return 0; }

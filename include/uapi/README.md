@@ -13,7 +13,7 @@ LeonOS-specific extensions. Neither i386 nor x32 is included.
   public termios is larger; musl performs the kernel conversion.
 - Kernel-only objects, scheduler state, pointers and helper declarations stay
   under `kernel/ntclks/include`. Public LeonOS convenience functions stay in
-  `include/leonos` or `userland/libc/include/leonos` and import these definitions.
+  `include/leonos` or `userland/runtime/include/leonos` and import these definitions.
 - musl sources and headers remain upstream. Verify their actual installed
   headers against UAPI with `python3 build.py test musl-abi`. Never patch a
   musl constant to match a divergent kernel. Removed legacy adapters historically

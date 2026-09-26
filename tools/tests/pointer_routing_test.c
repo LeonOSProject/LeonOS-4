@@ -15,7 +15,7 @@ static int windowd_vt_active(void);
 #undef WINDOWD_VT_TEST
 #undef syscall3
 #include "../../kernel/ntclks/input.c"
-#include "../../userland/libc/src/ui_input.c"
+#include "../../userland/runtime/src/ui_input.c"
 #include "../../kernel/ntclks/arch/x86_64/keyboard_led.h"
 
 static uint64_t read_cursor;

@@ -30,7 +30,7 @@ cell widths determine aligned 3/2/1-column layouts and wrapping.
 
 musl enters the kernel with the native `syscall` instruction. The LeonOS
 extension assembly helpers in
-`userland/libc/src/syscall.S` translate C call arguments into the syscall ABI:
+`userland/runtime/src/syscall.S` translate C call arguments into the syscall ABI:
 
 - `rax`: syscall number.
 - `rdi`, `rsi`, `rdx`, `r10`, `r8`, `r9`: arguments 0 through 5.
@@ -44,8 +44,8 @@ Return values follow the kernel convention:
 
 The public userland numbers and wrappers are in:
 
-- `userland/libc/include/leonos/syscall.h`
-- `userland/libc/src/libc.c`
+- `userland/runtime/include/leonos/syscall.h`
+- `userland/runtime/src/libc.c`
 
 The kernel-side numbers and errno constants are in:
 
