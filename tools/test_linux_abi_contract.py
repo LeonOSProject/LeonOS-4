@@ -32,8 +32,8 @@ def test_linux_numbers_and_flags() -> None:
 
 def test_native_syscall_entry_and_stack_protocol() -> None:
     syscall_asm = read("userland/runtime/src/syscall.S")
-    boot_asm = read("kernel/ntclks/kernel/ntclks/arch/x86_64/boot.S")
-    gdt = read("kernel/ntclks/kernel/ntclks/arch/x86_64/gdt.c")
+    boot_asm = read("kernel/ntclks/arch/x86_64/boot.S")
+    gdt = read("kernel/ntclks/arch/x86_64/gdt.c")
     userland = read("kernel/ntclks/kernel/ntclks/user/userland.c")
     assert "syscall" in syscall_asm and "int $0x80" not in syscall_asm
     assert "x86_64_syscall_entry" in boot_asm

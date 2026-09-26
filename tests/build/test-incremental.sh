@@ -353,7 +353,7 @@ fi
 
 printf '\n=== A04b: the linker script ===\n'
 advance_clock
-touch "$ntclks/kernel/ntclks/arch/x86_64/linker.ld"
+touch "$ntclks/arch/x86_64/linker.ld"
 script_build=$(build)
 script_cc=$(printf '%s\n' "$script_build" | grep -cE '^  CC ' || true)
 script_ld=$(printf '%s\n' "$script_build" | grep -cE '^  LD ' || true)

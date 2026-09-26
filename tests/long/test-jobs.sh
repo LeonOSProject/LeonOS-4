@@ -60,7 +60,7 @@ changed_between() {
 # source, one header with dozens of consumers, and the linker script, which must
 # relink without recompiling anything. They live in the kernel checkout.
 touch_targets="$ntclks/kernel/ntclks/futex.c $ntclks/kernel/ntclks/include/ntclks/types.h
-$ntclks/kernel/ntclks/arch/x86_64/linker.ld"
+$ntclks/arch/x86_64/linker.ld"
 
 printf '=== A08: -j1 and -j8 from clean output directories ===\n'
 for level in $jobs; do
@@ -87,7 +87,7 @@ for level in $jobs; do
     # has none, so the check names exactly the four it expects.
     missing_sig=''
     for class in kernel-cc kernel-as kernel-link kernel-objcopy; do
-        [ -f "$tree/meta/$class.sig" ] || missing_sig="$missing_sig $class"
+        [ -f "$tree/ntclks/meta/$class.sig" ] || missing_sig="$missing_sig $class"
     done
     if [ -z "$missing_sig" ]; then
         pass "-j$level publishes a signature for every kernel action class"
@@ -119,7 +119,7 @@ printf '\n=== A08: the same invalidations at both job levels, three rounds ===\n
 # is stable. The cheap pair is also two different action classes: one object, and
 # a relink with no recompilation at all.
 heavy_targets=$touch_targets
-light_targets="$ntclks/kernel/ntclks/futex.c $ntclks/kernel/ntclks/arch/x86_64/linker.ld"
+light_targets="$ntclks/kernel/ntclks/futex.c $ntclks/arch/x86_64/linker.ld"
 for round in 1 2 3; do
     if [ "$round" = 1 ]; then
         round_targets=$heavy_targets
@@ -168,7 +168,7 @@ done
 printf '\n=== A08: comparable output content ===\n'
 for product in generated/system/kernel.sys generated/system/kernel.debug \
         ntclks/generated/system/kernel.unstripped ntclks/obj/kernel/sources.list \
-        include/generated/autoconf.h include/generated/build_info.h; do
+        include/generated/autoconf.h ntclks/include/generated/build_info.h; do
     a=$work/j1/$product
     b=$work/j8/$product
     if [ ! -f "$a" ] || [ ! -f "$b" ]; then

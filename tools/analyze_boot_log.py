@@ -161,7 +161,7 @@ DIRECT_RULES = (
         "ACPI 关机路径不可用",
         "固件没有提供完成 ACPI S5 关机所需的表或寄存器，关机可能只能停止 CPU。",
         "检查虚拟机 ACPI 选项、固件类型和硬件平台；在 VMware 中验证 ACPI 电源管理已启用。",
-        "kernel/ntclks/kernel/ntclks/arch/x86_64/power.c:532",
+        "kernel/ntclks/arch/x86_64/power.c:532",
     ),
 )
 
@@ -241,7 +241,7 @@ def _exception_findings(lines: list[str], radius: int) -> list[Finding]:
             _context(lines, (index,), radius),
             f"CPU 在 RIP={match.group('rip')} 触发向量 {vector}，错误码为 {match.group('error')}。",
             "依据 RIP、当前 pid/task 和异常模式检查近期映射、重定位、用户指针或特权级转换；页错误还需检查 CR2 与标志位。",
-            "kernel/ntclks/kernel/ntclks/arch/x86_64/idt.c:156",
+            "kernel/ntclks/arch/x86_64/idt.c:156",
         ))
     return findings
 
