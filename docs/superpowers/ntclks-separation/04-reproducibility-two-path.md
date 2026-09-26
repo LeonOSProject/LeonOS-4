@@ -37,3 +37,12 @@ B = `/home/leon/projects/c/LeonOS-4-repro`（O=`…/repro-b`，detached 同提�
 3. `rootfs/manifest.json` 的 `source` 字段改为相对构建根路径（簿记可移植化）。
 
 完成上述三项后本地 APK/镜像即应跨路径逐字节一致。
+
+## 4. 适配器世界复跑（2026-09-25 深夜，3b 项）
+
+父构建改递归适配器（`b6fd988`+`ef0b398`）后同法复跑（A=主 worktree、B=repro
+worktree@f95be1f，各自全新 O，均指向同一内核 checkout）：Ring-0 全部 9 制品
+SAME（含 kernel.sys 新哈希 `805f4164…`），证明适配器与发布链零路径依赖；
+DIFF 项与 §2 完全同形（ISO←上游二进制、musl-sdk←leonos-musl-cc、
+manifest.json←source 字段），**无新增非确定性**。日志：
+`/home/leon/build/ntclks-sep/logs/repro-compare-b2.log`。
