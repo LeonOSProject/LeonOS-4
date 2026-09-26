@@ -50,7 +50,7 @@ test_linux_abi_contract 全过。
 
 构建旋钮：`KERNEL_SOURCE_DIRS` 增 `mm`（`kernel/ntclks/mm/` 移空后 find 不再产出）。
 
-状态：**待实施**。
+状态：**已完成**（NTCLKS `5921cb5`：3 文件 + SOURCE_DIRS；主仓test_linux_memory/physical_pages_test 路径修复、paging_protection_test补 smp_flush_user_tlb 桩——该桩缺失是 NTCLKS a3d403d 起的既有缺口，与本次移动无关，按文件既有桩模式补齐后断言原样）。验证：G2_KERNEL_EXIT=0、NTCLKS make test 0、test_linux_memory 8 用例全过。
 
 ### G3 fs（5 文件）
 

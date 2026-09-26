@@ -44,6 +44,7 @@ int page_cache_retain(uint64_t p) { (void)p; return -1; }
 int page_cache_owns(uint64_t p) { (void)p; return 0; }
 void page_cache_release(uint64_t p) { (void)p; abort(); }
 void x86_64_load_cr3(uint64_t p) { (void)p; }
+void smp_flush_user_tlb(void) { }
 void x86_64_invlpg(uint64_t p) { (void)p; }
 
 int main(void)
