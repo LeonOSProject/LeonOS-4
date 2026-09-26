@@ -31,6 +31,11 @@ DEAD=定义但无内核内调用者）。目标：为"会话/测试 autospawn �
 
 ## 2. 名字/路径判定（弱检查）与替代
 
+> **2026-09-25 迁移状态**：M5（autospawn）、M7（installer-session env）、M8（/run/leonos
+> 产品目录与 hostname）已迁用户态，内核仅存机制（新增 `/proc/cmdline` 通用节点）；
+> M1 维持现状待等价替代（专项设计审查项，M1(c) 为 xfail 钉）。详见
+> [07-phase4-runtime-policy.md](07-phase4-runtime-policy.md)。
+
 | 弱检查 | 位置 | 弱点 | 替代（现有标准机制） |
 | --- | --- | --- | --- |
 | Desktop/windowd/imd 身份（M1） | userland.c:1146-1159 + 168-184 | 大小写不敏感字符串等值；ext2 大小写敏感下大小写变体是不同文件仍匹配 | 把权威编码进**镜像文件本身**（root 所有 + set-id 语义已在 A7 执行锁内验证，无 TOCTOU）或文件能力位；路径退出信任判定 |

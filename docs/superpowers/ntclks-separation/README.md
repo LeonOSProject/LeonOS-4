@@ -13,6 +13,7 @@
 | `04-reproducibility-two-path.md` | 阶段 3：双路径可重现性比较结果与建议修复 |
 | `05-phase2-standalone-checkout.md` | 阶段 2：独立内核 checkout 的验证证据 |
 | `06-handover-2026-09-25.md` | **交接文档**（授权边界、进度、证据、下一步、风险） |
+| `07-phase4-runtime-policy.md` | 阶段 4：权限负例 + autospawn/会话策略迁移执行记录（含内核侧留痕） |
 
 原始命令输出与日志保存在任务工作目录
 `/home/leon/build/ntclks-sep/logs/`（仓库外），报告中给出相对引用。
