@@ -303,6 +303,13 @@ int subsystem_handle(const struct request *request, struct result *out_result);
   音频、鼠标、网络或安装交互已经验证。
 - 发布任务应同时考虑 VMDK、普通 ISO、Installer ISO、SDK、API 包、校验和与
   第三方归属文件；任何一项是否包含某个组件由当前 profile 与组件清单决定。
+- 内核子仓（`kernel/ntclks`，NTCLKS）日常开发在子仓内进行：在子仓里开分支或
+  游离提交（detached HEAD），验证通过后推送其工作分支或 main；主仓只提交
+  更新后的 gitlink（`git add kernel/ntclks`），不把子仓改动拆进主仓提交。
+  子仓 checkout 处于 detached HEAD 是正常状态（gitlink 检出即游离），不要
+  在主仓 `git submodule update` 后顺手帮子仓建分支。发布目标（rpr-pages/
+  release）要求子仓 clean 且 HEAD 与 gitlink 一致；开发构建（all/kernel）
+  允许子仓 dirty。
 
 ## 11. 常用排查顺序
 
