@@ -34,14 +34,14 @@ int main(void)
     assert(task_evdev_ioctl(&file, EVIOCGLED(1), (uintptr_t)buffer) == 1);
     assert(buffer[0] == 1U << LED_CAPSL);
     output_writable = false;
-    assert(task_evdev_ioctl(&file, EVIOCGLED(1), (uintptr_t)buffer) == -LEONOS_EFAULT);
+    assert(task_evdev_ioctl(&file, EVIOCGLED(1), (uintptr_t)buffer) == -RELIEFOS_EFAULT);
     assert(task_evdev_ioctl(&file, EVIOCGLED(0), 0) == 0);
     output_writable = true;
-    assert(task_evdev_ioctl(&file, EVIOCGLED(1), 0) == -LEONOS_EFAULT);
+    assert(task_evdev_ioctl(&file, EVIOCGLED(1), 0) == -RELIEFOS_EFAULT);
     uint32_t scope = 7;
-    assert(task_evdev_ioctl(&file, LEONOS_EVIOCSVT, (uintptr_t)&scope) == -LEONOS_EINVAL);
+    assert(task_evdev_ioctl(&file, RELIEFOS_EVIOCSVT, (uintptr_t)&scope) == -RELIEFOS_EINVAL);
     scope = 1;
-    assert(task_evdev_ioctl(&file, LEONOS_EVIOCSVT, (uintptr_t)&scope) == 0);
+    assert(task_evdev_ioctl(&file, RELIEFOS_EVIOCSVT, (uintptr_t)&scope) == 0);
     assert(file.input_vt == 1 && file.aux == input_evdev_cursor_now());
     input_set_graphical_vt(0);
     input_push_key(30, 1);

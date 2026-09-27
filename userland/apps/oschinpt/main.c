@@ -1,17 +1,17 @@
-#include <leonos/auth.h>
-#include <leonos/fs.h>
-#include <leonos/gui.h>
-#include <leonos/http.h>
-#include <leonos/text_input.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
+#include <reliefos/auth.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
+#include <reliefos/http.h>
+#include <reliefos/text_input.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
 #include <string.h>
 #include <unistd.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 
 #define OSCHINPT_ID "oschinpt"
-#define OSCHINPT_DICT_PATH LEONOS_LAYOUT_LEONOS_APPS "/oschinpt/pinyin_simp.dict.yaml"
-#define OSCHINPT_DICT_INDEX_PATH LEONOS_LAYOUT_LEONOS_APPS "/oschinpt/oscp.idx"
+#define OSCHINPT_DICT_PATH RELIEFOS_LAYOUT_RELIEFOS_APPS "/oschinpt/pinyin_simp.dict.yaml"
+#define OSCHINPT_DICT_INDEX_PATH RELIEFOS_LAYOUT_RELIEFOS_APPS "/oschinpt/oscp.idx"
 #define OSCHINPT_DICT_URL "https://raw.githubusercontent.com/rime/rime-pinyin-simp/master/pinyin_simp.dict.yaml"
 #define OSCHINPT_CONFIG_NAME ".inputm.conf"
 #define OSCHINPT_LEARN_NAME ".oschinpt.learn"
@@ -146,10 +146,10 @@ static void copy_text(char *dst, uint32_t capacity, const char *src)
 
 static int user_path(char *path, uint32_t capacity, const char *name)
 {
-    struct leonos_user_info user = {0};
+    struct reliefos_user_info user = {0};
     uint32_t home_len;
     uint32_t name_len = text_len(name);
-    if (!path || !capacity || leonos_auth_current(&user) != 0 || !user.uid || !user.home[0]) {
+    if (!path || !capacity || reliefos_auth_current(&user) != 0 || !user.uid || !user.home[0]) {
         return 0;
     }
     home_len = text_len(user.home);
@@ -196,14 +196,14 @@ static int config_enabled(const char *config, const char *key, int fallback)
 
 static void load_user_config(void)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     char config[2048];
     int fd;
     long got;
     if (!user_path(path, sizeof(path), OSCHINPT_CONFIG_NAME)) {
         return;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return;
     }
@@ -220,7 +220,7 @@ static void load_user_config(void)
 
 static void load_learning(void)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     char data[2048];
     int fd;
     long got;
@@ -228,7 +228,7 @@ static void load_learning(void)
     if (!user_path(path, sizeof(path), OSCHINPT_LEARN_NAME)) {
         return;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return;
     }
@@ -272,7 +272,7 @@ static void load_learning(void)
 
 static void save_learning(const char *code, const char *word)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     char line[TEXT_INPUT_TEXT_LEN + OSCHINPT_COMPOSITION_CAP + 4U];
     uint32_t pos = 0;
     int fd;
@@ -293,7 +293,7 @@ static void save_learning(const char *code, const char *word)
         line[pos++] = '\n';
     }
     line[pos] = 0;
-    fd = open(path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_APPEND, 0666);
+    fd = open(path, RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_APPEND, 0666);
     if (fd >= 0) {
         (void)write(fd, line, pos);
         close(fd);
@@ -450,7 +450,7 @@ static void dictionary_index_reset(void)
 static int dictionary_index_load(void)
 {
     struct dictionary_index_header header = {0};
-    struct leonos_stat dictionary_stat = {0};
+    struct reliefos_stat dictionary_stat = {0};
     int index_fd;
     int dictionary_fd;
     if (dictionary_index_loaded) {
@@ -461,8 +461,8 @@ static int dictionary_index_load(void)
     }
     dictionary_index_attempted = 1;
     dictionary_index_count = 0;
-    dictionary_fd = open(OSCHINPT_DICT_PATH, LEONOS_O_RDONLY, 0);
-    if (dictionary_fd < 0 || leonos_fstat_legacy(dictionary_fd, &dictionary_stat) < 0) {
+    dictionary_fd = open(OSCHINPT_DICT_PATH, RELIEFOS_O_RDONLY, 0);
+    if (dictionary_fd < 0 || reliefos_fstat_legacy(dictionary_fd, &dictionary_stat) < 0) {
         if (dictionary_fd >= 0) {
             close(dictionary_fd);
         }
@@ -472,7 +472,7 @@ static int dictionary_index_load(void)
     if (dictionary_stat.size > 0xffffffffULL) {
         return 0;
     }
-    index_fd = open(OSCHINPT_DICT_INDEX_PATH, LEONOS_O_RDONLY, 0);
+    index_fd = open(OSCHINPT_DICT_INDEX_PATH, RELIEFOS_O_RDONLY, 0);
     if (index_fd < 0 || !dictionary_read_exact(index_fd, &header, sizeof(header)) ||
         header.magic[0] != 'O' || header.magic[1] != 'S' ||
         header.magic[2] != 'C' || header.magic[3] != 'I' ||
@@ -586,7 +586,7 @@ static void dictionary_index_sort(void)
 static int dictionary_index_build(void)
 {
     struct dictionary_index_header header = {0};
-    struct leonos_stat dictionary_stat = {0};
+    struct reliefos_stat dictionary_stat = {0};
     char buffer[OSCHINPT_DICT_READ_CHUNK];
     char line[OSCHINPT_DICT_LINE_CAP];
     uint32_t line_len = 0;
@@ -595,8 +595,8 @@ static int dictionary_index_build(void)
     int dictionary_fd;
     int index_fd;
     long got;
-    dictionary_fd = open(OSCHINPT_DICT_PATH, LEONOS_O_RDONLY, 0);
-    if (dictionary_fd < 0 || leonos_fstat_legacy(dictionary_fd, &dictionary_stat) < 0 ||
+    dictionary_fd = open(OSCHINPT_DICT_PATH, RELIEFOS_O_RDONLY, 0);
+    if (dictionary_fd < 0 || reliefos_fstat_legacy(dictionary_fd, &dictionary_stat) < 0 ||
         dictionary_stat.size > 0xffffffffULL) {
         if (dictionary_fd >= 0) {
             close(dictionary_fd);
@@ -640,7 +640,7 @@ static int dictionary_index_build(void)
     header.count = dictionary_index_count;
     header.dictionary_size = (uint32_t)dictionary_stat.size;
     index_fd = open(OSCHINPT_DICT_INDEX_PATH,
-                    LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
+                    RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0666);
     if (index_fd < 0 || !dictionary_write_exact(index_fd, &header, sizeof(header)) ||
         !dictionary_write_exact(index_fd, dictionary_index,
                                 dictionary_index_count * sizeof(dictionary_index[0]))) {
@@ -670,14 +670,14 @@ static void dictionary_candidates(const char *code,
     if (index_pos >= dictionary_index_count || !count) {
         return;
     }
-    fd = open(OSCHINPT_DICT_PATH, LEONOS_O_RDONLY, 0);
+    fd = open(OSCHINPT_DICT_PATH, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return;
     }
     while (index_pos < dictionary_index_count && *count < OSCHINPT_CANDIDATE_POOL_CAP &&
            text_eq(dictionary_index[index_pos].code, code)) {
         struct dictionary_index_entry *entry = &dictionary_index[index_pos++];
-        if (lseek(fd, (long)entry->start, LEONOS_SEEK_SET) < 0) {
+        if (lseek(fd, (long)entry->start, RELIEFOS_SEEK_SET) < 0) {
             break;
         }
         remaining = entry->end - entry->start;
@@ -915,9 +915,9 @@ static void change_candidate_page(const text_input_key_event_t *event, int direc
 
 static int update_dictionary(void)
 {
-    struct leonos_http_response response = {0};
-    int ret = leonos_http_download(OSCHINPT_DICT_URL, OSCHINPT_DICT_PATH,
-                                   LEONOS_HTTP_DEFAULT_TIMEOUT_MS, 0, 0, &response);
+    struct reliefos_http_response response = {0};
+    int ret = reliefos_http_download(OSCHINPT_DICT_URL, OSCHINPT_DICT_PATH,
+                                   RELIEFOS_HTTP_DEFAULT_TIMEOUT_MS, 0, 0, &response);
     if (ret > 0 && response.http_status >= 200U && response.http_status < 300U) {
         dictionary_index_reset();
         if (!dictionary_index_build()) {
@@ -955,7 +955,7 @@ static void handle_event(const text_input_key_event_t *event)
         respond_composition(event);
         return;
     }
-    if (event->keycode == LEONOS_KEY_BACKSPACE) {
+    if (event->keycode == RELIEFOS_KEY_BACKSPACE) {
         uint32_t length = text_len(composition);
         if (length) {
             composition[length - 1U] = 0;
@@ -979,7 +979,7 @@ static void handle_event(const text_input_key_event_t *event)
         }
         return;
     }
-    if (event->keycode == LEONOS_KEY_SPACE) {
+    if (event->keycode == RELIEFOS_KEY_SPACE) {
         if (composition[0]) {
             commit_candidate(event, candidate_page_first(), 0);
         } else if (full_width) {
@@ -989,7 +989,7 @@ static void handle_event(const text_input_key_event_t *event)
         }
         return;
     }
-    if (event->keycode == LEONOS_KEY_ENTER) {
+    if (event->keycode == RELIEFOS_KEY_ENTER) {
         if (composition[0]) {
             commit_candidate(event, candidate_page_first(), 0);
         } else {
@@ -1028,7 +1028,7 @@ int main(int argc, char **argv)
 {
     text_input_provider_t provider = {0};
     text_input_key_event_t event = {0};
-    struct leonos_user_info user = {0};
+    struct reliefos_user_info user = {0};
     uint32_t config_generation = 0;
     unsigned long last_config_check = 0;
     if (argc > 1 && argv && argv[1] && text_eq(argv[1], "--update")) {
@@ -1049,7 +1049,7 @@ int main(int argc, char **argv)
     if (!dictionary_index_load()) {
         puts("[oschinpt] dictionary index unavailable; using built-in candidates only");
     }
-    if (leonos_auth_current(&user) == 0 && user.uid) {
+    if (reliefos_auth_current(&user) == 0 && user.uid) {
         text_input_state_t state = {0};
         if (text_input_get_state(user.uid, &state) > 0) {
             config_generation = state.config_generation;
@@ -1057,7 +1057,7 @@ int main(int argc, char **argv)
     }
     puts("[oschinpt] LeonOS 4 Chinese Input ready");
     for (;;) {
-        unsigned long now = leonos_uptime_ms();
+        unsigned long now = reliefos_uptime_ms();
         if (user.uid && now - last_config_check >= 200UL) {
             text_input_state_t state = {0};
             last_config_check = now;

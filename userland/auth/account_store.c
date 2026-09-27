@@ -167,12 +167,15 @@ static int operate(int directory, const char *const contents[4], int update)
     return result;
 }
 
-int leonos_account_store_commit(int directory, const char *const contents[4])
+int reliefos_account_store_commit(int directory, const char *const contents[4])
 {
     return operate(directory, contents, 1);
 }
 
-int leonos_account_store_recover(int directory)
+int reliefos_account_store_recover(int directory)
 {
     return operate(directory, NULL, 0);
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_account_store_commit) leonos_account_store_commit __attribute__((alias("reliefos_account_store_commit")));
+extern __typeof__(reliefos_account_store_recover) leonos_account_store_recover __attribute__((alias("reliefos_account_store_recover")));

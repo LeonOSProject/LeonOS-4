@@ -31,7 +31,7 @@ int main(void)
     task->kind = TASK_KIND_USER;
     nx_enabled = true;
     assert(address_space_create(sched_task_as(task)));
-    uint64_t va = NTCLKS_USER_BASE + 4096;
+    uint64_t va = RELIEFNT_USER_BASE + 4096;
     struct task_vma *vma = &task->vmas[0];
     *vma = (struct task_vma){.used = 1, .start = va, .end = va + 8192,
         .prot = LINUX_PROT_READ | LINUX_PROT_WRITE, .flags = TASK_VMA_FLAG_ANON};

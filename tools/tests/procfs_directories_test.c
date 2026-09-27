@@ -32,11 +32,11 @@ uint32_t smp_cpu_count(void) { return 1; }
 void sched_cpu_ticks(uint64_t *busy, uint64_t *idle) { *busy = 10; *idle = 20; }
 void sched_cpu_ticks_per_cpu(uint64_t *busy, uint64_t *idle, uint32_t capacity)
 { if (capacity) sched_cpu_ticks(busy, idle); }
-static const struct leonos_system_info fixture_system = {
+static const struct reliefos_system_info fixture_system = {
     .kernel_name = "ntclks", .kernel_version = "9.8.7-0123",
     .build_time = "2026-09-11 01:02:03",
 };
-const struct leonos_system_info *ntclks_system_info(void) { return &fixture_system; }
+const struct reliefos_system_info *reliefnt_system_info(void) { return &fixture_system; }
 
 const char *userland_boot_cmdline(void) { return ""; }
 void linux_uts_names(char host[65], char domain[65])
@@ -51,11 +51,11 @@ int cpu_inventory_read(uint64_t o,void *b,uint32_t n,uint32_t *r) { (void)o;(voi
 int sysfs_lookup(const char *p,struct storage_node *n) { (void)p;(void)n;return -2; }
 int sysfs_read(const char *p,uint64_t o,void *b,uint32_t n,uint32_t *r) { (void)p;(void)o;(void)b;(void)n;*r=0;return -2; }
 int sysfs_readlink(const char *p,char *b,uint32_t n) { (void)p;(void)b;(void)n;return -2; }
-int sysfs_readdir(const char *p,uint64_t *o,struct leonos_dir_entry *e) { (void)p;(void)o;(void)e;return -2; }
+int sysfs_readdir(const char *p,uint64_t *o,struct reliefos_dir_entry *e) { (void)p;(void)o;(void)e;return -2; }
 #endif
 struct task_vma *sched_task_vma_at(struct task *t,uint32_t i) { return i<SCHED_TASK_VMA_MAX? &sched_task_mm(t)->vmas[i]:NULL; }
 int pty_get_foreground_pgid(uint32_t p,uint32_t *g) { (void)p;*g=0;return -2; }
-int driver_manager_list(struct leonos_driver_list *query) { query->count = 0; return 0; }
+int driver_manager_list(struct reliefos_driver_list *query) { query->count = 0; return 0; }
 static char argument_pages[8192];
 bool address_space_user_page_readable(const struct address_space *a,uint64_t v) { (void)a;return v>=0x400000 && v<0x402000; }
 uint64_t address_space_user_page_phys(const struct address_space *a,uint64_t v) { (void)a;return (v&~4095ULL)-0x400000+0x1000; }
@@ -65,18 +65,18 @@ int main(void)
 {
     strcpy(current.path, "/usr/lib/leonos/apps/procsys/procsys.elf");
     struct storage_node node;
-    assert(proc_lookup("/proc/42", &node) == 0 && node.type == LEONOS_FS_TYPE_DIR);
-    assert(proc_lookup("/proc/self", &node) == 0 && node.type == LEONOS_FS_TYPE_SYMLINK);
+    assert(proc_lookup("/proc/42", &node) == 0 && node.type == RELIEFOS_FS_TYPE_DIR);
+    assert(proc_lookup("/proc/self", &node) == 0 && node.type == RELIEFOS_FS_TYPE_SYMLINK);
     assert(proc_lookup("/proc/43", &node) == -2);
     assert(proc_lookup("/proc/4294967338", &node) == -2);
     assert(proc_lookup("/proc/42unknown/stat", &node) == -2);
-    assert(proc_lookup("/proc/42/stat", &node) == 0 && node.type == LEONOS_FS_TYPE_FILE);
+    assert(proc_lookup("/proc/42/stat", &node) == 0 && node.type == RELIEFOS_FS_TYPE_FILE);
     char contents[512];
     uint32_t got;
     assert(proc_read("/proc/42/stat", 0, contents, sizeof(contents) - 1, &got) == 0 && got);
     contents[got] = 0;
     assert(strstr(contents, "42 (test)"));
-    assert(proc_lookup("/proc/42/status", &node) == 0 && node.type == LEONOS_FS_TYPE_FILE);
+    assert(proc_lookup("/proc/42/status", &node) == 0 && node.type == RELIEFOS_FS_TYPE_FILE);
     char link[64] = {0};
     assert(proc_readlink("/proc/self", link, sizeof(link)) == 2);
     assert(!memcmp(link, "42", 2));
@@ -88,8 +88,8 @@ int main(void)
         .pty_id = 2, .endpoint = TASK_PTY_ENDPOINT_SLAVE};
     assert(proc_readlink("/proc/self/fd/0", link, sizeof(link)) == 9);
     assert(!memcmp(link, "/dev/tty2", 9));
-    assert(proc_lookup("/proc/42/fd", &node) == 0 && node.type == LEONOS_FS_TYPE_DIR);
-    assert(proc_lookup("/proc/42/fd/0", &node) == 0 && node.type == LEONOS_FS_TYPE_SYMLINK);
+    assert(proc_lookup("/proc/42/fd", &node) == 0 && node.type == RELIEFOS_FS_TYPE_DIR);
+    assert(proc_lookup("/proc/42/fd/0", &node) == 0 && node.type == RELIEFOS_FS_TYPE_SYMLINK);
     assert(proc_readlink("/proc/self/fd/99", link, sizeof(link)) == -2);
     assert(proc_readlink("/proc/self/fd/4294967296", link, sizeof(link)) == -2);
     current.euid = current.suid = current.fsuid = 1001;
@@ -115,34 +115,34 @@ int main(void)
     sched_task_mm(&foreign)->as.cr3 = 4096;
     sched_task_mm(&foreign)->env_start = sched_task_mm(&current)->env_start;
     sched_task_mm(&foreign)->env_end = sched_task_mm(&current)->env_end;
-    assert(proc_read("/proc/43/environ", 0, contents, sizeof(contents), &got) == -LEONOS_EACCES && got == 0);
+    assert(proc_read("/proc/43/environ", 0, contents, sizeof(contents), &got) == -RELIEFOS_EACCES && got == 0);
     foreign.uid = foreign.euid = foreign.suid = current.fsuid;
     foreign.gid = foreign.egid = foreign.sgid = current.fsgid;
     assert(proc_read("/proc/43/environ", 0, contents, sizeof(contents), &got) == 0 && got == 12);
     sched_task_mm(&foreign)->nondumpable = true;
-    assert(proc_read("/proc/43/environ", 0, contents, sizeof(contents), &got) == -LEONOS_EACCES && got == 0);
+    assert(proc_read("/proc/43/environ", 0, contents, sizeof(contents), &got) == -RELIEFOS_EACCES && got == 0);
     current.cap_effective |= 1ULL << CAP_SYS_PTRACE;
     assert(proc_read("/proc/43/environ", 0, contents, sizeof(contents), &got) == 0 && got == 12);
     current.cap_effective = 0;
     expose_foreign = false;
     uint64_t offset = 0;
-    struct leonos_dir_entry entry;
+    struct reliefos_dir_entry entry;
     assert(proc_readdir("/proc/42", &offset, &entry) == 1 && !strcmp(entry.name, "stat"));
     assert(proc_readdir("/proc/42", &offset, &entry) == 1 && !strcmp(entry.name, "cmdline"));
     assert(proc_readdir("/proc/42", &offset, &entry) == 1 && !strcmp(entry.name, "status"));
     const char *extra[] = {"mounts", "mountinfo", "exe", "cwd", "root"};
     for (unsigned i = 0; i < sizeof(extra) / sizeof(extra[0]); ++i) {
         assert(proc_readdir("/proc/42", &offset, &entry) == 1 && !strcmp(entry.name, extra[i]));
-        assert(entry.type == (i >= 2 ? LEONOS_FS_TYPE_SYMLINK : LEONOS_FS_TYPE_FILE));
+        assert(entry.type == (i >= 2 ? RELIEFOS_FS_TYPE_SYMLINK : RELIEFOS_FS_TYPE_FILE));
     }
     assert(proc_readdir("/proc/42", &offset, &entry) == 1 && !strcmp(entry.name, "comm"));
     assert(proc_readdir("/proc/42", &offset, &entry) == 1 && !strcmp(entry.name, "environ"));
-    assert(proc_readdir("/proc/42", &offset, &entry) == 1 && !strcmp(entry.name, "fd") && entry.type == LEONOS_FS_TYPE_DIR);
+    assert(proc_readdir("/proc/42", &offset, &entry) == 1 && !strcmp(entry.name, "fd") && entry.type == RELIEFOS_FS_TYPE_DIR);
     assert(proc_readdir("/proc/42", &offset, &entry) == 0);
     offset = 0;
     assert(proc_readdir("/proc/42/fd", &offset, &entry) == 1 && !strcmp(entry.name, "0"));
     assert(proc_readdir("/proc/42/fd", &offset, &entry) == 0);
-    assert(proc_lookup("/proc/mounts", &node) == 0 && node.type == LEONOS_FS_TYPE_SYMLINK);
+    assert(proc_lookup("/proc/mounts", &node) == 0 && node.type == RELIEFOS_FS_TYPE_SYMLINK);
     memset(link, '#', sizeof(link));
     assert(proc_readlink("/proc/mounts", link, 4) == 4 && !memcmp(link, "self", 4) && link[4] == '#');
     strcpy(sched_task_cwd(&current), "/home/test");

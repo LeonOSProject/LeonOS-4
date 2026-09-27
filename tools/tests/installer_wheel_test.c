@@ -16,7 +16,7 @@ int main(void)
     assert(mkdtemp(target));
     snprintf(path, sizeof(path), "%s/etc", target);
     assert(mkdir(path, 0700) == 0);
-    assert(leonos_account_seed(target, "alice", "user-password", "root-password") == 0);
+    assert(reliefos_account_seed(target, "alice", "user-password", "root-password") == 0);
 
     snprintf(path, sizeof(path), "%s/etc/group", target);
     FILE *file = fopen(path, "r");
@@ -64,9 +64,9 @@ int main(void)
     }
     assert(users == 1);
     fclose(file);
-    assert(!leonos_account_name_valid("alice,bob", 32));
+    assert(!reliefos_account_name_valid("alice,bob", 32));
     errno = 0;
-    assert(leonos_account_seed(target, "wheel", "password", "password") == -1 && errno == EINVAL);
+    assert(reliefos_account_seed(target, "wheel", "password", "password") == -1 && errno == EINVAL);
     puts("installer wheel: PASS membership, gshadow, nonroot identity and reserved names");
     return 0;
 }

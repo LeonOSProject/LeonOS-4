@@ -5,9 +5,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
-#include <leonos/http.h>
-#include <leonos/net_control.h>
-#include <leonos/system.h>
+#include <reliefos/http.h>
+#include <reliefos/net_control.h>
+#include <reliefos/system.h>
 #include <netdb.h>
 #include <poll.h>
 #include <stdio.h>
@@ -34,13 +34,13 @@ static int run(char *const command[])
 static int unprivileged_management(void)
 {
     if (setgroups(0, NULL) < 0 || setgid(1000) < 0 || setuid(1000) < 0) return 1;
-    struct leonos_net_dhcp dhcp;
-    struct leonos_net_config config;
-    CHECK(leonos_net_config(&config) == 0 && config.local_ip == 0x0a25000f,
+    struct reliefos_net_dhcp dhcp;
+    struct reliefos_net_config config;
+    CHECK(reliefos_net_config(&config) == 0 && config.local_ip == 0x0a25000f,
           "ordinary user reads network service");
-    CHECK(leonos_net_dhcp_renew(4000, &dhcp) < 0 && errno == EACCES,
+    CHECK(reliefos_net_dhcp_renew(4000, &dhcp) < 0 && errno == EACCES,
           "ordinary user DHCP requires authorization");
-    CHECK(leonos_net_config(&config) == 0 && config.local_ip == 0x0a25000f,
+    CHECK(reliefos_net_config(&config) == 0 && config.local_ip == 0x0a25000f,
           "network service remains usable after denied update");
     char *direct[] = {"/usr/lib/leonos/apps/netctl/netctl.elf", "--renew-dhcp", NULL};
     CHECK(run(direct) == 128 + EACCES, "DHCP helper rejects direct unprivileged execution");
@@ -57,26 +57,26 @@ int main(int argc, char **argv)
     puts("[network] START");
     alarm(100);
     int control = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
-    struct leonos_net_control request = {.version = LEONOS_NET_CONTROL_VERSION,
-                                        .operation = LEONOS_NET_CONTROL_CONFIG};
-    CHECK(control >= 0 && ioctl(control, LEONOS_NET_CONTROL_IOCTL, &request) == 0 && !request.result,
+    struct reliefos_net_control request = {.version = RELIEFOS_NET_CONTROL_VERSION,
+                                        .operation = RELIEFOS_NET_CONTROL_CONFIG};
+    CHECK(control >= 0 && ioctl(control, RELIEFOS_NET_CONTROL_IOCTL, &request) == 0 && !request.result,
           "real interface query");
-    struct leonos_net_config *config = &request.data.config;
+    struct reliefos_net_config *config = &request.data.config;
     printf("[network] address=%08x gateway=%08x dns=%08x flags=%x\n", config->local_ip,
            config->gateway_ip, config->dns_ip, config->flags);
     CHECK(config->local_ip == 0x0a25000f && config->gateway_ip == 0x0a250002 &&
           config->dns_ip == 0x0a250003, "DHCP custom subnet and DNS");
     close(control);
-    struct leonos_net_config managed;
+    struct reliefos_net_config managed;
     int management = -1;
     for (unsigned i = 0; i < 20; ++i) {
-        management = leonos_net_config(&managed);
+        management = reliefos_net_config(&managed);
         if (!management) break;
         usleep(500000);
     }
     CHECK(management == 0 && managed.local_ip == 0x0a25000f, "production netmand configuration IPC");
-    struct leonos_net_dhcp renewed;
-    CHECK(leonos_net_dhcp_renew(4000, &renewed) == 0 && renewed.status == 0 &&
+    struct reliefos_net_dhcp renewed;
+    CHECK(reliefos_net_dhcp_renew(4000, &renewed) == 0 && renewed.status == 0 &&
           renewed.config.local_ip == 0x0a25000f, "root DHCP update through production service");
     char *ordinary[] = {"/usr/lib/leonos/tests/linux-inventory.elf", "--netmand-unprivileged", NULL};
     CHECK(run(ordinary) == 0, "network controller authorization workflow");
@@ -132,11 +132,11 @@ int main(int argc, char **argv)
               "inherited TCP descriptor survives parent close");
         freeaddrinfo(addresses);
     }
-    struct leonos_time_sync sync;
-    ret = leonos_time_ntp_sync(4000, &sync);
+    struct reliefos_time_sync sync;
+    ret = reliefos_time_ntp_sync(4000, &sync);
     struct timespec now;
     clock_gettime(CLOCK_REALTIME, &now);
-    CHECK(ret == 0 && sync.valid && sync.status == LEONOS_NET_STATUS_OK &&
+    CHECK(ret == 0 && sync.valid && sync.status == RELIEFOS_NET_STATUS_OK &&
           now.tv_sec >= 2208988800LL && now.tv_sec < 2208988900LL,
           "NTP era 2040 and actual CLOCK_REALTIME update");
     printf("[network] clock=%lld.%09ld ntp-status=%u\n", (long long)now.tv_sec, now.tv_nsec, sync.status);
@@ -156,14 +156,14 @@ int main(int argc, char **argv)
     {
         const size_t expected_size = 1024U * 1024U;
         char *body = malloc(expected_size + 1U);
-        struct leonos_http_response https_response = {0};
+        struct reliefos_http_response https_response = {0};
         int native_ok = 0;
         if (body) {
-            int request_result = leonos_http_get(
+            int request_result = reliefos_http_get(
                 "https://fixture.test:18443/payload", 20000U, body,
                 (uint32_t)(expected_size + 1U), NULL, 0, &https_response);
             native_ok = request_result == 0 &&
-                        https_response.net_status == LEONOS_NET_STATUS_OK &&
+                        https_response.net_status == RELIEFOS_NET_STATUS_OK &&
                         https_response.http_status == 200U &&
                         https_response.body_len == expected_size;
             for (size_t i = 0; native_ok && i < expected_size; ++i) {
@@ -175,8 +175,8 @@ int main(int argc, char **argv)
         CHECK(native_ok, "native libc HTTPS GET verifies CA and exact payload");
         free(body);
 
-        struct leonos_http_response download_response = {0};
-        int download_result = leonos_http_download(
+        struct reliefos_http_response download_response = {0};
+        int download_result = reliefos_http_download(
             "https://fixture.test:18443/payload", "/tmp/net-native-download",
             20000U, NULL, NULL, &download_response);
         FILE *native_download = fopen("/tmp/net-native-download", "rb");
@@ -194,43 +194,43 @@ int main(int argc, char **argv)
         CHECK(download_ok && downloaded == expected_size,
               "native HTTPS streaming download preserves exact payload");
 
-        struct leonos_http_response mismatch = {0};
+        struct reliefos_http_response mismatch = {0};
         char small_body[256];
-        int mismatch_result = leonos_http_get(
+        int mismatch_result = reliefos_http_get(
             "https://10.37.0.2:18443/payload", 20000U, small_body,
             sizeof(small_body), NULL, 0, &mismatch);
         CHECK(mismatch_result == 0 &&
-              mismatch.net_status == LEONOS_NET_STATUS_TLS_FAILED,
+              mismatch.net_status == RELIEFOS_NET_STATUS_TLS_FAILED,
               "native HTTPS rejects certificate hostname mismatch");
 
-        struct leonos_http_response downgrade = {0};
-        int downgrade_result = leonos_http_get(
+        struct reliefos_http_response downgrade = {0};
+        int downgrade_result = reliefos_http_get(
             "https://fixture.test:18443/downgrade", 20000U, small_body,
             sizeof(small_body), NULL, 0, &downgrade);
         CHECK(downgrade_result == 0 &&
-              downgrade.net_status == LEONOS_NET_STATUS_TLS_FAILED,
+              downgrade.net_status == RELIEFOS_NET_STATUS_TLS_FAILED,
               "native HTTPS rejects cleartext downgrade redirect");
     }
     control = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
     puts("[network] LINK_DOWN_REQUEST");
     for (unsigned i = 0; i < 70; ++i) {
-        request = (struct leonos_net_control){.version=LEONOS_NET_CONTROL_VERSION, .operation=LEONOS_NET_CONTROL_CONFIG};
-        if (ioctl(control, LEONOS_NET_CONTROL_IOCTL, &request) < 0) break;
-        if (!(request.data.config.flags & LEONOS_NET_CONFIG_FLAG_ACTIVE)) break;
+        request = (struct reliefos_net_control){.version=RELIEFOS_NET_CONTROL_VERSION, .operation=RELIEFOS_NET_CONTROL_CONFIG};
+        if (ioctl(control, RELIEFOS_NET_CONTROL_IOCTL, &request) < 0) break;
+        if (!(request.data.config.flags & RELIEFOS_NET_CONFIG_FLAG_ACTIVE)) break;
         usleep(100000);
     }
-    CHECK((request.data.config.flags & (LEONOS_NET_CONFIG_FLAG_ACTIVE | LEONOS_NET_CONFIG_FLAG_PRESENT)) ==
-          LEONOS_NET_CONFIG_FLAG_PRESENT, "disconnected link remains present but inactive");
+    CHECK((request.data.config.flags & (RELIEFOS_NET_CONFIG_FLAG_ACTIVE | RELIEFOS_NET_CONFIG_FLAG_PRESENT)) ==
+          RELIEFOS_NET_CONFIG_FLAG_PRESENT, "disconnected link remains present but inactive");
     puts("[network] LINK_UP_REQUEST");
     for (unsigned i = 0; i < 70; ++i) {
-        if (ioctl(control, LEONOS_NET_CONTROL_IOCTL, &request) < 0) break;
-        if (request.data.config.flags & LEONOS_NET_CONFIG_FLAG_ACTIVE) break;
+        if (ioctl(control, RELIEFOS_NET_CONTROL_IOCTL, &request) < 0) break;
+        if (request.data.config.flags & RELIEFOS_NET_CONFIG_FLAG_ACTIVE) break;
         usleep(100000);
     }
-    CHECK(request.data.config.flags & LEONOS_NET_CONFIG_FLAG_ACTIVE, "carrier recovers after reconnect");
-    request = (struct leonos_net_control){.version=LEONOS_NET_CONTROL_VERSION, .operation=LEONOS_NET_CONTROL_DHCP,
+    CHECK(request.data.config.flags & RELIEFOS_NET_CONFIG_FLAG_ACTIVE, "carrier recovers after reconnect");
+    request = (struct reliefos_net_control){.version=RELIEFOS_NET_CONTROL_VERSION, .operation=RELIEFOS_NET_CONTROL_DHCP,
         .data.dhcp={.timeout_ms=3000}};
-    CHECK(ioctl(control, LEONOS_NET_CONTROL_IOCTL, &request) == 0 && !request.result &&
+    CHECK(ioctl(control, RELIEFOS_NET_CONTROL_IOCTL, &request) == 0 && !request.result &&
         !request.data.dhcp.status && request.data.dhcp.config.local_ip == 0x0a25000f, "DHCP reacquires after reconnect");
     close(control);
     alarm(0);

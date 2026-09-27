@@ -1,20 +1,20 @@
-#include <leonos/auth.h>
-#include <leonos/environment.h>
-#include <leonos/syscall.h>
+#include <reliefos/auth.h>
+#include <reliefos/environment.h>
+#include <reliefos/syscall.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 #include "locale_conf.h"
 
-#define LEONOS_ENV_GLOBAL_PATH LEONOS_PATH_ENVIRONMENT_CONF
-#define LEONOS_ENV_USER_SUFFIX "/.environment"
+#define RELIEFOS_ENV_GLOBAL_PATH RELIEFOS_PATH_ENVIRONMENT_CONF
+#define RELIEFOS_ENV_USER_SUFFIX "/.environment"
 
 extern char **environ;
 
 struct environment_list {
-    char *items[LEONOS_ENV_MAX_ENTRIES];
+    char *items[RELIEFOS_ENV_MAX_ENTRIES];
     uint32_t count;
 };
 
@@ -41,7 +41,7 @@ static void env_list_free(struct environment_list *list)
 
 static int env_name_valid(const char *name, uint32_t length)
 {
-    if (!name || length == 0 || length >= LEONOS_ENV_MAX_ENTRY_LEN) {
+    if (!name || length == 0 || length >= RELIEFOS_ENV_MAX_ENTRY_LEN) {
         return 0;
     }
     if (!((name[0] >= 'A' && name[0] <= 'Z') ||
@@ -96,7 +96,7 @@ static int env_list_set_item(struct environment_list *list, const char *item)
         return -1;
     }
     item_length = env_text_len(item);
-    if (item_length == 0 || item_length >= LEONOS_ENV_MAX_ENTRY_LEN) {
+    if (item_length == 0 || item_length >= RELIEFOS_ENV_MAX_ENTRY_LEN) {
         return -1;
     }
     copy = (char *)malloc(item_length + 1U);
@@ -111,7 +111,7 @@ static int env_list_set_item(struct environment_list *list, const char *item)
             return 0;
         }
     }
-    if (list->count >= LEONOS_ENV_MAX_ENTRIES) {
+    if (list->count >= RELIEFOS_ENV_MAX_ENTRIES) {
         free(copy);
         return -7;
     }
@@ -152,7 +152,7 @@ static int env_list_set(struct environment_list *list, const char *name,
     value_length = env_text_len(value);
     if (!env_name_valid(name, name_length) ||
         strchr(value, '\n') || strchr(value, '\r') ||
-        name_length + value_length + 2U > LEONOS_ENV_MAX_ENTRY_LEN) {
+        name_length + value_length + 2U > RELIEFOS_ENV_MAX_ENTRY_LEN) {
         return -1;
     }
     total_length = name_length + value_length + 2U;
@@ -243,14 +243,14 @@ static int env_load_file(struct environment_list *list, const char *path)
         /* Missing configuration is equivalent to an empty layer. */
         return errno == ENOENT ? 0 : -errno;
     }
-    contents = (char *)malloc(LEONOS_ENV_MAX_FILE_BYTES + 1U);
+    contents = (char *)malloc(RELIEFOS_ENV_MAX_FILE_BYTES + 1U);
     if (!contents) {
         close(fd);
         return -12;
     }
-    while (length < LEONOS_ENV_MAX_FILE_BYTES) {
+    while (length < RELIEFOS_ENV_MAX_FILE_BYTES) {
         got = read(fd, contents + length,
-                   LEONOS_ENV_MAX_FILE_BYTES - length);
+                   RELIEFOS_ENV_MAX_FILE_BYTES - length);
         if (got <= 0) {
             break;
         }
@@ -273,10 +273,10 @@ static int env_load_file(struct environment_list *list, const char *path)
 }
 
 static int env_user_path(char *path, uint32_t capacity,
-                         const struct leonos_user_info *user)
+                         const struct reliefos_user_info *user)
 {
     uint32_t home_length;
-    uint32_t suffix_length = (uint32_t)sizeof(LEONOS_ENV_USER_SUFFIX) - 1U;
+    uint32_t suffix_length = (uint32_t)sizeof(RELIEFOS_ENV_USER_SUFFIX) - 1U;
     if (!path || capacity == 0 || !user || !user->home[0]) {
         return 0;
     }
@@ -285,17 +285,17 @@ static int env_user_path(char *path, uint32_t capacity,
         return 0;
     }
     memcpy(path, user->home, home_length);
-    memcpy(path + home_length, LEONOS_ENV_USER_SUFFIX, suffix_length + 1U);
+    memcpy(path + home_length, RELIEFOS_ENV_USER_SUFFIX, suffix_length + 1U);
     return 1;
 }
 
 static void env_apply_locale(struct environment_list *list)
 {
     char text[512];
-    struct leonos_locale_setting settings[LEONOS_LOCALE_MAX];
+    struct reliefos_locale_setting settings[RELIEFOS_LOCALE_MAX];
     size_t length = 0;
     int count, i;
-    int fd = open(LEONOS_PATH_LOCALE_CONF, O_RDONLY);
+    int fd = open(RELIEFOS_PATH_LOCALE_CONF, O_RDONLY);
     long got;
     if (fd < 0)
         return;
@@ -317,7 +317,7 @@ static void env_apply_locale(struct environment_list *list)
         while (length && text[length - 1U] != '\n')
             length--;
     }
-    count = leonos_locale_parse(text, length, settings, LEONOS_LOCALE_MAX);
+    count = reliefos_locale_parse(text, length, settings, RELIEFOS_LOCALE_MAX);
     for (i = 0; i < count; i++) {
         if (!env_list_has(list, settings[i].name))
             (void)env_list_set(list, settings[i].name, settings[i].value);
@@ -327,18 +327,18 @@ static void env_apply_locale(struct environment_list *list)
 static int env_load_layers(struct environment_list *list,
                            char *const overrides[])
 {
-    struct leonos_user_info user = {0};
-    char user_path[LEONOS_AUTH_HOME_LEN + sizeof(LEONOS_ENV_USER_SUFFIX)];
+    struct reliefos_user_info user = {0};
+    char user_path[RELIEFOS_AUTH_HOME_LEN + sizeof(RELIEFOS_ENV_USER_SUFFIX)];
     int result;
     if (!list) {
         return -1;
     }
     env_apply_locale(list);
-    result = env_load_file(list, LEONOS_ENV_GLOBAL_PATH);
+    result = env_load_file(list, RELIEFOS_ENV_GLOBAL_PATH);
     if (result < 0) {
         return result;
     }
-    if (leonos_auth_current(&user) == 0 && env_user_path(user_path,
+    if (reliefos_auth_current(&user) == 0 && env_user_path(user_path,
                                                           sizeof(user_path),
                                                           &user)) {
         result = env_load_file(list, user_path);
@@ -368,7 +368,7 @@ static int env_load_layers(struct environment_list *list,
     /* A user's persistent environment is the source of truth for newly
      * launched applications. Reapply it after the parent's inherited vector
      * so a language change is not masked by the long-lived desktop process. */
-    if (leonos_auth_current(&user) == 0 && env_user_path(user_path,
+    if (reliefos_auth_current(&user) == 0 && env_user_path(user_path,
                                                           sizeof(user_path),
                                                           &user)) {
         (void)env_load_file(list, user_path);
@@ -376,7 +376,7 @@ static int env_load_layers(struct environment_list *list,
     return 0;
 }
 
-int leonos_environment_build(char *const overrides[], char ***out_envp)
+int reliefos_environment_build(char *const overrides[], char ***out_envp)
 {
     struct environment_list list = {0};
     char **envp;
@@ -404,7 +404,7 @@ int leonos_environment_build(char *const overrides[], char ***out_envp)
     return 0;
 }
 
-void leonos_environment_free(char **envp)
+void reliefos_environment_free(char **envp)
 {
     if (!envp) {
         return;
@@ -424,13 +424,13 @@ static int env_write_file(const char *path, const struct environment_list *list,
     if (!path || !list) {
         return -1;
     }
-    contents = (char *)malloc(LEONOS_ENV_MAX_FILE_BYTES);
+    contents = (char *)malloc(RELIEFOS_ENV_MAX_FILE_BYTES);
     if (!contents) {
         return -12;
     }
     for (uint32_t i = 0; i < list->count; ++i) {
         uint32_t item_length = env_text_len(list->items[i]);
-        if (length + item_length + 1U > LEONOS_ENV_MAX_FILE_BYTES) {
+        if (length + item_length + 1U > RELIEFOS_ENV_MAX_FILE_BYTES) {
             free(contents);
             return -7;
         }
@@ -459,27 +459,27 @@ static int env_write_file(const char *path, const struct environment_list *list,
 }
 
 static int env_persistent_path(uint32_t scope, char *path, uint32_t capacity,
-                               struct leonos_user_info *user)
+                               struct reliefos_user_info *user)
 {
     if (!path || !capacity || !user) {
         return -1;
     }
-    *user = (struct leonos_user_info){0};
-    if (leonos_auth_current(user) < 0) {
+    *user = (struct reliefos_user_info){0};
+    if (reliefos_auth_current(user) < 0) {
         return -13;
     }
-    if (scope == LEONOS_ENV_SCOPE_GLOBAL) {
-        if (user->role != LEONOS_AUTH_ROLE_ADMIN) {
+    if (scope == RELIEFOS_ENV_SCOPE_GLOBAL) {
+        if (user->role != RELIEFOS_AUTH_ROLE_ADMIN) {
             return -13;
         }
-        if (env_text_len(LEONOS_ENV_GLOBAL_PATH) + 1U > capacity) {
+        if (env_text_len(RELIEFOS_ENV_GLOBAL_PATH) + 1U > capacity) {
             return -7;
         }
-        memcpy(path, LEONOS_ENV_GLOBAL_PATH,
-               env_text_len(LEONOS_ENV_GLOBAL_PATH) + 1U);
+        memcpy(path, RELIEFOS_ENV_GLOBAL_PATH,
+               env_text_len(RELIEFOS_ENV_GLOBAL_PATH) + 1U);
         return 0;
     }
-    if (scope == LEONOS_ENV_SCOPE_USER &&
+    if (scope == RELIEFOS_ENV_SCOPE_USER &&
         env_user_path(path, capacity, user)) {
         return 0;
     }
@@ -490,8 +490,8 @@ static int env_persistent_update(uint32_t scope, const char *name,
                                  const char *value, int remove)
 {
     struct environment_list list = {0};
-    struct leonos_user_info user;
-    char path[LEONOS_AUTH_HOME_LEN + sizeof(LEONOS_ENV_USER_SUFFIX)];
+    struct reliefos_user_info user;
+    char path[RELIEFOS_AUTH_HOME_LEN + sizeof(RELIEFOS_ENV_USER_SUFFIX)];
     int result;
     result = env_persistent_path(scope, path, sizeof(path), &user);
     if (result < 0) {
@@ -506,18 +506,23 @@ static int env_persistent_update(uint32_t scope, const char *name,
                       env_list_set(&list, name, value);
     if (result == 0) {
         result = env_write_file(path, &list,
-                                scope == LEONOS_ENV_SCOPE_GLOBAL ? 0644 : 0600);
+                                scope == RELIEFOS_ENV_SCOPE_GLOBAL ? 0644 : 0600);
     }
     env_list_free(&list);
     return result;
 }
 
-int leonos_environment_set(uint32_t scope, const char *name, const char *value)
+int reliefos_environment_set(uint32_t scope, const char *name, const char *value)
 {
     return env_persistent_update(scope, name, value, 0);
 }
 
-int leonos_environment_unset(uint32_t scope, const char *name)
+int reliefos_environment_unset(uint32_t scope, const char *name)
 {
     return env_persistent_update(scope, name, "", 1);
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_environment_build) leonos_environment_build __attribute__((alias("reliefos_environment_build")));
+extern __typeof__(reliefos_environment_free) leonos_environment_free __attribute__((alias("reliefos_environment_free")));
+extern __typeof__(reliefos_environment_set) leonos_environment_set __attribute__((alias("reliefos_environment_set")));
+extern __typeof__(reliefos_environment_unset) leonos_environment_unset __attribute__((alias("reliefos_environment_unset")));

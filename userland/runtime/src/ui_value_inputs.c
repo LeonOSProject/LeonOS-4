@@ -1,5 +1,5 @@
-#include <leonos/gui.h>
-#include <leonos/ui.h>
+#include <reliefos/gui.h>
+#include <reliefos/ui.h>
 
 struct value_popup_cache {
     uint32_t valid;
@@ -15,7 +15,7 @@ struct value_popup_cache {
 
 static struct value_popup_cache value_popup;
 
-static void value_popup_place(const struct leonos_ui_surface *surface,
+static void value_popup_place(const struct reliefos_ui_surface *surface,
                               uint32_t kind, uint32_t requested_x,
                               uint32_t requested_y, uint32_t w, uint32_t h,
                               int32_t *out_x, int32_t *out_y)
@@ -84,7 +84,7 @@ static uint8_t color_channel(uint32_t color, uint8_t channel)
     return (uint8_t)(color >> ((2U - (channel % 3U)) * 8U));
 }
 
-static void color_set_channel(struct leonos_ui_color_input_state *state,
+static void color_set_channel(struct reliefos_ui_color_input_state *state,
                               uint8_t channel, uint8_t value)
 {
     uint32_t shift = (2U - (channel % 3U)) * 8U;
@@ -101,7 +101,7 @@ static void color_format(char out[8], uint32_t color)
     out[7] = 0;
 }
 
-void leonos_ui_color_input_state_init(struct leonos_ui_color_input_state *state,
+void reliefos_ui_color_input_state_init(struct reliefos_ui_color_input_state *state,
                                       uint32_t color)
 {
     if (!state) {
@@ -113,8 +113,8 @@ void leonos_ui_color_input_state_init(struct leonos_ui_color_input_state *state,
     state->channel = 0;
 }
 
-void leonos_ui_color_input(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
-                           uint32_t w, const struct leonos_ui_color_input_state *state,
+void reliefos_ui_color_input(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
+                           uint32_t w, const struct reliefos_ui_color_input_state *state,
                            uint32_t flags)
 {
     char value[8];
@@ -126,27 +126,27 @@ void leonos_ui_color_input(struct leonos_ui_surface *surface, uint32_t x, uint32
     if (!state || w < 36) {
         return;
     }
-    leonos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w,
-                            LEONOS_UI_BUTTON_H,
-                            (flags & LEONOS_UI_INPUT_DISABLED)
-                                ? LEONOS_GUI_CURSOR_NO : LEONOS_GUI_CURSOR_HAND,
-                            (flags & LEONOS_UI_INPUT_DISABLED)
-                                ? LEONOS_GUI_CURSOR_REGION_DISABLED : 0);
+    reliefos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w,
+                            RELIEFOS_UI_BUTTON_H,
+                            (flags & RELIEFOS_UI_INPUT_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_NO : RELIEFOS_GUI_CURSOR_HAND,
+                            (flags & RELIEFOS_UI_INPUT_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_REGION_DISABLED : 0);
     color_format(value, state->color);
-    leonos_ui_bevel(surface, x, y, w, LEONOS_UI_BUTTON_H, LEONOS_UI_WHITE,
-                    state->focused ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_rect(surface, x + 4, y + 4, 28, LEONOS_UI_BUTTON_H - 8, state->color);
-    leonos_ui_text_transparent(surface, x + 40, y + 4, value,
-                               (flags & LEONOS_UI_INPUT_DISABLED) ? LEONOS_UI_DARK : LEONOS_UI_BLACK);
-    leonos_ui_text_transparent(surface, x + w - 14, y + 4, state->open ? "^" : "v",
-                               LEONOS_UI_DARK);
-    if (!state->open || (flags & LEONOS_UI_INPUT_DISABLED)) {
+    reliefos_ui_bevel(surface, x, y, w, RELIEFOS_UI_BUTTON_H, RELIEFOS_UI_WHITE,
+                    state->focused ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_rect(surface, x + 4, y + 4, 28, RELIEFOS_UI_BUTTON_H - 8, state->color);
+    reliefos_ui_text_transparent(surface, x + 40, y + 4, value,
+                               (flags & RELIEFOS_UI_INPUT_DISABLED) ? RELIEFOS_UI_DARK : RELIEFOS_UI_BLACK);
+    reliefos_ui_text_transparent(surface, x + w - 14, y + 4, state->open ? "^" : "v",
+                               RELIEFOS_UI_DARK);
+    if (!state->open || (flags & RELIEFOS_UI_INPUT_DISABLED)) {
         return;
     }
-    value_popup_place(surface, 1, x, y + LEONOS_UI_BUTTON_H + 2,
+    value_popup_place(surface, 1, x, y + RELIEFOS_UI_BUTTON_H + 2,
                       popup_w, 82, &popup_x, &popup_y);
-    leonos_ui_bevel(surface, (uint32_t)popup_x, (uint32_t)popup_y,
-                    popup_w, 82, LEONOS_UI_GRAY, 0);
+    reliefos_ui_bevel(surface, (uint32_t)popup_x, (uint32_t)popup_y,
+                    popup_w, 82, RELIEFOS_UI_GRAY, 0);
     for (uint32_t channel = 0; channel < 3; ++channel) {
         uint32_t channel_x = (uint32_t)popup_x + 6 + channel * channel_w;
         int32_t channel_value = color_channel(state->color, (uint8_t)channel);
@@ -154,17 +154,17 @@ void leonos_ui_color_input(struct leonos_ui_surface *surface, uint32_t x, uint32
         uint32_t preview = channel == 0 ? ((uint32_t)channel_value << 16)
                          : channel == 1 ? ((uint32_t)channel_value << 8)
                                         : (uint32_t)channel_value;
-        leonos_ui_text_transparent(surface, channel_x, (uint32_t)popup_y + 8, label, LEONOS_UI_BLACK);
-        leonos_ui_rect(surface, channel_x, (uint32_t)popup_y + 26,
+        reliefos_ui_text_transparent(surface, channel_x, (uint32_t)popup_y + 8, label, RELIEFOS_UI_BLACK);
+        reliefos_ui_rect(surface, channel_x, (uint32_t)popup_y + 26,
                        channel_w > 8 ? channel_w - 8 : channel_w, 12, preview);
-        leonos_ui_stepper(surface, channel_x, (uint32_t)popup_y + 46,
+        reliefos_ui_stepper(surface, channel_x, (uint32_t)popup_y + 46,
                           channel_w > 8 ? channel_w - 8 : channel_w,
-                          LEONOS_UI_BUTTON_H, channel_value, 0, 255,
-                          state->channel == channel ? LEONOS_UI_BUTTON_ACTIVE : 0);
+                          RELIEFOS_UI_BUTTON_H, channel_value, 0, 255,
+                          state->channel == channel ? RELIEFOS_UI_BUTTON_ACTIVE : 0);
     }
 }
 
-int leonos_ui_color_input_handle_mouse(struct leonos_ui_color_input_state *state,
+int reliefos_ui_color_input_handle_mouse(struct reliefos_ui_color_input_state *state,
                                        int32_t px, int32_t py,
                                        uint32_t x, uint32_t y, uint32_t w,
                                        uint32_t flags)
@@ -173,11 +173,11 @@ int leonos_ui_color_input_handle_mouse(struct leonos_ui_color_input_state *state
     int32_t popup_y;
     uint32_t popup_w;
     uint32_t channel_w;
-    if (!state || (flags & LEONOS_UI_INPUT_DISABLED)) {
+    if (!state || (flags & RELIEFOS_UI_INPUT_DISABLED)) {
         return 0;
     }
-    if (leonos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)x, (int32_t)y,
-                      w, LEONOS_UI_BUTTON_H)) {
+    if (reliefos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)x, (int32_t)y,
+                      w, RELIEFOS_UI_BUTTON_H)) {
         state->open = state->open ? 0 : 1;
         state->focused = 1;
         return 1;
@@ -186,22 +186,22 @@ int leonos_ui_color_input_handle_mouse(struct leonos_ui_color_input_state *state
         return 0;
     }
     popup_w = w < 214 ? 214 : w;
-    value_popup_resolve(1, x, y + LEONOS_UI_BUTTON_H + 2,
+    value_popup_resolve(1, x, y + RELIEFOS_UI_BUTTON_H + 2,
                         popup_w, 82, &popup_x, &popup_y);
     channel_w = (popup_w - 16) / 3;
     for (uint32_t channel = 0; channel < 3; ++channel) {
         uint32_t channel_x = (uint32_t)popup_x + 6 + channel * channel_w;
         int32_t value = color_channel(state->color, (uint8_t)channel);
-        if (leonos_ui_stepper_handle_mouse(&value, 0, 255, 1, channel_x,
+        if (reliefos_ui_stepper_handle_mouse(&value, 0, 255, 1, channel_x,
                                            (uint32_t)popup_y + 46,
                                            channel_w > 8 ? channel_w - 8 : channel_w,
-                                           LEONOS_UI_BUTTON_H, px, py)) {
+                                           RELIEFOS_UI_BUTTON_H, px, py)) {
             color_set_channel(state, (uint8_t)channel, (uint8_t)value);
             state->channel = (uint8_t)channel;
             return 1;
         }
     }
-    if (!leonos_ui_hit((uint32_t)px, (uint32_t)py, popup_x, popup_y,
+    if (!reliefos_ui_hit((uint32_t)px, (uint32_t)py, popup_x, popup_y,
                        popup_w, 82)) {
         state->open = 0;
         return 1;
@@ -209,18 +209,18 @@ int leonos_ui_color_input_handle_mouse(struct leonos_ui_color_input_state *state
     return 0;
 }
 
-int leonos_ui_color_input_handle_key(struct leonos_ui_color_input_state *state,
+int reliefos_ui_color_input_handle_key(struct reliefos_ui_color_input_state *state,
                                      uint8_t keycode, uint32_t flags)
 {
-    if (!state || (flags & LEONOS_UI_INPUT_DISABLED)) {
+    if (!state || (flags & RELIEFOS_UI_INPUT_DISABLED)) {
         return 0;
     }
-    if (keycode == LEONOS_KEY_ENTER || keycode == LEONOS_KEY_SPACE) {
+    if (keycode == RELIEFOS_KEY_ENTER || keycode == RELIEFOS_KEY_SPACE) {
         state->open = state->open ? 0 : 1;
         state->focused = 1;
         return 1;
     }
-    if (state->open && keycode == LEONOS_KEY_TAB) {
+    if (state->open && keycode == RELIEFOS_KEY_TAB) {
         state->channel = (uint8_t)((state->channel + 1U) % 3U);
         return 1;
     }
@@ -250,7 +250,7 @@ static uint8_t date_weekday(uint16_t year, uint8_t month, uint8_t day)
                       adjusted_year / 400U + offsets[month - 1] + day) % 7U);
 }
 
-static void date_normalize(struct leonos_ui_date_input_state *state)
+static void date_normalize(struct reliefos_ui_date_input_state *state)
 {
     if (state->year == 0) {
         state->year = 2000;
@@ -267,7 +267,7 @@ static void date_normalize(struct leonos_ui_date_input_state *state)
     }
 }
 
-static void date_format(char out[11], const struct leonos_ui_date_input_state *state)
+static void date_format(char out[11], const struct reliefos_ui_date_input_state *state)
 {
     uint16_t year = state->year;
     out[0] = (char)('0' + (year / 1000U) % 10U);
@@ -283,7 +283,7 @@ static void date_format(char out[11], const struct leonos_ui_date_input_state *s
     out[10] = 0;
 }
 
-static void date_change_month(struct leonos_ui_date_input_state *state, int direction)
+static void date_change_month(struct reliefos_ui_date_input_state *state, int direction)
 {
     if (direction < 0) {
         if (state->month == 1) {
@@ -305,7 +305,7 @@ static void date_change_month(struct leonos_ui_date_input_state *state, int dire
     date_normalize(state);
 }
 
-void leonos_ui_date_input_state_init(struct leonos_ui_date_input_state *state,
+void reliefos_ui_date_input_state_init(struct reliefos_ui_date_input_state *state,
                                      uint16_t year, uint8_t month, uint8_t day)
 {
     if (!state) {
@@ -320,8 +320,8 @@ void leonos_ui_date_input_state_init(struct leonos_ui_date_input_state *state,
     date_normalize(state);
 }
 
-void leonos_ui_date_input(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
-                          uint32_t w, const struct leonos_ui_date_input_state *state,
+void reliefos_ui_date_input(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
+                          uint32_t w, const struct reliefos_ui_date_input_state *state,
                           uint32_t flags)
 {
     char value[11];
@@ -336,35 +336,35 @@ void leonos_ui_date_input(struct leonos_ui_surface *surface, uint32_t x, uint32_
     if (!state || w < 48) {
         return;
     }
-    leonos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w,
-                            LEONOS_UI_BUTTON_H,
-                            (flags & LEONOS_UI_INPUT_DISABLED)
-                                ? LEONOS_GUI_CURSOR_NO : LEONOS_GUI_CURSOR_HAND,
-                            (flags & LEONOS_UI_INPUT_DISABLED)
-                                ? LEONOS_GUI_CURSOR_REGION_DISABLED : 0);
+    reliefos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w,
+                            RELIEFOS_UI_BUTTON_H,
+                            (flags & RELIEFOS_UI_INPUT_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_NO : RELIEFOS_GUI_CURSOR_HAND,
+                            (flags & RELIEFOS_UI_INPUT_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_REGION_DISABLED : 0);
     date_format(value, state);
-    leonos_ui_bevel(surface, x, y, w, LEONOS_UI_BUTTON_H, LEONOS_UI_WHITE,
-                    state->focused ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_text_transparent(surface, x + 8, y + 4, value,
-                               (flags & LEONOS_UI_INPUT_DISABLED) ? LEONOS_UI_DARK : LEONOS_UI_BLACK);
-    leonos_ui_text_transparent(surface, x + w - 16, y + 4, state->open ? "^" : "v",
-                               LEONOS_UI_DARK);
-    if (!state->open || (flags & LEONOS_UI_INPUT_DISABLED)) {
+    reliefos_ui_bevel(surface, x, y, w, RELIEFOS_UI_BUTTON_H, RELIEFOS_UI_WHITE,
+                    state->focused ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_text_transparent(surface, x + 8, y + 4, value,
+                               (flags & RELIEFOS_UI_INPUT_DISABLED) ? RELIEFOS_UI_DARK : RELIEFOS_UI_BLACK);
+    reliefos_ui_text_transparent(surface, x + w - 16, y + 4, state->open ? "^" : "v",
+                               RELIEFOS_UI_DARK);
+    if (!state->open || (flags & RELIEFOS_UI_INPUT_DISABLED)) {
         return;
     }
-    value_popup_place(surface, 2, x, y + LEONOS_UI_BUTTON_H + 2,
+    value_popup_place(surface, 2, x, y + RELIEFOS_UI_BUTTON_H + 2,
                       popup_w, 174, &popup_x, &popup_y);
-    leonos_ui_bevel(surface, (uint32_t)popup_x, (uint32_t)popup_y,
-                    popup_w, 174, LEONOS_UI_GRAY, 0);
-    leonos_ui_button(surface, (uint32_t)popup_x + 6, (uint32_t)popup_y + 4, 22, 20, "<", 0);
-    leonos_ui_button(surface, (uint32_t)popup_x + popup_w - 28,
+    reliefos_ui_bevel(surface, (uint32_t)popup_x, (uint32_t)popup_y,
+                    popup_w, 174, RELIEFOS_UI_GRAY, 0);
+    reliefos_ui_button(surface, (uint32_t)popup_x + 6, (uint32_t)popup_y + 4, 22, 20, "<", 0);
+    reliefos_ui_button(surface, (uint32_t)popup_x + popup_w - 28,
                      (uint32_t)popup_y + 4, 22, 20, ">", 0);
-    leonos_ui_text_transparent(surface, (uint32_t)popup_x + 42,
-                               (uint32_t)popup_y + 6, value, LEONOS_UI_BLACK);
+    reliefos_ui_text_transparent(surface, (uint32_t)popup_x + 42,
+                               (uint32_t)popup_y + 6, value, RELIEFOS_UI_BLACK);
     for (uint32_t column = 0; column < 7; ++column) {
-        leonos_ui_text_transparent(surface, (uint32_t)popup_x + 8 + column * cell_w,
+        reliefos_ui_text_transparent(surface, (uint32_t)popup_x + 8 + column * cell_w,
                                    (uint32_t)popup_y + 32,
-                                   weekdays[column], LEONOS_UI_DARK);
+                                   weekdays[column], RELIEFOS_UI_DARK);
     }
     first = date_weekday(state->year, state->month, 1);
     days = date_days_in_month(state->year, state->month);
@@ -373,22 +373,22 @@ void leonos_ui_date_input(struct leonos_ui_surface *surface, uint32_t x, uint32_
         uint32_t cell_x = (uint32_t)popup_x + 6 + (index % 7U) * cell_w;
         uint32_t cell_y = (uint32_t)popup_y + 50 + (index / 7U) * 20U;
         uint32_t selected = day == state->day;
-        leonos_ui_cursor_region(surface, (int32_t)cell_x, (int32_t)cell_y,
+        reliefos_ui_cursor_region(surface, (int32_t)cell_x, (int32_t)cell_y,
                                 cell_w > 2 ? cell_w - 2 : cell_w, 18,
-                                LEONOS_GUI_CURSOR_HAND, 0);
+                                RELIEFOS_GUI_CURSOR_HAND, 0);
         day_text[0] = (char)('0' + day / 10U);
         day_text[1] = (char)('0' + day % 10U);
         day_text[2] = 0;
         if (selected) {
-            leonos_ui_rect(surface, cell_x, cell_y, cell_w > 2 ? cell_w - 2 : cell_w,
-                           18, LEONOS_UI_ACTIVE_TITLE);
+            reliefos_ui_rect(surface, cell_x, cell_y, cell_w > 2 ? cell_w - 2 : cell_w,
+                           18, RELIEFOS_UI_ACTIVE_TITLE);
         }
-        leonos_ui_text_transparent(surface, cell_x + 3, cell_y + 2, day_text,
-                                   selected ? LEONOS_UI_WHITE : LEONOS_UI_BLACK);
+        reliefos_ui_text_transparent(surface, cell_x + 3, cell_y + 2, day_text,
+                                   selected ? RELIEFOS_UI_WHITE : RELIEFOS_UI_BLACK);
     }
 }
 
-int leonos_ui_date_input_handle_mouse(struct leonos_ui_date_input_state *state,
+int reliefos_ui_date_input_handle_mouse(struct reliefos_ui_date_input_state *state,
                                       int32_t px, int32_t py,
                                       uint32_t x, uint32_t y, uint32_t w,
                                       uint32_t flags)
@@ -398,11 +398,11 @@ int leonos_ui_date_input_handle_mouse(struct leonos_ui_date_input_state *state,
     uint32_t popup_w;
     uint32_t cell_w;
     uint8_t first;
-    if (!state || (flags & LEONOS_UI_INPUT_DISABLED)) {
+    if (!state || (flags & RELIEFOS_UI_INPUT_DISABLED)) {
         return 0;
     }
-    if (leonos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)x, (int32_t)y,
-                      w, LEONOS_UI_BUTTON_H)) {
+    if (reliefos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)x, (int32_t)y,
+                      w, RELIEFOS_UI_BUTTON_H)) {
         state->open = state->open ? 0 : 1;
         state->focused = 1;
         return 1;
@@ -411,7 +411,7 @@ int leonos_ui_date_input_handle_mouse(struct leonos_ui_date_input_state *state,
         return 0;
     }
     popup_w = w < 224 ? 224 : w;
-    value_popup_resolve(2, x, y + LEONOS_UI_BUTTON_H + 2,
+    value_popup_resolve(2, x, y + RELIEFOS_UI_BUTTON_H + 2,
                         popup_w, 174, &popup_x, &popup_y);
     if ((uint32_t)py >= (uint32_t)popup_y + 4 &&
         (uint32_t)py < (uint32_t)popup_y + 24) {
@@ -443,7 +443,7 @@ int leonos_ui_date_input_handle_mouse(struct leonos_ui_date_input_state *state,
         }
         return 1;
     }
-    if (!leonos_ui_hit((uint32_t)px, (uint32_t)py, popup_x, popup_y,
+    if (!reliefos_ui_hit((uint32_t)px, (uint32_t)py, popup_x, popup_y,
                        popup_w, 174)) {
         state->open = 0;
         return 1;
@@ -451,21 +451,30 @@ int leonos_ui_date_input_handle_mouse(struct leonos_ui_date_input_state *state,
     return 0;
 }
 
-int leonos_ui_date_input_handle_key(struct leonos_ui_date_input_state *state,
+int reliefos_ui_date_input_handle_key(struct reliefos_ui_date_input_state *state,
                                     uint8_t keycode, uint32_t flags)
 {
-    if (!state || (flags & LEONOS_UI_INPUT_DISABLED)) {
+    if (!state || (flags & RELIEFOS_UI_INPUT_DISABLED)) {
         return 0;
     }
-    if (keycode == LEONOS_KEY_ENTER || keycode == LEONOS_KEY_SPACE) {
+    if (keycode == RELIEFOS_KEY_ENTER || keycode == RELIEFOS_KEY_SPACE) {
         state->open = state->open ? 0 : 1;
         state->focused = 1;
         return 1;
     }
-    if (keycode == LEONOS_KEY_TAB) {
+    if (keycode == RELIEFOS_KEY_TAB) {
         state->part = (uint8_t)((state->part + 1U) % 3U);
         state->focused = 1;
         return 1;
     }
     return 0;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_ui_color_input) leonos_ui_color_input __attribute__((alias("reliefos_ui_color_input")));
+extern __typeof__(reliefos_ui_color_input_handle_key) leonos_ui_color_input_handle_key __attribute__((alias("reliefos_ui_color_input_handle_key")));
+extern __typeof__(reliefos_ui_color_input_handle_mouse) leonos_ui_color_input_handle_mouse __attribute__((alias("reliefos_ui_color_input_handle_mouse")));
+extern __typeof__(reliefos_ui_color_input_state_init) leonos_ui_color_input_state_init __attribute__((alias("reliefos_ui_color_input_state_init")));
+extern __typeof__(reliefos_ui_date_input) leonos_ui_date_input __attribute__((alias("reliefos_ui_date_input")));
+extern __typeof__(reliefos_ui_date_input_handle_key) leonos_ui_date_input_handle_key __attribute__((alias("reliefos_ui_date_input_handle_key")));
+extern __typeof__(reliefos_ui_date_input_handle_mouse) leonos_ui_date_input_handle_mouse __attribute__((alias("reliefos_ui_date_input_handle_mouse")));
+extern __typeof__(reliefos_ui_date_input_state_init) leonos_ui_date_input_state_init __attribute__((alias("reliefos_ui_date_input_state_init")));

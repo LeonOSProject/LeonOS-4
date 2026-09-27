@@ -52,7 +52,7 @@ static void feed(const char *text)
 
 int main(void)
 {
-    char output[LEONOS_AUTH_PASSWORD_LEN], overlong[140];
+    char output[RELIEFOS_AUTH_PASSWORD_LEN], overlong[140];
     feed("U!lower\n");
     interrupt_read = 1;
     assert(tty_secret(NULL, output, sizeof(output)) == 1);

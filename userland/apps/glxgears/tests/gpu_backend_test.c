@@ -2,8 +2,8 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <leonos/pgl.h>
-#include <leonos/gpu_sdk.h>
+#include <reliefos/pgl.h>
+#include <reliefos/gpu_sdk.h>
 
 #define main portablegl_upstream_main
 #include "gears-upstream.c"

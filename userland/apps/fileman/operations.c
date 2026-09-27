@@ -5,7 +5,7 @@
 #define FILEMAN_COPY_MAX_DEPTH 16U
 #define FILEMAN_RECYCLE_MAP ".leon-recycle-map"
 
-static char clipboard_paths[FILEMAN_CLIPBOARD_MAX][LEONOS_FS_PATH_LEN];
+static char clipboard_paths[FILEMAN_CLIPBOARD_MAX][RELIEFOS_FS_PATH_LEN];
 static uint32_t clipboard_count;
 static uint8_t clipboard_cut;
 static char recycle_map[4096];
@@ -40,7 +40,7 @@ static int build_recycle_dir(char *dst, uint32_t cap)
         return -1;
     }
     build_path_join(dst, cap, home_path, "recycle-bin");
-    return mkdir(dst, 0777) < 0 && leonos_stat_legacy(dst, &(struct leonos_stat){0}) < 0 ? -1 : 0;
+    return mkdir(dst, 0777) < 0 && reliefos_stat_legacy(dst, &(struct reliefos_stat){0}) < 0 ? -1 : 0;
 }
 
 static void build_path_in_dir(char *dst, uint32_t cap, const char *dir,
@@ -98,13 +98,13 @@ static void build_copy_name(char *dst, uint32_t cap, const char *name,
 static int choose_target_path(const char *dir, const char *name,
                               char *dst, uint32_t cap)
 {
-    struct leonos_stat st;
-    char candidate[LEONOS_FS_NAME_LEN];
+    struct reliefos_stat st;
+    char candidate[RELIEFOS_FS_NAME_LEN];
     build_path_in_dir(dst, cap, dir, name);
-    if (leonos_stat_legacy(dst, &st) < 0) {
+    if (reliefos_stat_legacy(dst, &st) < 0) {
         return 0;
     }
-    if (leonos_ui_show_confirm_dialog(T("File Conflict"),
+    if (reliefos_ui_show_confirm_dialog(T("File Conflict"),
                                       T("The destination exists. Replace it? Choose No to save with another name."),
                                       0)) {
         return 1;
@@ -113,7 +113,7 @@ static int choose_target_path(const char *dir, const char *name,
     for (uint32_t serial = 2; serial < 100U; ++serial) {
         build_copy_name(candidate, sizeof(candidate), name, serial);
         build_path_in_dir(dst, cap, dir, candidate);
-        if (leonos_stat_legacy(dst, &st) < 0) {
+        if (reliefos_stat_legacy(dst, &st) < 0) {
             return 0;
         }
     }
@@ -123,16 +123,16 @@ static int choose_target_path(const char *dir, const char *name,
 static int choose_free_target_path(const char *dir, const char *name,
                                    char *dst, uint32_t cap)
 {
-    struct leonos_stat st;
-    char candidate[LEONOS_FS_NAME_LEN];
+    struct reliefos_stat st;
+    char candidate[RELIEFOS_FS_NAME_LEN];
     build_path_in_dir(dst, cap, dir, name);
-    if (leonos_stat_legacy(dst, &st) < 0) {
+    if (reliefos_stat_legacy(dst, &st) < 0) {
         return 0;
     }
     for (uint32_t serial = 2; serial < 100U; ++serial) {
         build_copy_name(candidate, sizeof(candidate), name, serial);
         build_path_in_dir(dst, cap, dir, candidate);
-        if (leonos_stat_legacy(dst, &st) < 0) {
+        if (reliefos_stat_legacy(dst, &st) < 0) {
             return 0;
         }
     }
@@ -141,23 +141,23 @@ static int choose_free_target_path(const char *dir, const char *name,
 
 static int remove_tree(const char *path, uint32_t depth)
 {
-    struct leonos_stat st;
+    struct reliefos_stat st;
     int fd;
     int ret;
-    if (depth > FILEMAN_COPY_MAX_DEPTH || leonos_stat_legacy(path, &st) < 0) {
+    if (depth > FILEMAN_COPY_MAX_DEPTH || reliefos_stat_legacy(path, &st) < 0) {
         return -1;
     }
-    if (st.type != LEONOS_FS_TYPE_DIR) {
+    if (st.type != RELIEFOS_FS_TYPE_DIR) {
         return unlink(path);
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return fd;
     }
     for (;;) {
-        struct leonos_dir_entry entry;
-        char child[LEONOS_FS_PATH_LEN];
-        ret = leonos_readdir(fd, &entry);
+        struct reliefos_dir_entry entry;
+        char child[RELIEFOS_FS_PATH_LEN];
+        ret = reliefos_readdir(fd, &entry);
         if (ret <= 0) {
             break;
         }
@@ -177,14 +177,14 @@ static int copy_file(const char *src, const char *dst, uint64_t total,
                      uint32_t span_percent)
 {
     char buffer[FILEMAN_COPY_BUFFER_SIZE];
-    int in = open(src, LEONOS_O_RDONLY, 0);
+    int in = open(src, RELIEFOS_O_RDONLY, 0);
     int out;
     if (in < 0) {
         return in;
     }
     struct stat source;
     if (fstat(in, &source) < 0) { close(in); return -1; }
-    out = open(dst, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, source.st_mode & 0777);
+    out = open(dst, RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, source.st_mode & 0777);
     if (out < 0) {
         close(in);
         return out;
@@ -220,28 +220,28 @@ static int copy_tree(const char *src, const char *dst, uint64_t total,
                      uint64_t *done, uint32_t base_percent,
                      uint32_t span_percent, uint32_t depth)
 {
-    struct leonos_stat st;
+    struct reliefos_stat st;
     int ret;
-    if (depth > FILEMAN_COPY_MAX_DEPTH || leonos_stat_legacy(src, &st) < 0) {
+    if (depth > FILEMAN_COPY_MAX_DEPTH || reliefos_stat_legacy(src, &st) < 0) {
         return -1;
     }
-    if (st.type != LEONOS_FS_TYPE_DIR) {
+    if (st.type != RELIEFOS_FS_TYPE_DIR) {
         return copy_file(src, dst, total, done, base_percent, span_percent);
     }
     ret = mkdir(dst, 0777);
-    if (ret < 0 && leonos_stat_legacy(dst, &(struct leonos_stat){0}) < 0) {
+    if (ret < 0 && reliefos_stat_legacy(dst, &(struct reliefos_stat){0}) < 0) {
         return ret;
     }
     {
-        int fd = open(src, LEONOS_O_RDONLY, 0);
+        int fd = open(src, RELIEFOS_O_RDONLY, 0);
         if (fd < 0) {
             return fd;
         }
         for (;;) {
-            struct leonos_dir_entry entry;
-            char child_src[LEONOS_FS_PATH_LEN];
-            char child_dst[LEONOS_FS_PATH_LEN];
-            ret = leonos_readdir(fd, &entry);
+            struct reliefos_dir_entry entry;
+            char child_src[RELIEFOS_FS_PATH_LEN];
+            char child_dst[RELIEFOS_FS_PATH_LEN];
+            ret = reliefos_readdir(fd, &entry);
             if (ret <= 0) {
                 break;
             }
@@ -261,12 +261,12 @@ static int copy_tree(const char *src, const char *dst, uint64_t total,
 
 static uint64_t path_bytes(const char *path)
 {
-    struct leonos_stat st;
+    struct reliefos_stat st;
     struct folder_size_info info = {0};
-    if (leonos_stat_legacy(path, &st) < 0) {
+    if (reliefos_stat_legacy(path, &st) < 0) {
         return 0;
     }
-    if (st.type == LEONOS_FS_TYPE_DIR) {
+    if (st.type == RELIEFOS_FS_TYPE_DIR) {
         (void)accumulate_folder_size(path, &info, 0);
         return info.bytes;
     }
@@ -316,8 +316,8 @@ void paste_clipboard(void)
     operation_set(0, was_cut ? T("Moving files...")
                              : T("Copying files..."));
     for (uint32_t i = 0; i < clipboard_count; ++i) {
-        char target[LEONOS_FS_PATH_LEN];
-        char source_parent[LEONOS_FS_PATH_LEN];
+        char target[RELIEFOS_FS_PATH_LEN];
+        char source_parent[RELIEFOS_FS_PATH_LEN];
         const char *name = path_basename(clipboard_paths[i]);
         int conflict;
         int ret;
@@ -393,12 +393,12 @@ void paste_clipboard(void)
 
 static int recycle_map_load(const char *dir)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     uint32_t len = 0;
     int fd;
     build_path_in_dir(path, sizeof(path), dir, FILEMAN_RECYCLE_MAP);
     recycle_map[0] = 0;
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return 0;
     }
@@ -416,10 +416,10 @@ static int recycle_map_load(const char *dir)
 
 static void recycle_map_save(const char *dir)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     int fd;
     build_path_in_dir(path, sizeof(path), dir, FILEMAN_RECYCLE_MAP);
-    fd = open(path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
+    fd = open(path, RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0666);
     if (fd >= 0) {
         (void)write(fd, recycle_map, text_len(recycle_map));
         close(fd);
@@ -505,7 +505,7 @@ static void recycle_map_remove(const char *name)
 
 void recycle_selected_entries(void)
 {
-    char recycle[LEONOS_FS_PATH_LEN];
+    char recycle[RELIEFOS_FS_PATH_LEN];
     uint32_t moved = 0;
     if (fileman_is_recycle_dir()) {
         set_status(T("Items are already in the Recycle Bin"));
@@ -518,8 +518,8 @@ void recycle_selected_entries(void)
     recycle_map_load(recycle);
     operation_set(0, T("Moving items to Recycle Bin..."));
     for (uint32_t i = 0; i < entry_count; ++i) {
-        char src[LEONOS_FS_PATH_LEN];
-        char dst[LEONOS_FS_PATH_LEN];
+        char src[RELIEFOS_FS_PATH_LEN];
+        char dst[RELIEFOS_FS_PATH_LEN];
         int selected = fileman_entry_marked(i) ||
             (!fileman_selected_count() && i == (uint32_t)file_list.selected);
         if (!selected || fileman_entry_is_device(i)) {
@@ -545,9 +545,9 @@ void recycle_selected_entries(void)
 
 void restore_selected_entry(void)
 {
-    char recycle[LEONOS_FS_PATH_LEN];
-    char src[LEONOS_FS_PATH_LEN];
-    char origin[LEONOS_FS_PATH_LEN];
+    char recycle[RELIEFOS_FS_PATH_LEN];
+    char src[RELIEFOS_FS_PATH_LEN];
+    char origin[RELIEFOS_FS_PATH_LEN];
     if (!fileman_is_recycle_dir() || !selected_entry_valid()) {
         set_status(T("Select an item in Recycle Bin"));
         return;
@@ -559,12 +559,12 @@ void restore_selected_entry(void)
         return;
     }
     build_child_path(src, sizeof(src), entries[file_list.selected].name);
-    if (leonos_stat_legacy(origin, &(struct leonos_stat){0}) == 0 &&
-        !leonos_ui_show_confirm_dialog(T("Restore Conflict"),
+    if (reliefos_stat_legacy(origin, &(struct reliefos_stat){0}) == 0 &&
+        !reliefos_ui_show_confirm_dialog(T("Restore Conflict"),
                                        T("Original path exists. Replace it?"), 0)) {
         return;
     }
-    if (leonos_stat_legacy(origin, &(struct leonos_stat){0}) == 0 && remove_tree(origin, 0) < 0) {
+    if (reliefos_stat_legacy(origin, &(struct reliefos_stat){0}) == 0 && remove_tree(origin, 0) < 0) {
         set_status(T("Could not replace original item"));
         return;
     }
@@ -584,13 +584,13 @@ void empty_recycle_bin(void)
     if (!fileman_is_recycle_dir()) {
         return;
     }
-    if (!leonos_ui_show_confirm_dialog(T("Empty Recycle Bin"),
+    if (!reliefos_ui_show_confirm_dialog(T("Empty Recycle Bin"),
                                        T("Delete all Recycle Bin items permanently?"), 0)) {
         return;
     }
     operation_set(0, T("Emptying Recycle Bin..."));
     for (uint32_t i = 0; i < entry_count; ++i) {
-        char path[LEONOS_FS_PATH_LEN];
+        char path[RELIEFOS_FS_PATH_LEN];
         if (text_eq(entries[i].name, FILEMAN_RECYCLE_MAP)) {
             continue;
         }
@@ -616,13 +616,13 @@ void permanent_delete_selected_entries(void)
         set_status(T("Select an item"));
         return;
     }
-    if (!leonos_ui_show_confirm_dialog(T("Delete Permanently"),
+    if (!reliefos_ui_show_confirm_dialog(T("Delete Permanently"),
                                        T("Selected items cannot be restored. Continue?"), 0)) {
         return;
     }
     operation_set(0, T("Deleting items..."));
     for (uint32_t i = 0; i < entry_count; ++i) {
-        char path[LEONOS_FS_PATH_LEN];
+        char path[RELIEFOS_FS_PATH_LEN];
         int selected = fileman_entry_marked(i) ||
             (!fileman_selected_count() && i == (uint32_t)file_list.selected);
         if (!selected || fileman_entry_is_device(i)) {

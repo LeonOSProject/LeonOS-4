@@ -1,6 +1,6 @@
-#include <leonos/fs.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
+#include <reliefos/fs.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -110,7 +110,7 @@ static int read_exact(int fd, void *buffer, uint32_t length)
 
 static int skip_bytes(int fd, uint32_t length)
 {
-    return lseek(fd, (long)length, LEONOS_SEEK_CUR) < 0 ? -1 : 0;
+    return lseek(fd, (long)length, RELIEFOS_SEEK_CUR) < 0 ? -1 : 0;
 }
 
 static int parse_wav_header(int fd, struct wav_info *out)
@@ -161,7 +161,7 @@ static int play_wav(const char *path)
     uint32_t remaining;
     int fd;
     int ret;
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         printf("wavplay: open failed %d\n", fd);
         return 1;

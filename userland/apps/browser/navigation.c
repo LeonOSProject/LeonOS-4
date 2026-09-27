@@ -6,8 +6,8 @@
 #define BROWSER_TAG_TEXT_MAX 512U
 #define BROWSER_HTTP_MAX_RETRIES 3U
 
-static char browser_http_headers[LEONOS_HTTP_HEADER_MAX + 1U];
-static char browser_css_headers[LEONOS_HTTP_HEADER_MAX + 1U];
+static char browser_http_headers[RELIEFOS_HTTP_HEADER_MAX + 1U];
+static char browser_css_headers[RELIEFOS_HTTP_HEADER_MAX + 1U];
 static char browser_css_body[BROWSER_CSS_FETCH_MAX + 1U];
 static char browser_external_css[BROWSER_EXTERNAL_CSS_MAX + 1U];
 static char browser_combined_source[BROWSER_SOURCE_CAP];
@@ -83,7 +83,7 @@ void set_page_source(const char *title, const char *source,
         window_title[0] = 0;
         append_text(window_title, &title_pos, sizeof(window_title), "LeonOS Browser - ");
         append_text(window_title, &title_pos, sizeof(window_title), page_title);
-        (void)leonos_gui_set_window_title((uint32_t)window_id, window_title);
+        (void)reliefos_gui_set_window_title((uint32_t)window_id, window_title);
     }
     set_status(status);
 }
@@ -183,7 +183,7 @@ void load_about(void)
         "</body></html>";
     copy_text(current_location, sizeof(current_location), "about:leonos");
     copy_text(address_input, sizeof(address_input), current_location);
-    leonos_ui_edit_state_sync(&address_edit);
+    reliefos_ui_edit_state_sync(&address_edit);
     set_page_source("LeonOS Browser", about_html, 1, T("Ready"));
 }
 
@@ -360,7 +360,7 @@ static uint32_t browser_fetch_external_css(const char *base_url)
     browser_external_css[0] = 0;
     while (page_source[scan] && count < BROWSER_CSS_LINK_MAX) {
         uint32_t tag_len;
-        struct leonos_http_response css_response;
+        struct reliefos_http_response css_response;
         if (page_source[scan] != '<' ||
             !browser_tag_name_at(page_source + scan, "link")) {
             ++scan;
@@ -379,7 +379,7 @@ static uint32_t browser_fetch_external_css(const char *base_url)
             !browser_extract_attr(tag, "href", href, sizeof(href))) {
             continue;
         }
-        if (leonos_http_resolve_url(base_url, href, resolved,
+        if (reliefos_http_resolve_url(base_url, href, resolved,
                                     sizeof(resolved)) < 0 ||
             (!starts_with_ignore_case(resolved, "http://") &&
              !starts_with_ignore_case(resolved, "https://"))) {
@@ -403,7 +403,7 @@ static uint32_t browser_fetch_external_css(const char *base_url)
                 browser_css_body[i] = ' ';
             }
         }
-        if (css_response.flags & LEONOS_HTTP_FLAG_TRUNCATED) {
+        if (css_response.flags & RELIEFOS_HTTP_FLAG_TRUNCATED) {
             source_truncated = 1;
         }
         append_text(browser_external_css, &css_pos,
@@ -441,7 +441,7 @@ static uint32_t browser_inject_external_css(const char *base_url)
     return css_count;
 }
 
-static int browser_response_is_html(const struct leonos_http_response *response,
+static int browser_response_is_html(const struct reliefos_http_response *response,
                                     const char *url)
 {
     if (response && response->content_type[0]) {
@@ -485,7 +485,7 @@ static int is_retriable_error(int ret, uint32_t net_status)
 void load_http_form_post(const char *url, const char *body)
 {
     struct parsed_http_url parsed;
-    struct leonos_http_response response;
+    struct reliefos_http_response response;
     uint32_t pos = 0;
     uint32_t css_count = 0;
     uint32_t retries = 0;
@@ -503,7 +503,7 @@ void load_http_form_post(const char *url, const char *body)
                    parsed.secure, parsed.path);
     copy_text(current_location, sizeof(current_location), normalized);
     copy_text(address_input, sizeof(address_input), normalized);
-    leonos_ui_edit_state_sync(&address_edit);
+    reliefos_ui_edit_state_sync(&address_edit);
     set_status(T("Submitting form..."));
     present_browser();
     for (;;) {
@@ -537,14 +537,14 @@ void load_http_form_post(const char *url, const char *body)
     if (response.final_url[0]) {
         copy_text(current_location, sizeof(current_location), response.final_url);
         copy_text(address_input, sizeof(address_input), current_location);
-        leonos_ui_edit_state_sync(&address_edit);
+        reliefos_ui_edit_state_sync(&address_edit);
     }
     for (uint32_t i = 0; i < response.body_len; ++i) {
         if (!page_source[i]) {
             page_source[i] = ' ';
         }
     }
-    if (response.flags & LEONOS_HTTP_FLAG_TRUNCATED) {
+    if (response.flags & RELIEFOS_HTTP_FLAG_TRUNCATED) {
         source_truncated = 1;
     }
     status[0] = 0;
@@ -586,7 +586,7 @@ void load_http_form_post(const char *url, const char *body)
 void load_http_url(const char *url)
 {
     struct parsed_http_url parsed;
-    struct leonos_http_response response;
+    struct reliefos_http_response response;
     uint32_t pos = 0;
     uint32_t css_count = 0;
     uint32_t retries = 0;
@@ -604,7 +604,7 @@ void load_http_url(const char *url)
                    parsed.secure, parsed.path);
     copy_text(current_location, sizeof(current_location), normalized);
     copy_text(address_input, sizeof(address_input), normalized);
-    leonos_ui_edit_state_sync(&address_edit);
+    reliefos_ui_edit_state_sync(&address_edit);
     set_status(T("Opening page..."));
     present_browser();
     for (;;) {
@@ -612,7 +612,7 @@ void load_http_url(const char *url)
         browser_http_headers[0] = 0;
         source_truncated = 0;
         ret = browser_http_get_with_cookies(normalized,
-                                            LEONOS_HTTP_DEFAULT_TIMEOUT_MS,
+                                            RELIEFOS_HTTP_DEFAULT_TIMEOUT_MS,
                                             page_source, sizeof(page_source),
                                             browser_http_headers,
                                             sizeof(browser_http_headers),
@@ -640,14 +640,14 @@ void load_http_url(const char *url)
         copy_text(current_location, sizeof(current_location),
                   response.final_url);
         copy_text(address_input, sizeof(address_input), current_location);
-        leonos_ui_edit_state_sync(&address_edit);
+        reliefos_ui_edit_state_sync(&address_edit);
     }
     for (uint32_t i = 0; i < response.body_len; ++i) {
         if (!page_source[i]) {
             page_source[i] = ' ';
         }
     }
-    if (response.flags & LEONOS_HTTP_FLAG_TRUNCATED) {
+    if (response.flags & RELIEFOS_HTTP_FLAG_TRUNCATED) {
         source_truncated = 1;
     }
     status[0] = 0;
@@ -661,7 +661,7 @@ void load_http_url(const char *url)
         append_text(status, &pos, sizeof(status), "  redirects ");
         append_u32(status, &pos, sizeof(status), response.redirect_count);
     }
-    if (response.flags & LEONOS_HTTP_FLAG_CHUNKED) {
+    if (response.flags & RELIEFOS_HTTP_FLAG_CHUNKED) {
         append_text(status, &pos, sizeof(status), "  chunked");
     }
     if (source_truncated) {
@@ -697,7 +697,7 @@ void load_local_file(const char *path)
     char status[BROWSER_STATUS_CAP];
     source_truncated = 0;
     browser_form_clear_focus();
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         format_ret_status(status, sizeof(status), T("Open failed"), fd);
         render_message_page(T("File Error"), status, path);
@@ -726,7 +726,7 @@ void load_local_file(const char *path)
     page_source[len] = 0;
     copy_text(current_location, sizeof(current_location), path);
     copy_text(address_input, sizeof(address_input), path);
-    leonos_ui_edit_state_sync(&address_edit);
+    reliefos_ui_edit_state_sync(&address_edit);
     copy_text(page_title, sizeof(page_title), path);
     page_is_html = ends_with_ignore_case(path, ".html") || ends_with_ignore_case(path, ".htm");
     rerender_page();
@@ -759,13 +759,13 @@ static int browser_should_download_http_url(const char *url)
 
 void browser_start_download(const char *url)
 {
-    char target[LEONOS_HTTP_URL_LEN];
+    char target[RELIEFOS_HTTP_URL_LEN];
     char *argv[3];
     copy_text(target, sizeof(target), url);
-    argv[0] = (char *)leonos_launch_builtin_path("downloadmgr");
+    argv[0] = (char *)reliefos_launch_builtin_path("downloadmgr");
     argv[1] = target;
     argv[2] = 0;
-    if (leonos_launch_argv(argv) < 0) {
+    if (reliefos_launch_argv(argv) < 0) {
         set_status(T("Could not start Download Manager"));
     } else {
         set_status(T("Download started"));
@@ -774,13 +774,13 @@ void browser_start_download(const char *url)
 
 static void browser_start_api_install(const char *url)
 {
-    char target[LEONOS_HTTP_URL_LEN];
+    char target[RELIEFOS_HTTP_URL_LEN];
     char *argv[3];
     copy_text(target, sizeof(target), url);
-    argv[0] = (char *)leonos_launch_builtin_path("apiapp");
+    argv[0] = (char *)reliefos_launch_builtin_path("apiapp");
     argv[1] = target;
     argv[2] = 0;
-    if (leonos_launch_argv(argv) < 0) {
+    if (reliefos_launch_argv(argv) < 0) {
         set_status(T("Could not start API Installer"));
     } else {
         set_status(T("Application download started"));

@@ -2,8 +2,8 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/un.h>
-#define ioctl leonos_test_ioctl
-#include <leonos/syscall.h>
+#define ioctl reliefos_test_ioctl
+#include <reliefos/syscall.h>
 
 #define main windowd_main
 #define open test_open
@@ -56,21 +56,21 @@ void *test_mmap(void *addr, size_t size, int prot, int flags, int fd, off_t off)
     return backing;
 }
 int test_munmap(void *addr, size_t size) { (void)addr; (void)size; return 0; }
-int leonos_ipc_send_fd(int fd, uint32_t type, const void *p, uint32_t n, int sent_fd)
+int reliefos_ipc_send_fd(int fd, uint32_t type, const void *p, uint32_t n, int sent_fd)
 {
     (void)fd; (void)type; (void)p; (void)n; (void)sent_fd;
     return 0;
 }
-int leonos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
+int reliefos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
 {
     (void)fd;
-    assert(type == LEONOS_WIN_MSG_WINDOW_NOTIFY);
-    assert(length == sizeof(struct leonos_gui_window_msg));
+    assert(type == RELIEFOS_WIN_MSG_WINDOW_NOTIFY);
+    assert(length == sizeof(struct reliefos_gui_window_msg));
     if (++sends == 1) { errno = EAGAIN; return -1; }
     assert(delivered < 4);
-    const struct leonos_gui_window_msg *message = payload;
+    const struct reliefos_gui_window_msg *message = payload;
     assert(!strcmp(message->app_path, "/usr/lib/leonos/apps/terminal/terminal.elf"));
-    delivered_types[delivered++] = ((const struct leonos_gui_window_msg *)payload)->type;
+    delivered_types[delivered++] = ((const struct reliefos_gui_window_msg *)payload)->type;
     return 0;
 }
 int poll(struct pollfd *fds, nfds_t n, int timeout)
@@ -78,13 +78,13 @@ int poll(struct pollfd *fds, nfds_t n, int timeout)
     (void)fds; (void)n; (void)timeout;
     return incoming == 0;
 }
-int leonos_ipc_recv_fd(int fd, uint32_t *type, void *payload, uint32_t capacity,
+int reliefos_ipc_recv_fd(int fd, uint32_t *type, void *payload, uint32_t capacity,
                        uint32_t *length, int *received_fd)
 {
     (void)fd; (void)received_fd;
-    struct leonos_win_present present = {.window_id = 1, .width = 8, .height = 8};
+    struct reliefos_win_present present = {.window_id = 1, .width = 8, .height = 8};
     assert(capacity >= sizeof(present));
-    *type = LEONOS_WIN_MSG_PRESENT;
+    *type = RELIEFOS_WIN_MSG_PRESENT;
     *length = sizeof(present);
     memcpy(payload, &present, sizeof(present));
     ++incoming;
@@ -94,11 +94,11 @@ int leonos_ipc_recv_fd(int fd, uint32_t *type, void *payload, uint32_t capacity,
 int main(void)
 {
     clients[0] = (struct windowd_client){.used = 1, .fd = 4, .pid = 5,
-        .role = LEONOS_WIN_ROLE_POLICY};
+        .role = RELIEFOS_WIN_ROLE_POLICY};
     clients[1] = (struct windowd_client){.used = 1, .fd = 5, .pid = 11,
-        .role = LEONOS_WIN_ROLE_APP};
+        .role = RELIEFOS_WIN_ROLE_APP};
     policy_slot = 0;
-    struct leonos_win_create request = {.width = 8, .height = 8, .title = "Terminal"};
+    struct reliefos_win_create request = {.width = 8, .height = 8, .title = "Terminal"};
     assert(create_window(&clients[1], &request) == 0);
     assert(sends == 1 && delivered == 0);
     handle_client(1);

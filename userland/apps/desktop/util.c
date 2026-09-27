@@ -1,4 +1,4 @@
-#include <leonos/pam_session.h>
+#include <reliefos/pam_session.h>
 #include "desktop.h"
 
 uint32_t fb_w(void)
@@ -69,10 +69,10 @@ int desktop_apply_display_settings(uint8_t mode_index, uint8_t scale_index)
                      desktop_scale_options[scale_index];
     physical_height = desktop_display_modes[mode_index].height *
                       desktop_scale_options[scale_index];
-    if ((fb_caps.capabilities & LEONOS_FB_CAP_MODE_SET) &&
+    if ((fb_caps.capabilities & RELIEFOS_FB_CAP_MODE_SET) &&
         (fb.width != physical_width || fb.height != physical_height)) {
-        if (leonos_fb_set_mode(physical_width, physical_height) < 0 ||
-            leonos_fb_info(&fb) < 0 || leonos_fb_capabilities(&fb_caps) < 0) {
+        if (reliefos_fb_set_mode(physical_width, physical_height) < 0 ||
+            reliefos_fb_info(&fb) < 0 || reliefos_fb_capabilities(&fb_caps) < 0) {
             puts("[desktop.elf] framebuffer mode change failed");
             return 0;
         }
@@ -82,7 +82,7 @@ int desktop_apply_display_settings(uint8_t mode_index, uint8_t scale_index)
     desktop_scale = desktop_scale_options[scale_index];
     desktop_logical_w = desktop_display_modes[mode_index].width;
     desktop_logical_h = desktop_display_modes[mode_index].height;
-    leonos_ui_bind(&ui, screen, desktop_logical_w, desktop_logical_h, MAX_FB_W);
+    reliefos_ui_bind(&ui, screen, desktop_logical_w, desktop_logical_h, MAX_FB_W);
     if (windows[0].visible || windows[1].visible || windows[2].visible || windows[3].visible) {
         desktop_reflow_after_display_change();
     }
@@ -92,8 +92,8 @@ int desktop_apply_display_settings(uint8_t mode_index, uint8_t scale_index)
 
 void desktop_publish_display_state(void)
 {
-    struct leonos_display_state state;
-    unsigned long now = leonos_uptime_ms();
+    struct reliefos_display_state state;
+    unsigned long now = reliefos_uptime_ms();
     state.fb_width = fb.width;
     state.fb_height = fb.height;
     state.logical_width = fb_w();
@@ -105,19 +105,19 @@ void desktop_publish_display_state(void)
     state.confirm_remaining_ms = desktop_pending_confirm && desktop_confirm_deadline_ms > now
                                      ? (uint32_t)(desktop_confirm_deadline_ms - now)
                                      : 0;
-    (void)leonos_display_publish_state(&state);
+    (void)reliefos_display_publish_state(&state);
 }
 
 void desktop_publish_appearance_state(void)
 {
-    struct leonos_appearance_state state;
-    state.theme = leonos_ui_theme();
+    struct reliefos_appearance_state state;
+    state.theme = reliefos_ui_theme();
     state.metro_color_scheme = desktop_metro_color_scheme;
     state.win95_color_scheme = desktop_win95_color_scheme;
     state.wallpaper_mode = desktop_wallpaper_mode;
     copy_text(state.wallpaper_path, sizeof(state.wallpaper_path),
               desktop_wallpaper_path);
-    (void)leonos_appearance_publish_state(&state);
+    (void)reliefos_appearance_publish_state(&state);
 }
 
 static void desktop_broadcast_appearance(void)
@@ -125,8 +125,8 @@ static void desktop_broadcast_appearance(void)
     for (uint8_t slot = BUILTIN_WINDOWS; slot < MAX_WINDOWS; ++slot) {
         if (windows[slot].visible && windows[slot].window_id) {
             send_app_event_to_window(windows[slot].window_id,
-                                     LEONOS_GUI_APP_EVENT_THEME_CHANGED,
-                                     (int32_t)leonos_ui_theme(),
+                                     RELIEFOS_GUI_APP_EVENT_THEME_CHANGED,
+                                     (int32_t)reliefos_ui_theme(),
                                      (int32_t)desktop_metro_color_scheme,
                                      (int32_t)desktop_win95_color_scheme,
                                      0,
@@ -139,7 +139,7 @@ static void desktop_broadcast_appearance(void)
 
 void desktop_apply_theme(uint32_t theme)
 {
-    struct leonos_appearance_request request;
+    struct reliefos_appearance_request request;
     request.theme = theme;
     request.metro_color_scheme = desktop_metro_color_scheme;
     request.win95_color_scheme = desktop_win95_color_scheme;
@@ -149,16 +149,16 @@ void desktop_apply_theme(uint32_t theme)
     desktop_apply_appearance(&request);
 }
 
-void desktop_apply_appearance(const struct leonos_appearance_request *request)
+void desktop_apply_appearance(const struct reliefos_appearance_request *request)
 {
     if (!request ||
-        request->theme > LEONOS_UI_THEME_METRO ||
-        request->metro_color_scheme >= LEONOS_UI_COLOR_SCHEME_COUNT ||
-        request->win95_color_scheme >= LEONOS_UI_COLOR_SCHEME_COUNT ||
-        request->wallpaper_mode >= LEONOS_WALLPAPER_MODE_COUNT) {
+        request->theme > RELIEFOS_UI_THEME_METRO ||
+        request->metro_color_scheme >= RELIEFOS_UI_COLOR_SCHEME_COUNT ||
+        request->win95_color_scheme >= RELIEFOS_UI_COLOR_SCHEME_COUNT ||
+        request->wallpaper_mode >= RELIEFOS_WALLPAPER_MODE_COUNT) {
         return;
     }
-    if (leonos_ui_theme_set_appearance(request->theme,
+    if (reliefos_ui_theme_set_appearance(request->theme,
                                        request->metro_color_scheme,
                                        request->win95_color_scheme) < 0) {
         return;
@@ -177,24 +177,24 @@ void desktop_apply_appearance(const struct leonos_appearance_request *request)
 
 void desktop_handle_appearance_requests(void)
 {
-    struct leonos_appearance_request request;
-    while (leonos_appearance_poll_request(&request) > 0) {
+    struct reliefos_appearance_request request;
+    while (reliefos_appearance_poll_request(&request) > 0) {
         desktop_apply_appearance(&request);
     }
 }
 
 void desktop_handle_display_requests(void)
 {
-    struct leonos_display_request request;
-    while (leonos_display_poll_request(&request) > 0) {
-        if (request.action == LEONOS_DISPLAY_REQUEST_APPLY) {
+    struct reliefos_display_request request;
+    while (reliefos_display_poll_request(&request) > 0) {
+        if (request.action == RELIEFOS_DISPLAY_REQUEST_APPLY) {
             desktop_apply_display_settings_pending((uint8_t)request.mode_index,
                                                    (uint8_t)request.scale_index);
-        } else if (request.action == LEONOS_DISPLAY_REQUEST_KEEP) {
+        } else if (request.action == RELIEFOS_DISPLAY_REQUEST_KEEP) {
             desktop_confirm_display_settings();
-        } else if (request.action == LEONOS_DISPLAY_REQUEST_REVERT) {
+        } else if (request.action == RELIEFOS_DISPLAY_REQUEST_REVERT) {
             desktop_revert_display_settings();
-        } else if (request.action == LEONOS_DISPLAY_REQUEST_REFRESH) {
+        } else if (request.action == RELIEFOS_DISPLAY_REQUEST_REFRESH) {
             full_redraw_pending = 1;
         }
         desktop_publish_display_state();
@@ -320,45 +320,45 @@ static int desktop_config_get_value(const char *buf, const char *key,
 static uint32_t desktop_color_scheme_from_name(const char *name, uint32_t fallback)
 {
     if (text_eq(name, "blue")) {
-        return LEONOS_UI_COLOR_SCHEME_BLUE;
+        return RELIEFOS_UI_COLOR_SCHEME_BLUE;
     }
     if (text_eq(name, "teal")) {
-        return LEONOS_UI_COLOR_SCHEME_TEAL;
+        return RELIEFOS_UI_COLOR_SCHEME_TEAL;
     }
     if (text_eq(name, "green")) {
-        return LEONOS_UI_COLOR_SCHEME_GREEN;
+        return RELIEFOS_UI_COLOR_SCHEME_GREEN;
     }
     if (text_eq(name, "purple")) {
-        return LEONOS_UI_COLOR_SCHEME_PURPLE;
+        return RELIEFOS_UI_COLOR_SCHEME_PURPLE;
     }
     if (text_eq(name, "red")) {
-        return LEONOS_UI_COLOR_SCHEME_RED;
+        return RELIEFOS_UI_COLOR_SCHEME_RED;
     }
     if (text_eq(name, "graphite")) {
-        return LEONOS_UI_COLOR_SCHEME_GRAPHITE;
+        return RELIEFOS_UI_COLOR_SCHEME_GRAPHITE;
     }
     if (text_eq(name, "pink")) {
-        return LEONOS_UI_COLOR_SCHEME_PINK;
+        return RELIEFOS_UI_COLOR_SCHEME_PINK;
     }
-    return fallback < LEONOS_UI_COLOR_SCHEME_COUNT
+    return fallback < RELIEFOS_UI_COLOR_SCHEME_COUNT
                ? fallback
-               : LEONOS_UI_COLOR_SCHEME_BLUE;
+               : RELIEFOS_UI_COLOR_SCHEME_BLUE;
 }
 
 static const char *desktop_color_scheme_name(uint32_t scheme)
 {
     switch (scheme) {
-    case LEONOS_UI_COLOR_SCHEME_TEAL:
+    case RELIEFOS_UI_COLOR_SCHEME_TEAL:
         return "teal";
-    case LEONOS_UI_COLOR_SCHEME_GREEN:
+    case RELIEFOS_UI_COLOR_SCHEME_GREEN:
         return "green";
-    case LEONOS_UI_COLOR_SCHEME_PURPLE:
+    case RELIEFOS_UI_COLOR_SCHEME_PURPLE:
         return "purple";
-    case LEONOS_UI_COLOR_SCHEME_RED:
+    case RELIEFOS_UI_COLOR_SCHEME_RED:
         return "red";
-    case LEONOS_UI_COLOR_SCHEME_GRAPHITE:
+    case RELIEFOS_UI_COLOR_SCHEME_GRAPHITE:
         return "graphite";
-    case LEONOS_UI_COLOR_SCHEME_PINK:
+    case RELIEFOS_UI_COLOR_SCHEME_PINK:
         return "pink";
     default:
         return "blue";
@@ -368,35 +368,35 @@ static const char *desktop_color_scheme_name(uint32_t scheme)
 static uint32_t desktop_wallpaper_mode_from_name(const char *name, uint32_t fallback)
 {
     if (text_eq(name, "fit")) {
-        return LEONOS_WALLPAPER_MODE_FIT;
+        return RELIEFOS_WALLPAPER_MODE_FIT;
     }
     if (text_eq(name, "center")) {
-        return LEONOS_WALLPAPER_MODE_CENTER;
+        return RELIEFOS_WALLPAPER_MODE_CENTER;
     }
     if (text_eq(name, "tile")) {
-        return LEONOS_WALLPAPER_MODE_TILE;
+        return RELIEFOS_WALLPAPER_MODE_TILE;
     }
     if (text_eq(name, "stretch")) {
-        return LEONOS_WALLPAPER_MODE_STRETCH;
+        return RELIEFOS_WALLPAPER_MODE_STRETCH;
     }
     if (text_eq(name, "fill")) {
-        return LEONOS_WALLPAPER_MODE_FILL;
+        return RELIEFOS_WALLPAPER_MODE_FILL;
     }
-    return fallback < LEONOS_WALLPAPER_MODE_COUNT
+    return fallback < RELIEFOS_WALLPAPER_MODE_COUNT
                ? fallback
-               : LEONOS_WALLPAPER_MODE_FILL;
+               : RELIEFOS_WALLPAPER_MODE_FILL;
 }
 
 static const char *desktop_wallpaper_mode_name(uint32_t mode)
 {
     switch (mode) {
-    case LEONOS_WALLPAPER_MODE_FIT:
+    case RELIEFOS_WALLPAPER_MODE_FIT:
         return "fit";
-    case LEONOS_WALLPAPER_MODE_CENTER:
+    case RELIEFOS_WALLPAPER_MODE_CENTER:
         return "center";
-    case LEONOS_WALLPAPER_MODE_TILE:
+    case RELIEFOS_WALLPAPER_MODE_TILE:
         return "tile";
-    case LEONOS_WALLPAPER_MODE_STRETCH:
+    case RELIEFOS_WALLPAPER_MODE_STRETCH:
         return "stretch";
     default:
         return "fill";
@@ -405,14 +405,14 @@ static const char *desktop_wallpaper_mode_name(uint32_t mode)
 
 static int desktop_appearance_config_path(char *path, uint32_t path_len)
 {
-    struct leonos_user_info user;
+    struct reliefos_user_info user;
     uint32_t pos = 0;
     if (!path || path_len == 0) {
         return 0;
     }
     path[0] = 0;
-    user = (struct leonos_user_info){0};
-    if (leonos_session_current(&user) < 0 || !user.home[0]) {
+    user = (struct reliefos_user_info){0};
+    if (reliefos_session_current(&user) < 0 || !user.home[0]) {
         return 0;
     }
     append_text(path, &pos, path_len, user.home);
@@ -423,26 +423,26 @@ static int desktop_appearance_config_path(char *path, uint32_t path_len)
 
 void desktop_load_appearance_config(void)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     char cfg[640];
-    char value[LEONOS_FS_PATH_LEN];
+    char value[RELIEFOS_FS_PATH_LEN];
     uint32_t theme;
     uint32_t len = 0;
     int fd;
 
-    leonos_ui_theme_load_system();
-    desktop_boot_theme_default = (uint8_t)leonos_ui_theme();
+    reliefos_ui_theme_load_system();
+    desktop_boot_theme_default = (uint8_t)reliefos_ui_theme();
     theme = desktop_boot_theme_default;
     desktop_metro_color_scheme =
-        (uint8_t)leonos_ui_theme_color_scheme(LEONOS_UI_THEME_METRO);
+        (uint8_t)reliefos_ui_theme_color_scheme(RELIEFOS_UI_THEME_METRO);
     desktop_win95_color_scheme =
-        (uint8_t)leonos_ui_theme_color_scheme(LEONOS_UI_THEME_WIN95);
-    desktop_wallpaper_mode = LEONOS_WALLPAPER_MODE_FILL;
+        (uint8_t)reliefos_ui_theme_color_scheme(RELIEFOS_UI_THEME_WIN95);
+    desktop_wallpaper_mode = RELIEFOS_WALLPAPER_MODE_FILL;
     copy_text(desktop_wallpaper_path, sizeof(desktop_wallpaper_path),
               DESKTOP_DEFAULT_WALLPAPER_PATH);
 
     if (desktop_appearance_config_path(path, sizeof(path))) {
-        fd = open(path, LEONOS_O_RDONLY, 0);
+        fd = open(path, RELIEFOS_O_RDONLY, 0);
         if (fd >= 0) {
             while (len + 1u < sizeof(cfg)) {
                 long got = read(fd, cfg + len, sizeof(cfg) - len - 1u);
@@ -455,8 +455,8 @@ void desktop_load_appearance_config(void)
             cfg[len] = 0;
             if (desktop_config_get_value(cfg, "theme", value, sizeof(value))) {
                 theme = text_eq(value, "win95")
-                            ? LEONOS_UI_THEME_WIN95
-                            : LEONOS_UI_THEME_METRO;
+                            ? RELIEFOS_UI_THEME_WIN95
+                            : RELIEFOS_UI_THEME_METRO;
             }
             if (desktop_config_get_value(cfg, "metro.color", value, sizeof(value))) {
                 desktop_metro_color_scheme =
@@ -478,7 +478,7 @@ void desktop_load_appearance_config(void)
             }
         }
     }
-    (void)leonos_ui_theme_set_appearance(theme,
+    (void)reliefos_ui_theme_set_appearance(theme,
                                          desktop_metro_color_scheme,
                                          desktop_win95_color_scheme);
     (void)load_wallpaper_bmp();
@@ -489,18 +489,18 @@ void desktop_load_appearance_config(void)
 
 int desktop_save_appearance_config(void)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     char buf[640];
     uint32_t pos = 0;
     int fd;
     long wrote;
     if (!desktop_appearance_config_path(path, sizeof(path))) {
-        return -LEONOS_EPERM;
+        return -RELIEFOS_EPERM;
     }
     buf[0] = 0;
     append_text(buf, &pos, sizeof(buf), "theme=");
     append_text(buf, &pos, sizeof(buf),
-                leonos_ui_theme() == LEONOS_UI_THEME_WIN95 ? "win95" : "metro");
+                reliefos_ui_theme() == RELIEFOS_UI_THEME_WIN95 ? "win95" : "metro");
     append_char(buf, &pos, sizeof(buf), '\n');
     append_text(buf, &pos, sizeof(buf), "metro.color=");
     append_text(buf, &pos, sizeof(buf),
@@ -517,7 +517,7 @@ int desktop_save_appearance_config(void)
     append_text(buf, &pos, sizeof(buf),
                 desktop_wallpaper_mode_name(desktop_wallpaper_mode));
     append_char(buf, &pos, sizeof(buf), '\n');
-    fd = open(path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
+    fd = open(path, RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0666);
     if (fd < 0) {
         return fd;
     }
@@ -534,8 +534,8 @@ void desktop_load_display_config(void)
     char buf[128];
     uint8_t mode = 0;
     uint8_t scale = 0;
-    leonos_ui_theme_load_system();
-    desktop_boot_theme_default = (uint8_t)leonos_ui_theme();
+    reliefos_ui_theme_load_system();
+    desktop_boot_theme_default = (uint8_t)reliefos_ui_theme();
     int fd = open(DISPLAY_CONFIG_PATH, 0, 0);
     if (fd >= 0) {
         long got = read(fd, buf, sizeof(buf) - 1);
@@ -569,10 +569,10 @@ int desktop_save_display_config(void)
     append_char(buf, &pos, sizeof(buf), '\n');
     append_text(buf, &pos, sizeof(buf), "theme=");
     append_text(buf, &pos, sizeof(buf),
-                desktop_boot_theme_default == LEONOS_UI_THEME_WIN95 ? "win95" : "metro");
+                desktop_boot_theme_default == RELIEFOS_UI_THEME_WIN95 ? "win95" : "metro");
     append_char(buf, &pos, sizeof(buf), '\n');
     fd = open(DISPLAY_CONFIG_PATH,
-              LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
+              RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0666);
     if (fd < 0) {
         return fd;
     }
@@ -597,7 +597,7 @@ void desktop_apply_display_settings_pending(uint8_t mode_index, uint8_t scale_in
         return;
     }
     desktop_pending_confirm = 1;
-    desktop_confirm_deadline_ms = leonos_uptime_ms() + DISPLAY_CONFIRM_MS;
+    desktop_confirm_deadline_ms = reliefos_uptime_ms() + DISPLAY_CONFIRM_MS;
     full_redraw_pending = 1;
 }
 
@@ -627,7 +627,7 @@ void desktop_revert_display_settings(void)
 
 void desktop_update_display_confirmation(void)
 {
-    if (desktop_pending_confirm && leonos_uptime_ms() >= desktop_confirm_deadline_ms) {
+    if (desktop_pending_confirm && reliefos_uptime_ms() >= desktop_confirm_deadline_ms) {
         desktop_revert_display_settings();
     } else {
         desktop_publish_display_state();
@@ -707,7 +707,7 @@ void desktop_icon_path_for_app(const char *app_path, char *dst, uint32_t dst_len
     }
     dst[0] = 0;
     if (app_path && app_path[0] &&
-        leonos_app_registry_icon(app_path, dst, dst_len) == 0) {
+        reliefos_app_registry_icon(app_path, dst, dst_len) == 0) {
         return;
     }
 }
@@ -725,7 +725,7 @@ uint32_t running_window_count(void)
     uint32_t count = 0;
     for (uint8_t i = 0; i < MAX_WINDOWS; ++i) {
         if (windows[i].visible &&
-            (windows[i].flags & LEONOS_GUI_WINDOW_HIDE_TASKBAR) == 0) {
+            (windows[i].flags & RELIEFOS_GUI_WINDOW_HIDE_TASKBAR) == 0) {
             ++count;
         }
     }
@@ -751,7 +751,7 @@ void start_menu_set_open(uint8_t open)
     start_menu_open = open;
     start_menu_opening = open;
     start_menu_animating = 1;
-    start_menu_anim_start = leonos_uptime_ms();
+    start_menu_anim_start = reliefos_uptime_ms();
     if (open) {
         printf("[desktop.elf] DBG menu-open t0=%lu\n", start_menu_anim_start);
     }
@@ -768,7 +768,7 @@ uint32_t start_menu_progress(void)
     if (!start_menu_animating) {
         return start_menu_open ? 100 : 0;
     }
-    unsigned long elapsed = leonos_uptime_ms() - start_menu_anim_start;
+    unsigned long elapsed = reliefos_uptime_ms() - start_menu_anim_start;
     if (elapsed >= START_MENU_ANIM_MS) {
         start_menu_animating = 0;
         return start_menu_open ? 100 : 0;
@@ -790,7 +790,7 @@ uint32_t desktop_ease_percent(uint32_t percent)
 
 int desktop_window_animation_active(void)
 {
-    unsigned long now = leonos_uptime_ms();
+    unsigned long now = reliefos_uptime_ms();
     for (uint8_t i = 0; i < MAX_WINDOWS; ++i) {
         if (windows[i].visible && windows[i].anim &&
             now - windows[i].anim_start_ms < WINDOW_ANIM_MS) {
@@ -802,7 +802,7 @@ int desktop_window_animation_active(void)
 
 void desktop_update_window_animations(void)
 {
-    unsigned long now = leonos_uptime_ms();
+    unsigned long now = reliefos_uptime_ms();
     for (uint8_t i = 0; i < MAX_WINDOWS; ++i) {
         if (!windows[i].visible || !windows[i].anim ||
             now - windows[i].anim_start_ms < WINDOW_ANIM_MS) {

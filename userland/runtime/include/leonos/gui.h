@@ -1,389 +1,226 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/gui.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_GUI_H
 #define LEONOS_GUI_H
+#include <reliefos/gui.h>
 
-#include <stdint.h>
-#include <leonos/fb.h>
-#include <leonos/fs.h>
-
-
-#define LEONOS_DISPLAY_REQUEST_APPLY 1U
-#define LEONOS_DISPLAY_REQUEST_KEEP 2U
-#define LEONOS_DISPLAY_REQUEST_REVERT 3U
-#define LEONOS_DISPLAY_REQUEST_REFRESH 4U
-
-#define LEONOS_WALLPAPER_MODE_FILL 0U
-#define LEONOS_WALLPAPER_MODE_FIT 1U
-#define LEONOS_WALLPAPER_MODE_CENTER 2U
-#define LEONOS_WALLPAPER_MODE_TILE 3U
-#define LEONOS_WALLPAPER_MODE_STRETCH 4U
-#define LEONOS_WALLPAPER_MODE_COUNT 5U
-
-#define LEONOS_TASK_NAME_LEN 32U
-#define LEONOS_TASK_MAX 64U
-
-#define LEONOS_INPUT_MOUSE 1U
-#define LEONOS_INPUT_KEYBOARD 2U
-#define LEONOS_INPUT_MOUSE_WHEEL 3U
-
-#define LEONOS_KEY_ESCAPE 1U
-#define LEONOS_KEY_BACKSPACE 14U
-#define LEONOS_KEY_TAB 15U
-#define LEONOS_KEY_ENTER 28U
-#define LEONOS_KEY_LEFT_CTRL 29U
-#define LEONOS_KEY_LEFT_SHIFT 42U
-#define LEONOS_KEY_RIGHT_SHIFT 54U
-#define LEONOS_KEY_LEFT_ALT 56U
-#define LEONOS_KEY_SPACE 57U
-#define LEONOS_KEY_CAPS_LOCK 58U
-#define LEONOS_INPUT_MOD_CAPS_LOCK 0x01U
-#define LEONOS_KEY_HOME 71U
-#define LEONOS_KEY_UP 72U
-#define LEONOS_KEY_PAGE_UP 73U
-#define LEONOS_KEY_LEFT 75U
-#define LEONOS_KEY_RIGHT 77U
-#define LEONOS_KEY_END 79U
-#define LEONOS_KEY_DOWN 80U
-#define LEONOS_KEY_PAGE_DOWN 81U
-#define LEONOS_KEY_INSERT 82U
-#define LEONOS_KEY_DELETE 83U
-#define LEONOS_KEY_F12 88U
-#define LEONOS_KEY_LEFT_WIN 112U
-#define LEONOS_KEY_RIGHT_WIN 113U
-#define LEONOS_KEY_MENU 114U
-#define LEONOS_KEY_RIGHT_ALT 115U
-#define LEONOS_KEY_RIGHT_CTRL 116U
-
-#define LEONOS_GUI_APP_EVENT_CLOSE 1U
-#define LEONOS_GUI_APP_EVENT_FOCUS 2U
-#define LEONOS_GUI_APP_EVENT_BLUR 3U
-#define LEONOS_GUI_APP_EVENT_RESIZE 4U
-#define LEONOS_GUI_APP_EVENT_MOUSE_MOVE 5U
-#define LEONOS_GUI_APP_EVENT_MOUSE_BUTTON 6U
-#define LEONOS_GUI_APP_EVENT_KEY_DOWN 7U
-#define LEONOS_GUI_APP_EVENT_KEY_UP 8U
-#define LEONOS_GUI_APP_EVENT_MOUSE_WHEEL 9U
-#define LEONOS_GUI_APP_EVENT_THEME_CHANGED 10U
-#define LEONOS_GUI_IDLE_WAIT_MS 100U
-
-/* Keep resizable application surfaces aligned with the window-server limit. */
-#define LEONOS_GUI_MAX_WINDOW_WIDTH 1920U
-#define LEONOS_GUI_MAX_WINDOW_HEIGHT 1080U
-
-#define LEONOS_GUI_WINDOW_NO_RESIZE 0x00000001U
-#define LEONOS_GUI_WINDOW_FULLSCREEN 0x00000002U
-#define LEONOS_GUI_WINDOW_BORDERLESS 0x00000004U
-#define LEONOS_GUI_WINDOW_HIDE_TASKBAR 0x00000008U
-
-#define LEONOS_GUI_WINDOW_UPDATE_TITLE 0x00000001U
-#define LEONOS_GUI_WINDOW_UPDATE_BORDERLESS 0x00000002U
-#define LEONOS_GUI_WINDOW_UPDATE_TASKBAR 0x00000004U
-
-#define LEONOS_GUI_CURSOR_ARROW 0U
-#define LEONOS_GUI_CURSOR_HAND 1U
-#define LEONOS_GUI_CURSOR_TEXT 2U
-#define LEONOS_GUI_CURSOR_WAIT 3U
-#define LEONOS_GUI_CURSOR_CROSSHAIR 4U
-#define LEONOS_GUI_CURSOR_MOVE 5U
-#define LEONOS_GUI_CURSOR_NO 6U
-#define LEONOS_GUI_CURSOR_HELP 7U
-#define LEONOS_GUI_CURSOR_PROGRESS 8U
-#define LEONOS_GUI_CURSOR_SIZE_NS 9U
-#define LEONOS_GUI_CURSOR_SIZE_WE 10U
-#define LEONOS_GUI_CURSOR_SIZE_NWSE 11U
-#define LEONOS_GUI_CURSOR_SIZE_NESW 12U
-#define LEONOS_GUI_CURSOR_UP 13U
-#define LEONOS_GUI_CURSOR_APP_STARTING 14U
-#define LEONOS_GUI_CURSOR_STYLE_COUNT 15U
-
-#define LEONOS_GUI_CURSOR_REQUEST_POSITION 0x00000001U
-#define LEONOS_GUI_CURSOR_REQUEST_STYLE 0x00000002U
-#define LEONOS_GUI_CURSOR_REQUEST_AUTO 0x00000004U
-#define LEONOS_GUI_CURSOR_REQUEST_ALL (LEONOS_GUI_CURSOR_REQUEST_POSITION | \
-                                      LEONOS_GUI_CURSOR_REQUEST_STYLE | \
-                                      LEONOS_GUI_CURSOR_REQUEST_AUTO)
-#define LEONOS_GUI_WINDOW_MSG_CURSOR_REGION 7U
-#define LEONOS_GUI_CURSOR_REGION_SET 1U
-#define LEONOS_GUI_CURSOR_REGION_REMOVE 2U
-#define LEONOS_GUI_CURSOR_REGION_CLEAR 3U
-#define LEONOS_GUI_CURSOR_REGION_DISABLED 0x00000001U
-
-
-struct leonos_gui_window {
-    uint32_t id;
-    uint32_t width;
-    uint32_t height;
-    const char *title;
-    const char *text;
-    uint32_t flags;
-};
-
-struct leonos_input_event {
-    uint32_t type;
-    int32_t x;
-    int32_t y;
-    int32_t dx;
-    int32_t dy;
-    uint8_t buttons;
-    uint8_t keycode;
-    uint8_t pressed;
-    uint8_t modifiers;
-};
-
-struct leonos_fb_info {
-    uint32_t width;
-    uint32_t height;
-    uint32_t pitch;
-    uint8_t bpp;
-};
-
-struct leonos_fb_mode {
-    uint32_t width;
-    uint32_t height;
-};
-
-struct leonos_fb_rect {
-    uint32_t x;
-    uint32_t y;
-    uint32_t width;
-    uint32_t height;
-    uint32_t color;
-};
-
-struct leonos_fb_text {
-    uint32_t x;
-    uint32_t y;
-    uint32_t fg;
-    uint32_t bg;
-    const char *text;
-};
-
-struct leonos_fb_blit {
-    uint32_t x;
-    uint32_t y;
-    uint32_t width;
-    uint32_t height;
-    uint32_t stride;
-    const uint32_t *pixels;
-};
-
-struct leonos_gui_create {
-    uint32_t width;
-    uint32_t height;
-    const char *title;
-    const char *text;
-    uint32_t flags;
-};
-
-struct leonos_gui_window_update {
-    uint32_t window_id;
-    uint32_t mask;
-    uint32_t flags;
-    const char *title;
-};
-
-struct leonos_gui_taskbar_request {
-    uint32_t window_id;
-    uint32_t visible;
-};
-
-struct leonos_gui_cursor_request {
-    uint32_t window_id;
-    int32_t x;
-    int32_t y;
-    uint32_t style;
-    uint32_t flags;
-};
-
-struct leonos_mouse_state {
-    int32_t x;
-    int32_t y;
-    uint8_t buttons;
-    uint8_t visible;
-    uint8_t present;
-    uint8_t absolute;
-};
-
-struct leonos_gui_cursor_region_request {
-    uint32_t window_id;
-    uint32_t region_id;
-    int32_t x;
-    int32_t y;
-    uint32_t width;
-    uint32_t height;
-    uint32_t style;
-    uint32_t flags;
-    uint32_t operation;
-};
-
-struct leonos_gui_window_msg {
-    uint32_t type;
-    uint32_t pid;
-    uint32_t window_id;
-    uint32_t width;
-    uint32_t height;
-    uint32_t flags;
-    uint32_t data;
-    char title[48];
-    char text[1024];
-    char app_path[LEONOS_FS_PATH_LEN];
-    int32_t cursor_x;
-    int32_t cursor_y;
-    uint32_t cursor_region_id;
-    uint32_t cursor_style;
-    uint32_t cursor_flags;
-    uint32_t cursor_operation;
-};
-
-struct leonos_gui_present {
-    uint32_t window_id;
-    uint32_t width;
-    uint32_t height;
-    uint32_t stride;
-    const uint32_t *pixels;
-};
-
-struct leonos_gui_fetch {
-    uint32_t window_id;
-    uint32_t capacity_width;
-    uint32_t capacity_height;
-    uint32_t stride;
-    uint32_t out_width;
-    uint32_t out_height;
-    uint32_t *pixels;
-};
-
-struct leonos_gui_app_event {
-    uint32_t window_id;
-    uint32_t type;
-    int32_t x;
-    int32_t y;
-    int32_t dx;
-    int32_t dy;
-    uint32_t width;
-    uint32_t height;
-    uint8_t buttons;
-    uint8_t keycode;
-    uint8_t pressed;
-    uint8_t modifiers;
-};
-
-struct leonos_gui_wait_app_event {
-    struct leonos_gui_app_event event;
-    uint32_t timeout_ms;
-};
-
-#define LEONOS_TASK_SNAPSHOT_FLAG_ELEVATED_ADMIN 0x00000010U
-
-struct leonos_task_info {
-    uint32_t pid;
-    uint32_t parent_pid;
-    uint32_t state;
-    uint32_t kind;
-    uint32_t flags;
-    uint32_t uid;
-    uint32_t role;
-    uint32_t session_id;
-    uint32_t memory_kib;
-    uint64_t cpu_ticks;
-    int32_t priority;
-    uint32_t pending_signals;
-    uint64_t wake_tick;
-    uint64_t entry;
-    uint64_t cr3;
-    uint64_t affinity_mask;
-    char name[LEONOS_TASK_NAME_LEN];
-    char username[32];
-};
-
-struct leonos_task_snapshot {
-    uint32_t capacity;
-    uint32_t count;
-    uint64_t tick;
-    struct leonos_task_info *tasks;
-};
-
-struct leonos_display_state {
-    uint32_t fb_width;
-    uint32_t fb_height;
-    uint32_t logical_width;
-    uint32_t logical_height;
-    uint32_t scale;
-    uint32_t mode_index;
-    uint32_t scale_index;
-    uint32_t pending_confirm;
-    uint32_t confirm_remaining_ms;
-};
-
-struct leonos_display_request {
-    uint32_t action;
-    uint32_t mode_index;
-    uint32_t scale_index;
-};
-
-struct leonos_appearance_state {
-    uint32_t theme;
-    uint32_t metro_color_scheme;
-    uint32_t win95_color_scheme;
-    uint32_t wallpaper_mode;
-    char wallpaper_path[LEONOS_FS_PATH_LEN];
-};
-
-struct leonos_appearance_request {
-    uint32_t theme;
-    uint32_t metro_color_scheme;
-    uint32_t win95_color_scheme;
-    uint32_t wallpaper_mode;
-    char wallpaper_path[LEONOS_FS_PATH_LEN];
-};
-
-int leonos_gui_connect(void);
-int leonos_gui_policy_connect(void);
-int leonos_gui_create_window(const struct leonos_gui_window *window);
-int leonos_gui_next_event(struct leonos_input_event *event);
-unsigned long leonos_uptime_ms(void);
-int leonos_fb_info(struct leonos_fb_info *info);
-int leonos_fb_capabilities(struct leonos_fb_capabilities *caps);
-int leonos_fb_set_mode(uint32_t width, uint32_t height);
-int leonos_fb_fill(uint32_t color);
-int leonos_fb_rect(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t color);
-int leonos_fb_text(uint32_t x, uint32_t y, const char *text, uint32_t fg, uint32_t bg);
-uint32_t leonos_fb_pixel(uint32_t x, uint32_t y);
-int leonos_fb_blit(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t stride, const uint32_t *pixels);
-int leonos_gui_create_app_window(const char *title, const char *text, uint32_t width, uint32_t height);
-int leonos_gui_create_app_window_ex(const char *title, const char *text, uint32_t width, uint32_t height, uint32_t flags);
-int leonos_gui_destroy_app_window(uint32_t window_id);
-int leonos_gui_update_window(const struct leonos_gui_window_update *update);
-int leonos_gui_set_window_title(uint32_t window_id, const char *title);
-int leonos_gui_set_window_borderless(uint32_t window_id, uint32_t borderless);
-int leonos_gui_set_window_taskbar_visible(uint32_t window_id, uint32_t visible);
-int leonos_gui_set_taskbar_visible(uint32_t window_id, uint32_t visible);
-int leonos_gui_poll_window(struct leonos_gui_window_msg *message);
-/* Wait for policy messages/input without consuming queued events. */
-int leonos_gui_wait_policy(uint32_t timeout_ms);
-int leonos_gui_present_window(uint32_t window_id, uint32_t width, uint32_t height,
-                              uint32_t stride, const uint32_t *pixels);
-int leonos_gui_fetch_window(uint32_t window_id, uint32_t capacity_width, uint32_t capacity_height,
-                            uint32_t stride, uint32_t *pixels,
-                            uint32_t *out_width, uint32_t *out_height);
-int leonos_gui_poll_app_event(struct leonos_gui_app_event *event);
-int leonos_gui_wait_app_event(struct leonos_gui_app_event *event, uint32_t timeout_ms);
-int leonos_gui_send_app_event(const struct leonos_gui_app_event *event);
-int leonos_gui_set_mouse_visible(uint32_t window_id, uint32_t visible);
-int leonos_gui_mouse_visible(void);
-int leonos_gui_cursor_request(const struct leonos_gui_cursor_request *request);
-int leonos_gui_set_cursor_position(uint32_t window_id, int32_t x, int32_t y);
-int leonos_gui_set_cursor_style(uint32_t window_id, uint32_t style);
-int leonos_gui_set_cursor_auto(uint32_t window_id);
-int leonos_mouse_get_state(struct leonos_mouse_state *state);
-int leonos_task_snapshot(struct leonos_task_info *tasks, uint32_t capacity, uint64_t *tick);
-int leonos_task_kill(uint32_t pid);
-int leonos_display_get_state(struct leonos_display_state *state);
-int leonos_display_request(const struct leonos_display_request *request);
-int leonos_display_poll_request(struct leonos_display_request *request);
-int leonos_display_publish_state(const struct leonos_display_state *state);
-int leonos_appearance_get_state(struct leonos_appearance_state *state);
-int leonos_appearance_request_theme(const struct leonos_appearance_request *request);
-int leonos_appearance_poll_request(struct leonos_appearance_request *request);
-int leonos_appearance_publish_state(const struct leonos_appearance_state *state);
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_DISPLAY_REQUEST_APPLY RELIEFOS_DISPLAY_REQUEST_APPLY
+#define LEONOS_DISPLAY_REQUEST_KEEP RELIEFOS_DISPLAY_REQUEST_KEEP
+#define LEONOS_DISPLAY_REQUEST_REFRESH RELIEFOS_DISPLAY_REQUEST_REFRESH
+#define LEONOS_DISPLAY_REQUEST_REVERT RELIEFOS_DISPLAY_REQUEST_REVERT
+#define LEONOS_FBIOBLIT RELIEFOS_FBIOBLIT
+#define LEONOS_FBIOGET_CAPABILITIES RELIEFOS_FBIOGET_CAPABILITIES
+#define LEONOS_FBIOUPDATE_REGION RELIEFOS_FBIOUPDATE_REGION
+#define LEONOS_FB_BACKEND_BOCHS_VBE RELIEFOS_FB_BACKEND_BOCHS_VBE
+#define LEONOS_FB_BACKEND_BOOT RELIEFOS_FB_BACKEND_BOOT
+#define LEONOS_FB_BACKEND_VMWARE_SVGA RELIEFOS_FB_BACKEND_VMWARE_SVGA
+#define LEONOS_FB_CAP_MODE_SET RELIEFOS_FB_CAP_MODE_SET
+#define LEONOS_FB_H RELIEFOS_FB_H
+#define LEONOS_FS_ACL_ACE_INHERITED RELIEFOS_FS_ACL_ACE_INHERITED
+#define LEONOS_FS_ACL_FLAG_CORRUPT RELIEFOS_FS_ACL_FLAG_CORRUPT
+#define LEONOS_FS_ACL_FLAG_SYNTHETIC RELIEFOS_FS_ACL_FLAG_SYNTHETIC
+#define LEONOS_FS_ACL_MAX_ACE RELIEFOS_FS_ACL_MAX_ACE
+#define LEONOS_FS_ACL_PRINCIPAL_ADMINISTRATORS RELIEFOS_FS_ACL_PRINCIPAL_ADMINISTRATORS
+#define LEONOS_FS_ACL_PRINCIPAL_EVERYONE RELIEFOS_FS_ACL_PRINCIPAL_EVERYONE
+#define LEONOS_FS_ACL_PRINCIPAL_GROUP RELIEFOS_FS_ACL_PRINCIPAL_GROUP
+#define LEONOS_FS_ACL_PRINCIPAL_OWNER RELIEFOS_FS_ACL_PRINCIPAL_OWNER
+#define LEONOS_FS_ACL_PRINCIPAL_SYSTEM RELIEFOS_FS_ACL_PRINCIPAL_SYSTEM
+#define LEONOS_FS_ACL_PRINCIPAL_USERS RELIEFOS_FS_ACL_PRINCIPAL_USERS
+#define LEONOS_FS_ACL_VERSION RELIEFOS_FS_ACL_VERSION
+#define LEONOS_FS_FILE_WRITE_SLICE_BYTES RELIEFOS_FS_FILE_WRITE_SLICE_BYTES
+#define LEONOS_FS_H RELIEFOS_FS_H
+#define LEONOS_FS_IO_SLICE_BYTES RELIEFOS_FS_IO_SLICE_BYTES
+#define LEONOS_FS_MAX_ENTRIES RELIEFOS_FS_MAX_ENTRIES
+#define LEONOS_FS_NAME_LEN RELIEFOS_FS_NAME_LEN
+#define LEONOS_FS_PATH_LEN RELIEFOS_FS_PATH_LEN
+#define LEONOS_FS_PERM_DELETE RELIEFOS_FS_PERM_DELETE
+#define LEONOS_FS_PERM_EXEC RELIEFOS_FS_PERM_EXEC
+#define LEONOS_FS_PERM_FULL RELIEFOS_FS_PERM_FULL
+#define LEONOS_FS_PERM_MANAGE RELIEFOS_FS_PERM_MANAGE
+#define LEONOS_FS_PERM_READ RELIEFOS_FS_PERM_READ
+#define LEONOS_FS_PERM_WRITE RELIEFOS_FS_PERM_WRITE
+#define LEONOS_FS_READ_SLICE_BYTES RELIEFOS_FS_READ_SLICE_BYTES
+#define LEONOS_FS_TYPE_DEVICE RELIEFOS_FS_TYPE_DEVICE
+#define LEONOS_FS_TYPE_DIR RELIEFOS_FS_TYPE_DIR
+#define LEONOS_FS_TYPE_FIFO RELIEFOS_FS_TYPE_FIFO
+#define LEONOS_FS_TYPE_FILE RELIEFOS_FS_TYPE_FILE
+#define LEONOS_FS_TYPE_SOCKET RELIEFOS_FS_TYPE_SOCKET
+#define LEONOS_FS_TYPE_SYMLINK RELIEFOS_FS_TYPE_SYMLINK
+#define LEONOS_GUI_APP_EVENT_BLUR RELIEFOS_GUI_APP_EVENT_BLUR
+#define LEONOS_GUI_APP_EVENT_CLOSE RELIEFOS_GUI_APP_EVENT_CLOSE
+#define LEONOS_GUI_APP_EVENT_FOCUS RELIEFOS_GUI_APP_EVENT_FOCUS
+#define LEONOS_GUI_APP_EVENT_KEY_DOWN RELIEFOS_GUI_APP_EVENT_KEY_DOWN
+#define LEONOS_GUI_APP_EVENT_KEY_UP RELIEFOS_GUI_APP_EVENT_KEY_UP
+#define LEONOS_GUI_APP_EVENT_MOUSE_BUTTON RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON
+#define LEONOS_GUI_APP_EVENT_MOUSE_MOVE RELIEFOS_GUI_APP_EVENT_MOUSE_MOVE
+#define LEONOS_GUI_APP_EVENT_MOUSE_WHEEL RELIEFOS_GUI_APP_EVENT_MOUSE_WHEEL
+#define LEONOS_GUI_APP_EVENT_RESIZE RELIEFOS_GUI_APP_EVENT_RESIZE
+#define LEONOS_GUI_APP_EVENT_THEME_CHANGED RELIEFOS_GUI_APP_EVENT_THEME_CHANGED
+#define LEONOS_GUI_CURSOR_APP_STARTING RELIEFOS_GUI_CURSOR_APP_STARTING
+#define LEONOS_GUI_CURSOR_ARROW RELIEFOS_GUI_CURSOR_ARROW
+#define LEONOS_GUI_CURSOR_CROSSHAIR RELIEFOS_GUI_CURSOR_CROSSHAIR
+#define LEONOS_GUI_CURSOR_HAND RELIEFOS_GUI_CURSOR_HAND
+#define LEONOS_GUI_CURSOR_HELP RELIEFOS_GUI_CURSOR_HELP
+#define LEONOS_GUI_CURSOR_MOVE RELIEFOS_GUI_CURSOR_MOVE
+#define LEONOS_GUI_CURSOR_NO RELIEFOS_GUI_CURSOR_NO
+#define LEONOS_GUI_CURSOR_PROGRESS RELIEFOS_GUI_CURSOR_PROGRESS
+#define LEONOS_GUI_CURSOR_REGION_CLEAR RELIEFOS_GUI_CURSOR_REGION_CLEAR
+#define LEONOS_GUI_CURSOR_REGION_DISABLED RELIEFOS_GUI_CURSOR_REGION_DISABLED
+#define LEONOS_GUI_CURSOR_REGION_REMOVE RELIEFOS_GUI_CURSOR_REGION_REMOVE
+#define LEONOS_GUI_CURSOR_REGION_SET RELIEFOS_GUI_CURSOR_REGION_SET
+#define LEONOS_GUI_CURSOR_REQUEST_ALL RELIEFOS_GUI_CURSOR_REQUEST_ALL
+#define LEONOS_GUI_CURSOR_REQUEST_AUTO RELIEFOS_GUI_CURSOR_REQUEST_AUTO
+#define LEONOS_GUI_CURSOR_REQUEST_POSITION RELIEFOS_GUI_CURSOR_REQUEST_POSITION
+#define LEONOS_GUI_CURSOR_REQUEST_STYLE RELIEFOS_GUI_CURSOR_REQUEST_STYLE
+#define LEONOS_GUI_CURSOR_SIZE_NESW RELIEFOS_GUI_CURSOR_SIZE_NESW
+#define LEONOS_GUI_CURSOR_SIZE_NS RELIEFOS_GUI_CURSOR_SIZE_NS
+#define LEONOS_GUI_CURSOR_SIZE_NWSE RELIEFOS_GUI_CURSOR_SIZE_NWSE
+#define LEONOS_GUI_CURSOR_SIZE_WE RELIEFOS_GUI_CURSOR_SIZE_WE
+#define LEONOS_GUI_CURSOR_STYLE_COUNT RELIEFOS_GUI_CURSOR_STYLE_COUNT
+#define LEONOS_GUI_CURSOR_TEXT RELIEFOS_GUI_CURSOR_TEXT
+#define LEONOS_GUI_CURSOR_UP RELIEFOS_GUI_CURSOR_UP
+#define LEONOS_GUI_CURSOR_WAIT RELIEFOS_GUI_CURSOR_WAIT
+#define LEONOS_GUI_IDLE_WAIT_MS RELIEFOS_GUI_IDLE_WAIT_MS
+#define LEONOS_GUI_MAX_WINDOW_HEIGHT RELIEFOS_GUI_MAX_WINDOW_HEIGHT
+#define LEONOS_GUI_MAX_WINDOW_WIDTH RELIEFOS_GUI_MAX_WINDOW_WIDTH
+#define LEONOS_GUI_WINDOW_BORDERLESS RELIEFOS_GUI_WINDOW_BORDERLESS
+#define LEONOS_GUI_WINDOW_FULLSCREEN RELIEFOS_GUI_WINDOW_FULLSCREEN
+#define LEONOS_GUI_WINDOW_HIDE_TASKBAR RELIEFOS_GUI_WINDOW_HIDE_TASKBAR
+#define LEONOS_GUI_WINDOW_MSG_CURSOR_REGION RELIEFOS_GUI_WINDOW_MSG_CURSOR_REGION
+#define LEONOS_GUI_WINDOW_NO_RESIZE RELIEFOS_GUI_WINDOW_NO_RESIZE
+#define LEONOS_GUI_WINDOW_UPDATE_BORDERLESS RELIEFOS_GUI_WINDOW_UPDATE_BORDERLESS
+#define LEONOS_GUI_WINDOW_UPDATE_TASKBAR RELIEFOS_GUI_WINDOW_UPDATE_TASKBAR
+#define LEONOS_GUI_WINDOW_UPDATE_TITLE RELIEFOS_GUI_WINDOW_UPDATE_TITLE
+#define LEONOS_INPUT_KEYBOARD RELIEFOS_INPUT_KEYBOARD
+#define LEONOS_INPUT_MOD_CAPS_LOCK RELIEFOS_INPUT_MOD_CAPS_LOCK
+#define LEONOS_INPUT_MOUSE RELIEFOS_INPUT_MOUSE
+#define LEONOS_INPUT_MOUSE_WHEEL RELIEFOS_INPUT_MOUSE_WHEEL
+#define LEONOS_KEY_BACKSPACE RELIEFOS_KEY_BACKSPACE
+#define LEONOS_KEY_CAPS_LOCK RELIEFOS_KEY_CAPS_LOCK
+#define LEONOS_KEY_DELETE RELIEFOS_KEY_DELETE
+#define LEONOS_KEY_DOWN RELIEFOS_KEY_DOWN
+#define LEONOS_KEY_END RELIEFOS_KEY_END
+#define LEONOS_KEY_ENTER RELIEFOS_KEY_ENTER
+#define LEONOS_KEY_ESCAPE RELIEFOS_KEY_ESCAPE
+#define LEONOS_KEY_F12 RELIEFOS_KEY_F12
+#define LEONOS_KEY_HOME RELIEFOS_KEY_HOME
+#define LEONOS_KEY_INSERT RELIEFOS_KEY_INSERT
+#define LEONOS_KEY_LEFT RELIEFOS_KEY_LEFT
+#define LEONOS_KEY_LEFT_ALT RELIEFOS_KEY_LEFT_ALT
+#define LEONOS_KEY_LEFT_CTRL RELIEFOS_KEY_LEFT_CTRL
+#define LEONOS_KEY_LEFT_SHIFT RELIEFOS_KEY_LEFT_SHIFT
+#define LEONOS_KEY_LEFT_WIN RELIEFOS_KEY_LEFT_WIN
+#define LEONOS_KEY_MENU RELIEFOS_KEY_MENU
+#define LEONOS_KEY_PAGE_DOWN RELIEFOS_KEY_PAGE_DOWN
+#define LEONOS_KEY_PAGE_UP RELIEFOS_KEY_PAGE_UP
+#define LEONOS_KEY_RIGHT RELIEFOS_KEY_RIGHT
+#define LEONOS_KEY_RIGHT_ALT RELIEFOS_KEY_RIGHT_ALT
+#define LEONOS_KEY_RIGHT_CTRL RELIEFOS_KEY_RIGHT_CTRL
+#define LEONOS_KEY_RIGHT_SHIFT RELIEFOS_KEY_RIGHT_SHIFT
+#define LEONOS_KEY_RIGHT_WIN RELIEFOS_KEY_RIGHT_WIN
+#define LEONOS_KEY_SPACE RELIEFOS_KEY_SPACE
+#define LEONOS_KEY_TAB RELIEFOS_KEY_TAB
+#define LEONOS_KEY_UP RELIEFOS_KEY_UP
+#define LEONOS_O_ACCMODE RELIEFOS_O_ACCMODE
+#define LEONOS_O_APPEND RELIEFOS_O_APPEND
+#define LEONOS_O_CLOEXEC RELIEFOS_O_CLOEXEC
+#define LEONOS_O_CREAT RELIEFOS_O_CREAT
+#define LEONOS_O_DIRECTORY RELIEFOS_O_DIRECTORY
+#define LEONOS_O_EXCL RELIEFOS_O_EXCL
+#define LEONOS_O_NOFOLLOW RELIEFOS_O_NOFOLLOW
+#define LEONOS_O_NONBLOCK RELIEFOS_O_NONBLOCK
+#define LEONOS_O_RDONLY RELIEFOS_O_RDONLY
+#define LEONOS_O_RDWR RELIEFOS_O_RDWR
+#define LEONOS_O_TRUNC RELIEFOS_O_TRUNC
+#define LEONOS_O_WRONLY RELIEFOS_O_WRONLY
+#define LEONOS_SEEK_CUR RELIEFOS_SEEK_CUR
+#define LEONOS_SEEK_END RELIEFOS_SEEK_END
+#define LEONOS_SEEK_SET RELIEFOS_SEEK_SET
+#define LEONOS_TASK_MAX RELIEFOS_TASK_MAX
+#define LEONOS_TASK_NAME_LEN RELIEFOS_TASK_NAME_LEN
+#define LEONOS_TASK_SNAPSHOT_FLAG_ELEVATED_ADMIN RELIEFOS_TASK_SNAPSHOT_FLAG_ELEVATED_ADMIN
+#define LEONOS_UAPI_FS_ABI_H RELIEFOS_UAPI_FS_ABI_H
+#define LEONOS_WALLPAPER_MODE_CENTER RELIEFOS_WALLPAPER_MODE_CENTER
+#define LEONOS_WALLPAPER_MODE_COUNT RELIEFOS_WALLPAPER_MODE_COUNT
+#define LEONOS_WALLPAPER_MODE_FILL RELIEFOS_WALLPAPER_MODE_FILL
+#define LEONOS_WALLPAPER_MODE_FIT RELIEFOS_WALLPAPER_MODE_FIT
+#define LEONOS_WALLPAPER_MODE_STRETCH RELIEFOS_WALLPAPER_MODE_STRETCH
+#define LEONOS_WALLPAPER_MODE_TILE RELIEFOS_WALLPAPER_MODE_TILE
+#define leonos_appearance_get_state reliefos_appearance_get_state
+#define leonos_appearance_poll_request reliefos_appearance_poll_request
+#define leonos_appearance_publish_state reliefos_appearance_publish_state
+#define leonos_appearance_request reliefos_appearance_request
+#define leonos_appearance_request_theme reliefos_appearance_request_theme
+#define leonos_appearance_state reliefos_appearance_state
+#define leonos_dir_entry reliefos_dir_entry
+#define leonos_dir_list reliefos_dir_list
+#define leonos_display_get_state reliefos_display_get_state
+#define leonos_display_poll_request reliefos_display_poll_request
+#define leonos_display_publish_state reliefos_display_publish_state
+#define leonos_display_request reliefos_display_request
+#define leonos_display_state reliefos_display_state
+#define leonos_fb_blit reliefos_fb_blit
+#define leonos_fb_capabilities reliefos_fb_capabilities
+#define leonos_fb_fill reliefos_fb_fill
+#define leonos_fb_info reliefos_fb_info
+#define leonos_fb_mode reliefos_fb_mode
+#define leonos_fb_pixel reliefos_fb_pixel
+#define leonos_fb_present reliefos_fb_present
+#define leonos_fb_rect reliefos_fb_rect
+#define leonos_fb_set_mode reliefos_fb_set_mode
+#define leonos_fb_text reliefos_fb_text
+#define leonos_fs_acl reliefos_fs_acl
+#define leonos_fs_acl_ace reliefos_fs_acl_ace
+#define leonos_fs_acl_get reliefos_fs_acl_get
+#define leonos_fs_acl_repair reliefos_fs_acl_repair
+#define leonos_fs_acl_set reliefos_fs_acl_set
+#define leonos_fs_acl_take_ownership reliefos_fs_acl_take_ownership
+#define leonos_fstat_legacy reliefos_fstat_legacy
+#define leonos_gui_app_event reliefos_gui_app_event
+#define leonos_gui_connect reliefos_gui_connect
+#define leonos_gui_create reliefos_gui_create
+#define leonos_gui_create_app_window reliefos_gui_create_app_window
+#define leonos_gui_create_app_window_ex reliefos_gui_create_app_window_ex
+#define leonos_gui_create_window reliefos_gui_create_window
+#define leonos_gui_cursor_region_request reliefos_gui_cursor_region_request
+#define leonos_gui_cursor_request reliefos_gui_cursor_request
+#define leonos_gui_destroy_app_window reliefos_gui_destroy_app_window
+#define leonos_gui_fetch reliefos_gui_fetch
+#define leonos_gui_fetch_window reliefos_gui_fetch_window
+#define leonos_gui_mouse_visible reliefos_gui_mouse_visible
+#define leonos_gui_next_event reliefos_gui_next_event
+#define leonos_gui_policy_connect reliefos_gui_policy_connect
+#define leonos_gui_poll_app_event reliefos_gui_poll_app_event
+#define leonos_gui_poll_window reliefos_gui_poll_window
+#define leonos_gui_present reliefos_gui_present
+#define leonos_gui_present_window reliefos_gui_present_window
+#define leonos_gui_send_app_event reliefos_gui_send_app_event
+#define leonos_gui_set_cursor_auto reliefos_gui_set_cursor_auto
+#define leonos_gui_set_cursor_position reliefos_gui_set_cursor_position
+#define leonos_gui_set_cursor_style reliefos_gui_set_cursor_style
+#define leonos_gui_set_mouse_visible reliefos_gui_set_mouse_visible
+#define leonos_gui_set_taskbar_visible reliefos_gui_set_taskbar_visible
+#define leonos_gui_set_window_borderless reliefos_gui_set_window_borderless
+#define leonos_gui_set_window_taskbar_visible reliefos_gui_set_window_taskbar_visible
+#define leonos_gui_set_window_title reliefos_gui_set_window_title
+#define leonos_gui_taskbar_request reliefos_gui_taskbar_request
+#define leonos_gui_update_window reliefos_gui_update_window
+#define leonos_gui_wait_app_event reliefos_gui_wait_app_event
+#define leonos_gui_wait_policy reliefos_gui_wait_policy
+#define leonos_gui_window reliefos_gui_window
+#define leonos_gui_window_msg reliefos_gui_window_msg
+#define leonos_gui_window_update reliefos_gui_window_update
+#define leonos_input_event reliefos_input_event
+#define leonos_list_dir reliefos_list_dir
+#define leonos_mouse_get_state reliefos_mouse_get_state
+#define leonos_mouse_state reliefos_mouse_state
+#define leonos_readdir reliefos_readdir
+#define leonos_stat reliefos_stat
+#define leonos_stat_legacy reliefos_stat_legacy
+#define leonos_task_info reliefos_task_info
+#define leonos_task_kill reliefos_task_kill
+#define leonos_task_snapshot reliefos_task_snapshot
+#define leonos_uptime_ms reliefos_uptime_ms
+#endif /* LEONOS_GUI_H */

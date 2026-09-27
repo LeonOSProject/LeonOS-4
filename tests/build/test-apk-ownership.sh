@@ -11,21 +11,23 @@ cc -std=c11 -Wall -Wextra -Wpedantic -Werror -Wformat=2 -Wshadow \
   "$src/tools/host/manifest/json.c" "$src/tools/host/common/buffer.c" \
   "$src/tools/host/common/io.c" -o "$tmp/reliefos-apk-own"
 
-mkdir -p "$tmp/root/usr/bin" "$tmp/root/usr/lib/leonos/apps/demo"
+mkdir -p "$tmp/root/usr/bin" "$tmp/root/usr/lib/leonos/apps/demo" "$tmp/root/usr/lib/reliefos"
 printf elf >"$tmp/root/usr/bin/tool"
 chmod 755 "$tmp/root/usr/bin/tool"
 ln -s tool "$tmp/root/usr/bin/tool-link"
 printf app >"$tmp/root/usr/lib/leonos/apps/demo/demo.elf"
+printf library >"$tmp/root/usr/lib/reliefos/libreliefos.so.2"
 cat >"$tmp/policy.json" <<'EOF'
 {"version":1,"apk_registration":"not-installed","groups":{
  "tools":{"destination":"leonos","components":[],"paths":["usr/bin/tool"]},
- "apps":{"destination":"leonos","components":["demo"]},
+ "apps":{"destination":"leonos","components":["demo"],"paths":["usr/lib/reliefos"]},
  "leonos-base":{"destination":"leonos","components":[]}
 }}
 EOF
 
 "$tmp/reliefos-apk-own" --policy "$tmp/policy.json" --root "$tmp/root" --output "$tmp/list"
 awk -F '\t' '$1=="apps" && $2=="file" && $3=="0644" && $4=="usr/lib/leonos/apps/demo/demo.elf" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
+awk -F '\t' '$1=="apps" && $2=="file" && $4=="usr/lib/reliefos/libreliefos.so.2" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
 awk -F '\t' '$1=="tools" && $2=="file" && $3=="0755" && $4=="usr/bin/tool" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
 awk -F '\t' '$1=="tools" && $2=="symlink" && $3=="0777" && $4=="usr/bin/tool-link" && $5=="tool" { ok=1 } END { exit !ok }' "$tmp/list"
 

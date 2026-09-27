@@ -1,54 +1,75 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/inputmd.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_INPUTMD_H
 #define LEONOS_INPUTMD_H
+#include <reliefos/inputmd.h>
 
-#include <leonos/inputm.h>
-#include <stdint.h>
-
-enum leonos_imd_msg {
-    LEONOS_IMD_MSG_HELLO = 10,
-    LEONOS_IMD_MSG_ACK = 11,
-    LEONOS_IMD_MSG_REGISTER = 20,
-    LEONOS_IMD_MSG_UNREGISTER = 21,
-    LEONOS_IMD_MSG_KEY_EVENT = 22,
-    LEONOS_IMD_MSG_RESULT = 23,
-    LEONOS_IMD_MSG_SUBMIT_KEY = 24,
-    LEONOS_IMD_MSG_SET_CONTEXT = 25,
-    LEONOS_IMD_MSG_SET_ACTIVE = 26,
-    LEONOS_IMD_MSG_LIST = 27,
-    LEONOS_IMD_MSG_LIST_ACK = 28,
-    LEONOS_IMD_MSG_GET_STATE = 29,
-    LEONOS_IMD_MSG_STATE_ACK = 30,
-    LEONOS_IMD_MSG_NOTIFY_CONFIG = 31,
-};
-
-#define LEONOS_IMD_ROLE_APP 1u
-#define LEONOS_IMD_ROLE_PROVIDER 2u
-
-struct leonos_imd_hello {
-    uint32_t pid;
-    uint32_t role;
-};
-
-struct leonos_imd_ack {
-    int32_t code;
-    uint32_t reserved;
-};
-
-struct leonos_imd_list {
-    uint32_t uid;
-    uint32_t capacity;
-};
-
-struct leonos_imd_list_ack {
-    uint32_t uid;
-    uint32_t count;
-    uint32_t reserved;
-    /* followed by count * struct leonos_inputm_provider */
-};
-
-struct leonos_imd_get_state {
-    uint32_t uid;
-    uint32_t reserved;
-};
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_IMD_MSG_ACK RELIEFOS_IMD_MSG_ACK
+#define LEONOS_IMD_MSG_GET_STATE RELIEFOS_IMD_MSG_GET_STATE
+#define LEONOS_IMD_MSG_HELLO RELIEFOS_IMD_MSG_HELLO
+#define LEONOS_IMD_MSG_KEY_EVENT RELIEFOS_IMD_MSG_KEY_EVENT
+#define LEONOS_IMD_MSG_LIST RELIEFOS_IMD_MSG_LIST
+#define LEONOS_IMD_MSG_LIST_ACK RELIEFOS_IMD_MSG_LIST_ACK
+#define LEONOS_IMD_MSG_NOTIFY_CONFIG RELIEFOS_IMD_MSG_NOTIFY_CONFIG
+#define LEONOS_IMD_MSG_REGISTER RELIEFOS_IMD_MSG_REGISTER
+#define LEONOS_IMD_MSG_RESULT RELIEFOS_IMD_MSG_RESULT
+#define LEONOS_IMD_MSG_SET_ACTIVE RELIEFOS_IMD_MSG_SET_ACTIVE
+#define LEONOS_IMD_MSG_SET_CONTEXT RELIEFOS_IMD_MSG_SET_CONTEXT
+#define LEONOS_IMD_MSG_STATE_ACK RELIEFOS_IMD_MSG_STATE_ACK
+#define LEONOS_IMD_MSG_SUBMIT_KEY RELIEFOS_IMD_MSG_SUBMIT_KEY
+#define LEONOS_IMD_MSG_UNREGISTER RELIEFOS_IMD_MSG_UNREGISTER
+#define LEONOS_IMD_ROLE_APP RELIEFOS_IMD_ROLE_APP
+#define LEONOS_IMD_ROLE_PROVIDER RELIEFOS_IMD_ROLE_PROVIDER
+#define LEONOS_INPUTM_ABBREV_LEN RELIEFOS_INPUTM_ABBREV_LEN
+#define LEONOS_INPUTM_CONTEXT_FOCUSED RELIEFOS_INPUTM_CONTEXT_FOCUSED
+#define LEONOS_INPUTM_CONTEXT_SECURE RELIEFOS_INPUTM_CONTEXT_SECURE
+#define LEONOS_INPUTM_H RELIEFOS_INPUTM_H
+#define LEONOS_INPUTM_ID_LEN RELIEFOS_INPUTM_ID_LEN
+#define LEONOS_INPUTM_MAX_CANDIDATES RELIEFOS_INPUTM_MAX_CANDIDATES
+#define LEONOS_INPUTM_MAX_PROVIDERS RELIEFOS_INPUTM_MAX_PROVIDERS
+#define LEONOS_INPUTM_NAME_LEN RELIEFOS_INPUTM_NAME_LEN
+#define LEONOS_INPUTM_RENDER_CONTROLS RELIEFOS_INPUTM_RENDER_CONTROLS
+#define LEONOS_INPUTM_RENDER_PIXELS RELIEFOS_INPUTM_RENDER_PIXELS
+#define LEONOS_INPUTM_RESULT_CANCEL RELIEFOS_INPUTM_RESULT_CANCEL
+#define LEONOS_INPUTM_RESULT_COMMIT RELIEFOS_INPUTM_RESULT_COMMIT
+#define LEONOS_INPUTM_RESULT_COMPOSITION RELIEFOS_INPUTM_RESULT_COMPOSITION
+#define LEONOS_INPUTM_RESULT_PASSTHROUGH RELIEFOS_INPUTM_RESULT_PASSTHROUGH
+#define LEONOS_INPUTM_START_LOGIN RELIEFOS_INPUTM_START_LOGIN
+#define LEONOS_INPUTM_START_MANUAL RELIEFOS_INPUTM_START_MANUAL
+#define LEONOS_INPUTM_START_ON_DEMAND RELIEFOS_INPUTM_START_ON_DEMAND
+#define LEONOS_INPUTM_TEXT_LEN RELIEFOS_INPUTM_TEXT_LEN
+#define LEONOS_UAPI_INPUTM_ABI_H RELIEFOS_UAPI_INPUTM_ABI_H
+#define leonos_imd_ack reliefos_imd_ack
+#define leonos_imd_get_state reliefos_imd_get_state
+#define leonos_imd_hello reliefos_imd_hello
+#define leonos_imd_list reliefos_imd_list
+#define leonos_imd_list_ack reliefos_imd_list_ack
+#define leonos_imd_msg reliefos_imd_msg
+#define leonos_inputm_active_request reliefos_inputm_active_request
+#define leonos_inputm_config_request reliefos_inputm_config_request
+#define leonos_inputm_context reliefos_inputm_context
+#define leonos_inputm_get_state reliefos_inputm_get_state
+#define leonos_inputm_key_event reliefos_inputm_key_event
+#define leonos_inputm_list reliefos_inputm_list
+#define leonos_inputm_note_gui_window reliefos_inputm_note_gui_window
+#define leonos_inputm_notify_config reliefos_inputm_notify_config
+#define leonos_inputm_observe_gui_key reliefos_inputm_observe_gui_key
+#define leonos_inputm_poll_gui_commit reliefos_inputm_poll_gui_commit
+#define leonos_inputm_poll_result reliefos_inputm_poll_result
+#define leonos_inputm_provider reliefos_inputm_provider
+#define leonos_inputm_provider_list reliefos_inputm_provider_list
+#define leonos_inputm_provider_next reliefos_inputm_provider_next
+#define leonos_inputm_provider_result reliefos_inputm_provider_result
+#define leonos_inputm_register reliefos_inputm_register
+#define leonos_inputm_result reliefos_inputm_result
+#define leonos_inputm_set_active reliefos_inputm_set_active
+#define leonos_inputm_set_context reliefos_inputm_set_context
+#define leonos_inputm_set_current_context reliefos_inputm_set_current_context
+#define leonos_inputm_state reliefos_inputm_state
+#define leonos_inputm_submit_key reliefos_inputm_submit_key
+#define leonos_inputm_take_key reliefos_inputm_take_key
+#define leonos_inputm_take_text reliefos_inputm_take_text
+#define leonos_inputm_unregister reliefos_inputm_unregister
+#endif /* LEONOS_INPUTMD_H */

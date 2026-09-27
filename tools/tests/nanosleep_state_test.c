@@ -27,8 +27,8 @@ void sched_sleep_current_until(uint64_t until)
 int time_clock_get(int32_t clock, struct linux_timespec *value)
 {
     uint64_t now = ticks + (clock == LINUX_CLOCK_REALTIME ? wall_offset : 0);
-    *value = (struct linux_timespec){now / NTCLKS_TICK_HZ,
-                                   (now % NTCLKS_TICK_HZ) * (1000000000 / NTCLKS_TICK_HZ)};
+    *value = (struct linux_timespec){now / RELIEFNT_TICK_HZ,
+                                   (now % RELIEFNT_TICK_HZ) * (1000000000 / RELIEFNT_TICK_HZ)};
     return 0;
 }
 static long call(int clock, int flags, struct linux_timespec *request, void *remaining)

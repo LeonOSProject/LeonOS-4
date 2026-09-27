@@ -3,10 +3,10 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 #include <errno.h>
-#include <leonos/device.h>
-#include <leonos/devmand.h>
-#include <leonos/driver.h>
-#include <leonos/unix_ipc.h>
+#include <reliefos/device.h>
+#include <reliefos/devmand.h>
+#include <reliefos/driver.h>
+#include <reliefos/unix_ipc.h>
 #include <poll.h>
 #include <stdint.h>
 #include <string.h>
@@ -48,7 +48,7 @@ static int devmand_wait(uint32_t expected, void *payload, uint32_t capacity,
         uint8_t buffer[DEVMAND_FRAME_CAP];
         uint32_t type = 0;
         uint32_t got = 0;
-        if (leonos_ipc_recv(devmand_fd, &type, buffer, sizeof(buffer), &got) == 0) {
+        if (reliefos_ipc_recv(devmand_fd, &type, buffer, sizeof(buffer), &got) == 0) {
             if (type == expected) {
                 if (got > capacity) got = capacity;
                 if (got) memcpy(payload, buffer, got);
@@ -63,27 +63,27 @@ static int devmand_wait(uint32_t expected, void *payload, uint32_t capacity,
 
 static int devmand_open(void)
 {
-    struct leonos_devmand_hello hello;
-    struct leonos_devmand_ack ack;
+    struct reliefos_devmand_hello hello;
+    struct reliefos_devmand_ack ack;
     uint32_t deadline;
     if (devmand_fd >= 0) return devmand_fd;
     if (devmand_now_ms() < devmand_retry_after_ms) return -1;
     deadline = devmand_now_ms() + DEVMAND_CONNECT_ATTEMPT_MS;
     while (devmand_fd < 0 && devmand_now_ms() < deadline) {
-        devmand_fd = leonos_ipc_connect(LEONOS_IPC_SOCK_DEVICE);
+        devmand_fd = reliefos_ipc_connect(RELIEFOS_IPC_SOCK_DEVICE);
         if (devmand_fd < 0) (void)poll(0, 0, 10);
     }
     if (devmand_fd < 0) {
         devmand_retry_after_ms = devmand_now_ms() + DEVMAND_CONNECT_BACKOFF_MS;
         return -1;
     }
-    (void)leonos_ipc_set_nonblock(devmand_fd, 1);
+    (void)reliefos_ipc_set_nonblock(devmand_fd, 1);
     hello.pid = (uint32_t)getpid();
     hello.uid = (uint32_t)getuid();
-    if (leonos_ipc_send(devmand_fd, LEONOS_DEVMAND_MSG_HELLO, &hello,
+    if (reliefos_ipc_send(devmand_fd, RELIEFOS_DEVMAND_MSG_HELLO, &hello,
                         sizeof(hello)) < 0 ||
-        devmand_wait(LEONOS_DEVMAND_MSG_ACK, &ack, sizeof(ack), 0) < 0) {
-        leonos_ipc_close(devmand_fd);
+        devmand_wait(RELIEFOS_DEVMAND_MSG_ACK, &ack, sizeof(ack), 0) < 0) {
+        reliefos_ipc_close(devmand_fd);
         devmand_fd = -1;
         devmand_retry_after_ms = devmand_now_ms() + DEVMAND_CONNECT_BACKOFF_MS;
         return -1;
@@ -91,18 +91,18 @@ static int devmand_open(void)
     return devmand_fd;
 }
 
-int leonos_device_list(struct leonos_device_info *devices,
+int reliefos_device_list(struct reliefos_device_info *devices,
                        uint32_t capacity, uint32_t *out_count)
 {
-    struct leonos_devmand_list_request request = {.capacity = capacity};
-    struct leonos_devmand_ack ack;
+    struct reliefos_devmand_list_request request = {.capacity = capacity};
+    struct reliefos_devmand_ack ack;
     uint8_t buffer[DEVMAND_FRAME_CAP];
     uint32_t length = 0;
     if (out_count) *out_count = 0;
     if (devmand_open() < 0) return -1;
-    if (leonos_ipc_send(devmand_fd, LEONOS_DEVMAND_MSG_DEVICE_LIST, &request,
+    if (reliefos_ipc_send(devmand_fd, RELIEFOS_DEVMAND_MSG_DEVICE_LIST, &request,
                         sizeof(request)) < 0) return -1;
-    if (devmand_wait(LEONOS_DEVMAND_MSG_DEVICE_LIST, buffer, sizeof(buffer),
+    if (devmand_wait(RELIEFOS_DEVMAND_MSG_DEVICE_LIST, buffer, sizeof(buffer),
                      &length) < 0) return -1;
     if (length < sizeof(ack)) return -1;
     memcpy(&ack, buffer, sizeof(ack));
@@ -116,18 +116,18 @@ int leonos_device_list(struct leonos_device_info *devices,
     return 0;
 }
 
-int leonos_driver_list(struct leonos_driver_info *drivers, uint32_t capacity,
+int reliefos_driver_list(struct reliefos_driver_info *drivers, uint32_t capacity,
                        uint32_t *out_count)
 {
-    struct leonos_devmand_list_request request = {.capacity = capacity};
-    struct leonos_devmand_ack ack;
+    struct reliefos_devmand_list_request request = {.capacity = capacity};
+    struct reliefos_devmand_ack ack;
     uint8_t buffer[DEVMAND_FRAME_CAP];
     uint32_t length = 0;
     if (out_count) *out_count = 0;
     if (devmand_open() < 0) return -1;
-    if (leonos_ipc_send(devmand_fd, LEONOS_DEVMAND_MSG_DRIVER_LIST, &request,
+    if (reliefos_ipc_send(devmand_fd, RELIEFOS_DEVMAND_MSG_DRIVER_LIST, &request,
                         sizeof(request)) < 0) return -1;
-    if (devmand_wait(LEONOS_DEVMAND_MSG_DRIVER_LIST, buffer, sizeof(buffer),
+    if (devmand_wait(RELIEFOS_DEVMAND_MSG_DRIVER_LIST, buffer, sizeof(buffer),
                      &length) < 0) return -1;
     if (length < sizeof(ack)) return -1;
     memcpy(&ack, buffer, sizeof(ack));
@@ -141,19 +141,23 @@ int leonos_driver_list(struct leonos_driver_info *drivers, uint32_t capacity,
     return 0;
 }
 
-int leonos_driver_control(uint32_t action, const char *file)
+int reliefos_driver_control(uint32_t action, const char *file)
 {
-    struct leonos_driver_control request;
-    struct leonos_devmand_ack ack;
-    if ((!file && action != LEONOS_DRIVER_CONTROL_RESCAN) ||
+    struct reliefos_driver_control request;
+    struct reliefos_devmand_ack ack;
+    if ((!file && action != RELIEFOS_DRIVER_CONTROL_RESCAN) ||
         (file && strlen(file) >= sizeof(request.file))) { errno = EINVAL; return -1; }
     memset(&request, 0, sizeof(request));
     request.action = action;
     if (file) devmand_copy(request.file, sizeof(request.file), file);
     if (devmand_open() < 0) return -1;
-    if (leonos_ipc_send(devmand_fd, LEONOS_DEVMAND_MSG_DRIVER_CONTROL, &request,
+    if (reliefos_ipc_send(devmand_fd, RELIEFOS_DEVMAND_MSG_DRIVER_CONTROL, &request,
                         sizeof(request)) < 0) return -1;
-    if (devmand_wait(LEONOS_DEVMAND_MSG_ACK, &ack, sizeof(ack), 0) < 0) return -1;
+    if (devmand_wait(RELIEFOS_DEVMAND_MSG_ACK, &ack, sizeof(ack), 0) < 0) return -1;
     if (ack.code < 0) { errno = -ack.code; return -1; }
     return ack.code;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_device_list) leonos_device_list __attribute__((alias("reliefos_device_list")));
+extern __typeof__(reliefos_driver_control) leonos_driver_control __attribute__((alias("reliefos_driver_control")));
+extern __typeof__(reliefos_driver_list) leonos_driver_list __attribute__((alias("reliefos_driver_list")));

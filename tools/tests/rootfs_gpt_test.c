@@ -17,10 +17,10 @@ int main(int argc,char **argv)
 {
     assert(argc==4);
     char uuid[37];
-    assert(leonos_block_partition_uuid(argv[1],0,uuid)==0 && !strcmp(uuid,argv[2]));
-    assert(leonos_block_partition_uuid(argv[1],1,uuid)==0 && !strcmp(uuid,argv[3]));
-    assert(leonos_block_partition_uuid(argv[1],2,uuid)==-ENOENT);
-    assert(leonos_block_partition_uuid(argv[1],UINT32_MAX,uuid)==-ENOENT);
-    assert(leonos_block_partition_uuid(argv[1],0,NULL)==-EINVAL);
+    assert(reliefos_block_partition_uuid(argv[1],0,uuid)==0 && !strcmp(uuid,argv[2]));
+    assert(reliefos_block_partition_uuid(argv[1],1,uuid)==0 && !strcmp(uuid,argv[3]));
+    assert(reliefos_block_partition_uuid(argv[1],2,uuid)==-ENOENT);
+    assert(reliefos_block_partition_uuid(argv[1],UINT32_MAX,uuid)==-ENOENT);
+    assert(reliefos_block_partition_uuid(argv[1],0,NULL)==-EINVAL);
     puts("PASS installer UUID reader against independently generated primary/backup GPT");
 }

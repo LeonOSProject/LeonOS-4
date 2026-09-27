@@ -2,12 +2,12 @@
 
 uint32_t pixels[FILEMAN_MAX_W * FILEMAN_MAX_H];
 uint32_t details_pixels[FILEMAN_DETAILS_W * FILEMAN_DETAILS_H];
-struct leonos_dir_entry entries[FILEMAN_MAX_ENTRIES];
-char current_path[LEONOS_FS_PATH_LEN] = "/";
-char home_path[LEONOS_AUTH_HOME_LEN];
+struct reliefos_dir_entry entries[FILEMAN_MAX_ENTRIES];
+char current_path[RELIEFOS_FS_PATH_LEN] = "/";
+char home_path[RELIEFOS_AUTH_HOME_LEN];
 char status_text[160] = "Ready";
 uint32_t entry_count;
-struct leonos_ui_listview_state file_list;
+struct reliefos_ui_listview_state file_list;
 int32_t last_click_index = -1;
 unsigned long last_click_ms;
 uint8_t menu_open;
@@ -21,9 +21,9 @@ uint32_t view_w = FILEMAN_W;
 uint32_t view_h = FILEMAN_H;
 uint64_t selected_mask;
 uint32_t fileman_window_id;
-struct leonos_ui_surface fileman_ui;
-char address_input[LEONOS_FS_PATH_LEN];
-struct leonos_ui_edit_state address_edit;
+struct reliefos_ui_surface fileman_ui;
+char address_input[RELIEFOS_FS_PATH_LEN];
+struct reliefos_ui_edit_state address_edit;
 uint8_t fileman_operation_active;
 uint32_t fileman_operation_percent;
 char fileman_operation_text[160];
@@ -39,11 +39,11 @@ struct fileman_layout current_layout(void)
 {
     struct fileman_layout l;
     uint32_t content_h = view_h > LIST_Y + STATUS_H + 10 ? view_h - LIST_Y - STATUS_H - 10 : ROW_H * 2;
-    struct leonos_ui_split_pane_state split;
+    struct reliefos_ui_split_pane_state split;
     if (view_w > 430) {
-        leonos_ui_split_pane_init(&split, LEONOS_UI_SPLIT_VERTICAL, TREE_W, 96, 220);
+        reliefos_ui_split_pane_init(&split, RELIEFOS_UI_SPLIT_VERTICAL, TREE_W, 96, 220);
         split.splitter_size = 8;
-        leonos_ui_split_pane_layout(&split, 8, LIST_Y,
+        reliefos_ui_split_pane_layout(&split, 8, LIST_Y,
                                     view_w > 34 ? view_w - 34 : view_w,
                                     content_h + 4);
         l.tree_x = (uint32_t)split.first.x;

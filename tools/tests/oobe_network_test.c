@@ -4,12 +4,12 @@
 #include <time.h>
 #include <unistd.h>
 
-#define wait4 leonos_decl_wait4
-int leonos_decl_wait4(int pid, int *status, int options, void *usage);
+#define wait4 reliefos_decl_wait4
+int reliefos_decl_wait4(int pid, int *status, int options, void *usage);
 #include "../../userland/apps/desktop/screen.c"
 #undef wait4
 
-struct leonos_ui_surface ui;
+struct reliefos_ui_surface ui;
 uint8_t desktop_service_network_icon = 1;
 uint8_t desktop_service_rtc_clock = 1;
 uint8_t desktop_taskbar_visible = 1;
@@ -19,9 +19,9 @@ uint8_t full_redraw_pending;
 static int parent_pid;
 uint32_t fb_w(void) { return 1280; }
 uint32_t desktop_tray_width(void) { return 160; }
-unsigned long leonos_uptime_ms(void) { return 1000; }
+unsigned long reliefos_uptime_ms(void) { return 1000; }
 int sleep_ms(unsigned long ms) { return usleep(ms * 1000); }
-int leonos_decl_wait4(int pid, int *status, int options, void *usage)
+int reliefos_decl_wait4(int pid, int *status, int options, void *usage)
 { assert(options == WNOHANG && !usage); return waitpid(pid, status, options); }
 
 int net_service_config(net_service_config_t *config)
@@ -36,15 +36,15 @@ int net_service_config(net_service_config_t *config)
     return 0;
 }
 
-void leonos_ui_rect(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_rect(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                     uint32_t width, uint32_t height, uint32_t color)
 { (void)surface; (void)x; (void)y; (void)width; (void)height; (void)color; }
-void leonos_ui_bevel(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_bevel(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                      uint32_t width, uint32_t height, uint32_t color, uint32_t flags)
 { (void)surface; (void)x; (void)y; (void)width; (void)height; (void)color; (void)flags; }
-uint32_t leonos_ui_text_width(const char *text) { (void)text; return 0; }
-uint32_t leonos_ui_color(uint32_t role) { return role; }
-void leonos_ui_text_transparent_clipped(struct leonos_ui_surface *surface,
+uint32_t reliefos_ui_text_width(const char *text) { (void)text; return 0; }
+uint32_t reliefos_ui_color(uint32_t role) { return role; }
+void reliefos_ui_text_transparent_clipped(struct reliefos_ui_surface *surface,
                                        uint32_t x, uint32_t y, uint32_t width,
                                        const char *text, uint32_t color)
 { (void)surface; (void)x; (void)y; (void)width; (void)text; (void)color; }

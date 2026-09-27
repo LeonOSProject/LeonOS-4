@@ -4,8 +4,8 @@ root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd -P)
 w=$(mktemp -d)
 trap 'rm -rf "$w"' EXIT
 
-mkdir -p "$w/src/include/uapi" "$w/src/include/leonos" \
-    "$w/src/userland/runtime/include/leonos" "$w/src/third_party/zlib" \
+mkdir -p "$w/src/include/uapi" "$w/src/include/leonos" "$w/src/include/reliefos" \
+    "$w/src/userland/runtime/include/leonos" "$w/src/userland/runtime/include/reliefos" "$w/src/third_party/zlib" \
     "$w/src/third_party/libpng" "$w/sysroot/include" "$w/sysroot/lib" \
     "$w/sysroot/share/licenses/musl" "$w/pam/usr/include/security" \
     "$w/pam/lib/pkgconfig" "$w/pam/share/licenses/linux-pam" \
@@ -18,6 +18,9 @@ for f in libc.so libc.a libmimalloc.so.3 mimalloc.o Scrt1.o crti.o crtn.o rcrt1.
 done
 printf 'license\n' > "$w/sysroot/share/licenses/musl/COPYRIGHT"
 printf 'header\n' > "$w/src/include/leonos/api.h"
+printf 'legacy header\n' > "$w/src/include/leonos/tar.h"
+printf 'canonical header\n' > "$w/src/include/reliefos/api.h"
+printf 'canonical header\n' > "$w/src/include/reliefos/tar.h"
 # UAPI fixture: the SDK must take ABI headers from the kernel header export
 # (headers_install output), never from the kernel-owned source tree.
 printf 'uapi fixture\n' > "$w/export/linux/types.h"
@@ -27,8 +30,10 @@ printf 'license\n' > "$w/pam/share/licenses/linux-pam/LICENSE"
 printf 'license\n' > "$w/auth/share/licenses/libxcrypt/LICENSE"
 printf 'so\n' > "$w/pam/lib/libpam.so.0"
 printf 'so\n' > "$w/auth/lib/libcrypt.so.2"
-printf 'runtime\n' > "$w/runtime.so"
-printf 'archive\n' > "$w/runtime.a"
+printf 'reliefos runtime\n' > "$w/reliefos-runtime.so"
+printf 'reliefos archive\n' > "$w/reliefos-runtime.a"
+printf 'leonos runtime\n' > "$w/leonos-runtime.so"
+printf 'leonos archive\n' > "$w/leonos-runtime.a"
 printf 'builtins\n' > "$w/builtins.a"
 printf 'driver\n' > "$w/driver"
 printf 'header\n' > "$w/src/third_party/zlib/zlib.h"
@@ -39,14 +44,22 @@ printf 'header\n' > "$w/pnglibconf.h"
 
 RUNTIME_BUILTINS="$w/builtins.a" PNG_CONFIG="$w/pnglibconf.h" \
     sh "$root/tools/build/musl-sdk.sh" "$w/src" "$w/sysroot" \
-    "$w/runtime.so" "$w/runtime.a" "$w/pam" "$w/auth" "$w/driver" \
+    "$w/reliefos-runtime.so" "$w/reliefos-runtime.a" \
+    "$w/leonos-runtime.so" "$w/leonos-runtime.a" "$w/pam" "$w/auth" "$w/driver" \
     "$w/musl-sdk" 1234 "$w/export"
 rm "$w/musl-sdk/include/stdio.h" "$w/musl-sdk/lib/crt1.o"
 RUNTIME_BUILTINS="$w/builtins.a" PNG_CONFIG="$w/pnglibconf.h" \
     sh "$root/tools/build/musl-sdk.sh" "$w/src" "$w/sysroot" \
-    "$w/runtime.so" "$w/runtime.a" "$w/pam" "$w/auth" "$w/driver" \
+    "$w/reliefos-runtime.so" "$w/reliefos-runtime.a" \
+    "$w/leonos-runtime.so" "$w/leonos-runtime.a" "$w/pam" "$w/auth" "$w/driver" \
     "$w/musl-sdk" 1234 "$w/export"
 cmp "$w/export/linux/types.h" "$w/musl-sdk/include/linux/types.h"
 cmp "$w/sysroot/include/stdio.h" "$w/musl-sdk/include/stdio.h"
 cmp "$w/sysroot/lib/crt1.o" "$w/musl-sdk/lib/crt1.o"
-echo 'ok - musl SDK stages recover deleted required members and take UAPI from the export'
+cmp "$w/src/include/reliefos/api.h" "$w/musl-sdk/include/reliefos/api.h"
+cmp "$w/src/include/leonos/tar.h" "$w/musl-sdk/include/leonos/tar.h"
+grep -Fx 'reliefos runtime' "$w/musl-sdk/lib/libreliefos.so.2"
+grep -Fx 'leonos runtime' "$w/musl-sdk/lib/libleonos.so.2"
+grep -Fx 'reliefos archive' "$w/musl-sdk/lib/libreliefos.a"
+grep -Fx 'leonos archive' "$w/musl-sdk/lib/libleonos.a"
+echo 'ok - musl SDK stages both runtime ABIs and keeps canonical and legacy headers'

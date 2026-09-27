@@ -1,22 +1,22 @@
-#ifndef LEONOS_DESKTOP_H
-#define LEONOS_DESKTOP_H
+#ifndef RELIEFOS_DESKTOP_H
+#define RELIEFOS_DESKTOP_H
 
-#include <leonos/gui.h>
-#include <leonos/layout.h>
-#include <leonos/auth.h>
-#include <leonos/fs.h>
+#include <reliefos/gui.h>
+#include <reliefos/layout.h>
+#include <reliefos/auth.h>
+#include <reliefos/fs.h>
 #include <libintl.h>
-#include <leonos/text_input.h>
-#include <leonos/license.h>
-#include <leonos/launch.h>
-#include <leonos/app.h>
-#include <leonos/mouse.h>
-#include <leonos/net.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/system.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/text_input.h>
+#include <reliefos/license.h>
+#include <reliefos/launch.h>
+#include <reliefos/app.h>
+#include <reliefos/mouse.h>
+#include <reliefos/net.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/system.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 #include <unistd.h>
 #include <signal.h>
 #include <stdio.h>
@@ -29,34 +29,34 @@
 #define MAX_FB_H 1080
 #define DESKTOP_MODE_COUNT 5
 #define DESKTOP_SCALE_COUNT 3
-#define TASKBAR_H LEONOS_UI_TASKBAR_H
+#define TASKBAR_H RELIEFOS_UI_TASKBAR_H
 #define TASKBAR_CLOCK_W 92
 #define TASKBAR_NET_W 34
 #define TASKBAR_INPUTM_W 42
 #define TASKBAR_TRAY_W (TASKBAR_CLOCK_W + TASKBAR_NET_W + TASKBAR_INPUTM_W)
-#define TITLEBAR_H LEONOS_UI_TITLEBAR_H
+#define TITLEBAR_H RELIEFOS_UI_TITLEBAR_H
 #define MIN_W 180
 #define MIN_H 96
 #define FALLBACK_CURSOR_W 16
 #define FALLBACK_CURSOR_H 16
 #define CURSOR_TILE_W 32
 #define CURSOR_TILE_H 32
-#define CURSOR_STYLE_COUNT LEONOS_GUI_CURSOR_STYLE_COUNT
+#define CURSOR_STYLE_COUNT RELIEFOS_GUI_CURSOR_STYLE_COUNT
 #define CURSOR_MAX_W CURSOR_TILE_W
 #define CURSOR_MAX_H (CURSOR_TILE_H * CURSOR_STYLE_COUNT)
 #define CURSOR_BMP_MAX_BYTES (CURSOR_MAX_W * CURSOR_MAX_H * 4 + 128)
-#define CURSOR_BMP_PATH LEONOS_LAYOUT_LEONOS_RESOURCES "/mouse.bmp"
+#define CURSOR_BMP_PATH RELIEFOS_LAYOUT_RELIEFOS_RESOURCES "/mouse.bmp"
 #define DESKTOP_CURSOR_REGION_CAP 64
 #define WALLPAPER_MAX_W 1280
 #define WALLPAPER_MAX_H 720
 #define WALLPAPER_BMP_MAX_BYTES (WALLPAPER_MAX_W * WALLPAPER_MAX_H * 4 + 128)
-#define DESKTOP_DEFAULT_WALLPAPER_PATH LEONOS_LAYOUT_LEONOS_RESOURCES "/wallpaper-metro.bmp"
+#define DESKTOP_DEFAULT_WALLPAPER_PATH RELIEFOS_LAYOUT_RELIEFOS_RESOURCES "/wallpaper-metro.bmp"
 #define WINDOW_BUTTON_ICON_W 16
 #define WINDOW_BUTTON_ICON_H 16
-#define WINDOW_BUTTON_MINIMIZE_ICON_PATH LEONOS_LAYOUT_LEONOS_RESOURCES "/window-button-minimize.bmp"
-#define WINDOW_BUTTON_MAXIMIZE_ICON_PATH LEONOS_LAYOUT_LEONOS_RESOURCES "/window-button-maximize.bmp"
-#define WINDOW_BUTTON_RESTORE_ICON_PATH LEONOS_LAYOUT_LEONOS_RESOURCES "/window-button-restore.bmp"
-#define WINDOW_BUTTON_CLOSE_ICON_PATH LEONOS_LAYOUT_LEONOS_RESOURCES "/window-button-close.bmp"
+#define WINDOW_BUTTON_MINIMIZE_ICON_PATH RELIEFOS_LAYOUT_RELIEFOS_RESOURCES "/window-button-minimize.bmp"
+#define WINDOW_BUTTON_MAXIMIZE_ICON_PATH RELIEFOS_LAYOUT_RELIEFOS_RESOURCES "/window-button-maximize.bmp"
+#define WINDOW_BUTTON_RESTORE_ICON_PATH RELIEFOS_LAYOUT_RELIEFOS_RESOURCES "/window-button-restore.bmp"
+#define WINDOW_BUTTON_CLOSE_ICON_PATH RELIEFOS_LAYOUT_RELIEFOS_RESOURCES "/window-button-close.bmp"
 #define APP_ICON_SMALL_W 16
 #define APP_ICON_SMALL_H 16
 #define APP_ICON_LARGE_W 32
@@ -68,17 +68,17 @@
 #define APP_ICON_BMP_MAX_BYTES (APP_ICON_MAX_W * APP_ICON_MAX_H * 4 + 128)
 /* A freshly spawned task can take several scheduler ticks before it appears
  * in the task snapshot.  Keep the spawn reservation during that handoff. */
-#define LOGIN_APP_PATH LEONOS_LAYOUT_LEONOS_APPS "/login/login.elf"
+#define LOGIN_APP_PATH RELIEFOS_LAYOUT_RELIEFOS_APPS "/login/login.elf"
 #define LOGIN_WINDOW_TITLE "LeonOS Login"
 #define LOGIN_WINDOW_TEXT "Sign in"
 #define LOGIN_RESPAWN_MS 1000UL
 /* Login window registration is asynchronous too.  Keep its launch reservation
  * until the task becomes visible to the desktop or has had time to start. */
 #define LOGIN_STARTUP_GRACE_MS 5000UL
-#define NETWORK_CONTROLLER_APP_PATH LEONOS_LAYOUT_LEONOS_APPS "/netctl/netctl.elf"
-#define DISPLAY_CONFIG_PATH LEONOS_PATH_DISPLAY_CONF
+#define NETWORK_CONTROLLER_APP_PATH RELIEFOS_LAYOUT_RELIEFOS_APPS "/netctl/netctl.elf"
+#define DISPLAY_CONFIG_PATH RELIEFOS_PATH_DISPLAY_CONF
 #define APPEARANCE_CONFIG_NAME "appearance.conf"
-#define SERVICES_CONFIG_PATH LEONOS_PATH_TASKBAR_CFG
+#define SERVICES_CONFIG_PATH RELIEFOS_PATH_TASKBAR_CFG
 #define SERVICES_CONFIG_MAX 512U
 #define DISPLAY_CONFIRM_MS 10000UL
 #define START_MENU_W 464
@@ -88,8 +88,8 @@
 #define START_MENU_ITEM_H 26
 #define START_MENU_SEARCH_H 28
 #define START_MENU_DIRTY_H (START_MENU_MAX_H + TASKBAR_H + 8)
-#define START_MENU_MAX_APPS LEONOS_FS_MAX_ENTRIES
-#define START_MENU_MAX_DOCS LEONOS_FS_MAX_ENTRIES
+#define START_MENU_MAX_APPS RELIEFOS_FS_MAX_ENTRIES
+#define START_MENU_MAX_DOCS RELIEFOS_FS_MAX_ENTRIES
 #define START_MENU_QUERY_MAX 48
 #define START_MENU_VIEW_HOME 0U
 #define START_MENU_VIEW_APPS 1U
@@ -106,7 +106,7 @@
 #define WIN_TAP_MAX_MS 500UL
 #define WINDOW_RECOVERABLE_W 96
 #define WINDOW_RECOVERABLE_TITLEBAR_H 8
-#define DESKTOP_ITEM_MAX LEONOS_FS_MAX_ENTRIES
+#define DESKTOP_ITEM_MAX RELIEFOS_FS_MAX_ENTRIES
 #define DESKTOP_ITEM_CELL_W 96
 #define DESKTOP_ITEM_CELL_H 96
 #define DESKTOP_ITEM_GRID_X 8
@@ -152,7 +152,7 @@
 #define DESKTOP_LIFECYCLE_WAITING 1
 #define DESKTOP_LIFECYCLE_FORCE_PROMPT 2
 #define DESKTOP_LIFECYCLE_TIMEOUT_MS 5000UL
-#define DESKTOP_LIFECYCLE_MAX_TARGETS LEONOS_TASK_MAX
+#define DESKTOP_LIFECYCLE_MAX_TARGETS RELIEFOS_TASK_MAX
 #define DESKTOP_LIFECYCLE_POLL_MS 50UL
 #define DESKTOP_TASK_FLAG_SERVICE 0x00000001U
 
@@ -178,7 +178,7 @@ struct desktop_window {
     uint8_t minimized;
     uint8_t maximized;
     uint8_t snap_mode;
-    char icon_path[LEONOS_FS_PATH_LEN];
+    char icon_path[RELIEFOS_FS_PATH_LEN];
     uint8_t anim;
     unsigned long anim_start_ms;
     int anim_from_x;
@@ -215,15 +215,15 @@ struct desktop_display_mode {
 };
 
 struct desktop_item {
-    struct leonos_dir_entry entry;
-    char label[LEONOS_FS_NAME_LEN + 1];
-    char path[LEONOS_FS_PATH_LEN];
-    char icon_path[LEONOS_FS_PATH_LEN];
+    struct reliefos_dir_entry entry;
+    char label[RELIEFOS_FS_NAME_LEN + 1];
+    char path[RELIEFOS_FS_PATH_LEN];
+    char icon_path[RELIEFOS_FS_PATH_LEN];
 };
 
 struct desktop_inputm_entry {
     char id[TEXT_INPUT_ID_LEN];
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     char abbreviation[TEXT_INPUT_ABBREV_LEN];
     uint32_t startup_mode;
     uint32_t order;
@@ -231,8 +231,8 @@ struct desktop_inputm_entry {
     uint8_t running;
 };
 
-extern struct leonos_fb_info fb;
-extern struct leonos_fb_capabilities fb_caps;
+extern struct reliefos_fb_info fb;
+extern struct reliefos_fb_capabilities fb_caps;
 extern uint32_t desktop_scale;
 extern uint32_t desktop_logical_w;
 extern uint32_t desktop_logical_h;
@@ -269,14 +269,14 @@ extern unsigned long start_menu_docs_retry_ms;
 extern uint32_t start_menu_app_count;
 extern uint32_t start_menu_doc_count;
 extern char start_menu_app_labels[START_MENU_MAX_APPS][32];
-extern char start_menu_app_paths[START_MENU_MAX_APPS][LEONOS_FS_PATH_LEN];
+extern char start_menu_app_paths[START_MENU_MAX_APPS][RELIEFOS_FS_PATH_LEN];
 extern char start_menu_doc_labels[START_MENU_MAX_DOCS][48];
-extern char start_menu_doc_paths[START_MENU_MAX_DOCS][LEONOS_FS_PATH_LEN];
+extern char start_menu_doc_paths[START_MENU_MAX_DOCS][RELIEFOS_FS_PATH_LEN];
 extern struct desktop_item desktop_items[DESKTOP_ITEM_MAX];
 extern uint32_t desktop_item_count;
 extern uint8_t desktop_items_ready;
 extern unsigned long desktop_items_retry_ms;
-extern char desktop_folder_path[LEONOS_FS_PATH_LEN];
+extern char desktop_folder_path[RELIEFOS_FS_PATH_LEN];
 extern int32_t desktop_selected_item;
 extern int32_t desktop_last_click_item;
 extern unsigned long desktop_last_click_ms;
@@ -291,7 +291,7 @@ extern char desktop_message_title[DESKTOP_MESSAGE_TITLE_LEN];
 extern char desktop_message_text[DESKTOP_MESSAGE_TEXT_LEN];
 extern uint8_t desktop_shortcut_input_active;
 extern uint8_t desktop_shortcut_shift_down;
-extern char desktop_shortcut_target[LEONOS_FS_PATH_LEN];
+extern char desktop_shortcut_target[RELIEFOS_FS_PATH_LEN];
 extern uint8_t snap_preview_mode;
 extern uint8_t alt_left_down;
 extern uint8_t alt_right_down;
@@ -326,7 +326,7 @@ extern uint8_t desktop_boot_theme_default;
 extern uint8_t desktop_metro_color_scheme;
 extern uint8_t desktop_win95_color_scheme;
 extern uint8_t desktop_wallpaper_mode;
-extern char desktop_wallpaper_path[LEONOS_FS_PATH_LEN];
+extern char desktop_wallpaper_path[RELIEFOS_FS_PATH_LEN];
 extern uint8_t desktop_service_network_icon;
 extern uint8_t desktop_service_rtc_clock;
 extern uint8_t full_redraw_pending;
@@ -347,7 +347,7 @@ extern uint32_t login_spawn_pid;
 extern uint8_t desktop_startup_launched;
 extern char app_titles[MAX_WINDOWS][48];
 extern char app_texts[MAX_WINDOWS][DESKTOP_APP_TEXT_LEN];
-extern struct leonos_task_info task_infos[LEONOS_TASK_MAX];
+extern struct reliefos_task_info task_infos[RELIEFOS_TASK_MAX];
 extern uint32_t task_info_count;
 extern uint64_t task_info_tick;
 extern unsigned long last_task_refresh;
@@ -356,7 +356,7 @@ extern uint32_t desktop_inputm_entry_count;
 extern text_input_state_t desktop_inputm_state;
 extern uint8_t desktop_inputm_menu_open;
 extern char desktop_inputm_status[96];
-extern struct leonos_ui_surface ui;
+extern struct reliefos_ui_surface ui;
 extern uint32_t app_client_scratch[APP_CLIENT_MAX_W * APP_CLIENT_MAX_H];
 
 extern uint32_t screen[MAX_FB_W * MAX_FB_H];
@@ -430,7 +430,7 @@ char lower_ascii(char ch);
 int keycode_to_ascii(uint8_t keycode, char *out);
 const char *task_state_name(uint32_t state);
 const char *task_kind_name(uint32_t kind);
-void task_line(char *buf, uint32_t cap, const struct leonos_task_info *task);
+void task_line(char *buf, uint32_t cap, const struct reliefos_task_info *task);
 void refresh_task_snapshot(void);
 uint32_t min_u32(uint32_t a, uint32_t b);
 void clamp_window_size(struct desktop_window *w);
@@ -523,17 +523,17 @@ void restore_window(uint8_t id);
 int handle_global_key(uint8_t keycode, uint8_t pressed);
 void toggle_maximize(uint8_t id);
 void apply_snap_mode(uint8_t id, uint8_t snap_mode);
-void open_app_window_from_msg(const struct leonos_gui_window_msg *msg);
+void open_app_window_from_msg(const struct reliefos_gui_window_msg *msg);
 int spawn_program_path(const char *path);
 int spawn_help_path(const char *path);
 void maybe_launch_login(void);
 int desktop_session_logged_in(void);
 int window_is_login(const struct desktop_window *w);
-int window_msg_is_login(const struct leonos_gui_window_msg *msg);
+int window_msg_is_login(const struct reliefos_gui_window_msg *msg);
 int login_window_slot(void);
 void login_lock_update(void);
 void login_lock_on_window_removed(uint8_t slot);
-int login_lock_blocks_window_msg(const struct leonos_gui_window_msg *msg);
+int login_lock_blocks_window_msg(const struct reliefos_gui_window_msg *msg);
 int handle_login_lock_mouse(uint32_t x, uint32_t y, uint8_t buttons);
 int handle_login_lock_mouse_wheel(uint32_t x, uint32_t y, int32_t wheel, uint8_t buttons);
 void desktop_launch_startup_apps(void);
@@ -561,7 +561,7 @@ void desktop_handle_display_requests(void);
 void desktop_publish_appearance_state(void);
 void desktop_handle_appearance_requests(void);
 void desktop_apply_theme(uint32_t theme);
-void desktop_apply_appearance(const struct leonos_appearance_request *request);
+void desktop_apply_appearance(const struct reliefos_appearance_request *request);
 void update_snap_preview(uint32_t x, uint32_t y);
 void handle_mouse(uint32_t x, uint32_t y, uint8_t buttons);
 void handle_mouse_wheel(uint32_t x, uint32_t y, int32_t wheel, uint8_t buttons);

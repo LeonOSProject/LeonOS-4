@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ntclks/tmpfs.h>
-#include <ntclks/time.h>
+#include <reliefnt/tmpfs.h>
+#include <reliefnt/time.h>
 #include <linux/mount.h>
 static struct {
     uint64_t phys;
@@ -54,7 +54,7 @@ void page_cache_invalidate_node(const struct storage_node *node)
     assert(node->flags & STORAGE_NODE_FLAG_TMPFS);
 }
 uint64_t mm_total_memory_kib(void) { return 65536; }
-int time_wall_clock(struct leonos_time_info *out)
+int time_wall_clock(struct reliefos_time_info *out)
 {
     memset(out, 0, sizeof(*out));
     out->unix_seconds = 1234;
@@ -98,7 +98,7 @@ int main(void)
     assert(tmpfs_rename(fs, "/d", "/d/sub/cycle") == -22);
     assert(tmpfs_create(fs, "/symlink", 0120777, "d/sub", &a) == 0);
     assert(tmpfs_readlink(fs, a.first_cluster, got, 3, &done) == 0 && done == 3 && !memcmp(got, "d/s", 3));
-    struct leonos_permissions p = {0601, 1000, 1001};
+    struct reliefos_permissions p = {0601, 1000, 1001};
     assert(tmpfs_permissions(fs, a.first_cluster, &p, true) == 0);
     assert(tmpfs_stat(fs, a.first_cluster, &st) == 0 && st.st_uid == 1000 && st.st_mode == 0120601);
     tmpfs_set_flags(fs, MS_RDONLY);

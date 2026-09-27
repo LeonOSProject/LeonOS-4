@@ -59,7 +59,7 @@ renames/touches were performed.
   Log `/tmp/leonos-userland-noop-final.log` (parent's temporary coordination
   message is the only output).
 - `readelf` confirms hello ELF64 x86-64 PIE, DT_NEEDED libmimalloc.so.3,
-  libleonos.so.2 and libc.so; dynlinkerror has no dynamic section.
+  libreliefos.so.2 and libc.so; dynlinkerror has no dynamic section.
 - Initial CC command-line propagation failure in upstream auth was diagnosed:
   recursive Make replaced configured compound CC with plain host clang. Parent
   fixed adapter propagation. This is not a userland workaround.

@@ -3,13 +3,13 @@
 #include <sys/ioctl.h>
 #include <linux/vt.h>
 #include <linux/kd.h>
-#include <leonos/device.h>
+#include <reliefos/device.h>
 
 static int desktop_vt_active(uint64_t *generation)
 {
     struct vt_stat state;
     int mode;
-    return ioctl(STDIN_FILENO, LEONOS_VT_GETGENERATION, generation) == 0 &&
+    return ioctl(STDIN_FILENO, RELIEFOS_VT_GETGENERATION, generation) == 0 &&
            ioctl(STDIN_FILENO, VT_GETSTATE, &state) == 0 &&
            state.v_active == 1 &&
            ioctl(STDIN_FILENO, KDGETMODE, &mode) == 0 && mode == KD_GRAPHICS;
@@ -24,18 +24,18 @@ void init_desktop(void)
     windows[0] = (struct desktop_window){.x = 120, .y = 84, .width = 420, .height = 220,
                                          .restore_x = 120, .restore_y = 84,
                                          .restore_width = 420, .restore_height = 220,
-                                         .title = T("Desktop Server"), .body_color = LEONOS_UI_GRAY,
+                                         .title = T("Desktop Server"), .body_color = RELIEFOS_UI_GRAY,
                                          .visible = 0};
     windows[1] = (struct desktop_window){.x = 190, .y = 150, .width = 360, .height = 190,
                                          .restore_x = 190, .restore_y = 150,
                                          .restore_width = 360, .restore_height = 190,
-                                         .title = T("File Manager"), .body_color = LEONOS_UI_WHITE};
-    windows[2] = (struct desktop_window){.title = T("Settings"), .body_color = LEONOS_UI_LIGHT,
+                                         .title = T("File Manager"), .body_color = RELIEFOS_UI_WHITE};
+    windows[2] = (struct desktop_window){.title = T("Settings"), .body_color = RELIEFOS_UI_LIGHT,
                                          };
     windows[3] = (struct desktop_window){.x = 90, .y = 118, .width = 620, .height = 300,
                                          .restore_x = 90, .restore_y = 118,
                                          .restore_width = 620, .restore_height = 300,
-                                         .title = T("Task Manager"), .body_color = LEONOS_UI_WHITE};
+                                         .title = T("Task Manager"), .body_color = RELIEFOS_UI_WHITE};
     desktop_icon_path_for_app("desktop", windows[0].icon_path,
                               sizeof(windows[0].icon_path));
     desktop_icon_path_for_app("fileman", windows[1].icon_path,
@@ -65,7 +65,7 @@ void init_desktop(void)
     cursor_x = 320;
     cursor_y = 240;
     cursor_visible = 1;
-    desktop_cursor_style = LEONOS_GUI_CURSOR_ARROW;
+    desktop_cursor_style = RELIEFOS_GUI_CURSOR_ARROW;
     desktop_cursor_auto = 1;
     desktop_taskbar_visible = 1;
     load_cursor_bmp();
@@ -79,25 +79,25 @@ void desktop_run(void)
 {
     puts("[desktop.elf] Ring-3 Win98-style window server starting");
 
-    int policy = leonos_gui_policy_connect();
-    int version = policy == 0 ? leonos_gui_connect() : -1;
+    int policy = reliefos_gui_policy_connect();
+    int version = policy == 0 ? reliefos_gui_connect() : -1;
     printf("[desktop.elf] windowd policy connect=%d protocol=%d\n", policy, version);
     printf("[desktop.elf] GUI protocol version=%d\n", version);
     printf("[desktop.elf] pid=%d service=window-server\n", getpid());
-    int framebuffer_result = leonos_fb_info(&fb);
+    int framebuffer_result = reliefos_fb_info(&fb);
     if (framebuffer_result < 0) {
         printf("[desktop.elf] framebuffer query failed ret=%d\n", framebuffer_result);
         for (;;) {
             sleep_ms(1000);
         }
     }
-    if (leonos_fb_capabilities(&fb_caps) < 0) {
+    if (reliefos_fb_capabilities(&fb_caps) < 0) {
         fb_caps.bytes_per_pixel = 4;
         fb_caps.capabilities = 0;
         fb_caps.max_width = fb.width;
         fb_caps.max_height = fb.height;
         fb_caps.max_bytes = fb.pitch * fb.height;
-        fb_caps.backend = LEONOS_FB_BACKEND_BOOT;
+        fb_caps.backend = RELIEFOS_FB_BACKEND_BOOT;
     }
     printf("[desktop.elf] framebuffer %dx%d bpp=%d\n", fb.width, fb.height, fb.bpp);
     desktop_load_display_config();
@@ -106,7 +106,7 @@ void desktop_run(void)
     printf("[desktop.elf] display mode %s scale=%dx logical=%dx%d\n",
            desktop_display_modes[desktop_mode_index].label,
            (int)desktop_scale, fb_w(), fb_h());
-    leonos_ui_bind(&ui, screen, fb_w(), fb_h(), MAX_FB_W);
+    reliefos_ui_bind(&ui, screen, fb_w(), fb_h(), MAX_FB_W);
     desktop_publish_display_state();
     desktop_publish_appearance_state();
 
@@ -119,15 +119,15 @@ void desktop_run(void)
     maybe_launch_login();
     if (access("/etc/leonos/installer-runtime", F_OK) == 0) {
         char *argv[] = {"installer", "--graphical", NULL};
-        (void)leonos_launch_argv(argv);
+        (void)reliefos_launch_argv(argv);
     }
 
     int profile = access("/etc/leonos/desktop-profile", F_OK) == 0;
-    unsigned long profile_start = leonos_uptime_ms();
+    unsigned long profile_start = reliefos_uptime_ms();
     unsigned long profile_frames = 0, profile_paint_ms = 0, profile_inputm_ms = 0;
     unsigned long last_log = 0;
-    unsigned long last_clock_second = leonos_uptime_ms() / 1000UL;
-    unsigned long last_services_refresh = leonos_uptime_ms();
+    unsigned long last_clock_second = reliefos_uptime_ms() / 1000UL;
+    unsigned long last_services_refresh = reliefos_uptime_ms();
     unsigned long last_inputm_refresh = 0;
     unsigned long last_desktop_items_poll = 0;
     int last_mouse_visible = 1;
@@ -141,10 +141,10 @@ void desktop_run(void)
             painted_generation = generation;
             redraw_all();
         }
-        struct leonos_gui_window_msg window_msg;
+        struct reliefos_gui_window_msg window_msg;
         int did_work = 0;
         uint32_t window_budget = 64;
-        while (window_budget-- && leonos_gui_poll_window(&window_msg) > 0) {
+        while (window_budget-- && reliefos_gui_poll_window(&window_msg) > 0) {
             open_app_window_from_msg(&window_msg);
             did_work = 1;
         }
@@ -154,20 +154,20 @@ void desktop_run(void)
         login_lock_update();
         desktop_update_window_animations();
 
-        struct leonos_input_event event;
-        struct leonos_input_event deferred_motion = {0};
+        struct reliefos_input_event event;
+        struct reliefos_input_event deferred_motion = {0};
         uint8_t have_deferred_motion = 0;
         /* Keep a continuously moving pointer from starving repaint. The
          * kernel coalesces moves, but a busy device can still refill the
          * queue while this loop is running. */
         uint32_t event_budget = 64;
-        while (event_budget-- && leonos_gui_next_event(&event) > 0) {
+        while (event_budget-- && reliefos_gui_next_event(&event) > 0) {
             did_work = 1;
             if (desktop_scale > 1) {
                 event.x /= (int32_t)desktop_scale;
                 event.y /= (int32_t)desktop_scale;
                 event.dx /= (int32_t)desktop_scale;
-                event.dy = event.type == LEONOS_INPUT_MOUSE_WHEEL
+                event.dy = event.type == RELIEFOS_INPUT_MOUSE_WHEEL
                                ? event.dy
                                : event.dy / (int32_t)desktop_scale;
             }
@@ -175,7 +175,7 @@ void desktop_run(void)
              * only the newest one in this batch so a high-rate mouse cannot
              * make the desktop render dozens of stale cursor positions. Any
              * button transition, wheel, or keyboard event flushes it first. */
-            if (event.type == LEONOS_INPUT_MOUSE && event.buttons == 0 &&
+            if (event.type == RELIEFOS_INPUT_MOUSE && event.buttons == 0 &&
                 previous_buttons == 0 && drag_window < 0) {
                 deferred_motion = event;
                 have_deferred_motion = 1;
@@ -187,12 +187,12 @@ void desktop_run(void)
                              deferred_motion.buttons);
                 have_deferred_motion = 0;
             }
-            if (event.type == LEONOS_INPUT_MOUSE) {
+            if (event.type == RELIEFOS_INPUT_MOUSE) {
                 handle_mouse((uint32_t)event.x, (uint32_t)event.y, event.buttons);
-            } else if (event.type == LEONOS_INPUT_MOUSE_WHEEL) {
+            } else if (event.type == RELIEFOS_INPUT_MOUSE_WHEEL) {
                 handle_mouse_wheel((uint32_t)event.x, (uint32_t)event.y,
                                    event.dy, event.buttons);
-            } else if (event.type == LEONOS_INPUT_KEYBOARD) {
+            } else if (event.type == RELIEFOS_INPUT_KEYBOARD) {
                 if (desktop_lifecycle_handle_key(event.keycode, event.pressed)) {
                     continue;
                 }
@@ -247,7 +247,7 @@ void desktop_run(void)
                 did_work = 1;
             }
         }
-        unsigned long paint_start = profile ? leonos_uptime_ms() : 0;
+        unsigned long paint_start = profile ? reliefos_uptime_ms() : 0;
         int painted = full_redraw_pending || desktop_damage_pending;
         if (full_redraw_pending) {
             redraw_all();
@@ -264,16 +264,16 @@ void desktop_run(void)
         }
         if (profile && painted) {
             ++profile_frames;
-            profile_paint_ms += leonos_uptime_ms() - paint_start;
+            profile_paint_ms += reliefos_uptime_ms() - paint_start;
         }
-        int mouse_visible = leonos_gui_mouse_visible();
+        int mouse_visible = reliefos_gui_mouse_visible();
         if (mouse_visible != last_mouse_visible) {
             last_mouse_visible = mouse_visible;
             redraw_all();
             did_work = 1;
         }
 
-        unsigned long now = leonos_uptime_ms();
+        unsigned long now = reliefos_uptime_ms();
         desktop_poll_network_state();
         if (!wallpaper_loaded && now >= wallpaper_retry_ms) {
             if (load_wallpaper_bmp()) {
@@ -337,9 +337,9 @@ void desktop_run(void)
         }
         if (now - last_inputm_refresh >= 100UL) {
             last_inputm_refresh = now;
-            unsigned long inputm_start = profile ? leonos_uptime_ms() : 0;
+            unsigned long inputm_start = profile ? reliefos_uptime_ms() : 0;
             desktop_inputm_refresh();
-            if (profile) profile_inputm_ms += leonos_uptime_ms() - inputm_start;
+            if (profile) profile_inputm_ms += reliefos_uptime_ms() - inputm_start;
         }
         if (profile && now - profile_start >= 5000UL) {
             printf("[desktop-perf] frames=%lu elapsed_ms=%lu paint_ms=%lu inputm_ms=%lu\n",
@@ -355,6 +355,6 @@ void desktop_run(void)
         if (did_work) {
             continue;
         }
-        (void)leonos_gui_wait_policy(50);
+        (void)reliefos_gui_wait_policy(50);
     }
 }

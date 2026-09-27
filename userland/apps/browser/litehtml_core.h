@@ -1,7 +1,7 @@
-#ifndef LEONOS_BROWSER_LITEHTML_CORE_H
-#define LEONOS_BROWSER_LITEHTML_CORE_H
+#ifndef RELIEFOS_BROWSER_LITEHTML_CORE_H
+#define RELIEFOS_BROWSER_LITEHTML_CORE_H
 
-#include <leonos/fs.h>
+#include <reliefos/fs.h>
 #include <stdint.h>
 
 #define BROWSER_COLOR_UNSET 0xffffffffu
@@ -50,7 +50,7 @@ struct browser_line {
 };
 
 struct browser_link {
-    char href[LEONOS_FS_PATH_LEN];
+    char href[RELIEFOS_FS_PATH_LEN];
 };
 
 struct litehtml_core_view {

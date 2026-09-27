@@ -9,7 +9,7 @@
 #include <sys/wait.h>
 #include <termios.h>
 #include <unistd.h>
-#include <leonos/sudo.h>
+#include <reliefos/sudo.h>
 
 static void run_case(int interrupted, int overflow)
 {
@@ -24,7 +24,7 @@ static void run_case(int interrupted, int overflow)
         int nullfd = open("/dev/null", O_RDONLY);
         assert(dup2(nullfd, 0) == 0);
         char password[8];
-        int result = leonos_read_password("PROMPT:", password, sizeof(password));
+        int result = reliefos_read_password("PROMPT:", password, sizeof(password));
         if (overflow) assert(result == -1 && errno == EOVERFLOW && password[0] == 0);
         else assert(result == 0 && !strcmp(password, "secret"));
         _exit(0);

@@ -4,7 +4,7 @@
  * ioctls, and sector-aligned raw I/O.  It is the shared implementation for
  * fdisk, mkfs.*, the installer and diskmgr; it does not call any private
  * kernel disk-management ABI. */
-#include <leonos/blockdev.h>
+#include <reliefos/blockdev.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/fs.h>
@@ -296,16 +296,16 @@ static int block_disk_index(const char *path, uint32_t *out_index)
     digits = path + 9;
     if (!digits[0] || strchr(digits, 'p')) return -BLOCK_EINVAL;
     index = strtoul(digits, &end, 10);
-    if (*end || index >= LEONOS_BLOCK_MAX_DISKS) return -BLOCK_EINVAL;
+    if (*end || index >= RELIEFOS_BLOCK_MAX_DISKS) return -BLOCK_EINVAL;
     *out_index = (uint32_t)index;
     return 0;
 }
 
-int leonos_block_partition_path(const char *disk_path, uint32_t index,
+int reliefos_block_partition_path(const char *disk_path, uint32_t index,
                                 char *out, uint32_t capacity)
 {
     uint32_t length;
-    if (!disk_path || !out || !capacity || index >= LEONOS_BLOCK_MAX_PARTITIONS) {
+    if (!disk_path || !out || !capacity || index >= RELIEFOS_BLOCK_MAX_PARTITIONS) {
         return -BLOCK_EINVAL;
     }
     length = (uint32_t)strlen(disk_path);
@@ -324,23 +324,23 @@ int leonos_block_partition_path(const char *disk_path, uint32_t index,
     return 0;
 }
 
-const char *leonos_block_filesystem_name(uint32_t filesystem)
+const char *reliefos_block_filesystem_name(uint32_t filesystem)
 {
     switch (filesystem) {
-    case LEONOS_BLOCK_FILESYSTEM_FAT32: return "fat32";
-    case LEONOS_BLOCK_FILESYSTEM_EXT2: return "ext2";
-    case LEONOS_BLOCK_FILESYSTEM_ISO9660: return "iso9660";
-    case LEONOS_BLOCK_FILESYSTEM_EXFAT: return "exfat";
+    case RELIEFOS_BLOCK_FILESYSTEM_FAT32: return "fat32";
+    case RELIEFOS_BLOCK_FILESYSTEM_EXT2: return "ext2";
+    case RELIEFOS_BLOCK_FILESYSTEM_ISO9660: return "iso9660";
+    case RELIEFOS_BLOCK_FILESYSTEM_EXFAT: return "exfat";
     default: return "unknown";
     }
 }
 
-const char *leonos_block_gpt_type_name(uint32_t type)
+const char *reliefos_block_gpt_type_name(uint32_t type)
 {
     switch (type) {
-    case LEONOS_BLOCK_GPT_ESP: return "esp";
-    case LEONOS_BLOCK_GPT_LINUX: return "linux";
-    case LEONOS_BLOCK_GPT_BASIC_DATA: return "basic";
+    case RELIEFOS_BLOCK_GPT_ESP: return "esp";
+    case RELIEFOS_BLOCK_GPT_LINUX: return "linux";
+    case RELIEFOS_BLOCK_GPT_BASIC_DATA: return "basic";
     default: return "other";
     }
 }
@@ -353,16 +353,16 @@ static int block_guid_empty(const uint8_t guid[16])
 
 static uint32_t block_guid_type(const uint8_t guid[16])
 {
-    if (memcmp(guid, block_guid_esp, 16) == 0) return LEONOS_BLOCK_GPT_ESP;
-    if (memcmp(guid, block_guid_linux, 16) == 0) return LEONOS_BLOCK_GPT_LINUX;
-    if (memcmp(guid, block_guid_basic, 16) == 0) return LEONOS_BLOCK_GPT_BASIC_DATA;
+    if (memcmp(guid, block_guid_esp, 16) == 0) return RELIEFOS_BLOCK_GPT_ESP;
+    if (memcmp(guid, block_guid_linux, 16) == 0) return RELIEFOS_BLOCK_GPT_LINUX;
+    if (memcmp(guid, block_guid_basic, 16) == 0) return RELIEFOS_BLOCK_GPT_BASIC_DATA;
     return 0;
 }
 
 static void block_set_guid(uint8_t guid[16], uint32_t type)
 {
-    const uint8_t *source = type == LEONOS_BLOCK_GPT_ESP ? block_guid_esp :
-                            type == LEONOS_BLOCK_GPT_LINUX ? block_guid_linux : block_guid_basic;
+    const uint8_t *source = type == RELIEFOS_BLOCK_GPT_ESP ? block_guid_esp :
+                            type == RELIEFOS_BLOCK_GPT_LINUX ? block_guid_linux : block_guid_basic;
     memcpy(guid, source, 16);
 }
 
@@ -575,7 +575,7 @@ static int block_reread(int fd)
     return ret < 0 ? -errno : 0;
 }
 
-int leonos_block_get_info(const char *path, struct leonos_block_disk_info *out)
+int reliefos_block_get_info(const char *path, struct reliefos_block_disk_info *out)
 {
     int fd;
     uint64_t sectors;
@@ -595,17 +595,17 @@ int leonos_block_get_info(const char *path, struct leonos_block_disk_info *out)
     return 0;
 }
 
-int leonos_block_list_disks(struct leonos_block_disk_info *disks, uint32_t capacity,
+int reliefos_block_list_disks(struct reliefos_block_disk_info *disks, uint32_t capacity,
                             uint32_t *out_count)
 {
     uint32_t count = 0;
     int first_error = 0;
     if (!out_count || (capacity && !disks)) return -BLOCK_EINVAL;
-    for (uint32_t index = 0; index < LEONOS_BLOCK_MAX_DISKS; ++index) {
-        char path[LEONOS_BLOCK_PATH_LEN];
-        struct leonos_block_disk_info info;
+    for (uint32_t index = 0; index < RELIEFOS_BLOCK_MAX_DISKS; ++index) {
+        char path[RELIEFOS_BLOCK_PATH_LEN];
+        struct reliefos_block_disk_info info;
         snprintf(path, sizeof(path), "/dev/disk%u", index);
-        int ret = leonos_block_get_info(path, &info);
+        int ret = reliefos_block_get_info(path, &info);
         if (ret < 0) {
             if (ret != -BLOCK_ENOENT && !first_error) first_error = ret;
             continue;
@@ -618,7 +618,7 @@ int leonos_block_list_disks(struct leonos_block_disk_info *disks, uint32_t capac
     return first_error;
 }
 
-int leonos_block_gpt_initialize(const char *disk_path, int force)
+int reliefos_block_gpt_initialize(const char *disk_path, int force)
 {
     int fd;
     uint64_t sectors;
@@ -679,23 +679,23 @@ static int block_partition_probe_fd(int fd, uint32_t *out_filesystem)
     uint8_t sector[BLOCK_SECTOR_SIZE];
     int ret;
     if (!out_filesystem) return -BLOCK_EINVAL;
-    *out_filesystem = LEONOS_BLOCK_FILESYSTEM_UNKNOWN;
+    *out_filesystem = RELIEFOS_BLOCK_FILESYSTEM_UNKNOWN;
     ret = block_io(fd, 0, sector, sizeof(sector), 0);
     if (ret < 0) return ret;
     if (sector[510] == 0x55 && sector[511] == 0xaa && memcmp(sector + 82, "FAT32   ", 8) == 0)
-        *out_filesystem = LEONOS_BLOCK_FILESYSTEM_FAT32;
+        *out_filesystem = RELIEFOS_BLOCK_FILESYSTEM_FAT32;
     else if (sector[510] == 0x55 && sector[511] == 0xaa && memcmp(sector + 3, "EXFAT   ", 8) == 0)
-        *out_filesystem = LEONOS_BLOCK_FILESYSTEM_EXFAT;
+        *out_filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXFAT;
     else {
         ret = block_io(fd, 1024, sector, sizeof(sector), 0);
         if (ret < 0) return ret;
         if (*(uint16_t *)(void *)(sector + 56) == EXT2_SUPER_MAGIC)
-            *out_filesystem = LEONOS_BLOCK_FILESYSTEM_EXT2;
+            *out_filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXT2;
     }
     return 0;
 }
 
-int leonos_block_probe_filesystem(const char *partition_path, uint32_t *out_filesystem)
+int reliefos_block_probe_filesystem(const char *partition_path, uint32_t *out_filesystem)
 {
     int fd;
     uint64_t sectors;
@@ -707,8 +707,8 @@ int leonos_block_probe_filesystem(const char *partition_path, uint32_t *out_file
     return ret;
 }
 
-int leonos_block_list_partitions(const char *disk_path,
-                                 struct leonos_block_partition *partitions,
+int reliefos_block_list_partitions(const char *disk_path,
+                                 struct reliefos_block_partition *partitions,
                                  uint32_t capacity, uint32_t *out_count)
 {
     int fd;
@@ -732,15 +732,15 @@ int leonos_block_list_partitions(const char *disk_path,
         const struct block_gpt_entry *entry = &table.entries[index];
         if (block_guid_empty(entry->type_guid)) continue;
         if (count < capacity) {
-            struct leonos_block_partition *out = &partitions[count];
+            struct reliefos_block_partition *out = &partitions[count];
             memset(out, 0, sizeof(*out));
             out->index = index;
             out->first_lba = entry->first_lba;
             out->sector_count = entry->last_lba - entry->first_lba + 1u;
             out->gpt_type = block_guid_type(entry->type_guid);
             block_name_get(out->name, sizeof(out->name), entry->name);
-            (void)leonos_block_partition_path(disk_path, index, out->path, sizeof(out->path));
-            (void)leonos_block_probe_filesystem(out->path, &out->filesystem);
+            (void)reliefos_block_partition_path(disk_path, index, out->path, sizeof(out->path));
+            (void)reliefos_block_probe_filesystem(out->path, &out->filesystem);
         }
         ++count;
     }
@@ -749,7 +749,7 @@ int leonos_block_list_partitions(const char *disk_path,
     return 0;
 }
 
-int leonos_block_partition_uuid(const char *disk_path, uint32_t index, char uuid[37])
+int reliefos_block_partition_uuid(const char *disk_path, uint32_t index, char uuid[37])
 {
     int fd;
     uint64_t sectors;
@@ -815,8 +815,8 @@ static int block_create_entry(struct block_gpt_table *table, void *context)
             if (end > table->primary.last_usable_lba) return -BLOCK_ENOSPC;
             memset(&table->entries[free_index], 0, sizeof(table->entries[free_index]));
             block_set_guid(table->entries[free_index].type_guid,
-                           request->filesystem == LEONOS_BLOCK_FILESYSTEM_EXT2 ?
-                           LEONOS_BLOCK_GPT_LINUX : LEONOS_BLOCK_GPT_BASIC_DATA);
+                           request->filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2 ?
+                           RELIEFOS_BLOCK_GPT_LINUX : RELIEFOS_BLOCK_GPT_BASIC_DATA);
             block_guid_make(table->entries[free_index].unique_guid,
                             cursor ^ ((uint64_t)free_index << 32));
             table->entries[free_index].first_lba = cursor;
@@ -837,15 +837,15 @@ static int block_create_entry(struct block_gpt_table *table, void *context)
     }
 }
 
-int leonos_block_gpt_create(const char *disk_path, uint32_t filesystem,
+int reliefos_block_gpt_create(const char *disk_path, uint32_t filesystem,
                             uint32_t size_mib, const char *name, uint32_t *out_index)
 {
     struct block_create_request request = {filesystem, size_mib, name, 0};
     int ret;
-    if (filesystem != LEONOS_BLOCK_FILESYSTEM_UNKNOWN &&
-        filesystem != LEONOS_BLOCK_FILESYSTEM_FAT32 &&
-        filesystem != LEONOS_BLOCK_FILESYSTEM_EXT2 &&
-        filesystem != LEONOS_BLOCK_FILESYSTEM_EXFAT) return -BLOCK_EINVAL;
+    if (filesystem != RELIEFOS_BLOCK_FILESYSTEM_UNKNOWN &&
+        filesystem != RELIEFOS_BLOCK_FILESYSTEM_FAT32 &&
+        filesystem != RELIEFOS_BLOCK_FILESYSTEM_EXT2 &&
+        filesystem != RELIEFOS_BLOCK_FILESYSTEM_EXFAT) return -BLOCK_EINVAL;
     ret = block_gpt_update(disk_path, block_create_entry, &request);
     if (ret == 0 && out_index) *out_index = request.index;
     return ret;
@@ -863,7 +863,7 @@ static int block_set_type_entry(struct block_gpt_table *table, void *context)
 {
     struct block_index_request *request = context;
     if (request->index >= table->primary.partition_entry_count || block_guid_empty(table->entries[request->index].type_guid) ||
-        request->type < LEONOS_BLOCK_GPT_BASIC_DATA || request->type > LEONOS_BLOCK_GPT_LINUX) return -BLOCK_EINVAL;
+        request->type < RELIEFOS_BLOCK_GPT_BASIC_DATA || request->type > RELIEFOS_BLOCK_GPT_LINUX) return -BLOCK_EINVAL;
     block_set_guid(table->entries[request->index].type_guid, request->type);
     return 0;
 }
@@ -874,17 +874,17 @@ static int block_set_name_entry(struct block_gpt_table *table, void *context)
     block_name_set(table->entries[request->index].name, request->name);
     return 0;
 }
-int leonos_block_gpt_delete(const char *disk_path, uint32_t index)
+int reliefos_block_gpt_delete(const char *disk_path, uint32_t index)
 {
     struct block_index_request request = {index, 0, NULL};
     return block_gpt_update(disk_path, block_delete_entry, &request);
 }
-int leonos_block_gpt_set_type(const char *disk_path, uint32_t index, uint32_t type)
+int reliefos_block_gpt_set_type(const char *disk_path, uint32_t index, uint32_t type)
 {
     struct block_index_request request = {index, type, NULL};
     return block_gpt_update(disk_path, block_set_type_entry, &request);
 }
-int leonos_block_gpt_set_name(const char *disk_path, uint32_t index, const char *name)
+int reliefos_block_gpt_set_name(const char *disk_path, uint32_t index, const char *name)
 {
     struct block_index_request request = {index, 0, name};
     return block_gpt_update(disk_path, block_set_name_entry, &request);
@@ -1170,17 +1170,32 @@ static int block_format_exfat(int fd, uint64_t sectors, const char *label)
     return block_io(fd, 23u * 512u, scratch, 512, 1);
 }
 
-int leonos_block_format(const char *partition_path, uint32_t filesystem, const char *label)
+int reliefos_block_format(const char *partition_path, uint32_t filesystem, const char *label)
 {
     int fd;
     uint64_t sectors;
     uint32_t sector_size;
     int ret = block_open_info(partition_path, 1, &fd, &sectors, &sector_size);
     if (ret < 0) return ret;
-    if (filesystem == LEONOS_BLOCK_FILESYSTEM_FAT32) ret = block_format_fat32(fd, sectors, label);
-    else if (filesystem == LEONOS_BLOCK_FILESYSTEM_EXT2) ret = block_format_ext2(fd, sectors, label);
-    else if (filesystem == LEONOS_BLOCK_FILESYSTEM_EXFAT) ret = block_format_exfat(fd, sectors, label);
+    if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_FAT32) ret = block_format_fat32(fd, sectors, label);
+    else if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2) ret = block_format_ext2(fd, sectors, label);
+    else if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXFAT) ret = block_format_exfat(fd, sectors, label);
     else ret = -BLOCK_EINVAL;
     (void)close(fd);
     return ret;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_block_filesystem_name) leonos_block_filesystem_name __attribute__((alias("reliefos_block_filesystem_name")));
+extern __typeof__(reliefos_block_format) leonos_block_format __attribute__((alias("reliefos_block_format")));
+extern __typeof__(reliefos_block_get_info) leonos_block_get_info __attribute__((alias("reliefos_block_get_info")));
+extern __typeof__(reliefos_block_gpt_create) leonos_block_gpt_create __attribute__((alias("reliefos_block_gpt_create")));
+extern __typeof__(reliefos_block_gpt_delete) leonos_block_gpt_delete __attribute__((alias("reliefos_block_gpt_delete")));
+extern __typeof__(reliefos_block_gpt_initialize) leonos_block_gpt_initialize __attribute__((alias("reliefos_block_gpt_initialize")));
+extern __typeof__(reliefos_block_gpt_set_name) leonos_block_gpt_set_name __attribute__((alias("reliefos_block_gpt_set_name")));
+extern __typeof__(reliefos_block_gpt_set_type) leonos_block_gpt_set_type __attribute__((alias("reliefos_block_gpt_set_type")));
+extern __typeof__(reliefos_block_gpt_type_name) leonos_block_gpt_type_name __attribute__((alias("reliefos_block_gpt_type_name")));
+extern __typeof__(reliefos_block_list_disks) leonos_block_list_disks __attribute__((alias("reliefos_block_list_disks")));
+extern __typeof__(reliefos_block_list_partitions) leonos_block_list_partitions __attribute__((alias("reliefos_block_list_partitions")));
+extern __typeof__(reliefos_block_partition_path) leonos_block_partition_path __attribute__((alias("reliefos_block_partition_path")));
+extern __typeof__(reliefos_block_partition_uuid) leonos_block_partition_uuid __attribute__((alias("reliefos_block_partition_uuid")));
+extern __typeof__(reliefos_block_probe_filesystem) leonos_block_probe_filesystem __attribute__((alias("reliefos_block_probe_filesystem")));

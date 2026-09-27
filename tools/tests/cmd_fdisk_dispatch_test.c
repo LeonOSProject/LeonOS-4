@@ -7,7 +7,7 @@
 #include "glibcmd.h"
 
 /* The app registry is outside command dispatch; no app is registered here. */
-int leonos_app_registry_resolve(const char *name, char *path, uint32_t capacity)
+int reliefos_app_registry_resolve(const char *name, char *path, uint32_t capacity)
 {
     (void)name; (void)path; (void)capacity;
     return -ENOENT;

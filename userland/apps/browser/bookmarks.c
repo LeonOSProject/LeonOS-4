@@ -4,7 +4,7 @@
 #define BROWSER_BOOKMARK_STORE_FILE "bookmarks.txt"
 #define BROWSER_BOOKMARK_MENU_FIXED 4U
 
-static char bookmark_store_path[LEONOS_FS_PATH_LEN];
+static char bookmark_store_path[RELIEFOS_FS_PATH_LEN];
 
 static void bookmark_append_path(char *dst, uint32_t cap, const char *dir,
                                  const char *name)
@@ -20,9 +20,9 @@ static void bookmark_append_path(char *dst, uint32_t cap, const char *dir,
 
 static void bookmark_store_location(char *dst, uint32_t cap)
 {
-    struct leonos_user_info user;
-    char dir[LEONOS_FS_PATH_LEN];
-    if (leonos_auth_current(&user) == 0 && user.uid && user.home[0]) {
+    struct reliefos_user_info user;
+    char dir[RELIEFOS_FS_PATH_LEN];
+    if (reliefos_auth_current(&user) == 0 && user.uid && user.home[0]) {
         bookmark_append_path(dir, sizeof(dir), user.home,
                              BROWSER_BOOKMARK_STORE_DIR);
         (void)mkdir(dir, 0700);
@@ -87,8 +87,8 @@ static void bookmark_save(void)
         append_text(data, &pos, sizeof(data), browser_bookmarks[i].url);
         append_char(data, &pos, sizeof(data), '\n');
     }
-    fd = open(bookmark_store_path, LEONOS_O_WRONLY | LEONOS_O_CREAT |
-              LEONOS_O_TRUNC, 0666);
+    fd = open(bookmark_store_path, RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT |
+              RELIEFOS_O_TRUNC, 0666);
     if (fd >= 0) {
         (void)write(fd, data, pos);
         close(fd);
@@ -137,7 +137,7 @@ void browser_bookmarks_load(void)
     int fd;
     browser_bookmark_count = 0;
     bookmark_store_location(bookmark_store_path, sizeof(bookmark_store_path));
-    fd = open(bookmark_store_path, LEONOS_O_RDONLY, 0);
+    fd = open(bookmark_store_path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return;
     }
@@ -199,7 +199,7 @@ void browser_bookmarks_add_current(void)
         return;
     }
     copy_text(title, sizeof(title), page_title);
-    if (!leonos_ui_show_input_dialog(T("Add Bookmark"),
+    if (!reliefos_ui_show_input_dialog(T("Add Bookmark"),
                                      T("Title:"), title,
                                      sizeof(title))) {
         return;
@@ -208,27 +208,27 @@ void browser_bookmarks_add_current(void)
     set_status(T("Bookmark saved"));
 }
 
-void browser_bookmarks_build_menu(struct leonos_ui_context_menu_item *items,
+void browser_bookmarks_build_menu(struct reliefos_ui_context_menu_item *items,
                                   uint32_t capacity, uint32_t *out_count)
 {
     uint32_t count = 0;
     if (!items || capacity < BROWSER_BOOKMARK_MENU_FIXED) {
         return;
     }
-    items[count++] = (struct leonos_ui_context_menu_item){
+    items[count++] = (struct reliefos_ui_context_menu_item){
         T("Add Current Page"), BROWSER_CMD_FAV_ADD, 0};
-    items[count++] = (struct leonos_ui_context_menu_item){
+    items[count++] = (struct reliefos_ui_context_menu_item){
         T("Manage Bookmarks..."), BROWSER_CMD_FAV_MANAGE, 0};
-    items[count++] = (struct leonos_ui_context_menu_item){"", 0,
-        LEONOS_UI_MENU_SEPARATOR};
+    items[count++] = (struct reliefos_ui_context_menu_item){"", 0,
+        RELIEFOS_UI_MENU_SEPARATOR};
     for (uint32_t i = 0; i < browser_bookmark_count && count < capacity; ++i) {
-        items[count++] = (struct leonos_ui_context_menu_item){
+        items[count++] = (struct reliefos_ui_context_menu_item){
             browser_bookmarks[i].title, BROWSER_CMD_FAV_BOOKMARK_BASE + i, 0};
     }
     if (count == 3U && count < capacity) {
-        items[count++] = (struct leonos_ui_context_menu_item){
+        items[count++] = (struct reliefos_ui_context_menu_item){
             T("No saved bookmarks"), 0,
-            LEONOS_UI_MENU_DISABLED};
+            RELIEFOS_UI_MENU_DISABLED};
     }
     if (out_count) {
         *out_count = count;
@@ -261,69 +261,69 @@ int browser_show_bookmark_manager(char *out_url, uint32_t out_cap)
 {
     enum { W = 500, H = 330, ROW_H = 28, LIST_Y = 48, LIST_ROWS = 7 };
     static uint32_t pixels[W * H];
-    struct leonos_ui_surface surface;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface surface;
+    struct reliefos_gui_app_event event;
     int window_id;
     int32_t selected = browser_bookmark_count ? 0 : -1;
     int result = 0;
     if (out_url && out_cap) {
         out_url[0] = 0;
     }
-    window_id = leonos_gui_create_app_window_ex(T("Bookmarks"),
+    window_id = reliefos_gui_create_app_window_ex(T("Bookmarks"),
                                                  T("Saved browser pages"),
                                                  W, H,
-                                                 LEONOS_GUI_WINDOW_NO_RESIZE);
+                                                 RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         return 0;
     }
-    leonos_ui_bind(&surface, pixels, W, H, W);
+    reliefos_ui_bind(&surface, pixels, W, H, W);
     for (;;) {
-        leonos_ui_rect(&surface, 0, 0, W, H, LEONOS_UI_GRAY);
-        leonos_ui_text(&surface, 18, 18, T("Bookmarks"),
-                       LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-        leonos_ui_panel(&surface, 16, LIST_Y, W - 32, LIST_ROWS * ROW_H,
-        LEONOS_UI_WHITE);
+        reliefos_ui_rect(&surface, 0, 0, W, H, RELIEFOS_UI_GRAY);
+        reliefos_ui_text(&surface, 18, 18, T("Bookmarks"),
+                       RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+        reliefos_ui_panel(&surface, 16, LIST_Y, W - 32, LIST_ROWS * ROW_H,
+        RELIEFOS_UI_WHITE);
         for (uint32_t i = 0; i < browser_bookmark_count && i < LIST_ROWS; ++i) {
             uint32_t y = LIST_Y + i * ROW_H;
             uint32_t selected_row = selected == (int32_t)i;
-            uint32_t bg = selected_row ? LEONOS_UI_ACTIVE_TITLE : LEONOS_UI_WHITE;
-            uint32_t fg = selected_row ? LEONOS_UI_WHITE : LEONOS_UI_BLACK;
-            uint32_t detail_fg = selected_row ? LEONOS_UI_WHITE : LEONOS_UI_DARK;
-            leonos_ui_rect(&surface, 18, y + 1U, W - 36, ROW_H - 2U, bg);
-            leonos_ui_text_clipped(&surface, 28, y + 7U, 180,
+            uint32_t bg = selected_row ? RELIEFOS_UI_ACTIVE_TITLE : RELIEFOS_UI_WHITE;
+            uint32_t fg = selected_row ? RELIEFOS_UI_WHITE : RELIEFOS_UI_BLACK;
+            uint32_t detail_fg = selected_row ? RELIEFOS_UI_WHITE : RELIEFOS_UI_DARK;
+            reliefos_ui_rect(&surface, 18, y + 1U, W - 36, ROW_H - 2U, bg);
+            reliefos_ui_text_clipped(&surface, 28, y + 7U, 180,
                                    browser_bookmarks[i].title,
                                    fg, bg);
-            leonos_ui_text_clipped(&surface, 216, y + 7U, W - 244,
+            reliefos_ui_text_clipped(&surface, 216, y + 7U, W - 244,
                                    browser_bookmarks[i].url,
                                    detail_fg, bg);
         }
         if (!browser_bookmark_count) {
-            leonos_ui_text(&surface, 28, LIST_Y + 10,
+            reliefos_ui_text(&surface, 28, LIST_Y + 10,
                            T("No saved bookmarks"),
-                           LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                           RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
         }
-        leonos_ui_button(&surface, 16, H - 42, 72, LEONOS_UI_BUTTON_H,
-                         T("Open"), selected < 0 ? LEONOS_UI_BUTTON_DISABLED : 0);
-        leonos_ui_button(&surface, 96, H - 42, 72, LEONOS_UI_BUTTON_H,
+        reliefos_ui_button(&surface, 16, H - 42, 72, RELIEFOS_UI_BUTTON_H,
+                         T("Open"), selected < 0 ? RELIEFOS_UI_BUTTON_DISABLED : 0);
+        reliefos_ui_button(&surface, 96, H - 42, 72, RELIEFOS_UI_BUTTON_H,
                          T("Add"), 0);
-        leonos_ui_button(&surface, 176, H - 42, 72, LEONOS_UI_BUTTON_H,
-                         T("Edit"), selected < 0 ? LEONOS_UI_BUTTON_DISABLED : 0);
-        leonos_ui_button(&surface, 256, H - 42, 72, LEONOS_UI_BUTTON_H,
-                         T("Delete"), selected < 0 ? LEONOS_UI_BUTTON_DISABLED : 0);
-        leonos_ui_button(&surface, W - 88, H - 42, 72, LEONOS_UI_BUTTON_H,
+        reliefos_ui_button(&surface, 176, H - 42, 72, RELIEFOS_UI_BUTTON_H,
+                         T("Edit"), selected < 0 ? RELIEFOS_UI_BUTTON_DISABLED : 0);
+        reliefos_ui_button(&surface, 256, H - 42, 72, RELIEFOS_UI_BUTTON_H,
+                         T("Delete"), selected < 0 ? RELIEFOS_UI_BUTTON_DISABLED : 0);
+        reliefos_ui_button(&surface, W - 88, H - 42, 72, RELIEFOS_UI_BUTTON_H,
                          T("Close"), 0);
-        leonos_gui_present_window((uint32_t)window_id, W, H, W, pixels);
+        reliefos_gui_present_window((uint32_t)window_id, W, H, W, pixels);
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) <= 0) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) <= 0) {
             sleep_ms(10);
             continue;
         }
-        if (event.type == LEONOS_GUI_APP_EVENT_CLOSE ||
-            (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN && event.pressed &&
+        if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE ||
+            (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN && event.pressed &&
              event.keycode == 1U)) {
             break;
         }
-        if (event.type != LEONOS_GUI_APP_EVENT_MOUSE_BUTTON ||
+        if (event.type != RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON ||
             !(event.buttons & 1U)) {
             continue;
         }
@@ -335,7 +335,7 @@ int browser_show_bookmark_manager(char *out_url, uint32_t out_cap)
             continue;
         }
         if (event.y < H - 42 ||
-            event.y >= (int32_t)(H - 42 + LEONOS_UI_BUTTON_H)) {
+            event.y >= (int32_t)(H - 42 + RELIEFOS_UI_BUTTON_H)) {
             continue;
         }
         if (event.x >= 16 && event.x < 88 && selected >= 0) {
@@ -346,9 +346,9 @@ int browser_show_bookmark_manager(char *out_url, uint32_t out_cap)
         if (event.x >= 96 && event.x < 168) {
             char title[BROWSER_BOOKMARK_TITLE_CAP] = "New Bookmark";
             char url[BROWSER_URL_CAP] = "http://";
-            if (leonos_ui_show_input_dialog(T("Add Bookmark"),
+            if (reliefos_ui_show_input_dialog(T("Add Bookmark"),
                                             T("Title:"), title, sizeof(title)) &&
-                leonos_ui_show_input_dialog(T("Add Bookmark"),
+                reliefos_ui_show_input_dialog(T("Add Bookmark"),
                                             T("URL:"), url, sizeof(url)) && url[0]) {
                 bookmark_add(title, url);
                 selected = (int32_t)browser_bookmark_count - 1;
@@ -361,9 +361,9 @@ int browser_show_bookmark_manager(char *out_url, uint32_t out_cap)
             uint32_t index = (uint32_t)selected;
             copy_text(title, sizeof(title), browser_bookmarks[index].title);
             copy_text(url, sizeof(url), browser_bookmarks[index].url);
-            if (leonos_ui_show_input_dialog(T("Edit Bookmark"),
+            if (reliefos_ui_show_input_dialog(T("Edit Bookmark"),
                                             T("Title:"), title, sizeof(title)) &&
-                leonos_ui_show_input_dialog(T("Edit Bookmark"),
+                reliefos_ui_show_input_dialog(T("Edit Bookmark"),
                                             T("URL:"), url, sizeof(url)) && url[0]) {
                 bookmark_clean(browser_bookmarks[index].title,
                                sizeof(browser_bookmarks[index].title), title);
@@ -375,7 +375,7 @@ int browser_show_bookmark_manager(char *out_url, uint32_t out_cap)
         }
         if (event.x >= 256 && event.x < 328 && selected >= 0) {
             uint32_t index = (uint32_t)selected;
-            if (leonos_ui_show_confirm_dialog(T("Delete Bookmark"),
+            if (reliefos_ui_show_confirm_dialog(T("Delete Bookmark"),
                                               browser_bookmarks[index].title, 0)) {
                 for (uint32_t i = index + 1U; i < browser_bookmark_count; ++i) {
                     browser_bookmarks[i - 1U] = browser_bookmarks[i];
@@ -392,7 +392,7 @@ int browser_show_bookmark_manager(char *out_url, uint32_t out_cap)
             break;
         }
     }
-    leonos_gui_destroy_app_window((uint32_t)window_id);
+    reliefos_gui_destroy_app_window((uint32_t)window_id);
     return result;
 }
 
@@ -455,7 +455,7 @@ void browser_find_prompt(void)
 {
     char query[BROWSER_FIND_CAP];
     copy_text(query, sizeof(query), browser_find_query);
-    if (!leonos_ui_show_input_dialog(T("Find in Page"),
+    if (!reliefos_ui_show_input_dialog(T("Find in Page"),
                                      T("Find:"), query,
                                      sizeof(query))) {
         return;

@@ -1,24 +1,24 @@
-#include <leonos/fs.h>
-#include <leonos/gui.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include "../localized_doc.h"
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 
 #include <stddef.h>
 #include <stdint.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 
 #define OSHLP_INITIAL_W 900U
 #define OSHLP_INITIAL_H 620U
 #define OSHLP_MIN_W 560U
 #define OSHLP_MIN_H 360U
-#define OSHLP_MAX_W LEONOS_GUI_MAX_WINDOW_WIDTH
-#define OSHLP_MAX_H LEONOS_GUI_MAX_WINDOW_HEIGHT
+#define OSHLP_MAX_W RELIEFOS_GUI_MAX_WINDOW_WIDTH
+#define OSHLP_MAX_H RELIEFOS_GUI_MAX_WINDOW_HEIGHT
 #define OSHLP_TOOL_H 46U
 #define OSHLP_STATUS_H 24U
 #define OSHLP_TREE_W 246U
@@ -36,7 +36,7 @@
 #define OSHLP_TITLE_MAX 96U
 #define OSHLP_PATH_MAX 128U
 #define OSHLP_META_MAX 80U
-#define OSHLP_DEFAULT_PATH LEONOS_PATH_HELP
+#define OSHLP_DEFAULT_PATH RELIEFOS_PATH_HELP
 #define OSHLP_KEY_ESCAPE 1U
 #define OSHLP_KEY_PAGE_UP 73U
 #define OSHLP_KEY_PAGE_DOWN 81U
@@ -95,13 +95,13 @@ struct render_line {
 };
 
 static uint32_t pixels[OSHLP_MAX_W * OSHLP_MAX_H];
-static struct leonos_ui_surface ui;
+static struct reliefos_ui_surface ui;
 static int window_id;
 static uint32_t view_w = OSHLP_INITIAL_W;
 static uint32_t view_h = OSHLP_INITIAL_H;
 static char source[OSHLP_SOURCE_MAX + 1U];
 static uint32_t source_len;
-static char hlp_path[LEONOS_FS_PATH_LEN];
+static char hlp_path[RELIEFOS_FS_PATH_LEN];
 static char file_title[OSHLP_TITLE_MAX];
 static char file_author[OSHLP_META_MAX];
 static char file_version[32];
@@ -110,7 +110,7 @@ static uint32_t doc_count;
 static uint32_t active_doc;
 static char status_text[160];
 static struct tree_node tree_nodes[OSHLP_TREE_MAX];
-static struct leonos_ui_tree_item tree_items[OSHLP_TREE_MAX];
+static struct reliefos_ui_tree_item tree_items[OSHLP_TREE_MAX];
 static uint32_t tree_count;
 static uint32_t tree_scroll;
 static struct render_line render_lines[OSHLP_RENDER_MAX];
@@ -500,7 +500,7 @@ static uint32_t doc_text_cols(void)
     uint32_t w = view_w > OSHLP_TREE_W + OSHLP_SCROLL_W + 54U
                      ? view_w - OSHLP_TREE_W - OSHLP_SCROLL_W - 54U
                      : 80U;
-    return w / LEONOS_FONT_W;
+    return w / RELIEFOS_FONT_W;
 }
 
 static void clean_markdown_inline(char *dst, uint32_t cap, const char *src)
@@ -1081,9 +1081,9 @@ static void rebuild_tree(void)
         tree_items[i].label = tree_nodes[i].label;
         tree_items[i].id = tree_nodes[i].id;
         tree_items[i].depth = tree_nodes[i].depth;
-        tree_items[i].flags = tree_nodes[i].leaf ? LEONOS_UI_TREE_LEAF : LEONOS_UI_TREE_EXPANDED;
+        tree_items[i].flags = tree_nodes[i].leaf ? RELIEFOS_UI_TREE_LEAF : RELIEFOS_UI_TREE_EXPANDED;
         if (tree_nodes[i].leaf && tree_nodes[i].id == active_doc + 1U) {
-            tree_items[i].flags |= LEONOS_UI_TREE_SELECTED;
+            tree_items[i].flags |= RELIEFOS_UI_TREE_SELECTED;
         }
     }
     visible = view_h > OSHLP_TOOL_H + OSHLP_STATUS_H + 28U
@@ -1153,7 +1153,7 @@ static int read_hlp_file(const char *path)
     int fd;
     long got;
     source_len = 0;
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return fd;
     }
@@ -1270,7 +1270,7 @@ static uint32_t render_line_height(uint8_t kind)
     if (kind == OSHLP_LINE_HR) {
         return 14U;
     }
-    return LEONOS_FONT_H + 4U;
+    return RELIEFOS_FONT_H + 4U;
 }
 
 static uint32_t render_line_cell_w(uint8_t kind)
@@ -1284,7 +1284,7 @@ static uint32_t render_line_cell_w(uint8_t kind)
     if (kind == OSHLP_LINE_H3) {
         return 10U;
     }
-    return LEONOS_FONT_W;
+    return RELIEFOS_FONT_W;
 }
 
 static uint32_t render_line_content_w(const struct render_line *line)
@@ -1302,7 +1302,7 @@ static uint32_t render_line_content_w(const struct render_line *line)
     cell_w = render_line_cell_w(line->kind);
     w = indent + 16U + line->cells * cell_w;
     if (line->kind == OSHLP_LINE_TABLE && line->table_cells) {
-        uint32_t table_w = 16U + line->cells * LEONOS_FONT_W +
+        uint32_t table_w = 16U + line->cells * RELIEFOS_FONT_W +
                            (uint32_t)line->table_cells * 12U;
         if (table_w > w) {
             w = table_w;
@@ -1451,7 +1451,7 @@ static void rect_clip(uint32_t clip_x, uint32_t clip_y, uint32_t clip_w,
     if (right <= left || bottom <= top) {
         return;
     }
-    leonos_ui_rect(&ui, (uint32_t)left, (uint32_t)top,
+    reliefos_ui_rect(&ui, (uint32_t)left, (uint32_t)top,
                    (uint32_t)(right - left), (uint32_t)(bottom - top),
                    color);
 }
@@ -1510,7 +1510,7 @@ static void draw_text_scrolled(uint32_t clip_x, uint32_t clip_y,
     if (draw_w > (uint32_t)(clip_right - draw_x)) {
         draw_w = (uint32_t)(clip_right - draw_x);
     }
-    leonos_ui_text_resized_clipped(&ui, (uint32_t)draw_x, (uint32_t)y,
+    reliefos_ui_text_resized_clipped(&ui, (uint32_t)draw_x, (uint32_t)y,
                                    draw_w, text + byte_start, fg, bg,
                                    cell_w, cell_h);
 }
@@ -1559,7 +1559,7 @@ static void draw_table_line(const struct render_line *line,
         uint32_t end;
         uint32_t cell_x = (cell * row_w) / cells;
         uint32_t next_x = ((cell + 1U) * row_w) / cells;
-        uint32_t cell_w = next_x > cell_x ? next_x - cell_x : LEONOS_FONT_W;
+        uint32_t cell_w = next_x > cell_x ? next_x - cell_x : RELIEFOS_FONT_W;
         uint32_t inner_w = cell_w > 8U ? cell_w - 8U : cell_w;
         uint32_t text_w;
         uint32_t shift = 0;
@@ -1568,7 +1568,7 @@ static void draw_table_line(const struct render_line *line,
             continue;
         }
         copy_range(cell_text, sizeof(cell_text), line->text, start, end);
-        text_w = text_cells(cell_text) * LEONOS_FONT_W;
+        text_w = text_cells(cell_text) * RELIEFOS_FONT_W;
         if (inner_w > text_w) {
             if (line->table_align[cell] == OSHLP_ALIGN_RIGHT) {
                 shift = inner_w - text_w;
@@ -1578,8 +1578,8 @@ static void draw_table_line(const struct render_line *line,
         }
         draw_text_scrolled(clip_x, clip_y, clip_w, clip_h,
                            x + (int32_t)cell_x + 4 + (int32_t)shift,
-                           y + 2, cell_text, LEONOS_UI_BLACK, 0x00f7fbffU,
-                           LEONOS_FONT_W, LEONOS_FONT_H,
+                           y + 2, cell_text, RELIEFOS_UI_BLACK, 0x00f7fbffU,
+                           RELIEFOS_FONT_W, RELIEFOS_FONT_H,
                            text_cells(cell_text));
     }
 }
@@ -1590,9 +1590,9 @@ static void draw_render_line(const struct render_line *line,
                              uint32_t clip_w, uint32_t clip_h)
 {
     uint32_t cell_w = render_line_cell_w(line ? line->kind : OSHLP_LINE_NORMAL);
-    uint32_t cell_h = LEONOS_FONT_H;
-    uint32_t fg = LEONOS_UI_BLACK;
-    uint32_t bg = LEONOS_UI_WHITE;
+    uint32_t cell_h = RELIEFOS_FONT_H;
+    uint32_t fg = RELIEFOS_UI_BLACK;
+    uint32_t bg = RELIEFOS_UI_WHITE;
     int32_t tx;
     if (!line) {
         return;
@@ -1603,9 +1603,9 @@ static void draw_render_line(const struct render_line *line,
     }
     if (line->kind == OSHLP_LINE_HR) {
         rect_clip(clip_x, clip_y, clip_w, clip_h, x, y + 6, w, 1U,
-                  LEONOS_UI_DARK);
+                  RELIEFOS_UI_DARK);
         rect_clip(clip_x, clip_y, clip_w, clip_h, x, y + 7, w, 1U,
-                  LEONOS_UI_LIGHT);
+                  RELIEFOS_UI_LIGHT);
         return;
     }
     if (line->kind == OSHLP_LINE_H1) {
@@ -1618,7 +1618,7 @@ static void draw_render_line(const struct render_line *line,
         cell_h = 20U;
         fg = 0x00004098U;
     } else if (line->kind == OSHLP_LINE_MUTED) {
-        fg = LEONOS_UI_DARK;
+        fg = RELIEFOS_UI_DARK;
     } else if (line->kind == OSHLP_LINE_CODE) {
         bg = 0x00eeeeeeU;
         rect_clip(clip_x, clip_y, clip_w, clip_h, x, y, w,
@@ -1659,36 +1659,36 @@ static void present_help(void)
     total_h = render_total_h();
     doc_view_height = doc_view_h_for_content(content_w);
     has_hscroll = content_w > doc_w();
-    leonos_ui_bind(&ui, pixels, view_w, view_h, OSHLP_MAX_W);
-    leonos_ui_rect(&ui, 0, 0, view_w, view_h, LEONOS_UI_WHITE);
-    leonos_ui_rect(&ui, 0, 0, view_w, OSHLP_TOOL_H, LEONOS_UI_GRAY);
-    leonos_ui_button(&ui, 8, 9, 64, LEONOS_UI_BUTTON_H, T("Back"),
-                     history_index > 0 ? 0 : LEONOS_UI_BUTTON_DISABLED);
-    leonos_ui_button(&ui, 78, 9, 76, LEONOS_UI_BUTTON_H, T("Forward"),
-                     history_index + 1U < history_count ? 0 : LEONOS_UI_BUTTON_DISABLED);
-    leonos_ui_text_clipped(&ui, 166, 14, view_w > 174U ? view_w - 174U : 100U,
-                           display_title, LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_panel(&ui, 8, content_top(), OSHLP_TREE_W - 16U,
+    reliefos_ui_bind(&ui, pixels, view_w, view_h, OSHLP_MAX_W);
+    reliefos_ui_rect(&ui, 0, 0, view_w, view_h, RELIEFOS_UI_WHITE);
+    reliefos_ui_rect(&ui, 0, 0, view_w, OSHLP_TOOL_H, RELIEFOS_UI_GRAY);
+    reliefos_ui_button(&ui, 8, 9, 64, RELIEFOS_UI_BUTTON_H, T("Back"),
+                     history_index > 0 ? 0 : RELIEFOS_UI_BUTTON_DISABLED);
+    reliefos_ui_button(&ui, 78, 9, 76, RELIEFOS_UI_BUTTON_H, T("Forward"),
+                     history_index + 1U < history_count ? 0 : RELIEFOS_UI_BUTTON_DISABLED);
+    reliefos_ui_text_clipped(&ui, 166, 14, view_w > 174U ? view_w - 174U : 100U,
+                           display_title, RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_panel(&ui, 8, content_top(), OSHLP_TREE_W - 16U,
                     content_bottom() > content_top() ? content_bottom() - content_top() : 40U,
-                    LEONOS_UI_WHITE);
+                    RELIEFOS_UI_WHITE);
     if (tree_draw) {
-        leonos_ui_tree(&ui, 12, content_top() + 4U, OSHLP_TREE_W - 24U,
+        reliefos_ui_tree(&ui, 12, content_top() + 4U, OSHLP_TREE_W - 24U,
                        &tree_items[tree_scroll], tree_draw, OSHLP_TREE_ROW_H);
     } else {
-        leonos_ui_text_clipped(&ui, 18, content_top() + 14U, OSHLP_TREE_W - 36U,
-                               T("No pages"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+        reliefos_ui_text_clipped(&ui, 18, content_top() + 14U, OSHLP_TREE_W - 36U,
+                               T("No pages"), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     }
-    leonos_ui_vscrollbar(&ui, OSHLP_TREE_W - 18U, content_top() + 4U, 12,
+    reliefos_ui_vscrollbar(&ui, OSHLP_TREE_W - 18U, content_top() + 4U, 12,
                          content_bottom() > content_top() + 8U
                              ? content_bottom() - content_top() - 8U
                              : 40U,
                          tree_scroll, tree_count > tree_rows ? tree_count : tree_rows,
                          tree_rows,
-                         tree_count <= tree_rows ? LEONOS_UI_SCROLLBAR_DISABLED : 0);
-    leonos_ui_panel(&ui, doc_x() - 8U, content_top(),
+                         tree_count <= tree_rows ? RELIEFOS_UI_SCROLLBAR_DISABLED : 0);
+    reliefos_ui_panel(&ui, doc_x() - 8U, content_top(),
                     view_w > doc_x() ? view_w - doc_x() - 6U : 120U,
                     content_bottom() > content_top() ? content_bottom() - content_top() : 40U,
-                    LEONOS_UI_WHITE);
+                    RELIEFOS_UI_WHITE);
     for (uint32_t i = 0; i < render_count; ++i) {
         uint32_t h = render_line_height(render_lines[i].kind);
         if (line_top + h > scroll_y && line_top < scroll_y + doc_view_height) {
@@ -1699,19 +1699,19 @@ static void present_help(void)
         }
         line_top += h;
     }
-    leonos_ui_vscrollbar(&ui, view_w > OSHLP_SCROLL_W + 8U ? view_w - OSHLP_SCROLL_W - 8U : 0,
+    reliefos_ui_vscrollbar(&ui, view_w > OSHLP_SCROLL_W + 8U ? view_w - OSHLP_SCROLL_W - 8U : 0,
                          doc_y(), OSHLP_SCROLL_W - 4U, doc_view_height,
                          scroll_y, total_h > doc_view_height ? total_h : doc_view_height,
                          doc_view_height,
-                         total_h <= doc_view_height ? LEONOS_UI_SCROLLBAR_DISABLED : 0);
+                         total_h <= doc_view_height ? RELIEFOS_UI_SCROLLBAR_DISABLED : 0);
     if (has_hscroll) {
-        leonos_ui_hscrollbar(&ui, doc_x(),
+        reliefos_ui_hscrollbar(&ui, doc_x(),
                              doc_y() + doc_view_height,
                              doc_w(), OSHLP_HSCROLL_H,
                              scroll_x, content_w, doc_w(), 0);
     }
-    leonos_ui_statusbar(&ui, view_h - OSHLP_STATUS_H, OSHLP_STATUS_H, status_text);
-    (void)leonos_gui_present_window((uint32_t)window_id, view_w, view_h, OSHLP_MAX_W, pixels);
+    reliefos_ui_statusbar(&ui, view_h - OSHLP_STATUS_H, OSHLP_STATUS_H, status_text);
+    (void)reliefos_gui_present_window((uint32_t)window_id, view_w, view_h, OSHLP_MAX_W, pixels);
 }
 
 static int hit_rect_i(int32_t px, int32_t py, uint32_t x, uint32_t y,
@@ -1721,7 +1721,7 @@ static int hit_rect_i(int32_t px, int32_t py, uint32_t x, uint32_t y,
            px < (int32_t)(x + w) && py < (int32_t)(y + h);
 }
 
-static void handle_mouse_button(const struct leonos_gui_app_event *event)
+static void handle_mouse_button(const struct reliefos_gui_app_event *event)
 {
     uint32_t id = 0;
     uint32_t content_w;
@@ -1732,11 +1732,11 @@ static void handle_mouse_button(const struct leonos_gui_app_event *event)
     if (!event || !event->pressed || !(event->buttons & 1U)) {
         return;
     }
-    if (hit_rect_i(event->x, event->y, 8, 9, 64, LEONOS_UI_BUTTON_H)) {
+    if (hit_rect_i(event->x, event->y, 8, 9, 64, RELIEFOS_UI_BUTTON_H)) {
         history_back();
         return;
     }
-    if (hit_rect_i(event->x, event->y, 78, 9, 76, LEONOS_UI_BUTTON_H)) {
+    if (hit_rect_i(event->x, event->y, 78, 9, 76, RELIEFOS_UI_BUTTON_H)) {
         history_forward();
         return;
     }
@@ -1744,7 +1744,7 @@ static void handle_mouse_button(const struct leonos_gui_app_event *event)
     total_h = render_total_h();
     doc_view_height = doc_view_h_for_content(content_w);
     doc_scroll_x = view_w > OSHLP_SCROLL_W + 8U ? view_w - OSHLP_SCROLL_W - 8U : 0;
-    if (leonos_ui_vscrollbar_handle_mouse(&tree_scroll,
+    if (reliefos_ui_vscrollbar_handle_mouse(&tree_scroll,
                                           tree_count > tree_visible_rows()
                                               ? tree_count
                                               : tree_visible_rows(),
@@ -1757,7 +1757,7 @@ static void handle_mouse_button(const struct leonos_gui_app_event *event)
                                           event->x, event->y)) {
         return;
     }
-    if (leonos_ui_vscrollbar_handle_mouse(&scroll_y,
+    if (reliefos_ui_vscrollbar_handle_mouse(&scroll_y,
                                           total_h > doc_view_height
                                               ? total_h
                                               : doc_view_height,
@@ -1769,7 +1769,7 @@ static void handle_mouse_button(const struct leonos_gui_app_event *event)
         return;
     }
     if (content_w > doc_w() &&
-        leonos_ui_hscrollbar_handle_mouse(&scroll_x, content_w, doc_w(),
+        reliefos_ui_hscrollbar_handle_mouse(&scroll_x, content_w, doc_w(),
                                           doc_x(), doc_y() + doc_view_height,
                                           doc_w(), OSHLP_HSCROLL_H,
                                           event->x, event->y)) {
@@ -1780,7 +1780,7 @@ static void handle_mouse_button(const struct leonos_gui_app_event *event)
         event->y < (int32_t)content_bottom()) {
         uint32_t tree_rows = tree_visible_rows();
         uint32_t tree_draw = tree_count > tree_scroll ? min_u32(tree_count - tree_scroll, tree_rows) : 0;
-        if (leonos_ui_tree_hit(event->x, event->y, 12, content_top() + 4U,
+        if (reliefos_ui_tree_hit(event->x, event->y, 12, content_top() + 4U,
                                OSHLP_TREE_W - 24U, &tree_items[tree_scroll],
                                tree_draw, OSHLP_TREE_ROW_H, &id)) {
             if (id > 0 && id <= doc_count) {
@@ -1790,7 +1790,7 @@ static void handle_mouse_button(const struct leonos_gui_app_event *event)
     }
 }
 
-static void handle_wheel(const struct leonos_gui_app_event *event)
+static void handle_wheel(const struct reliefos_gui_app_event *event)
 {
     uint32_t steps;
     if (!event || event->dy == 0) {
@@ -1813,7 +1813,7 @@ static void handle_wheel(const struct leonos_gui_app_event *event)
     }
 }
 
-static void handle_key(const struct leonos_gui_app_event *event)
+static void handle_key(const struct reliefos_gui_app_event *event)
 {
     uint32_t page;
     uint32_t total_h;
@@ -1823,7 +1823,7 @@ static void handle_key(const struct leonos_gui_app_event *event)
     page = doc_view_h();
     total_h = render_total_h();
     if (event->keycode == OSHLP_KEY_ESCAPE) {
-        leonos_gui_destroy_app_window((uint32_t)window_id);
+        reliefos_gui_destroy_app_window((uint32_t)window_id);
         exit(0);
     } else if (event->keycode == OSHLP_KEY_UP) {
         scroll_y = scroll_y > 24U ? scroll_y - 24U : 0;
@@ -1835,7 +1835,7 @@ static void handle_key(const struct leonos_gui_app_event *event)
     } else if (event->keycode == OSHLP_KEY_PAGE_DOWN) {
         uint32_t max_scroll = total_h > page ? total_h - page : 0;
         scroll_y = scroll_y + page < max_scroll ? scroll_y + page : max_scroll;
-    } else if (event->keycode == LEONOS_KEY_BACKSPACE) {
+    } else if (event->keycode == RELIEFOS_KEY_BACKSPACE) {
         history_back();
     }
 }
@@ -1843,9 +1843,9 @@ static void handle_key(const struct leonos_gui_app_event *event)
 int main(int argc, char **argv, char **envp)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_gui_app_event event;
+    struct reliefos_gui_app_event event;
     const char *path = OSHLP_DEFAULT_PATH;
     const char *doc_id = 0;
     (void)envp;
@@ -1857,40 +1857,40 @@ int main(int argc, char **argv, char **envp)
         doc_id = argv[2];
     }
     copy_text(status_text, sizeof(status_text), T("Loading"));
-    window_id = leonos_gui_create_app_window_ex(T("LeonOS Help"),
+    window_id = reliefos_gui_create_app_window_ex(T("LeonOS Help"),
                                                 T("Help Viewer"),
                                                 view_w, view_h, 0);
     if (window_id <= 0) {
         printf("[oshlp.elf] create window failed=%d\n", window_id);
         return 1;
     }
-    leonos_ui_bind(&ui, pixels, view_w, view_h, OSHLP_MAX_W);
+    reliefos_ui_bind(&ui, pixels, view_w, view_h, OSHLP_MAX_W);
     (void)load_help_file(path, doc_id);
     present_help();
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON) {
                 handle_mouse_button(&event);
                 present_help();
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_WHEEL) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_WHEEL) {
                 handle_wheel(&event);
                 present_help();
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN ||
-                event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN ||
+                event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
                 handle_key(&event);
                 present_help();
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_RESIZE ||
-                event.type == LEONOS_GUI_APP_EVENT_FOCUS) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_RESIZE ||
+                event.type == RELIEFOS_GUI_APP_EVENT_FOCUS) {
                 if (event.width) {
                     view_w = event.width > OSHLP_MAX_W ? OSHLP_MAX_W : event.width;
                     if (view_w < OSHLP_MIN_W) {

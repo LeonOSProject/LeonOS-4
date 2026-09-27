@@ -1,6 +1,6 @@
-#include <leonos/fs.h>
-#include <leonos/png.h>
-#include <leonos/syscall.h>
+#include <reliefos/fs.h>
+#include <reliefos/png.h>
+#include <reliefos/syscall.h>
 
 #include <png.h>
 #include <stdint.h>
@@ -9,14 +9,14 @@
 
 static int png_read_file(const char *path, uint8_t **out_data, uint32_t *out_size)
 {
-    struct leonos_stat st;
+    struct reliefos_stat st;
     uint8_t *data;
     uint32_t offset = 0;
     int fd;
 
     if (!path || !path[0] || !out_data || !out_size ||
-        leonos_stat_legacy(path, &st) < 0 || st.type != LEONOS_FS_TYPE_FILE ||
-        st.size == 0 || st.size > LEONOS_PNG_MAX_FILE_BYTES) {
+        reliefos_stat_legacy(path, &st) < 0 || st.type != RELIEFOS_FS_TYPE_FILE ||
+        st.size == 0 || st.size > RELIEFOS_PNG_MAX_FILE_BYTES) {
         return -1;
     }
 
@@ -24,7 +24,7 @@ static int png_read_file(const char *path, uint8_t **out_data, uint32_t *out_siz
     if (!data) {
         return -1;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         free(data);
         return fd;
@@ -51,7 +51,7 @@ static int png_read_file(const char *path, uint8_t **out_data, uint32_t *out_siz
     return 0;
 }
 
-int leonos_png_decode_file(const char *path, uint32_t **out_pixels,
+int reliefos_png_decode_file(const char *path, uint32_t **out_pixels,
                            uint32_t *out_width, uint32_t *out_height)
 {
     png_image image;
@@ -79,7 +79,7 @@ int leonos_png_decode_file(const char *path, uint32_t **out_pixels,
         goto cleanup;
     }
     pixel_count = (uint64_t)image.width * (uint64_t)image.height;
-    if (pixel_count > LEONOS_PNG_MAX_PIXELS) {
+    if (pixel_count > RELIEFOS_PNG_MAX_PIXELS) {
         goto cleanup;
     }
     image.format = PNG_FORMAT_RGBA;
@@ -110,7 +110,10 @@ cleanup:
     return result;
 }
 
-void leonos_png_free(uint32_t *pixels)
+void reliefos_png_free(uint32_t *pixels)
 {
     free(pixels);
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_png_decode_file) leonos_png_decode_file __attribute__((alias("reliefos_png_decode_file")));
+extern __typeof__(reliefos_png_free) leonos_png_free __attribute__((alias("reliefos_png_free")));

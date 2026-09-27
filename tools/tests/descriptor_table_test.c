@@ -35,21 +35,21 @@ void kernel_spin_unlock_irqrestore(struct kernel_spinlock *lock, uint64_t flags)
 
 static void test_flock_promotion(void)
 {
-    for (unsigned type = LEONOS_FLOCK_SH; type <= LEONOS_FLOCK_EX; ++type) {
+    for (unsigned type = RELIEFOS_FLOCK_SH; type <= RELIEFOS_FLOCK_EX; ++type) {
         struct task_file source = {.used = 1, .flock_type = type};
         struct task_file duplicate = {0};
-        struct leonos_flock_entry *entry = &leonos_flocks[0];
-        *entry = (struct leonos_flock_entry){.used = 1, .type = type};
+        struct reliefos_flock_entry *entry = &reliefos_flocks[0];
+        *entry = (struct reliefos_flock_entry){.used = 1, .type = type};
         kernel_wait_queue_init(&entry->waiters);
-        if (type == LEONOS_FLOCK_EX) entry->owner = &source;
+        if (type == RELIEFOS_FLOCK_EX) entry->owner = &source;
         else { entry->shared_count = 1; entry->shared_owners[0] = &source; }
         fail_allocation = 1;
-        assert(task_file_reference(&duplicate, &source) == -LEONOS_ENOMEM);
+        assert(task_file_reference(&duplicate, &source) == -RELIEFOS_ENOMEM);
         assert(!source.description && !duplicate.used);
-        assert((type == LEONOS_FLOCK_EX ? entry->owner : entry->shared_owners[0]) == &source);
+        assert((type == RELIEFOS_FLOCK_EX ? entry->owner : entry->shared_owners[0]) == &source);
         fail_allocation = 0;
         assert(task_file_reference(&duplicate, &source) == 0);
-        assert((type == LEONOS_FLOCK_EX ? entry->owner : entry->shared_owners[0]) == source.description);
+        assert((type == RELIEFOS_FLOCK_EX ? entry->owner : entry->shared_owners[0]) == source.description);
         clear_task_file(&source);
         assert(entry->used);
         clear_task_file(&duplicate);
@@ -64,17 +64,17 @@ static void test_pty_descriptions(void)
     assert(parent && child);
     parent->limits.nofile.rlim_cur = child->limits.nofile.rlim_cur = 1024;
     fail_allocation = 1;
-    assert(task_pty_endpoint_fd(parent, 7, TASK_PTY_ENDPOINT_SLAVE, LEONOS_O_RDWR) == -LEONOS_ENOMEM);
+    assert(task_pty_endpoint_fd(parent, 7, TASK_PTY_ENDPOINT_SLAVE, RELIEFOS_O_RDWR) == -RELIEFOS_ENOMEM);
     assert(!pty_references && !task_pty_fd_for_fd(parent, 3));
     fail_allocation = 0;
-    int fd = task_pty_endpoint_fd(parent, 7, TASK_PTY_ENDPOINT_SLAVE, LEONOS_O_RDWR | LEONOS_O_CLOEXEC);
+    int fd = task_pty_endpoint_fd(parent, 7, TASK_PTY_ENDPOINT_SLAVE, RELIEFOS_O_RDWR | RELIEFOS_O_CLOEXEC);
     assert(fd == 3 && pty_references == 1);
     struct task_pty_fd *source = task_pty_fd_for_fd(parent, fd);
     int duplicate = task_pty_duplicate_fd(parent, fd, 0, 0);
     assert(duplicate == 4 && source->description->references == 2 && pty_references == 1);
-    source->description->status_flags |= LEONOS_O_NONBLOCK;
-    assert(task_pty_status(task_pty_fd_for_fd(parent, duplicate)) & LEONOS_O_NONBLOCK);
-    assert(task_fd_descriptor_flags(parent, fd) == LEONOS_FD_CLOEXEC &&
+    source->description->status_flags |= RELIEFOS_O_NONBLOCK;
+    assert(task_pty_status(task_pty_fd_for_fd(parent, duplicate)) & RELIEFOS_O_NONBLOCK);
+    assert(task_fd_descriptor_flags(parent, fd) == RELIEFOS_FD_CLOEXEC &&
            task_fd_descriptor_flags(parent, duplicate) == 0);
     child->fd_table = parent->fd_table;
     assert(syscall_clone_task_files(parent, child) == 0);
@@ -86,7 +86,7 @@ static void test_pty_descriptions(void)
     task_pty_release_entry(task_pty_fd_for_fd(child, fd));
     task_pty_release_entry(task_pty_fd_for_fd(child, duplicate));
     assert(queued.description->references == 1 && pty_references == 1);
-    fd = task_pty_import_fd(parent, &queued, LEONOS_FD_CLOEXEC);
+    fd = task_pty_import_fd(parent, &queued, RELIEFOS_FD_CLOEXEC);
     assert(fd == 3 && queued.description->references == 2);
     task_pty_release_entry(&queued);
     source = task_pty_fd_for_fd(parent, fd);
@@ -100,7 +100,7 @@ static void test_pty_descriptions(void)
     assert(task_pty_for_io(parent, fd) == &parent->syscall_pty);
     task_release_syscall_file(parent);
     assert(!pty_references && !parent->syscall_pty.used);
-    fd = task_pty_endpoint_fd(parent, 7, TASK_PTY_ENDPOINT_SLAVE, LEONOS_O_RDWR);
+    fd = task_pty_endpoint_fd(parent, 7, TASK_PTY_ENDPOINT_SLAVE, RELIEFOS_O_RDWR);
     assert(fd >= 0);
     struct task_fd_table_state *shared = kernel_malloc(sizeof(*shared));
     assert(shared);
@@ -109,15 +109,15 @@ static void test_pty_descriptions(void)
     shared->references = 2;
     parent->shared_files = child->shared_files = shared;
     fail_allocation = 1;
-    assert(syscall_unshare_task_files(parent) == -LEONOS_ENOMEM);
+    assert(syscall_unshare_task_files(parent) == -RELIEFOS_ENOMEM);
     assert(parent->shared_files == shared && shared->references == 2);
     fail_allocation = 0;
     assert(syscall_unshare_task_files(parent) == 0);
     source = task_pty_fd_for_fd(parent, fd);
     assert(parent->shared_files != shared && shared->references == 1);
     assert(source != task_pty_fd_for_fd(child, fd) && source->description->references == 2);
-    source->description->status_flags |= LEONOS_O_APPEND;
-    assert(task_pty_status(task_pty_fd_for_fd(child, fd)) & LEONOS_O_APPEND);
+    source->description->status_flags |= RELIEFOS_O_APPEND;
+    assert(task_pty_status(task_pty_fd_for_fd(child, fd)) & RELIEFOS_O_APPEND);
     task_pty_release_entry(source);
     task_pty_release_entry(task_pty_fd_for_fd(child, fd));
     assert(!pty_references);
@@ -138,15 +138,15 @@ static void test_console_descriptions(void)
     assert(task_file_for_fd(parent, 0) && task_file_for_fd(parent, 1) && task_file_for_fd(parent, 2));
     assert(task_device_is(task_file_for_fd(parent, 0), STORAGE_DEV_KIND_NULL));
     assert(task_device_is(task_file_for_fd(parent, 1), STORAGE_DEV_KIND_KMSG));
-    assert(task_fd_set_descriptor_flags(parent, 2, LEONOS_FD_CLOEXEC) == 0);
+    assert(task_fd_set_descriptor_flags(parent, 2, RELIEFOS_FD_CLOEXEC) == 0);
     child->fd_table = parent->fd_table;
     assert(syscall_clone_task_files(parent, child) == 0);
     assert(task_file_for_fd(parent, 1) == task_file_for_fd(child, 1));
     int copy = task_duplicate_file_fd(child, 1, 0, 0);
     assert(copy == 3);
-    task_file_for_fd(child, copy)->flags |= LEONOS_O_NONBLOCK;
-    assert(task_file_for_fd(parent, 1)->flags & LEONOS_O_NONBLOCK);
-    assert(task_fd_descriptor_flags(child, 2) == LEONOS_FD_CLOEXEC);
+    task_file_for_fd(child, copy)->flags |= RELIEFOS_O_NONBLOCK;
+    assert(task_file_for_fd(parent, 1)->flags & RELIEFOS_O_NONBLOCK);
+    assert(task_fd_descriptor_flags(child, 2) == RELIEFOS_FD_CLOEXEC);
     task_discard_file_fd(child, 1);
     assert(task_pty_materialize_stdio(child) == 0 && !task_file_for_fd(child, 1));
     assert(task_file_for_fd(parent, 1));
@@ -182,12 +182,12 @@ int main(void)
     assert(task_allocate_fd(task, 0, &slot) == 3);
     slot->flags = TASK_FILE_FLAG_PIPE;
     struct task_file *resolved;
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     assert(resolve_kernel_path_at_flags(task, 3, "", true, path, &resolved, false, FS_LOOKUP_FOLLOW) == 0);
     assert(resolved == slot && !path[0]);
-    assert(resolve_kernel_path_at_flags(task, 3, "entry", true, path, &resolved, false, FS_LOOKUP_FOLLOW) == -LEONOS_ENOTDIR);
-    assert(resolve_kernel_path_at_flags(task, 3, "", false, path, &resolved, false, FS_LOOKUP_FOLLOW) == -LEONOS_ENOENT);
-    assert(resolve_kernel_path_at_flags(task, -1, "", true, path, &resolved, false, FS_LOOKUP_FOLLOW) == -LEONOS_EBADF);
+    assert(resolve_kernel_path_at_flags(task, 3, "entry", true, path, &resolved, false, FS_LOOKUP_FOLLOW) == -RELIEFOS_ENOTDIR);
+    assert(resolve_kernel_path_at_flags(task, 3, "", false, path, &resolved, false, FS_LOOKUP_FOLLOW) == -RELIEFOS_ENOENT);
+    assert(resolve_kernel_path_at_flags(task, -1, "", true, path, &resolved, false, FS_LOOKUP_FOLLOW) == -RELIEFOS_EBADF);
     slot->flags = 0;
     puts("PASS AT_EMPTY_PATH anonymous descriptor resolution and invalid-path errors");
     slot->offset = 123;
@@ -205,20 +205,20 @@ int main(void)
     assert(task_file_for_fd(task, 3)->references == 3);
     /* Reject failed expansion without consuming an OFD reference or fd. */
     fail_allocation = 1;
-    assert(task_dup2_fd(task, 100, 900) == -LEONOS_ENOMEM);
+    assert(task_dup2_fd(task, 100, 900) == -RELIEFOS_ENOMEM);
     assert(task_file_for_fd(task, 900) == NULL);
     assert(task_file_for_fd(task, 3)->references == 3);
     fail_allocation = 0;
     assert(task_dup2_fd(task, 100, 900) == 900);
-    assert(task_dup2_fd(task, 999, 900) == -LEONOS_EBADF);
+    assert(task_dup2_fd(task, 999, 900) == -RELIEFOS_EBADF);
     assert(task_file_for_fd(task, 3)->references == 4);
     struct task waiter = {.pid = 777, .state = TASK_BLOCKED};
-    leonos_flocks[0] = (struct leonos_flock_entry){.used = 1,
-        .type = LEONOS_FLOCK_EX, .owner = task_file_for_fd(task, 3)};
-    kernel_wait_queue_init(&leonos_flocks[0].waiters);
-    assert(kernel_wait_queue_add(&leonos_flocks[0].waiters, &waiter) == 0);
+    reliefos_flocks[0] = (struct reliefos_flock_entry){.used = 1,
+        .type = RELIEFOS_FLOCK_EX, .owner = task_file_for_fd(task, 3)};
+    kernel_wait_queue_init(&reliefos_flocks[0].waiters);
+    assert(kernel_wait_queue_add(&reliefos_flocks[0].waiters, &waiter) == 0);
     sched_task_limits(task)->nofile.rlim_cur = 4;
-    assert(task_allocate_fd(task, 0, &slot) == -LEONOS_EMFILE);
+    assert(task_allocate_fd(task, 0, &slot) == -RELIEFOS_EMFILE);
     assert(task_dup2_fd(task, 900, 900) == 900);
     task_discard_file_fd(task, 0);
     assert(task_allocate_fd(task, 0, &slot) == 0);
@@ -227,9 +227,9 @@ int main(void)
     task_discard_file_fd(task, 0);
     for (int fd = 3; fd < 1024; ++fd) {
         task_discard_file_fd(task, fd);
-        if (fd < 900) assert(leonos_flocks[0].used && waiter.waiting_queue);
+        if (fd < 900) assert(reliefos_flocks[0].used && waiter.waiting_queue);
     }
-    assert(!leonos_flocks[0].used && !waiter.waiting_queue && !leonos_flocks[0].waiters.count);
+    assert(!reliefos_flocks[0].used && !waiter.waiting_queue && !reliefos_flocks[0].waiters.count);
     assert(task_allocate_fd(task, 0, &slot) == 0 && !slot->kind);
     task_discard_file_fd(task, 0);
     task->signalfd_vectors = kernel_malloc(9 * sizeof(struct iovec));

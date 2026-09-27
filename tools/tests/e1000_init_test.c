@@ -20,10 +20,10 @@ static uint64_t allocate(uint32_t count)
 }
 static void release(uint64_t p, uint32_t count)
 { assert(allocations); --allocations; assert(munmap((void *)(uintptr_t)p, count * 4096u) == 0); }
-static int find(uint16_t vendor, uint16_t device, struct leonos_driver_pci_device *out)
+static int find(uint16_t vendor, uint16_t device, struct reliefos_driver_pci_device *out)
 {
     if (vendor != 0x8086 || device != 0x100f) return -1;
-    *out = (struct leonos_driver_pci_device){.vendor_id = vendor, .device_id = device, .class_code = 2};
+    *out = (struct reliefos_driver_pci_device){.vendor_id = vendor, .device_id = device, .class_code = 2};
     return 0;
 }
 static uint32_t read32(uint8_t b, uint8_t s, uint8_t f, uint8_t offset)
@@ -35,7 +35,7 @@ static void write16(uint8_t b, uint8_t s, uint8_t f, uint8_t offset, uint16_t va
 static void pause_ms(uint64_t ms)
 { (void)ms; *(uint32_t *)(registers + E1000_REG_CTRL) &= ~(1u << 26); }
 static void log_text(const char *text) { (void)text; }
-static int register_ops(const struct leonos_driver_e1000_ops *ops)
+static int register_ops(const struct reliefos_driver_e1000_ops *ops)
 { assert(ops->is_ready()); return registration_error; }
 
 int main(void)
@@ -46,8 +46,8 @@ int main(void)
     *(uint32_t *)(registers + E1000_REG_STATUS) = 1u << 1;
     *(uint32_t *)(registers + E1000_REG_RAL) = 0x06290c00;
     *(uint32_t *)(registers + E1000_REG_RAH) = E1000_RAH_AV | 0x9729;
-    const struct leonos_driver_kernel_api api = {
-        .abi_version = LEONOS_DRIVER_ABI_VERSION, .struct_size = sizeof(api),
+    const struct reliefos_driver_kernel_api api = {
+        .abi_version = RELIEFOS_DRIVER_ABI_VERSION, .struct_size = sizeof(api),
         .alloc_pages = allocate, .free_pages = release, .console_write = log_text,
         .pci_find = find, .pci_read16 = read16, .pci_write16 = write16,
         .pci_read32 = read32, .sleep_ms = pause_ms, .register_e1000 = register_ops,

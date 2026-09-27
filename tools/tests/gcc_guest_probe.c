@@ -615,7 +615,7 @@ int main(int argc, char **argv)
     }
 
     unsigned failed = edge_failures;
-    struct leonos_dir_entry *headers = NULL;
+    struct reliefos_dir_entry *headers = NULL;
     uint32_t header_count = 0;
     int directory_result = installer_list_dir(
         "/opt/dyne/gcc-musl/x86_64-linux-musl/include/linux", &headers, &header_count);

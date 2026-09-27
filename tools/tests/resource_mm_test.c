@@ -8,9 +8,9 @@ struct task_vma *sched_task_vma_at(struct task *task, uint32_t index) { return &
 int main(void)
 {
     struct task task = {0};
-    uint64_t base = NTCLKS_USER_BASE;
+    uint64_t base = RELIEFNT_USER_BASE;
     task.vmas[0] = (struct task_vma){.used = 1, .start = base, .end = base + 8192};
-    task.stack_top = NTCLKS_USER_TOP - 4096;
+    task.stack_top = RELIEFNT_USER_TOP - 4096;
     task.stack_low = task.stack_top - 65536;
     uint64_t used = 8192 + 65536;
     task.limits.as.rlim_cur = used;
@@ -34,13 +34,13 @@ int main(void)
     /* RLIMIT_STACK is measured in Linux against the whole growable stack
      * span (stack_top - new_start), inclusive of the eager initial pages. */
     struct task stack_task = {0};
-    stack_task.stack_top = NTCLKS_USER_TOP - 4096;
+    stack_task.stack_top = RELIEFNT_USER_TOP - 4096;
     stack_task.stack_low = stack_task.stack_top - 65536;
     stack_task.address_space.initial_stack_top = stack_task.stack_top;
     stack_task.address_space.initial_stack_low = stack_task.stack_low;
     stack_task.limits.as.rlim_cur = LINUX_RLIM_INFINITY;
     uint64_t candidate = stack_task.stack_top - 65536 - 4096;
-    uint64_t cross_pde = (stack_task.stack_top & ~(NTCLKS_USER_PD_BYTES - 1ULL)) - 4096;
+    uint64_t cross_pde = (stack_task.stack_top & ~(RELIEFNT_USER_PD_BYTES - 1ULL)) - 4096;
     /* The inherited low identity map makes the first fault in the next 2 MiB
      * slot report PRESENT even though no user PTE exists there. */
     assert(task_stack_fault_candidate(&stack_task, cross_pde, 4));

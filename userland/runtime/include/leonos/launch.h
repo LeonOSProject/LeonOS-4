@@ -1,54 +1,40 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/launch.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_LAUNCH_H
 #define LEONOS_LAUNCH_H
+#include <reliefos/launch.h>
 
-#include <stdint.h>
-
-void leonos_launch_use_session(int enabled);
-
-#define LEONOS_LAUNCH_MAX_ARGS 8U
-
-#define LEONOS_LAUNCH_ERR_EMPTY -1001
-#define LEONOS_LAUNCH_ERR_TOO_MANY_ARGS -1002
-#define LEONOS_LAUNCH_ERR_UNCLOSED_QUOTE -1003
-#define LEONOS_LAUNCH_ERR_NOT_FOUND -1004
-#define LEONOS_LAUNCH_ERR_NO_ASSOCIATION -1005
-#define LEONOS_LAUNCH_ERR_INVALID_SHORTCUT -1006
-#define LEONOS_LAUNCH_ERR_SHORTCUT_LOOP -1007
-#define LEONOS_LAUNCH_ERR_EXISTS -1008
-#define LEONOS_LAUNCH_ERR_ALREADY_RUNNING -1009
-#define LEONOS_LAUNCH_ASSOC_COUNT 7U
-
-struct leonos_launch_assoc_app {
-    const char *name;
-    const char *detail;
-    const char *program_path;
-    uint8_t mode;
-};
-
-#define LEONOS_LAUNCH_ASSOC_MODE_EXEC 1U
-#define LEONOS_LAUNCH_ASSOC_MODE_OPEN_TEXT 2U
-#define LEONOS_LAUNCH_ASSOC_MODE_TERMINAL_CAT 3U
-
-int leonos_cmdline_split(char *line, char *argv[], uint32_t max_args);
-const char *leonos_launch_builtin_path(const char *name_or_path);
-int leonos_launch_file_with_app(const char *target_path, const char *program_path);
-const char *leonos_launch_resolve_default_app_for_path(const char *path);
-const char *leonos_launch_get_extension_for_path(const char *path, char *buffer,
-                                                 uint32_t capacity);
-const struct leonos_launch_assoc_app *leonos_launch_assoc_apps(uint32_t *count);
-int leonos_launch_set_extension_association(const char *extension, const char *program_path);
-int leonos_launch_get_extension_association(const char *extension, char *program_path,
-                                            uint32_t capacity);
-void leonos_launch_default_shortcut_name(const char *target_path, char *buffer,
-                                         uint32_t capacity);
-int leonos_launch_create_shortcut(const char *shortcut_path, const char *target_path);
-int leonos_launch_create_shortcut_in_dir(const char *dir_path, const char *target_path,
-                                         char *out_path, uint32_t out_capacity);
-/* Starts an executable in a child process. execve() intentionally replaces
- * the current process image, so graphical launchers must use this helper. */
-int leonos_spawn_argv(const char *path, char *const argv[]);
-int leonos_launch_argv(char *argv[]);
-int leonos_launch_command_line(char *line, char *argv[], uint32_t max_args);
-const char *leonos_launch_error_text(int code);
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_LAUNCH_ASSOC_COUNT RELIEFOS_LAUNCH_ASSOC_COUNT
+#define LEONOS_LAUNCH_ASSOC_MODE_EXEC RELIEFOS_LAUNCH_ASSOC_MODE_EXEC
+#define LEONOS_LAUNCH_ASSOC_MODE_OPEN_TEXT RELIEFOS_LAUNCH_ASSOC_MODE_OPEN_TEXT
+#define LEONOS_LAUNCH_ASSOC_MODE_TERMINAL_CAT RELIEFOS_LAUNCH_ASSOC_MODE_TERMINAL_CAT
+#define LEONOS_LAUNCH_ERR_ALREADY_RUNNING RELIEFOS_LAUNCH_ERR_ALREADY_RUNNING
+#define LEONOS_LAUNCH_ERR_EMPTY RELIEFOS_LAUNCH_ERR_EMPTY
+#define LEONOS_LAUNCH_ERR_EXISTS RELIEFOS_LAUNCH_ERR_EXISTS
+#define LEONOS_LAUNCH_ERR_INVALID_SHORTCUT RELIEFOS_LAUNCH_ERR_INVALID_SHORTCUT
+#define LEONOS_LAUNCH_ERR_NOT_FOUND RELIEFOS_LAUNCH_ERR_NOT_FOUND
+#define LEONOS_LAUNCH_ERR_NO_ASSOCIATION RELIEFOS_LAUNCH_ERR_NO_ASSOCIATION
+#define LEONOS_LAUNCH_ERR_SHORTCUT_LOOP RELIEFOS_LAUNCH_ERR_SHORTCUT_LOOP
+#define LEONOS_LAUNCH_ERR_TOO_MANY_ARGS RELIEFOS_LAUNCH_ERR_TOO_MANY_ARGS
+#define LEONOS_LAUNCH_ERR_UNCLOSED_QUOTE RELIEFOS_LAUNCH_ERR_UNCLOSED_QUOTE
+#define LEONOS_LAUNCH_MAX_ARGS RELIEFOS_LAUNCH_MAX_ARGS
+#define leonos_cmdline_split reliefos_cmdline_split
+#define leonos_launch_argv reliefos_launch_argv
+#define leonos_launch_assoc_app reliefos_launch_assoc_app
+#define leonos_launch_assoc_apps reliefos_launch_assoc_apps
+#define leonos_launch_builtin_path reliefos_launch_builtin_path
+#define leonos_launch_command_line reliefos_launch_command_line
+#define leonos_launch_create_shortcut reliefos_launch_create_shortcut
+#define leonos_launch_create_shortcut_in_dir reliefos_launch_create_shortcut_in_dir
+#define leonos_launch_default_shortcut_name reliefos_launch_default_shortcut_name
+#define leonos_launch_error_text reliefos_launch_error_text
+#define leonos_launch_file_with_app reliefos_launch_file_with_app
+#define leonos_launch_get_extension_association reliefos_launch_get_extension_association
+#define leonos_launch_get_extension_for_path reliefos_launch_get_extension_for_path
+#define leonos_launch_resolve_default_app_for_path reliefos_launch_resolve_default_app_for_path
+#define leonos_launch_set_extension_association reliefos_launch_set_extension_association
+#define leonos_launch_use_session reliefos_launch_use_session
+#define leonos_spawn_argv reliefos_spawn_argv
+#endif /* LEONOS_LAUNCH_H */

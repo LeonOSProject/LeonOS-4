@@ -70,32 +70,32 @@ int main(void)
     assert(mkdtemp(path));
     int directory = open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
     assert(directory >= 0);
-    assert(leonos_account_store_recover(directory) == 0);
-    assert(leonos_account_store_commit(directory, old) == 0 && matches(directory, old));
+    assert(reliefos_account_store_recover(directory) == 0);
+    assert(reliefos_account_store_commit(directory, old) == 0 && matches(directory, old));
     fail_write = 1;
-    assert(leonos_account_store_commit(directory, next) == -1 && errno == ENOSPC);
-    assert(leonos_account_store_recover(directory) == 0 && matches(directory, old));
+    assert(reliefos_account_store_commit(directory, next) == -1 && errno == ENOSPC);
+    assert(reliefos_account_store_recover(directory) == 0 && matches(directory, old));
     fail_sync = 1;
-    assert(leonos_account_store_commit(directory, next) == -1 && errno == EIO);
-    assert(leonos_account_store_recover(directory) == 0 && matches(directory, old));
+    assert(reliefos_account_store_commit(directory, next) == -1 && errno == EIO);
+    assert(reliefos_account_store_recover(directory) == 0 && matches(directory, old));
     short_write = interrupt_write = 1;
-    assert(leonos_account_store_commit(directory, next) == 0 && matches(directory, next));
+    assert(reliefos_account_store_commit(directory, next) == 0 && matches(directory, next));
     short_write = 0;
     for (unsigned point = 1; point <= 24; ++point) {
-        assert(leonos_account_store_commit(directory, old) == 0);
+        assert(reliefos_account_store_commit(directory, old) == 0);
         pid_t child = fork();
         assert(child >= 0);
         if (!child) {
             crash_at = point;
             operations = 0;
-            _exit(leonos_account_store_commit(directory, next) ? 1 : 0);
+            _exit(reliefos_account_store_commit(directory, next) ? 1 : 0);
         }
         int status;
         assert(waitpid(child, &status, 0) == child && WIFEXITED(status));
         assert(WEXITSTATUS(status) == 99 || WEXITSTATUS(status) == 0);
-        assert(leonos_account_store_recover(directory) == 0);
+        assert(reliefos_account_store_recover(directory) == 0);
         assert(matches(directory, old) || matches(directory, next));
-        assert(leonos_account_store_recover(directory) == 0);
+        assert(reliefos_account_store_recover(directory) == 0);
     }
     pid_t workers[4];
     for (unsigned i = 0; i < 4; ++i) {
@@ -103,7 +103,7 @@ int main(void)
         assert(workers[i] >= 0);
         if (!workers[i]) {
             for (unsigned n = 0; n < 8; ++n)
-                if (leonos_account_store_commit(directory, (i + n) % 2 ? old : next)) _exit(1);
+                if (reliefos_account_store_commit(directory, (i + n) % 2 ? old : next)) _exit(1);
             _exit(0);
         }
     }
@@ -111,14 +111,14 @@ int main(void)
         int status;
         assert(waitpid(workers[i], &status, 0) == workers[i] && WIFEXITED(status) && !WEXITSTATUS(status));
     }
-    assert(leonos_account_store_recover(directory) == 0);
+    assert(reliefos_account_store_recover(directory) == 0);
     assert(matches(directory, old) || matches(directory, next));
     assert(fchmod(directory, 0777) == 0);
-    assert(leonos_account_store_commit(directory, next) == -1 && errno == EACCES);
+    assert(reliefos_account_store_commit(directory, next) == -1 && errno == EACCES);
     assert(fchmod(directory, 0700) == 0);
     assert(unlinkat(directory, ".pwd.lock", 0) == 0);
     assert(symlinkat("shadow", directory, ".pwd.lock") == 0);
-    assert(leonos_account_store_commit(directory, next) == -1 && errno == ELOOP);
+    assert(reliefos_account_store_commit(directory, next) == -1 && errno == ELOOP);
     assert(unlinkat(directory, ".pwd.lock", 0) == 0);
     for (unsigned i = 0; i < 4; ++i) assert(unlinkat(directory, names[i], 0) == 0);
     assert(close(directory) == 0 && rmdir(path) == 0);

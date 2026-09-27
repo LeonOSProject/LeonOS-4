@@ -1,11 +1,11 @@
-#include <leonos/fs.h>
-#include <leonos/gui.h>
-#include <leonos/net.h>
-#include <leonos/stdio.h>
-#include <leonos/system.h>
-#include <leonos/syscall.h>
-#include <leonos/tls.h>
-#include <leonos/layout.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
+#include <reliefos/net.h>
+#include <reliefos/stdio.h>
+#include <reliefos/system.h>
+#include <reliefos/syscall.h>
+#include <reliefos/tls.h>
+#include <reliefos/layout.h>
 
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
@@ -17,22 +17,22 @@
 
 #include <string.h>
 
-#define LEONOS_TLS_CA_BUNDLE LEONOS_PATH_CACERT
-#define LEONOS_TLS_CA_BUNDLE_MAX (512U * 1024U)
+#define RELIEFOS_TLS_CA_BUNDLE RELIEFOS_PATH_CACERT
+#define RELIEFOS_TLS_CA_BUNDLE_MAX (512U * 1024U)
 
-struct leonos_tls_io {
+struct reliefos_tls_io {
     int socket;
     uint32_t timeout_ms;
-    leonos_tls_stream_callback activity;
+    reliefos_tls_stream_callback activity;
     void *activity_context;
 };
 
-static mbedtls_x509_crt leonos_tls_roots;
-static int leonos_tls_roots_state;
+static mbedtls_x509_crt reliefos_tls_roots;
+static int reliefos_tls_roots_state;
 
-static uint32_t leonos_tls_root_count(void)
+static uint32_t reliefos_tls_root_count(void)
 {
-    const mbedtls_x509_crt *root = &leonos_tls_roots;
+    const mbedtls_x509_crt *root = &reliefos_tls_roots;
     uint32_t count = 0;
     while (root && root->version != 0) {
         ++count;
@@ -41,7 +41,7 @@ static uint32_t leonos_tls_root_count(void)
     return count;
 }
 
-static void leonos_tls_log_verify_failure(const char *hostname, uint32_t flags)
+static void reliefos_tls_log_verify_failure(const char *hostname, uint32_t flags)
 {
     printf("[tls] verify failed host=%s flags=0x%x expired=%u future=%u cn=%u trust=%u key=%u md=%u\n",
            hostname ? hostname : "(null)", flags,
@@ -53,12 +53,12 @@ static void leonos_tls_log_verify_failure(const char *hostname, uint32_t flags)
            (flags & MBEDTLS_X509_BADCERT_BAD_MD) != 0);
 }
 
-static int leonos_tls_is_leap_year(int year)
+static int reliefos_tls_is_leap_year(int year)
 {
     return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
 }
 
-static int leonos_tls_header_name_equal(const char *line, const char *name)
+static int reliefos_tls_header_name_equal(const char *line, const char *name)
 {
     while (*name && *line) {
         char left = *line++;
@@ -76,7 +76,7 @@ static int leonos_tls_header_name_equal(const char *line, const char *name)
     return *name == 0 && *line == ':';
 }
 
-static int leonos_tls_parse_content_length(const char *data,
+static int reliefos_tls_parse_content_length(const char *data,
                                            uint32_t header_len,
                                            uint32_t *content_length)
 {
@@ -87,7 +87,7 @@ static int leonos_tls_parse_content_length(const char *data,
         while (line_end < header_len && data[line_end] != '\n') {
             ++line_end;
         }
-        if (leonos_tls_header_name_equal(data + line_start,
+        if (reliefos_tls_header_name_equal(data + line_start,
                                          "Content-Length")) {
             const char *value = data + line_start + 15U;
             while (value < data + line_end &&
@@ -108,11 +108,11 @@ static int leonos_tls_parse_content_length(const char *data,
     return 0;
 }
 
-int64_t leonos_mbedtls_time(int64_t *seconds)
+int64_t reliefos_mbedtls_time(int64_t *seconds)
 {
-    struct leonos_time_info info;
+    struct reliefos_time_info info;
     int64_t value = 0;
-    if (leonos_time_info(&info) == 0 && info.valid) {
+    if (reliefos_time_info(&info) == 0 && info.valid) {
         value = (int64_t)info.unix_seconds;
     }
     if (seconds) {
@@ -135,13 +135,13 @@ struct tm *mbedtls_platform_gmtime_r(const int64_t *seconds, struct tm *out)
     }
     days = *seconds / 86400;
     remainder = *seconds % 86400;
-    while (days >= (leonos_tls_is_leap_year(year) ? 366 : 365)) {
-        days -= leonos_tls_is_leap_year(year) ? 366 : 365;
+    while (days >= (reliefos_tls_is_leap_year(year) ? 366 : 365)) {
+        days -= reliefos_tls_is_leap_year(year) ? 366 : 365;
         ++year;
     }
     while (month < 12) {
         int count = month_days[month];
-        if (month == 1 && leonos_tls_is_leap_year(year)) {
+        if (month == 1 && reliefos_tls_is_leap_year(year)) {
             ++count;
         }
         if (days < count) {
@@ -160,7 +160,7 @@ struct tm *mbedtls_platform_gmtime_r(const int64_t *seconds, struct tm *out)
     out->tm_yday = (int)((*seconds / 86400) -
                          ((int64_t)(year - 1970) * 365));
     for (int current = 1970; current < year; ++current) {
-        if (leonos_tls_is_leap_year(current)) {
+        if (reliefos_tls_is_leap_year(current)) {
             --out->tm_yday;
         }
     }
@@ -168,7 +168,7 @@ struct tm *mbedtls_platform_gmtime_r(const int64_t *seconds, struct tm *out)
     return out;
 }
 
-static int leonos_tls_rdrand_available(void)
+static int reliefos_tls_rdrand_available(void)
 {
     uint32_t eax = 1;
     uint32_t ebx;
@@ -182,7 +182,7 @@ static int leonos_tls_rdrand_available(void)
     return (ecx & (1U << 30)) != 0;
 }
 
-static int leonos_tls_rdrand64(uint64_t *value)
+static int reliefos_tls_rdrand64(uint64_t *value)
 {
     unsigned char ready;
     __asm__ volatile("rdrand %0; setc %1"
@@ -198,14 +198,14 @@ int mbedtls_hardware_poll(void *data, unsigned char *output,
     if (olen) {
         *olen = 0;
     }
-    if (!output || !olen || !leonos_tls_rdrand_available()) {
+    if (!output || !olen || !reliefos_tls_rdrand_available()) {
         return MBEDTLS_ERR_ENTROPY_SOURCE_FAILED;
     }
     while (written < len) {
         uint64_t random = 0;
         int ready = 0;
         for (int attempt = 0; attempt < 10 && !ready; ++attempt) {
-            ready = leonos_tls_rdrand64(&random);
+            ready = reliefos_tls_rdrand64(&random);
         }
         if (!ready) {
             return MBEDTLS_ERR_ENTROPY_SOURCE_FAILED;
@@ -218,21 +218,21 @@ int mbedtls_hardware_poll(void *data, unsigned char *output,
     return 0;
 }
 
-static int leonos_tls_load_roots(void)
+static int reliefos_tls_load_roots(void)
 {
-    struct leonos_stat stat_info = {0};
+    struct reliefos_stat stat_info = {0};
     unsigned char *pem;
     uint32_t length = 0;
     int fd;
     int ret;
-    if (leonos_tls_roots_state != 0) {
-        return leonos_tls_roots_state > 0 ? 0 : -1;
+    if (reliefos_tls_roots_state != 0) {
+        return reliefos_tls_roots_state > 0 ? 0 : -1;
     }
-    leonos_tls_roots_state = -1;
-    ret = leonos_stat_legacy(LEONOS_TLS_CA_BUNDLE, &stat_info);
+    reliefos_tls_roots_state = -1;
+    ret = reliefos_stat_legacy(RELIEFOS_TLS_CA_BUNDLE, &stat_info);
     if (ret < 0 ||
-        stat_info.type != LEONOS_FS_TYPE_FILE || stat_info.size == 0 ||
-        stat_info.size > LEONOS_TLS_CA_BUNDLE_MAX) {
+        stat_info.type != RELIEFOS_FS_TYPE_FILE || stat_info.size == 0 ||
+        stat_info.size > RELIEFOS_TLS_CA_BUNDLE_MAX) {
         printf("[tls] CA bundle invalid stat=%d type=%u size=%lu\n", ret,
                stat_info.type, (unsigned long)stat_info.size);
         return -1;
@@ -243,7 +243,7 @@ static int leonos_tls_load_roots(void)
                (unsigned long)stat_info.size);
         return -1;
     }
-    fd = open(LEONOS_TLS_CA_BUNDLE, LEONOS_O_RDONLY, 0);
+    fd = open(RELIEFOS_TLS_CA_BUNDLE, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         printf("[tls] CA bundle open failed ret=%d\n", fd);
         free(pem);
@@ -262,30 +262,30 @@ static int leonos_tls_load_roots(void)
     }
     close(fd);
     pem[length] = 0;
-    mbedtls_x509_crt_init(&leonos_tls_roots);
-    ret = mbedtls_x509_crt_parse(&leonos_tls_roots, pem, (size_t)length + 1U);
+    mbedtls_x509_crt_init(&reliefos_tls_roots);
+    ret = mbedtls_x509_crt_parse(&reliefos_tls_roots, pem, (size_t)length + 1U);
     mbedtls_platform_zeroize(pem, (size_t)length + 1U);
     free(pem);
-    if (ret < 0 || leonos_tls_roots.version == 0) {
+    if (ret < 0 || reliefos_tls_roots.version == 0) {
         printf("[tls] CA bundle parse failed ret=%d roots=%u\n", ret,
-               leonos_tls_root_count());
-        mbedtls_x509_crt_free(&leonos_tls_roots);
+               reliefos_tls_root_count());
+        mbedtls_x509_crt_free(&reliefos_tls_roots);
         return -1;
     }
     printf("[tls] CA bundle loaded bytes=%u parse=%d roots=%u\n", length, ret,
-           leonos_tls_root_count());
-    leonos_tls_roots_state = 1;
+           reliefos_tls_root_count());
+    reliefos_tls_roots_state = 1;
     return 0;
 }
 
-static int leonos_tls_send(void *context, const unsigned char *buffer,
+static int reliefos_tls_send(void *context, const unsigned char *buffer,
                            size_t length)
 {
-    struct leonos_tls_io *io = (struct leonos_tls_io *)context;
-    uint32_t status = LEONOS_NET_STATUS_TCP_FAILED;
-    long sent = leonos_socket_send(io->socket, buffer, (uint32_t)length,
+    struct reliefos_tls_io *io = (struct reliefos_tls_io *)context;
+    uint32_t status = RELIEFOS_NET_STATUS_TCP_FAILED;
+    long sent = reliefos_socket_send(io->socket, buffer, (uint32_t)length,
                                    io->timeout_ms, &status);
-    if (sent < 0 || status != LEONOS_NET_STATUS_OK) {
+    if (sent < 0 || status != RELIEFOS_NET_STATUS_OK) {
         printf("[tls] send failed socket=%d ret=%ld net=%u\n", io->socket,
                sent, status);
         return MBEDTLS_ERR_NET_SEND_FAILED;
@@ -293,17 +293,17 @@ static int leonos_tls_send(void *context, const unsigned char *buffer,
     return (int)sent;
 }
 
-static int leonos_tls_recv(void *context, unsigned char *buffer,
+static int reliefos_tls_recv(void *context, unsigned char *buffer,
                             size_t length)
 {
-    struct leonos_tls_io *io = (struct leonos_tls_io *)context;
-    uint32_t status = LEONOS_NET_STATUS_TCP_FAILED;
-    unsigned long started = leonos_uptime_ms();
+    struct reliefos_tls_io *io = (struct reliefos_tls_io *)context;
+    uint32_t status = RELIEFOS_NET_STATUS_TCP_FAILED;
+    unsigned long started = reliefos_uptime_ms();
     for (;;) {
         uint32_t wait_ms = io->timeout_ms;
         long received;
         if (io->activity) {
-            unsigned long elapsed = leonos_uptime_ms() - started;
+            unsigned long elapsed = reliefos_uptime_ms() - started;
             if (elapsed >= io->timeout_ms ||
                 io->activity(0, 0, io->activity_context) < 0) {
                 printf("[tls] receive cancelled socket=%d elapsed=%lu\n",
@@ -315,16 +315,16 @@ static int leonos_tls_recv(void *context, unsigned char *buffer,
                 wait_ms = 200U;
             }
         }
-        received = leonos_socket_recv(io->socket, buffer, (uint32_t)length,
+        received = reliefos_socket_recv(io->socket, buffer, (uint32_t)length,
                                       wait_ms, &status);
-        if (received == 0 && status == LEONOS_NET_STATUS_TCP_TIMEOUT &&
+        if (received == 0 && status == RELIEFOS_NET_STATUS_TCP_TIMEOUT &&
             io->activity) {
             continue;
         }
-        if (received == 0 && status == LEONOS_NET_STATUS_OK) {
+        if (received == 0 && status == RELIEFOS_NET_STATUS_OK) {
             return 0;
         }
-        if (received < 0 || status != LEONOS_NET_STATUS_OK) {
+        if (received < 0 || status != RELIEFOS_NET_STATUS_OK) {
             printf("[tls] receive failed socket=%d ret=%ld net=%u\n",
                    io->socket, received, status);
             return MBEDTLS_ERR_NET_RECV_FAILED;
@@ -333,7 +333,7 @@ static int leonos_tls_recv(void *context, unsigned char *buffer,
     }
 }
 
-static int leonos_tls_write_all(mbedtls_ssl_context *ssl,
+static int reliefos_tls_write_all(mbedtls_ssl_context *ssl,
                                  const unsigned char *data, uint32_t length)
 {
     uint32_t written = 0;
@@ -347,7 +347,7 @@ static int leonos_tls_write_all(mbedtls_ssl_context *ssl,
     return 0;
 }
 
-int leonos_tls_http_exchange(int socket, const char *hostname,
+int reliefos_tls_http_exchange(int socket, const char *hostname,
                              uint32_t timeout_ms,
                              const void *request_headers,
                              uint32_t request_headers_len,
@@ -356,8 +356,8 @@ int leonos_tls_http_exchange(int socket, const char *hostname,
                              char *response, uint32_t response_capacity,
                              uint32_t *response_len)
 {
-    struct leonos_time_info time_info;
-    struct leonos_tls_io io;
+    struct reliefos_time_info time_info;
+    struct reliefos_tls_io io;
     mbedtls_ssl_context ssl;
     mbedtls_ssl_config config;
     mbedtls_ctr_drbg_context drbg;
@@ -376,9 +376,9 @@ int leonos_tls_http_exchange(int socket, const char *hostname,
     if (response_len) {
         *response_len = 0;
     }
-    time_info = (struct leonos_time_info){0};
-    time_ret = leonos_time_info(&time_info);
-    roots_ret = leonos_tls_load_roots();
+    time_info = (struct reliefos_time_info){0};
+    time_ret = reliefos_time_info(&time_info);
+    roots_ret = reliefos_tls_load_roots();
     if (!hostname || !hostname[0] || !request_headers || !request_headers_len ||
         !response || response_capacity < 2U || !response_len || time_ret < 0 ||
         !time_info.valid || roots_ret < 0) {
@@ -415,7 +415,7 @@ int leonos_tls_http_exchange(int socket, const char *hostname,
     mbedtls_ssl_conf_max_version(&config, MBEDTLS_SSL_MAJOR_VERSION_3,
                                  MBEDTLS_SSL_MINOR_VERSION_3);
     mbedtls_ssl_conf_authmode(&config, MBEDTLS_SSL_VERIFY_REQUIRED);
-    mbedtls_ssl_conf_ca_chain(&config, &leonos_tls_roots, 0);
+    mbedtls_ssl_conf_ca_chain(&config, &reliefos_tls_roots, 0);
     mbedtls_ssl_conf_rng(&config, mbedtls_ctr_drbg_random, &drbg);
     ret = mbedtls_ssl_setup(&ssl, &config);
     if (ret != 0) {
@@ -427,7 +427,7 @@ int leonos_tls_http_exchange(int socket, const char *hostname,
         printf("[tls] exchange hostname failed host=%s ret=%d\n", hostname, ret);
         goto cleanup;
     }
-    mbedtls_ssl_set_bio(&ssl, &io, leonos_tls_send, leonos_tls_recv, 0);
+    mbedtls_ssl_set_bio(&ssl, &io, reliefos_tls_send, reliefos_tls_recv, 0);
     ret = mbedtls_ssl_handshake(&ssl);
     if (ret != 0) {
         printf("[tls] exchange handshake failed host=%s ret=%d\n", hostname, ret);
@@ -435,13 +435,13 @@ int leonos_tls_http_exchange(int socket, const char *hostname,
     }
     verify_flags = mbedtls_ssl_get_verify_result(&ssl);
     if (verify_flags != 0) {
-        leonos_tls_log_verify_failure(hostname, verify_flags);
+        reliefos_tls_log_verify_failure(hostname, verify_flags);
         goto cleanup;
     }
     printf("[tls] exchange verified host=%s\n", hostname);
-    if (leonos_tls_write_all(&ssl, request_headers, request_headers_len) < 0 ||
+    if (reliefos_tls_write_all(&ssl, request_headers, request_headers_len) < 0 ||
         (request_body_len &&
-         leonos_tls_write_all(&ssl, request_body, request_body_len) < 0)) {
+         reliefos_tls_write_all(&ssl, request_body, request_body_len) < 0)) {
         printf("[tls] exchange request write failed host=%s\n", hostname);
         goto cleanup;
     }
@@ -475,7 +475,7 @@ int leonos_tls_http_exchange(int socket, const char *hostname,
             char *headers_end = strstr(response, "\r\n\r\n");
             if (headers_end) {
                 header_end = (uint32_t)(headers_end - response) + 4U;
-                content_length_valid = leonos_tls_parse_content_length(
+                content_length_valid = reliefos_tls_parse_content_length(
                     response, header_end, &content_length);
                 if (content_length_valid) {
                     if (content_length <= UINT32_MAX - header_end &&
@@ -510,17 +510,17 @@ cleanup:
     return ret;
 }
 
-int leonos_tls_http_stream(int socket, const char *hostname,
+int reliefos_tls_http_stream(int socket, const char *hostname,
                            uint32_t timeout_ms,
                            const void *request_headers,
                            uint32_t request_headers_len,
                            const void *request_body,
                            uint32_t request_body_len,
-                           leonos_tls_stream_callback callback,
+                           reliefos_tls_stream_callback callback,
                            void *context)
 {
-    struct leonos_time_info time_info;
-    struct leonos_tls_io io;
+    struct reliefos_time_info time_info;
+    struct reliefos_tls_io io;
     mbedtls_ssl_context ssl;
     mbedtls_ssl_config config;
     mbedtls_ctr_drbg_context drbg;
@@ -531,9 +531,9 @@ int leonos_tls_http_stream(int socket, const char *hostname,
     int time_ret;
     int peer_tcp_eof = 0;
     int ret = -1;
-    time_info = (struct leonos_time_info){0};
-    time_ret = leonos_time_info(&time_info);
-    roots_ret = leonos_tls_load_roots();
+    time_info = (struct reliefos_time_info){0};
+    time_ret = reliefos_time_info(&time_info);
+    roots_ret = reliefos_tls_load_roots();
     if (!hostname || !hostname[0] || !request_headers || !request_headers_len ||
         !callback || time_ret < 0 || !time_info.valid || roots_ret < 0) {
         printf("[tls] stream preflight host=%s time_ret=%d valid=%u roots_ret=%d\n",
@@ -569,7 +569,7 @@ int leonos_tls_http_stream(int socket, const char *hostname,
     mbedtls_ssl_conf_max_version(&config, MBEDTLS_SSL_MAJOR_VERSION_3,
                                  MBEDTLS_SSL_MINOR_VERSION_3);
     mbedtls_ssl_conf_authmode(&config, MBEDTLS_SSL_VERIFY_REQUIRED);
-    mbedtls_ssl_conf_ca_chain(&config, &leonos_tls_roots, 0);
+    mbedtls_ssl_conf_ca_chain(&config, &reliefos_tls_roots, 0);
     mbedtls_ssl_conf_rng(&config, mbedtls_ctr_drbg_random, &drbg);
     ret = mbedtls_ssl_setup(&ssl, &config);
     if (ret != 0) {
@@ -581,7 +581,7 @@ int leonos_tls_http_stream(int socket, const char *hostname,
         printf("[tls] stream hostname failed host=%s ret=%d\n", hostname, ret);
         goto cleanup;
     }
-    mbedtls_ssl_set_bio(&ssl, &io, leonos_tls_send, leonos_tls_recv, 0);
+    mbedtls_ssl_set_bio(&ssl, &io, reliefos_tls_send, reliefos_tls_recv, 0);
     ret = mbedtls_ssl_handshake(&ssl);
     if (ret != 0) {
         printf("[tls] stream handshake failed host=%s ret=%d\n", hostname, ret);
@@ -589,13 +589,13 @@ int leonos_tls_http_stream(int socket, const char *hostname,
     }
     verify_flags = mbedtls_ssl_get_verify_result(&ssl);
     if (verify_flags != 0) {
-        leonos_tls_log_verify_failure(hostname, verify_flags);
+        reliefos_tls_log_verify_failure(hostname, verify_flags);
         goto cleanup;
     }
     printf("[tls] stream verified host=%s\n", hostname);
-    if (leonos_tls_write_all(&ssl, request_headers, request_headers_len) < 0 ||
+    if (reliefos_tls_write_all(&ssl, request_headers, request_headers_len) < 0 ||
         (request_body_len &&
-         leonos_tls_write_all(&ssl, request_body, request_body_len) < 0)) {
+         reliefos_tls_write_all(&ssl, request_body, request_body_len) < 0)) {
         printf("[tls] stream request write failed host=%s\n", hostname);
         goto cleanup;
     }
@@ -630,3 +630,7 @@ cleanup:
     mbedtls_entropy_free(&entropy);
     return ret;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_mbedtls_time) leonos_mbedtls_time __attribute__((alias("reliefos_mbedtls_time")));
+extern __typeof__(reliefos_tls_http_exchange) leonos_tls_http_exchange __attribute__((alias("reliefos_tls_http_exchange")));
+extern __typeof__(reliefos_tls_http_stream) leonos_tls_http_stream __attribute__((alias("reliefos_tls_http_stream")));

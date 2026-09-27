@@ -4,8 +4,8 @@
  * Deliberately dependency-free: the acceptance contract for the new build
  * system is that its checks run with nothing but a C compiler and POSIX sh.
  */
-#ifndef LEONOS_TEST_SUPPORT_H
-#define LEONOS_TEST_SUPPORT_H
+#ifndef RELIEFOS_TEST_SUPPORT_H
+#define RELIEFOS_TEST_SUPPORT_H
 
 /* mkdtemp, opendir/readdir and posix_spawn all come from POSIX, not ISO C11. */
 #ifndef _POSIX_C_SOURCE
@@ -20,14 +20,14 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-static unsigned leonos_test_checks;
-static unsigned leonos_test_failures;
+static unsigned reliefos_test_checks;
+static unsigned reliefos_test_failures;
 
 #define TEST_ASSERT(condition)                                                      \
     do {                                                                        \
-        leonos_test_checks++;                                               \
+        reliefos_test_checks++;                                               \
         if (!(condition)) {                                                 \
-            leonos_test_failures++;                                     \
+            reliefos_test_failures++;                                     \
             fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__,     \
                 #condition);                                          \
         }                                                                   \
@@ -35,38 +35,38 @@ static unsigned leonos_test_failures;
 
 #define TEST_ASSERT_EQ(expected, actual)                                            \
     do {                                                                        \
-        long leonos__e = (long)(expected);                                  \
-        long leonos__a = (long)(actual);                                    \
-        leonos_test_checks++;                                               \
-        if (leonos__e != leonos__a) {                                       \
-            leonos_test_failures++;                                     \
+        long reliefos__e = (long)(expected);                                  \
+        long reliefos__a = (long)(actual);                                    \
+        reliefos_test_checks++;                                               \
+        if (reliefos__e != reliefos__a) {                                       \
+            reliefos_test_failures++;                                     \
             fprintf(stderr, "FAIL %s:%d: %s == %s (%ld != %ld)\n",      \
                 __FILE__, __LINE__, #expected, #actual,                 \
-                leonos__e, leonos__a);                                  \
+                reliefos__e, reliefos__a);                                  \
         }                                                                   \
     } while (0)
 
 #define TEST_ASSERT_STR_EQ(expected, actual)                                        \
     do {                                                                        \
-        const char *leonos__e = (expected);                                 \
-        const char *leonos__a = (actual);                                   \
-        leonos_test_checks++;                                               \
-        if (strcmp(leonos__e, leonos__a) != 0) {                            \
-            leonos_test_failures++;                                     \
+        const char *reliefos__e = (expected);                                 \
+        const char *reliefos__a = (actual);                                   \
+        reliefos_test_checks++;                                               \
+        if (strcmp(reliefos__e, reliefos__a) != 0) {                            \
+            reliefos_test_failures++;                                     \
             fprintf(stderr, "FAIL %s:%d: text differs\n  expected: %s\n  actual:   %s\n", \
-                __FILE__, __LINE__, leonos__e, leonos__a);              \
+                __FILE__, __LINE__, reliefos__e, reliefos__a);              \
         }                                                                   \
     } while (0)
 
 /* Returns the suite exit code: 0 when every check held. */
-static int leonos_test_report(const char *suite_name)
+static int reliefos_test_report(const char *suite_name)
 {
-    if (leonos_test_failures != 0) {
+    if (reliefos_test_failures != 0) {
         printf("not ok - %s: %u of %u checks failed\n", suite_name,
-            leonos_test_failures, leonos_test_checks);
+            reliefos_test_failures, reliefos_test_checks);
         return 1;
     }
-    printf("ok - %s: %u checks passed\n", suite_name, leonos_test_checks);
+    printf("ok - %s: %u checks passed\n", suite_name, reliefos_test_checks);
     return 0;
 }
 

@@ -674,7 +674,7 @@ main	migration	userland/apps/desktop/window.c	baseline inventory 2026-09-27, pen
 main	migration	userland/apps/device-agent/main.c	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/apps/devmgr/main.c	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/apps/diskmgr/main.c	baseline inventory 2026-09-27, pending rename tasks
-main	migration	userland/apps/doom/leonos_audio.c	baseline inventory 2026-09-27, pending rename tasks
+main	migration	userland/apps/doom/reliefos_audio.c	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/apps/doom/main.c	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/apps/doomlauncher/main.c	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/apps/downloadmgr/main.c	baseline inventory 2026-09-27, pending rename tasks
@@ -728,7 +728,7 @@ main	migration	userland/apps/oshlp/main.c	baseline inventory 2026-09-27, pending
 main	migration	userland/apps/osver/main.c	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/apps/paint/main.c	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/apps/ping/main.c	baseline inventory 2026-09-27, pending rename tasks
-main	migration	userland/apps/pleditor/platform_leonos.c	baseline inventory 2026-09-27, pending rename tasks
+main	migration	userland/apps/pleditor/platform_reliefos.c	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/apps/rcctl/main.c	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/apps/rprfetch/main.c	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/apps/run/main.c	baseline inventory 2026-09-27, pending rename tasks
@@ -851,7 +851,7 @@ main	migration	userland/runtime/src/wind.c	baseline inventory 2026-09-27, pendin
 main	migration	userland/sl/README.md	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/sqlite/README.md	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/sqlite/leonos_sqlite_vfs.c	baseline inventory 2026-09-27, pending rename tasks
-main	migration	userland/stardustui/src/platform_leonos.cpp	baseline inventory 2026-09-27, pending rename tasks
+main	migration	userland/stardustui/src/platform_reliefos.cpp	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/storage/leonos-apk-update	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/storage/leonos-check-update	baseline inventory 2026-09-27, pending rename tasks
 main	migration	userland/storage/leonos-grub-installer	baseline inventory 2026-09-27, pending rename tasks
@@ -1151,3 +1151,27 @@ main	compatibility	docs/branding-compatibility.md	vocabulary table quotes old na
 main	history	docs/superpowers/plans/2026-09-27-reliefos-reliefnt-rename.md	migration plan quotes old names
 main	history	docs/superpowers/specs/2026-09-27-reliefos-reliefnt-rename-design.md	design spec quotes old names
 main	history	docs/superpowers/specs/2026-09-27-reliefos-reliefnt-rename-inventory.tsv	inventory records old names
+main	history	docs/superpowers/specs/2026-09-27-reliefos-reliefnt-rename-baseline.md	pre-migration scan evidence
+main	compatibility	include/reliefos/devmgr_service.h	frozen task 6 guest socket path
+main	compatibility	include/reliefos/layout.h	frozen task 6 guest layout values
+main	compatibility	include/reliefos/text_input.h	frozen task 6 input service path
+main	compatibility	tests/build/test-config-migrate.sh	legacy configuration backup compatibility
+main	compatibility	tests/build/test-portablegl-abi.sh	checks old and new PortableGL exports
+main	compatibility	tests/build/test-reliefos-aliases.sh	checks legacy build environment aliases
+main	compatibility	tests/fixtures/brand-abi/README.md	documents captured old ABI fixture
+main	compatibility	tests/fixtures/brand-abi/old-library.sha256	preserved old runtime library identity
+main	compatibility	tests/fixtures/brand-abi/old-sdk-exports.tsv	preserved old SDK export list
+main	compatibility	tests/fixtures/brand-abi/old-sdk/include/leonos/api.h	old public header fixture
+main	compatibility	tests/fixtures/brand-abi/old-sdk/include/leonos/tar.h	old public header fixture
+main	compatibility	tests/fixtures/brand-abi/old-shared-symbols.tsv	preserved old dynamic symbol table
+main	compatibility	tests/fixtures/brand-abi/old-soname.txt	preserved old SONAME
+main	compatibility	tests/fixtures/brand-abi/old_api.c	compiles a legacy SDK consumer
+main	compatibility	tests/integration/brand-abi.sh	compiles and checks both SDK ABIs
+main	compatibility	tools/build/reliefos-config-migrate.sh	imports legacy config and retains its backup
+main	compatibility	userland/portablegl/reliefos_pgl.c	exports legacy PGL ELF aliases
+main	compatibility	userland/runtime/include/reliefos/unix_ipc.h	frozen task 6 guest socket paths
+kernel	compatibility	include/reliefos/elf_abi.h	published ELF note and runtime SONAME values
+kernel	compatibility	include/reliefos/layout.h	frozen task 6 guest layout values
+kernel	compatibility	include/uapi/reliefos/rootfs.h	frozen task 6 rootfs paths
+kernel	compatibility	kernel/reliefnt/include/reliefnt/storage.h	legacy installer module path reference
+kernel	compatibility	tests/uapi/uapi_compat.c	checks old UAPI forwarding headers

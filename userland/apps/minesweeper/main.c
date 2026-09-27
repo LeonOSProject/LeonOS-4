@@ -1,11 +1,11 @@
-#include <leonos/gui.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/ui.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/ui.h>
+#include <reliefos/layout.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <stdint.h>
@@ -26,8 +26,8 @@
 #define MS_H (MS_BOARD_Y + MS_ROWS * MS_TILE + 18)
 #define MS_SPRITE_SIZE 20
 #define MS_SPRITE_BMP_MAX_BYTES (MS_SPRITE_SIZE * MS_SPRITE_SIZE * 4U + 128U)
-#define MS_MINE_SPRITE_PATH LEONOS_PATH_MINESWEEPER_MINE_BMP
-#define MS_FLAG_SPRITE_PATH LEONOS_PATH_MINESWEEPER_FLAG_BMP
+#define MS_MINE_SPRITE_PATH RELIEFOS_PATH_MINESWEEPER_MINE_BMP
+#define MS_FLAG_SPRITE_PATH RELIEFOS_PATH_MINESWEEPER_FLAG_BMP
 
 #define CELL_MINE 0x01u
 #define CELL_REVEALED 0x02u
@@ -187,14 +187,14 @@ static uint32_t color_for_number(uint8_t n)
     }
 }
 
-static void draw_center_text(struct leonos_ui_surface *ui, uint32_t x, uint32_t y,
+static void draw_center_text(struct reliefos_ui_surface *ui, uint32_t x, uint32_t y,
                              uint32_t w, uint32_t h, const char *text,
                              uint32_t fg, uint32_t bg)
 {
-    uint32_t tw = leonos_ui_text_width(text);
+    uint32_t tw = reliefos_ui_text_width(text);
     uint32_t tx = x + (w > tw ? (w - tw) / 2 : 0);
-    uint32_t ty = y + (h > LEONOS_FONT_H ? (h - LEONOS_FONT_H) / 2 : 0);
-    leonos_ui_text(ui, tx, ty, text, fg, bg);
+    uint32_t ty = y + (h > RELIEFOS_FONT_H ? (h - RELIEFOS_FONT_H) / 2 : 0);
+    reliefos_ui_text(ui, tx, ty, text, fg, bg);
 }
 
 static uint32_t rng_next(void)
@@ -349,7 +349,7 @@ static void toggle_flag(int x, int y)
     }
 }
 
-static void draw_sprite(struct leonos_ui_surface *ui,
+static void draw_sprite(struct reliefos_ui_surface *ui,
                         const struct minesweeper_sprite *sprite,
                         uint32_t x, uint32_t y)
 {
@@ -357,13 +357,13 @@ static void draw_sprite(struct leonos_ui_surface *ui,
         for (uint32_t xx = 0; xx < sprite->width; ++xx) {
             uint32_t argb = sprite->pixels[yy * MS_SPRITE_SIZE + xx];
             if (argb >> 24) {
-                leonos_ui_pixel(ui, x + xx, y + yy, argb & 0x00ffffffu);
+                reliefos_ui_pixel(ui, x + xx, y + yy, argb & 0x00ffffffu);
             }
         }
     }
 }
 
-static void draw_tile(struct leonos_ui_surface *ui, uint32_t gx, uint32_t gy)
+static void draw_tile(struct reliefos_ui_surface *ui, uint32_t gx, uint32_t gy)
 {
     uint32_t x = MS_BOARD_X + gx * MS_TILE;
     uint32_t y = MS_BOARD_Y + gy * MS_TILE;
@@ -371,7 +371,7 @@ static void draw_tile(struct leonos_ui_surface *ui, uint32_t gx, uint32_t gy)
     uint32_t inner = MS_TILE > MS_GAP ? MS_TILE - MS_GAP : MS_TILE;
     if (cell & CELL_REVEALED) {
         uint32_t fill = (cell & CELL_MINE) ? 0x00e8b0b0 : 0x00d8d8d8;
-        leonos_ui_inset(ui, x, y, inner, inner, fill);
+        reliefos_ui_inset(ui, x, y, inner, inner, fill);
         if (cell & CELL_MINE) {
             draw_sprite(ui, &mine_sprite, x + (inner - mine_sprite.width) / 2U,
                         y + (inner - mine_sprite.height) / 2U);
@@ -381,7 +381,7 @@ static void draw_tile(struct leonos_ui_surface *ui, uint32_t gx, uint32_t gy)
                              color_for_number(adjacent[gy][gx]), fill);
         }
     } else {
-        leonos_ui_bevel(ui, x, y, inner, inner, LEONOS_UI_GRAY, 0);
+        reliefos_ui_bevel(ui, x, y, inner, inner, RELIEFOS_UI_GRAY, 0);
         if (cell & CELL_FLAGGED) {
             draw_sprite(ui, &flag_sprite, x + (inner - flag_sprite.width) / 2U,
                         y + (inner - flag_sprite.height) / 2U);
@@ -389,14 +389,14 @@ static void draw_tile(struct leonos_ui_surface *ui, uint32_t gx, uint32_t gy)
     }
 }
 
-static void draw_game(struct leonos_ui_surface *ui)
+static void draw_game(struct reliefos_ui_surface *ui)
 {
     char mines_text[32];
     const char *status = T("Ready");
     int mines_left = (int)MS_MINES - (int)flagged_count;
-    leonos_ui_rect(ui, 0, 0, MS_W, MS_H, LEONOS_UI_LIGHT);
-    leonos_ui_text(ui, 18, 16, T("Minesweeper"), LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
-    leonos_ui_button(ui, MS_W - 88, 12, 70, LEONOS_UI_BUTTON_H, T("New Game"), 0);
+    reliefos_ui_rect(ui, 0, 0, MS_W, MS_H, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text(ui, 18, 16, T("Minesweeper"), RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_button(ui, MS_W - 88, 12, 70, RELIEFOS_UI_BUTTON_H, T("New Game"), 0);
     if (game_over) {
         status = won ? T("You won") : T("Boom");
     } else if (mines_placed) {
@@ -416,11 +416,11 @@ static void draw_game(struct leonos_ui_surface *ui)
         mines_text[p + 1] = (char)('0' + mines_left % 10);
         mines_text[p + 2] = 0;
     }
-    leonos_ui_text(ui, 18, 42, mines_text, LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
-    leonos_ui_text(ui, 130, 42, status, LEONOS_UI_DARK, LEONOS_UI_LIGHT);
-    leonos_ui_inset(ui, MS_BOARD_X - 4, MS_BOARD_Y - 4,
+    reliefos_ui_text(ui, 18, 42, mines_text, RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text(ui, 130, 42, status, RELIEFOS_UI_DARK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_inset(ui, MS_BOARD_X - 4, MS_BOARD_Y - 4,
                     MS_COLS * MS_TILE + 6, MS_ROWS * MS_TILE + 6,
-                    LEONOS_UI_GRAY);
+                    RELIEFOS_UI_GRAY);
     for (uint32_t y = 0; y < MS_ROWS; ++y) {
         for (uint32_t x = 0; x < MS_COLS; ++x) {
             draw_tile(ui, x, y);
@@ -443,10 +443,10 @@ static int board_pos(int32_t px, int32_t py, int *out_x, int *out_y)
 int main(void)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
 
     puts("[minesweeper.elf] starting");
@@ -454,28 +454,28 @@ int main(void)
         puts("[minesweeper.elf] required BMP assets unavailable");
         return 1;
     }
-    window_id = leonos_gui_create_app_window_ex(T("Minesweeper"), T("LeonOS Minesweeper"),
-                                                MS_W, MS_H, LEONOS_GUI_WINDOW_NO_RESIZE);
+    window_id = reliefos_gui_create_app_window_ex(T("Minesweeper"), T("LeonOS Minesweeper"),
+                                                MS_W, MS_H, RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[minesweeper.elf] create window failed=%d\n", window_id);
         return 1;
     }
-    leonos_ui_bind(&ui, pixels, MS_W, MS_H, MS_W);
+    reliefos_ui_bind(&ui, pixels, MS_W, MS_H, MS_W);
     reset_game();
     draw_game(&ui);
-    leonos_gui_present_window((uint32_t)window_id, MS_W, MS_H, MS_W, pixels);
+    reliefos_gui_present_window((uint32_t)window_id, MS_W, MS_H, MS_W, pixels);
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 break;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 3u)) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 3u)) {
                 int gx = 0;
                 int gy = 0;
                 if ((event.buttons & 1u) &&
                     hit_rect_i(event.x, event.y, MS_W - 88, 12, 70,
-                               (int32_t)LEONOS_UI_BUTTON_H)) {
+                               (int32_t)RELIEFOS_UI_BUTTON_H)) {
                     reset_game();
                 } else if (board_pos(event.x, event.y, &gx, &gy)) {
                     if (event.buttons & 2u) {
@@ -488,16 +488,16 @@ int main(void)
                     }
                 }
                 draw_game(&ui);
-                leonos_gui_present_window((uint32_t)window_id, MS_W, MS_H, MS_W, pixels);
-            } else if (event.type == LEONOS_GUI_APP_EVENT_RESIZE ||
-                       event.type == LEONOS_GUI_APP_EVENT_FOCUS) {
+                reliefos_gui_present_window((uint32_t)window_id, MS_W, MS_H, MS_W, pixels);
+            } else if (event.type == RELIEFOS_GUI_APP_EVENT_RESIZE ||
+                       event.type == RELIEFOS_GUI_APP_EVENT_FOCUS) {
                 draw_game(&ui);
-                leonos_gui_present_window((uint32_t)window_id, MS_W, MS_H, MS_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, MS_W, MS_H, MS_W, pixels);
             }
         } else {
             (void)poll(0, 0, 10);
         }
     }
-    leonos_gui_destroy_app_window((uint32_t)window_id);
+    reliefos_gui_destroy_app_window((uint32_t)window_id);
     return 0;
 }

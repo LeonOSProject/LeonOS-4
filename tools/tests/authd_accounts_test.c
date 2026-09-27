@@ -13,14 +13,14 @@ int main(void)
 {
     char directory[] = "/tmp/leonos-accounts-XXXXXX", path[256];
     assert(mkdtemp(directory));
-    struct leonos_auth_record records[2] = {0};
+    struct reliefos_auth_record records[2] = {0};
     records[0].user.uid = 0;
-    records[0].user.role = LEONOS_AUTH_ROLE_ADMIN;
+    records[0].user.role = RELIEFOS_AUTH_ROLE_ADMIN;
     strcpy(records[0].user.username, "root");
     strcpy(records[0].user.home, "/root");
     memset(records[0].password_hash, 'Z', sizeof(records[0].password_hash));
     records[1].user.uid = 1000;
-    records[1].user.role = LEONOS_AUTH_ROLE_USER;
+    records[1].user.role = RELIEFOS_AUTH_ROLE_USER;
     strcpy(records[1].user.username, "second-user");
     strcpy(records[1].user.home, "/home/second-user");
     assert(authd_export_accounts(directory, records, 2) == 0);

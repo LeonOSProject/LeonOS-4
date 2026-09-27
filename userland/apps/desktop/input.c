@@ -1,4 +1,4 @@
-#include <leonos/pam_session.h>
+#include <reliefos/pam_session.h>
 #include "desktop.h"
 #include <errno.h>
 #include <string.h>
@@ -38,7 +38,7 @@ void restore_window(uint8_t id)
 int handle_global_key(uint8_t keycode, uint8_t pressed)
 {
     char ch;
-    if (keycode == LEONOS_KEY_LEFT_SHIFT) {
+    if (keycode == RELIEFOS_KEY_LEFT_SHIFT) {
         desktop_left_shift_down = pressed;
         if (pressed && is_alt_down() && desktop_inputm_hotkey_is_alt_shift()) {
             desktop_inputm_cycle();
@@ -46,7 +46,7 @@ int handle_global_key(uint8_t keycode, uint8_t pressed)
         }
         return 0;
     }
-    if (keycode == LEONOS_KEY_RIGHT_SHIFT) {
+    if (keycode == RELIEFOS_KEY_RIGHT_SHIFT) {
         desktop_right_shift_down = pressed;
         if (pressed && is_alt_down() && desktop_inputm_hotkey_is_alt_shift()) {
             desktop_inputm_cycle();
@@ -54,26 +54,26 @@ int handle_global_key(uint8_t keycode, uint8_t pressed)
         }
         return 0;
     }
-    if (keycode == LEONOS_KEY_LEFT_ALT) {
+    if (keycode == RELIEFOS_KEY_LEFT_ALT) {
         alt_left_down = pressed;
         if (!pressed && !is_alt_down()) {
             alt_tab_commit();
         }
         return 1;
     }
-    if (keycode == LEONOS_KEY_RIGHT_ALT) {
+    if (keycode == RELIEFOS_KEY_RIGHT_ALT) {
         alt_right_down = pressed;
         if (!pressed && !is_alt_down()) {
             alt_tab_commit();
         }
         return 1;
     }
-    if (keycode == LEONOS_KEY_LEFT_WIN) {
+    if (keycode == RELIEFOS_KEY_LEFT_WIN) {
         if (pressed && !win_left_down && !win_right_down) {
-            win_down_ms = leonos_uptime_ms();
+            win_down_ms = reliefos_uptime_ms();
         }
         if (!pressed && win_left_down && !win_right_down && !win_combo_used &&
-            leonos_uptime_ms() - win_down_ms <= WIN_TAP_MAX_MS) {
+            reliefos_uptime_ms() - win_down_ms <= WIN_TAP_MAX_MS) {
             start_menu_toggle();
         }
         win_left_down = pressed;
@@ -83,12 +83,12 @@ int handle_global_key(uint8_t keycode, uint8_t pressed)
         }
         return 1;
     }
-    if (keycode == LEONOS_KEY_RIGHT_WIN) {
+    if (keycode == RELIEFOS_KEY_RIGHT_WIN) {
         if (pressed && !win_left_down && !win_right_down) {
-            win_down_ms = leonos_uptime_ms();
+            win_down_ms = reliefos_uptime_ms();
         }
         if (!pressed && win_right_down && !win_left_down && !win_combo_used &&
-            leonos_uptime_ms() - win_down_ms <= WIN_TAP_MAX_MS) {
+            reliefos_uptime_ms() - win_down_ms <= WIN_TAP_MAX_MS) {
             start_menu_toggle();
         }
         win_right_down = pressed;
@@ -99,7 +99,7 @@ int handle_global_key(uint8_t keycode, uint8_t pressed)
         return 1;
     }
     if (!desktop_inputm_hotkey_is_alt_shift() && is_win_down() &&
-        keycode == LEONOS_KEY_SPACE) {
+        keycode == RELIEFOS_KEY_SPACE) {
         win_combo_used = 1;
         if (pressed) {
             desktop_inputm_cycle();
@@ -109,7 +109,7 @@ int handle_global_key(uint8_t keycode, uint8_t pressed)
     if (!pressed) {
         return 0;
     }
-    if (keycode == LEONOS_KEY_TAB && is_alt_down()) {
+    if (keycode == RELIEFOS_KEY_TAB && is_alt_down()) {
         alt_tab_advance();
         return 1;
     }
@@ -214,7 +214,7 @@ void apply_snap_mode(uint8_t id, uint8_t snap_mode)
     full_redraw_pending = 1;
 }
 
-void open_app_window_from_msg(const struct leonos_gui_window_msg *msg)
+void open_app_window_from_msg(const struct reliefos_gui_window_msg *msg)
 {
     int existing;
     if (!msg) {
@@ -246,7 +246,7 @@ void open_app_window_from_msg(const struct leonos_gui_window_msg *msg)
             w->flags = msg->flags;
             clamp_window(w);
             if (old_body_w != window_body_width(w) || old_body_h != window_body_height(w)) {
-                send_app_event((uint8_t)existing, LEONOS_GUI_APP_EVENT_RESIZE,
+                send_app_event((uint8_t)existing, RELIEFOS_GUI_APP_EVENT_RESIZE,
                                0, 0, 0, 0, 0, 0, 0);
             }
             full_redraw_pending = 1;
@@ -266,7 +266,7 @@ void open_app_window_from_msg(const struct leonos_gui_window_msg *msg)
         uint8_t cursor_changed = 0;
         uint32_t old_cursor_style = desktop_cursor_style;
         uint8_t old_cursor_auto = desktop_cursor_auto;
-        if (msg->flags & LEONOS_GUI_CURSOR_REQUEST_POSITION) {
+        if (msg->flags & RELIEFOS_GUI_CURSOR_REQUEST_POSITION) {
             int32_t requested_x = (int32_t)msg->width;
             int32_t requested_y = (int32_t)msg->height;
             uint32_t old_cursor_x = cursor_x;
@@ -282,12 +282,12 @@ void open_app_window_from_msg(const struct leonos_gui_window_msg *msg)
             cursor_visible = 1;
             cursor_changed = old_cursor_x != cursor_x || old_cursor_y != cursor_y;
         }
-        if (msg->flags & LEONOS_GUI_CURSOR_REQUEST_AUTO) {
+        if (msg->flags & RELIEFOS_GUI_CURSOR_REQUEST_AUTO) {
             desktop_cursor_auto = 1;
-            desktop_cursor_style = LEONOS_GUI_CURSOR_ARROW;
+            desktop_cursor_style = RELIEFOS_GUI_CURSOR_ARROW;
             cursor_changed |= !old_cursor_auto || old_cursor_style != desktop_cursor_style;
-        } else if ((msg->flags & LEONOS_GUI_CURSOR_REQUEST_STYLE) &&
-                   msg->data < LEONOS_GUI_CURSOR_STYLE_COUNT) {
+        } else if ((msg->flags & RELIEFOS_GUI_CURSOR_REQUEST_STYLE) &&
+                   msg->data < RELIEFOS_GUI_CURSOR_STYLE_COUNT) {
             desktop_cursor_auto = 0;
             desktop_cursor_style = msg->data;
             cursor_changed |= old_cursor_auto || old_cursor_style != desktop_cursor_style;
@@ -297,11 +297,11 @@ void open_app_window_from_msg(const struct leonos_gui_window_msg *msg)
         }
         return;
     }
-    if (msg->type == LEONOS_GUI_WINDOW_MSG_CURSOR_REGION) {
+    if (msg->type == RELIEFOS_GUI_WINDOW_MSG_CURSOR_REGION) {
         existing = find_window_slot_by_window_id(msg->window_id);
         if (existing >= 0 &&
-            msg->cursor_operation >= LEONOS_GUI_CURSOR_REGION_SET &&
-            msg->cursor_operation <= LEONOS_GUI_CURSOR_REGION_CLEAR) {
+            msg->cursor_operation >= RELIEFOS_GUI_CURSOR_REGION_SET &&
+            msg->cursor_operation <= RELIEFOS_GUI_CURSOR_REGION_CLEAR) {
             struct desktop_window *w = &windows[existing];
             uint32_t index = DESKTOP_CURSOR_REGION_CAP;
             uint8_t region_changed = 0;
@@ -316,13 +316,13 @@ void open_app_window_from_msg(const struct leonos_gui_window_msg *msg)
                     index = i;
                 }
             }
-            if (msg->cursor_operation == LEONOS_GUI_CURSOR_REGION_CLEAR) {
+            if (msg->cursor_operation == RELIEFOS_GUI_CURSOR_REGION_CLEAR) {
                 for (uint32_t i = 0; i < DESKTOP_CURSOR_REGION_CAP; ++i) {
                     region_changed |= w->cursor_regions[i].used;
                     w->cursor_regions[i].used = 0;
                 }
             } else if (index < DESKTOP_CURSOR_REGION_CAP) {
-                if (msg->cursor_operation == LEONOS_GUI_CURSOR_REGION_REMOVE) {
+                if (msg->cursor_operation == RELIEFOS_GUI_CURSOR_REGION_REMOVE) {
                     region_changed = w->cursor_regions[index].used;
                     w->cursor_regions[index].used = 0;
                 } else {
@@ -378,8 +378,8 @@ void open_app_window_from_msg(const struct leonos_gui_window_msg *msg)
               msg->title[0] ? msg->title : T("Application"));
     copy_text(app_texts[slot], sizeof(app_texts[slot]),
               msg->text[0] ? msg->text : T("Application window"));
-    uint32_t fullscreen = (msg->flags & LEONOS_GUI_WINDOW_FULLSCREEN) != 0;
-    uint32_t borderless = (msg->flags & LEONOS_GUI_WINDOW_BORDERLESS) != 0;
+    uint32_t fullscreen = (msg->flags & RELIEFOS_GUI_WINDOW_FULLSCREEN) != 0;
+    uint32_t borderless = (msg->flags & RELIEFOS_GUI_WINDOW_BORDERLESS) != 0;
     uint32_t width = fullscreen || borderless ? msg->width : msg->width + 16;
     uint32_t height = fullscreen || borderless ? msg->height : msg->height + TITLEBAR_H + 18;
     if (fullscreen) {
@@ -421,8 +421,8 @@ void open_app_window_from_msg(const struct leonos_gui_window_msg *msg)
     bring_to_front(slot);
     begin_window_open_animation(slot);
     send_app_event(slot, 4, 0, 0, 0, 0, 0, 0, 0);
-    send_app_event(slot, LEONOS_GUI_APP_EVENT_THEME_CHANGED,
-                   (int32_t)leonos_ui_theme(),
+    send_app_event(slot, RELIEFOS_GUI_APP_EVENT_THEME_CHANGED,
+                   (int32_t)reliefos_ui_theme(),
                    (int32_t)desktop_metro_color_scheme,
                    (int32_t)desktop_win95_color_scheme,
                    0, 0, 0, 0);
@@ -436,7 +436,7 @@ int spawn_program_path(const char *path)
     int pid;
     argv[0] = (char *)path;
     argv[1] = 0;
-    pid = leonos_launch_argv(argv);
+    pid = reliefos_launch_argv(argv);
     printf("[desktop.elf] spawn %s pid=%d\n", path, pid);
     return pid;
 }
@@ -445,10 +445,10 @@ int spawn_help_path(const char *path)
 {
     char *argv[3];
     int pid;
-    argv[0] = (char *)leonos_launch_builtin_path("oshlp");
+    argv[0] = (char *)reliefos_launch_builtin_path("oshlp");
     argv[1] = (char *)path;
     argv[2] = 0;
-    pid = leonos_spawn_argv(argv[0], argv);
+    pid = reliefos_spawn_argv(argv[0], argv);
     printf("[desktop.elf] spawn help %s pid=%d\n", path ? path : "", pid);
     return pid;
 }
@@ -456,21 +456,21 @@ int spawn_help_path(const char *path)
 
 int desktop_session_logged_in(void)
 {
-    struct leonos_user_info user;
-    user = (struct leonos_user_info){0};
-    return leonos_session_current(&user) == 0;
+    struct reliefos_user_info user;
+    user = (struct reliefos_user_info){0};
+    return reliefos_session_current(&user) == 0;
 }
 
 static int login_process_alive(void)
 {
-    struct leonos_task_info tasks[LEONOS_TASK_MAX];
+    struct reliefos_task_info tasks[RELIEFOS_TASK_MAX];
     uint64_t tick;
     unsigned long now;
     int count;
     if (!login_spawn_pid) {
         return 0;
     }
-    count = leonos_task_snapshot(tasks, LEONOS_TASK_MAX, &tick);
+    count = reliefos_task_snapshot(tasks, RELIEFOS_TASK_MAX, &tick);
     if (count < 0) {
         return 1;
     }
@@ -481,7 +481,7 @@ static int login_process_alive(void)
     }
     /* The child can run before it is published in a task snapshot.  Do not
      * interpret that short handoff as a failed login launch. */
-    now = leonos_uptime_ms();
+    now = reliefos_uptime_ms();
     if (now - login_last_spawn_ms < LOGIN_STARTUP_GRACE_MS) {
         return 1;
     }
@@ -494,12 +494,12 @@ static int spawn_graphical_login(void)
     /* A graphical session has a controlling VT too. Explicitly select the
      * windowed login so it cannot steal that VT through the getty path. */
     char *argv[] = {"login", "--graphical-login", NULL};
-    return leonos_launch_argv(argv);
+    return reliefos_launch_argv(argv);
 }
 
 void maybe_launch_login(void)
 {
-    struct leonos_auth_status status;
+    struct reliefos_auth_status status;
     if (desktop_session_logged_in()) {
         login_lock_active = 0;
         login_spawn_pid = 0;
@@ -515,13 +515,13 @@ void maybe_launch_login(void)
      * keep the screen locked even if account lookup or PAM initialization fails. */
     struct stat installed;
     if (lstat("/etc/leonos/installed", &installed) < 0 && errno == ENOENT) return;
-    status = (struct leonos_auth_status){0};
-    (void)leonos_auth_status(&status);
+    status = (struct reliefos_auth_status){0};
+    (void)reliefos_auth_status(&status);
     login_lock_active = 1;
     if (login_window_slot() >= 0 || login_process_alive()) {
         return;
     }
-    login_last_spawn_ms = leonos_uptime_ms();
+    login_last_spawn_ms = reliefos_uptime_ms();
     {
         int pid = spawn_graphical_login();
         login_spawn_pid = pid > 0 ? (uint32_t)pid : 0;
@@ -534,7 +534,7 @@ int window_is_login(const struct desktop_window *w)
            text_eq(w->app_text, LOGIN_WINDOW_TEXT);
 }
 
-int window_msg_is_login(const struct leonos_gui_window_msg *msg)
+int window_msg_is_login(const struct reliefos_gui_window_msg *msg)
 {
     return msg && text_eq(msg->title, LOGIN_WINDOW_TITLE) &&
            text_eq(msg->text, LOGIN_WINDOW_TEXT);
@@ -582,7 +582,7 @@ void login_lock_update(void)
     if (login_process_alive()) {
         return;
     }
-    now = leonos_uptime_ms();
+    now = reliefos_uptime_ms();
     if (now - login_last_spawn_ms >= LOGIN_RESPAWN_MS) {
         login_last_spawn_ms = now;
         {
@@ -595,11 +595,11 @@ void login_lock_update(void)
 void login_lock_on_window_removed(uint8_t slot)
 {
     if (login_lock_active && slot < MAX_WINDOWS && window_is_login(&windows[slot])) {
-        login_last_spawn_ms = leonos_uptime_ms();
+        login_last_spawn_ms = reliefos_uptime_ms();
     }
 }
 
-int login_lock_blocks_window_msg(const struct leonos_gui_window_msg *msg)
+int login_lock_blocks_window_msg(const struct reliefos_gui_window_msg *msg)
 {
     return login_lock_active && !window_msg_is_login(msg) &&
            !(msg && text_eq(msg->title, "Application Page Fault"));
@@ -646,7 +646,7 @@ static void desktop_power_begin(uint8_t action)
     }
     if (!pid) {
         int result = action == POWER_CONFIRM_REBOOT
-            ? leonos_system_reboot() : leonos_system_shutdown();
+            ? reliefos_system_reboot() : reliefos_system_shutdown();
         int error = errno;
         _exit(result < 0 ? (error > 0 && error < 126 ? error : EIO) : 0);
     }
@@ -737,7 +737,7 @@ static void desktop_lifecycle_finish(void)
     if (action != POWER_CONFIRM_LOGOUT) {
         return;
     }
-    leonos_auth_logout();
+    reliefos_auth_logout();
     desktop_load_appearance_config();
     desktop_inputm_load_config();
     desktop_items_clear();
@@ -755,8 +755,8 @@ static void desktop_lifecycle_finish(void)
 
 void desktop_lifecycle_begin(uint8_t action)
 {
-    struct leonos_task_info tasks[LEONOS_TASK_MAX];
-    struct leonos_user_info user;
+    struct reliefos_task_info tasks[RELIEFOS_TASK_MAX];
+    struct reliefos_user_info user;
     uint64_t tick;
     int count;
     uint32_t session_id = 0;
@@ -768,19 +768,19 @@ void desktop_lifecycle_begin(uint8_t action)
     if (desktop_lifecycle_state != DESKTOP_LIFECYCLE_IDLE || power_worker_action) {
         return;
     }
-    user = (struct leonos_user_info){0};
-    if (leonos_auth_current(&user) == 0) {
+    user = (struct reliefos_user_info){0};
+    if (reliefos_auth_current(&user) == 0) {
         uid = user.uid;
     }
-    count = leonos_task_snapshot(tasks, LEONOS_TASK_MAX, &tick);
+    count = reliefos_task_snapshot(tasks, RELIEFOS_TASK_MAX, &tick);
     if (count < 0) {
         printf("[desktop.elf] lifecycle task snapshot failed ret=%d\n", count);
         power_confirm_action = action;
         full_redraw_pending = 1;
         return;
     }
-    if (count > (int)LEONOS_TASK_MAX) {
-        count = (int)LEONOS_TASK_MAX;
+    if (count > (int)RELIEFOS_TASK_MAX) {
+        count = (int)RELIEFOS_TASK_MAX;
     }
     for (int i = 0; i < count; ++i) {
         if (tasks[i].pid == (uint32_t)getpid()) {
@@ -794,7 +794,7 @@ void desktop_lifecycle_begin(uint8_t action)
     desktop_lifecycle_reset();
     desktop_lifecycle_action = action;
     for (int i = 0; i < count && desktop_lifecycle_target_count < DESKTOP_LIFECYCLE_MAX_TARGETS; ++i) {
-        const struct leonos_task_info *task = &tasks[i];
+        const struct reliefos_task_info *task = &tasks[i];
         if (!task->pid || task->pid == (uint32_t)getpid() ||
             task->kind != 1U || task->state == 3U ||
             (task->flags & DESKTOP_TASK_FLAG_SERVICE) ||
@@ -806,7 +806,7 @@ void desktop_lifecycle_begin(uint8_t action)
     }
     desktop_lifecycle_remaining_count = desktop_lifecycle_target_count;
     desktop_lifecycle_state = DESKTOP_LIFECYCLE_WAITING;
-    desktop_lifecycle_started_ms = leonos_uptime_ms();
+    desktop_lifecycle_started_ms = reliefos_uptime_ms();
     power_confirm_action = POWER_CONFIRM_NONE;
     start_menu_set_open(0);
     for (uint32_t i = 0; i < desktop_lifecycle_target_count; ++i) {
@@ -822,7 +822,7 @@ void desktop_lifecycle_update(void)
 {
     desktop_power_update();
     static unsigned long last_poll_ms;
-    struct leonos_task_info tasks[LEONOS_TASK_MAX];
+    struct reliefos_task_info tasks[RELIEFOS_TASK_MAX];
     uint64_t tick;
     unsigned long now;
     int count;
@@ -830,12 +830,12 @@ void desktop_lifecycle_update(void)
     if (desktop_lifecycle_state == DESKTOP_LIFECYCLE_IDLE) {
         return;
     }
-    now = leonos_uptime_ms();
+    now = reliefos_uptime_ms();
     if (now - last_poll_ms < DESKTOP_LIFECYCLE_POLL_MS) {
         return;
     }
     last_poll_ms = now;
-    count = leonos_task_snapshot(tasks, LEONOS_TASK_MAX, &tick);
+    count = reliefos_task_snapshot(tasks, RELIEFOS_TASK_MAX, &tick);
     if (count < 0) {
         /* Keep the shutdown gate active when the task service is temporarily
          * unavailable; treating an error as an empty snapshot would bypass
@@ -847,8 +847,8 @@ void desktop_lifecycle_update(void)
         }
         return;
     }
-    if (count > (int)LEONOS_TASK_MAX) {
-        count = (int)LEONOS_TASK_MAX;
+    if (count > (int)RELIEFOS_TASK_MAX) {
+        count = (int)RELIEFOS_TASK_MAX;
     }
     for (uint32_t i = 0; i < desktop_lifecycle_target_count; ++i) {
         uint8_t alive = 0;
@@ -886,7 +886,7 @@ static void desktop_lifecycle_force(void)
     }
     desktop_lifecycle_force_requested = 1;
     desktop_lifecycle_state = DESKTOP_LIFECYCLE_WAITING;
-    desktop_lifecycle_started_ms = leonos_uptime_ms();
+    desktop_lifecycle_started_ms = reliefos_uptime_ms();
     full_redraw_pending = 1;
 }
 
@@ -896,11 +896,11 @@ int desktop_lifecycle_handle_key(uint8_t keycode, uint8_t pressed)
         if (!pressed) {
             return 1;
         }
-        if (keycode == LEONOS_KEY_ENTER) {
+        if (keycode == RELIEFOS_KEY_ENTER) {
             uint8_t action = power_confirm_action;
             power_confirm_action = POWER_CONFIRM_NONE;
             desktop_lifecycle_begin(action);
-        } else if (keycode == LEONOS_KEY_ESCAPE) {
+        } else if (keycode == RELIEFOS_KEY_ESCAPE) {
             power_confirm_action = POWER_CONFIRM_NONE;
             full_redraw_pending = 1;
         }
@@ -913,9 +913,9 @@ int desktop_lifecycle_handle_key(uint8_t keycode, uint8_t pressed)
         return 1;
     }
     if (desktop_lifecycle_state == DESKTOP_LIFECYCLE_FORCE_PROMPT) {
-        if (keycode == LEONOS_KEY_ENTER) {
+        if (keycode == RELIEFOS_KEY_ENTER) {
             desktop_lifecycle_force();
-        } else if (keycode == LEONOS_KEY_ESCAPE) {
+        } else if (keycode == RELIEFOS_KEY_ESCAPE) {
             desktop_lifecycle_reset();
             full_redraw_pending = 1;
         }
@@ -939,7 +939,7 @@ void desktop_launch_startup_apps(void)
     }
     desktop_startup_launched = 1;
     if (pid == 0) {
-        int result = leonos_startup_launch_current_user();
+        int result = reliefos_startup_launch_current_user();
         printf("[desktop.elf] user startup request result=%d\n", result);
         _exit(result < 0 ? 1 : 0);
     }
@@ -967,12 +967,12 @@ int desktop_handle_power_confirm_click(uint32_t x, uint32_t y)
     uint8_t action = power_confirm_action;
     if (desktop_lifecycle_state == DESKTOP_LIFECYCLE_FORCE_PROMPT) {
         if (hit_rect(x, y, (int)dialog_x + W - 188, (int)dialog_y + H - 38,
-                     84, LEONOS_UI_BUTTON_H)) {
+                     84, RELIEFOS_UI_BUTTON_H)) {
             desktop_lifecycle_force();
             return 1;
         }
         if (hit_rect(x, y, (int)dialog_x + W - 96, (int)dialog_y + H - 38,
-                     72, LEONOS_UI_BUTTON_H) ||
+                     72, RELIEFOS_UI_BUTTON_H) ||
             !hit_rect(x, y, (int)dialog_x, (int)dialog_y, W, H)) {
             desktop_lifecycle_reset();
             full_redraw_pending = 1;
@@ -986,14 +986,14 @@ int desktop_handle_power_confirm_click(uint32_t x, uint32_t y)
         return 0;
     }
     if (hit_rect(x, y, (int)dialog_x + W - 188, (int)dialog_y + H - 38,
-                 84, LEONOS_UI_BUTTON_H)) {
+                 84, RELIEFOS_UI_BUTTON_H)) {
         power_confirm_action = POWER_CONFIRM_NONE;
         full_redraw_pending = 1;
         desktop_lifecycle_begin(action);
         return 1;
     }
     if (hit_rect(x, y, (int)dialog_x + W - 96, (int)dialog_y + H - 38,
-                 72, LEONOS_UI_BUTTON_H) ||
+                 72, RELIEFOS_UI_BUTTON_H) ||
         !hit_rect(x, y, (int)dialog_x, (int)dialog_y, W, H)) {
         power_confirm_action = POWER_CONFIRM_NONE;
         full_redraw_pending = 1;
@@ -1039,7 +1039,7 @@ int handle_taskbar_click(uint32_t x, uint32_t y)
                               (desktop_service_rtc_clock ? TASKBAR_CLOCK_W : 0U) -
                               TASKBAR_NET_W;
         if (hit_rect(x, y, (int)network_x + 4, (int)tb_y + 5,
-                     TASKBAR_NET_W - 6, LEONOS_UI_BUTTON_H)) {
+                     TASKBAR_NET_W - 6, RELIEFOS_UI_BUTTON_H)) {
             spawn_program_path("netctl");
             start_menu_set_open(0);
             return 1;
@@ -1049,7 +1049,7 @@ int handle_taskbar_click(uint32_t x, uint32_t y)
     uint32_t button_w = taskbar_button_width(running_window_count());
     for (uint8_t i = 0; i < MAX_WINDOWS; ++i) {
         if (windows[i].visible &&
-            (windows[i].flags & LEONOS_GUI_WINDOW_HIDE_TASKBAR) == 0 &&
+            (windows[i].flags & RELIEFOS_GUI_WINDOW_HIDE_TASKBAR) == 0 &&
             button_w > 0) {
             uint32_t hit_w = button_w > 8 ? button_w - 8 : button_w;
             if (hit_rect(x, y, (int)bx, (int)tb_y + 5, hit_w, 24)) {
@@ -1072,14 +1072,14 @@ static uint32_t desktop_taskbar_cursor_style(uint32_t x, uint32_t y)
 {
     uint32_t tb_y = taskbar_y();
     if (!desktop_taskbar_visible || y < tb_y || y >= tb_y + TASKBAR_H) {
-        return LEONOS_GUI_CURSOR_ARROW;
+        return RELIEFOS_GUI_CURSOR_ARROW;
     }
     (void)x;
     /* Application buttons are handled by the desktop, not by GUI cursor
      * regions. Keep the regular arrow here: the hand cursor path performs a
      * much more expensive software cursor composition on every motion sample
      * and is unnecessary for a panel that has no hover state. */
-    return LEONOS_GUI_CURSOR_ARROW;
+    return RELIEFOS_GUI_CURSOR_ARROW;
 }
 
 void update_snap_preview(uint32_t x, uint32_t y)
@@ -1110,16 +1110,16 @@ uint32_t desktop_cursor_style_for_pointer(uint32_t x, uint32_t y)
     }
     if (drag_window >= 0) {
         if (drag_mode == DRAG_MOVE) {
-            return LEONOS_GUI_CURSOR_MOVE;
+            return RELIEFOS_GUI_CURSOR_MOVE;
         }
         if (drag_mode == DRAG_RESIZE) {
             w = &windows[drag_window];
             resize_edge_x = (int)x >= w->x + (int)w->width - 20;
             resize_edge_y = (int)y >= w->y + (int)w->height - 20;
             if (resize_edge_x && resize_edge_y) {
-                return LEONOS_GUI_CURSOR_SIZE_NWSE;
+                return RELIEFOS_GUI_CURSOR_SIZE_NWSE;
             }
-            return resize_edge_x ? LEONOS_GUI_CURSOR_SIZE_WE : LEONOS_GUI_CURSOR_SIZE_NS;
+            return resize_edge_x ? RELIEFOS_GUI_CURSOR_SIZE_WE : RELIEFOS_GUI_CURSOR_SIZE_NS;
         }
     }
     if (power_confirm_action || desktop_lifecycle_state != DESKTOP_LIFECYCLE_IDLE) {
@@ -1127,12 +1127,12 @@ uint32_t desktop_cursor_style_for_pointer(uint32_t x, uint32_t y)
         uint32_t dialog_x = fb_w() > dialog_w ? (fb_w() - dialog_w) / 2 : 0;
         uint32_t dialog_y = fb_h() > dialog_h ? (fb_h() - dialog_h) / 2 : 0;
         if (hit_rect(x, y, (int)dialog_x + dialog_w - 188,
-                     (int)dialog_y + dialog_h - 38, 84, LEONOS_UI_BUTTON_H) ||
+                     (int)dialog_y + dialog_h - 38, 84, RELIEFOS_UI_BUTTON_H) ||
             hit_rect(x, y, (int)dialog_x + dialog_w - 96,
-                     (int)dialog_y + dialog_h - 38, 72, LEONOS_UI_BUTTON_H)) {
-            return LEONOS_GUI_CURSOR_HAND;
+                     (int)dialog_y + dialog_h - 38, 72, RELIEFOS_UI_BUTTON_H)) {
+            return RELIEFOS_GUI_CURSOR_HAND;
         }
-        return LEONOS_GUI_CURSOR_NO;
+        return RELIEFOS_GUI_CURSOR_NO;
     }
     if (desktop_message_active) {
         enum { dialog_w = DESKTOP_MESSAGE_W, dialog_h = DESKTOP_MESSAGE_H };
@@ -1140,9 +1140,9 @@ uint32_t desktop_cursor_style_for_pointer(uint32_t x, uint32_t y)
         uint32_t dialog_y = fb_h() > dialog_h ? (fb_h() - dialog_h) / 2 : 0;
         return hit_rect(x, y, (int)dialog_x + dialog_w / 2 - 36,
                         (int)dialog_y + dialog_h - 38,
-                        72, LEONOS_UI_BUTTON_H)
-                   ? LEONOS_GUI_CURSOR_HAND
-                   : LEONOS_GUI_CURSOR_NO;
+                        72, RELIEFOS_UI_BUTTON_H)
+                   ? RELIEFOS_GUI_CURSOR_HAND
+                   : RELIEFOS_GUI_CURSOR_NO;
     }
     if (desktop_shortcut_input_active) {
         uint32_t dialog_x = fb_w() > DESKTOP_SHORTCUT_INPUT_W
@@ -1156,21 +1156,21 @@ uint32_t desktop_cursor_style_for_pointer(uint32_t x, uint32_t y)
                                : DESKTOP_SHORTCUT_INPUT_W;
         if (hit_rect(x, y, (int)dialog_x + 20, (int)dialog_y + 72,
                      input_w, 24)) {
-            return LEONOS_GUI_CURSOR_TEXT;
+            return RELIEFOS_GUI_CURSOR_TEXT;
         }
         if (hit_rect(x, y, (int)dialog_x + DESKTOP_SHORTCUT_INPUT_W - 168,
                      (int)dialog_y + DESKTOP_SHORTCUT_INPUT_H - 38,
-                     72, LEONOS_UI_BUTTON_H) ||
+                     72, RELIEFOS_UI_BUTTON_H) ||
             hit_rect(x, y, (int)dialog_x + DESKTOP_SHORTCUT_INPUT_W - 88,
                      (int)dialog_y + DESKTOP_SHORTCUT_INPUT_H - 38,
-                     72, LEONOS_UI_BUTTON_H)) {
-            return LEONOS_GUI_CURSOR_HAND;
+                     72, RELIEFOS_UI_BUTTON_H)) {
+            return RELIEFOS_GUI_CURSOR_HAND;
         }
-        return LEONOS_GUI_CURSOR_NO;
+        return RELIEFOS_GUI_CURSOR_NO;
     }
     if (desktop_inputm_menu_open) {
         uint32_t inputm_style = desktop_inputm_cursor_style(x, y);
-        if (inputm_style != LEONOS_GUI_CURSOR_ARROW || y < taskbar_y()) {
+        if (inputm_style != RELIEFOS_GUI_CURSOR_ARROW || y < taskbar_y()) {
             return inputm_style;
         }
     }
@@ -1180,40 +1180,40 @@ uint32_t desktop_cursor_style_for_pointer(uint32_t x, uint32_t y)
         }
         if (desktop_taskbar_visible && y >= taskbar_y()) {
             uint32_t inputm_style = desktop_inputm_cursor_style(x, y);
-            if (inputm_style != LEONOS_GUI_CURSOR_ARROW) {
+            if (inputm_style != RELIEFOS_GUI_CURSOR_ARROW) {
                 return inputm_style;
             }
             return desktop_taskbar_cursor_style(x, y);
         }
-        return LEONOS_GUI_CURSOR_ARROW;
+        return RELIEFOS_GUI_CURSOR_ARROW;
     }
     if (desktop_context_menu_active || desktop_context_menu_animating) {
         if (desktop_context_menu_animating) {
-            return LEONOS_GUI_CURSOR_ARROW;
+            return RELIEFOS_GUI_CURSOR_ARROW;
         }
-        uint32_t row_h = LEONOS_FONT_H + 8U;
-        uint32_t menu_h = leonos_ui_context_menu_height(DESKTOP_CONTEXT_MENU_COUNT);
+        uint32_t row_h = RELIEFOS_FONT_H + 8U;
+        uint32_t menu_h = reliefos_ui_context_menu_height(DESKTOP_CONTEXT_MENU_COUNT);
         if (!hit_rect(x, y, (int)desktop_context_menu_x,
                       (int)desktop_context_menu_y, DESKTOP_CONTEXT_MENU_W, menu_h)) {
-            return LEONOS_GUI_CURSOR_ARROW;
+            return RELIEFOS_GUI_CURSOR_ARROW;
         }
         if (y < desktop_context_menu_y + 4U) {
-            return LEONOS_GUI_CURSOR_ARROW;
+            return RELIEFOS_GUI_CURSOR_ARROW;
         }
         uint32_t index = (y - desktop_context_menu_y - 4U) / row_h;
-        return index < DESKTOP_CONTEXT_MENU_COUNT ? LEONOS_GUI_CURSOR_HAND
-                                                  : LEONOS_GUI_CURSOR_ARROW;
+        return index < DESKTOP_CONTEXT_MENU_COUNT ? RELIEFOS_GUI_CURSOR_HAND
+                                                  : RELIEFOS_GUI_CURSOR_ARROW;
     }
     if (desktop_taskbar_visible && y >= taskbar_y()) {
         uint32_t inputm_style = desktop_inputm_cursor_style(x, y);
-        if (inputm_style != LEONOS_GUI_CURSOR_ARROW) {
+        if (inputm_style != RELIEFOS_GUI_CURSOR_ARROW) {
             return inputm_style;
         }
         return desktop_taskbar_cursor_style(x, y);
     }
     id = hit_window(x, y);
     if (id < BUILTIN_WINDOWS || id >= MAX_WINDOWS) {
-        return LEONOS_GUI_CURSOR_ARROW;
+        return RELIEFOS_GUI_CURSOR_ARROW;
     }
     w = &windows[id];
     resizable = window_allows_resize(w);
@@ -1223,17 +1223,17 @@ uint32_t desktop_cursor_style_for_pointer(uint32_t x, uint32_t y)
         if (hit_rect(x, y, resizable ? bx : bx + 20, by, 18, 20) ||
             (resizable && hit_rect(x, y, bx + 20, by, 18, 20)) ||
             hit_rect(x, y, bx + 40, by, 18, 20)) {
-            return LEONOS_GUI_CURSOR_HAND;
+            return RELIEFOS_GUI_CURSOR_HAND;
         }
         if (window_allows_resize(w) &&
             !w->maximized &&
             hit_rect(x, y, w->x + (int)w->width - 18,
                      w->y + (int)w->height - 18, 18, 18)) {
-            return LEONOS_GUI_CURSOR_SIZE_NWSE;
+            return RELIEFOS_GUI_CURSOR_SIZE_NWSE;
         }
         if (hit_rect(x, y, w->x + 4, w->y + 4,
                      w->width > 8 ? w->width - 8 : 0, TITLEBAR_H)) {
-            return LEONOS_GUI_CURSOR_MOVE;
+            return RELIEFOS_GUI_CURSOR_MOVE;
         }
     }
     {
@@ -1245,22 +1245,22 @@ uint32_t desktop_cursor_style_for_pointer(uint32_t x, uint32_t y)
         client_x = (int)x - origin_x;
         client_y = (int)y - origin_y;
         if (client_x < 0 || client_y < 0) {
-            return LEONOS_GUI_CURSOR_ARROW;
+            return RELIEFOS_GUI_CURSOR_ARROW;
         }
         for (int i = DESKTOP_CURSOR_REGION_CAP - 1; i >= 0; --i) {
             struct desktop_cursor_region *region = &w->cursor_regions[i];
             if (region->used && hit_rect((uint32_t)client_x, (uint32_t)client_y,
                                          region->x, region->y,
                                          region->width, region->height)) {
-                if (region->flags & LEONOS_GUI_CURSOR_REGION_DISABLED) {
-                    return LEONOS_GUI_CURSOR_NO;
+                if (region->flags & RELIEFOS_GUI_CURSOR_REGION_DISABLED) {
+                    return RELIEFOS_GUI_CURSOR_NO;
                 }
-                return region->style < LEONOS_GUI_CURSOR_STYLE_COUNT
-                           ? region->style : LEONOS_GUI_CURSOR_ARROW;
+                return region->style < RELIEFOS_GUI_CURSOR_STYLE_COUNT
+                           ? region->style : RELIEFOS_GUI_CURSOR_ARROW;
             }
         }
     }
-    return LEONOS_GUI_CURSOR_ARROW;
+    return RELIEFOS_GUI_CURSOR_ARROW;
 }
 
 static int rect_same(struct rect a, struct rect b)
@@ -1523,7 +1523,7 @@ void handle_mouse(uint32_t x, uint32_t y, uint8_t buttons)
                 } else if (!window_is_fullscreen(w) && !window_is_borderless(w) &&
                            hit_rect(x, y, w->x + 4, w->y + 4,
                                     w->width > 8 ? w->width - 8 : 0, TITLEBAR_H)) {
-                    unsigned long now = leonos_uptime_ms();
+                    unsigned long now = reliefos_uptime_ms();
                     if (resizable &&
                         last_title_click_valid &&
                         last_title_click_window == (uint8_t)id &&
@@ -1589,7 +1589,7 @@ void handle_mouse_wheel(uint32_t x, uint32_t y, int32_t wheel, uint8_t buttons)
     }
     if (active_window_is_fullscreen() &&
         windows[active_window].window_id) {
-        send_app_event((uint8_t)active_window, LEONOS_GUI_APP_EVENT_MOUSE_WHEEL,
+        send_app_event((uint8_t)active_window, RELIEFOS_GUI_APP_EVENT_MOUSE_WHEEL,
                        (int32_t)x, (int32_t)y, 0, wheel, buttons, 0, 0);
         return;
     }
@@ -1609,7 +1609,7 @@ void handle_mouse_wheel(uint32_t x, uint32_t y, int32_t wheel, uint8_t buttons)
         int client_x = (int)x - origin_x;
         int client_y = (int)y - origin_y;
         if (client_x >= 0 && client_y >= 0) {
-            send_app_event((uint8_t)hover_id, LEONOS_GUI_APP_EVENT_MOUSE_WHEEL,
+            send_app_event((uint8_t)hover_id, RELIEFOS_GUI_APP_EVENT_MOUSE_WHEEL,
                            client_x, client_y, 0, wheel, buttons, 0, 0);
         }
     }

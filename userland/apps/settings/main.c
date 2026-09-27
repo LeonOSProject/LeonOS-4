@@ -1,24 +1,24 @@
-#include <leonos/openrc.h>
+#include <reliefos/openrc.h>
 #include <pwd.h>
 #include <unistd.h>
-#include <leonos/auth.h>
-#include <leonos/app.h>
-#include <leonos/fs.h>
-#include <leonos/gui.h>
+#include <reliefos/auth.h>
+#include <reliefos/app.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include "../locale_settings.h"
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/environment.h>
-#include <leonos/text_input.h>
-#include <leonos/launch.h>
-#include <leonos/license.h>
-#include <leonos/psf_font.h>
-#include <leonos/startup.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
+#include <reliefos/environment.h>
+#include <reliefos/text_input.h>
+#include <reliefos/launch.h>
+#include <reliefos/license.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/startup.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
+#include <reliefos/layout.h>
 
 #define SETTINGS_W 720
 #define SETTINGS_H 470
@@ -32,10 +32,10 @@
 #define SETTINGS_WALLPAPER_MAX_W 1280U
 #define SETTINGS_WALLPAPER_MAX_H 720U
 #define SETTINGS_WALLPAPER_BMP_MAX_BYTES (SETTINGS_WALLPAPER_MAX_W * SETTINGS_WALLPAPER_MAX_H * 4U + 128U)
-#define SETTINGS_DEFAULT_WALLPAPER_PATH LEONOS_PATH_WALLPAPER_BMP
+#define SETTINGS_DEFAULT_WALLPAPER_PATH RELIEFOS_PATH_WALLPAPER_BMP
 #define SETTINGS_TAB_Y 14
 #define SETTINGS_BODY_Y 44
-#define SETTINGS_SERVICES_PATH LEONOS_PATH_TASKBAR_CFG
+#define SETTINGS_SERVICES_PATH RELIEFOS_PATH_TASKBAR_CFG
 #define SETTINGS_SERVICES_CONFIG_MAX 512U
 #define SETTINGS_INPUTM_CONFIG_MAX 2048U
 #define SETTINGS_INPUTM_ROWS (TEXT_INPUT_MAX_PROVIDERS + 1U)
@@ -70,26 +70,26 @@ enum {
 };
 
 static uint32_t pixels[SETTINGS_W * SETTINGS_H];
-static struct leonos_display_state display_state;
-static struct leonos_fb_capabilities framebuffer_caps;
-static struct leonos_appearance_state appearance_state;
-static struct leonos_user_info current_user;
-static struct leonos_user_info *users;
+static struct reliefos_display_state display_state;
+static struct reliefos_fb_capabilities framebuffer_caps;
+static struct reliefos_appearance_state appearance_state;
+static struct reliefos_user_info current_user;
+static struct reliefos_user_info *users;
 static uint32_t user_scroll;
 static uint32_t user_count;
 static uint32_t selected_user;
 static uint8_t active_page;
 static uint8_t active_drop;
-static struct leonos_ui_tab_state settings_tabs;
+static struct reliefos_ui_tab_state settings_tabs;
 static char status_text[160] = "Ready";
 static char ntp_runtime_state[16] = "unknown";
 static char ntp_runtime_detail[96] = "runtime state unavailable";
 
 struct settings_inputm_entry {
     char id[TEXT_INPUT_ID_LEN];
-    char path[LEONOS_FS_PATH_LEN];
-    char settings_path[LEONOS_FS_PATH_LEN];
-    char settings_app[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
+    char settings_path[RELIEFOS_FS_PATH_LEN];
+    char settings_app[RELIEFOS_FS_PATH_LEN];
     uint32_t config_index;
     uint32_t startup_mode;
     uint32_t order;
@@ -146,7 +146,7 @@ static const struct assoc_row assoc_rows[SETTINGS_ASSOC_ROWS] = {
 /* Open-with buttons are populated from the application registry.  The UI has
  * four compact slots, while the registry may contain more handlers. */
 #define SETTINGS_ASSOC_CANDIDATE_MAX 4U
-static struct leonos_app_info settings_assoc_apps[LEONOS_APP_REGISTRY_MAX];
+static struct reliefos_app_info settings_assoc_apps[RELIEFOS_APP_REGISTRY_MAX];
 static uint32_t settings_assoc_app_count;
 static uint8_t settings_assoc_apps_loaded;
 static const uint32_t settings_assoc_button_x[SETTINGS_ASSOC_CANDIDATE_MAX] = {
@@ -270,17 +270,17 @@ static int32_t settings_read_le32s(const uint8_t *p)
 static const char *theme_color_label(uint32_t scheme)
 {
     switch (scheme) {
-    case LEONOS_UI_COLOR_SCHEME_TEAL:
+    case RELIEFOS_UI_COLOR_SCHEME_TEAL:
         return T("Teal");
-    case LEONOS_UI_COLOR_SCHEME_GREEN:
+    case RELIEFOS_UI_COLOR_SCHEME_GREEN:
         return T("Green");
-    case LEONOS_UI_COLOR_SCHEME_PURPLE:
+    case RELIEFOS_UI_COLOR_SCHEME_PURPLE:
         return T("Purple");
-    case LEONOS_UI_COLOR_SCHEME_RED:
+    case RELIEFOS_UI_COLOR_SCHEME_RED:
         return T("Red");
-    case LEONOS_UI_COLOR_SCHEME_GRAPHITE:
+    case RELIEFOS_UI_COLOR_SCHEME_GRAPHITE:
         return T("Graphite");
-    case LEONOS_UI_COLOR_SCHEME_PINK:
+    case RELIEFOS_UI_COLOR_SCHEME_PINK:
         return T("Kawaii Pink");
     default:
         return T("Blue");
@@ -290,37 +290,37 @@ static const char *theme_color_label(uint32_t scheme)
 static const char *wallpaper_mode_label(uint32_t mode)
 {
     switch (mode) {
-    case LEONOS_WALLPAPER_MODE_FIT:
+    case RELIEFOS_WALLPAPER_MODE_FIT:
         return T("Fit");
-    case LEONOS_WALLPAPER_MODE_CENTER:
+    case RELIEFOS_WALLPAPER_MODE_CENTER:
         return T("Center");
-    case LEONOS_WALLPAPER_MODE_TILE:
+    case RELIEFOS_WALLPAPER_MODE_TILE:
         return T("Tile");
-    case LEONOS_WALLPAPER_MODE_STRETCH:
+    case RELIEFOS_WALLPAPER_MODE_STRETCH:
         return T("Stretch");
     default:
         return T("Fill");
     }
 }
 
-static void fill_theme_color_items(struct leonos_ui_dropdown_item *items)
+static void fill_theme_color_items(struct reliefos_ui_dropdown_item *items)
 {
     if (!items) {
         return;
     }
-    for (uint32_t i = 0; i < LEONOS_UI_COLOR_SCHEME_COUNT; ++i) {
+    for (uint32_t i = 0; i < RELIEFOS_UI_COLOR_SCHEME_COUNT; ++i) {
         items[i].label = theme_color_label(i);
         items[i].id = i;
         items[i].flags = 0;
     }
 }
 
-static void fill_wallpaper_mode_items(struct leonos_ui_dropdown_item *items)
+static void fill_wallpaper_mode_items(struct reliefos_ui_dropdown_item *items)
 {
     if (!items) {
         return;
     }
-    for (uint32_t i = 0; i < LEONOS_WALLPAPER_MODE_COUNT; ++i) {
+    for (uint32_t i = 0; i < RELIEFOS_WALLPAPER_MODE_COUNT; ++i) {
         items[i].label = wallpaper_mode_label(i);
         items[i].id = i;
         items[i].flags = 0;
@@ -330,7 +330,7 @@ static void fill_wallpaper_mode_items(struct leonos_ui_dropdown_item *items)
 static int validate_wallpaper_bmp(const char *path)
 {
     uint8_t header[54];
-    struct leonos_stat st;
+    struct reliefos_stat st;
     int fd;
     long got;
     uint32_t pixel_offset;
@@ -345,11 +345,11 @@ static int validate_wallpaper_bmp(const char *path)
     if (!path || !path[0]) {
         return 0;
     }
-    if (leonos_stat_legacy(path, &st) < 0 || st.type != LEONOS_FS_TYPE_FILE ||
+    if (reliefos_stat_legacy(path, &st) < 0 || st.type != RELIEFOS_FS_TYPE_FILE ||
         st.size < sizeof(header) || st.size > SETTINGS_WALLPAPER_BMP_MAX_BYTES) {
         return 0;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return 0;
     }
@@ -385,14 +385,14 @@ static int validate_wallpaper_bmp(const char *path)
 
 static const char *role_label(uint32_t role)
 {
-    return role == LEONOS_AUTH_ROLE_ADMIN ? T("Administrator") : T("User");
+    return role == RELIEFOS_AUTH_ROLE_ADMIN ? T("Administrator") : T("User");
 }
 
 static const char *program_label(const char *program)
 {
-    static char label[LEONOS_APP_NAME_LEN];
+    static char label[RELIEFOS_APP_NAME_LEN];
     if (program && program[0] &&
-        leonos_app_registry_label(program, label, sizeof(label)) == 0) {
+        reliefos_app_registry_label(program, label, sizeof(label)) == 0) {
         return label;
     }
     return program && program[0] ? program : T("None");
@@ -403,13 +403,13 @@ static void settings_load_assoc_apps(void)
     uint32_t total;
     settings_assoc_app_count = 0;
     settings_assoc_apps_loaded = 0;
-    (void)leonos_app_registry_refresh();
-    total = leonos_app_registry_count();
+    (void)reliefos_app_registry_refresh();
+    total = reliefos_app_registry_count();
     for (uint32_t i = 0; i < total && settings_assoc_app_count <
-                            LEONOS_APP_REGISTRY_MAX; ++i) {
-        struct leonos_app_info info;
-        if (leonos_app_registry_get(i, &info) < 0 ||
-            (info.flags & LEONOS_APP_FLAG_OPEN_WITH) == 0 ||
+                            RELIEFOS_APP_REGISTRY_MAX; ++i) {
+        struct reliefos_app_info info;
+        if (reliefos_app_registry_get(i, &info) < 0 ||
+            (info.flags & RELIEFOS_APP_FLAG_OPEN_WITH) == 0 ||
             !info.extensions[0]) {
             continue;
         }
@@ -464,17 +464,17 @@ static uint32_t settings_assoc_row_candidates(uint32_t row,
 static const char *license_status_label(uint32_t status)
 {
     switch (status) {
-    case LEONOS_LICENSE_STATUS_OK:
+    case RELIEFOS_LICENSE_STATUS_OK:
         return T("Activated");
-    case LEONOS_LICENSE_STATUS_MISSING:
+    case RELIEFOS_LICENSE_STATUS_MISSING:
         return T("Not activated");
-    case LEONOS_LICENSE_STATUS_INVALID:
+    case RELIEFOS_LICENSE_STATUS_INVALID:
         return T("Invalid activation");
-    case LEONOS_LICENSE_STATUS_NETWORK:
+    case RELIEFOS_LICENSE_STATUS_NETWORK:
         return T("Network failure");
-    case LEONOS_LICENSE_STATUS_CLOCK:
+    case RELIEFOS_LICENSE_STATUS_CLOCK:
         return T("Clock failure");
-    case LEONOS_LICENSE_STATUS_DENIED:
+    case RELIEFOS_LICENSE_STATUS_DENIED:
         return T("Activation denied");
     default:
         return T("Unknown");
@@ -497,12 +497,12 @@ static const char *value_or_dash(const char *value)
     return value && value[0] ? value : "-";
 }
 
-static void draw_field(struct leonos_ui_surface *ui, int32_t y,
+static void draw_field(struct reliefos_ui_surface *ui, int32_t y,
                        const char *label, const char *value)
 {
-    leonos_ui_text(ui, 50, y, label, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text_clipped(ui, 176, y, SETTINGS_W - 226,
-                           value_or_dash(value), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+    reliefos_ui_text(ui, 50, y, label, RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text_clipped(ui, 176, y, SETTINGS_W - 226,
+                           value_or_dash(value), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
 }
 
 static void fake_path_for_extension(char *dst, uint32_t cap, const char *ext)
@@ -538,9 +538,9 @@ static void load_services_config(void)
     char cfg[SETTINGS_SERVICES_CONFIG_MAX];
     uint32_t len = 0;
     uint32_t pos = 0;
-    service_rows[1].enabled = leonos_openrc_enabled("leonos-dhcp") == 1;
-    service_rows[4].enabled = leonos_openrc_enabled("leonos-ntp") == 1;
-    int fd = open(SETTINGS_SERVICES_PATH, LEONOS_O_RDONLY, 0);
+    service_rows[1].enabled = reliefos_openrc_enabled("leonos-dhcp") == 1;
+    service_rows[4].enabled = reliefos_openrc_enabled("leonos-ntp") == 1;
+    int fd = open(SETTINGS_SERVICES_PATH, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return;
     }
@@ -585,7 +585,7 @@ static void refresh_ntp_runtime_state(void)
 {
     if (settings_rc_child || settings_rc_save) return;
     settings_rc_kind = 1;
-    settings_rc_child = leonos_openrc_spawn("leonos-ntp", "status");
+    settings_rc_child = reliefos_openrc_spawn("leonos-ntp", "status");
     if (settings_rc_child < 0) {
         settings_rc_child = 0;
         copy_text(ntp_runtime_state, sizeof(ntp_runtime_state), "failed");
@@ -595,7 +595,7 @@ static void refresh_ntp_runtime_state(void)
 
 static void save_services_config(void)
 {
-    if (current_user.role != LEONOS_AUTH_ROLE_ADMIN) {
+    if (current_user.role != RELIEFOS_AUTH_ROLE_ADMIN) {
         copy_text(status_text, sizeof(status_text), T("Administrator rights required"));
         return;
     }
@@ -611,7 +611,7 @@ static void write_services_preferences(void)
     char cfg[SETTINGS_SERVICES_CONFIG_MAX];
     uint32_t pos = 0;
     int fd;
-    if (current_user.role != LEONOS_AUTH_ROLE_ADMIN) {
+    if (current_user.role != RELIEFOS_AUTH_ROLE_ADMIN) {
         copy_text(status_text, sizeof(status_text),
                   T("Administrator rights required"));
         return;
@@ -625,7 +625,7 @@ static void write_services_preferences(void)
         append_char(cfg, &pos, sizeof(cfg), '\n');
     }
     fd = open(SETTINGS_SERVICES_PATH,
-              LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0644);
+              RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0644);
     if (fd < 0) {
         copy_text(status_text, sizeof(status_text),
                   T("Could not save services."));
@@ -645,7 +645,7 @@ static int poll_settings_openrc(void)
 {
     int changed = 0;
     if (settings_rc_child) {
-        int result = 125, ready = leonos_openrc_poll(settings_rc_child, &result);
+        int result = 125, ready = reliefos_openrc_poll(settings_rc_child, &result);
         if (!ready) return 0;
         settings_rc_child = 0;
         if (ready < 0) result = 125;
@@ -660,7 +660,7 @@ static int poll_settings_openrc(void)
             load_services_config();
         } else if (settings_rc_kind == 2) {
             settings_rc_kind = 3;
-            settings_rc_child = leonos_openrc_spawn("leonos-ntp", settings_rc_ntp ? "enable" : "disable");
+            settings_rc_child = reliefos_openrc_spawn("leonos-ntp", settings_rc_ntp ? "enable" : "disable");
         } else {
             settings_rc_kind = settings_rc_save = 0;
             write_services_preferences();
@@ -668,7 +668,7 @@ static int poll_settings_openrc(void)
     }
     if (!settings_rc_child && settings_rc_save && settings_rc_kind == 0) {
         settings_rc_kind = 2;
-        settings_rc_child = leonos_openrc_spawn("leonos-dhcp", settings_rc_dhcp ? "enable" : "disable");
+        settings_rc_child = reliefos_openrc_spawn("leonos-dhcp", settings_rc_dhcp ? "enable" : "disable");
     }
     if (settings_rc_child < 0) {
         settings_rc_child = settings_rc_kind = settings_rc_save = 0;
@@ -705,15 +705,15 @@ static int mode_supported(uint32_t mode, uint32_t scale_index)
 
 static void refresh_display_state(void)
 {
-    int state_available = leonos_display_get_state(&display_state) > 0;
-    if (leonos_fb_capabilities(&framebuffer_caps) < 0) {
+    int state_available = reliefos_display_get_state(&display_state) > 0;
+    if (reliefos_fb_capabilities(&framebuffer_caps) < 0) {
         framebuffer_caps.bytes_per_pixel = 4;
         framebuffer_caps.capabilities = 0;
         framebuffer_caps.max_width = state_available ? display_state.fb_width : 1920;
         framebuffer_caps.max_height = state_available ? display_state.fb_height : 1080;
         framebuffer_caps.max_bytes = framebuffer_caps.max_width * framebuffer_caps.max_height *
                                     sizeof(uint32_t);
-        framebuffer_caps.backend = LEONOS_FB_BACKEND_BOOT;
+        framebuffer_caps.backend = RELIEFOS_FB_BACKEND_BOOT;
     }
     if (!state_available) {
         display_state.fb_width = 1920;
@@ -730,13 +730,13 @@ static void refresh_display_state(void)
 
 static void refresh_appearance_state(void)
 {
-    if (leonos_appearance_get_state(&appearance_state) <= 0) {
-        appearance_state.theme = leonos_ui_theme();
+    if (reliefos_appearance_get_state(&appearance_state) <= 0) {
+        appearance_state.theme = reliefos_ui_theme();
         appearance_state.metro_color_scheme =
-            leonos_ui_theme_color_scheme(LEONOS_UI_THEME_METRO);
+            reliefos_ui_theme_color_scheme(RELIEFOS_UI_THEME_METRO);
         appearance_state.win95_color_scheme =
-            leonos_ui_theme_color_scheme(LEONOS_UI_THEME_WIN95);
-        appearance_state.wallpaper_mode = LEONOS_WALLPAPER_MODE_FILL;
+            reliefos_ui_theme_color_scheme(RELIEFOS_UI_THEME_WIN95);
+        appearance_state.wallpaper_mode = RELIEFOS_WALLPAPER_MODE_FILL;
         copy_text(appearance_state.wallpaper_path,
                   sizeof(appearance_state.wallpaper_path),
                   SETTINGS_DEFAULT_WALLPAPER_PATH);
@@ -746,10 +746,10 @@ static void refresh_appearance_state(void)
 static void refresh_users(void)
 {
     uint32_t count = 0;
-    current_user = (struct leonos_user_info){0};
-    (void)leonos_auth_current(&current_user);
-    if (current_user.role == LEONOS_AUTH_ROLE_ADMIN) {
-        (void)leonos_auth_users_alloc(&users, 1, &count);
+    current_user = (struct reliefos_user_info){0};
+    (void)reliefos_auth_current(&current_user);
+    if (current_user.role == RELIEFOS_AUTH_ROLE_ADMIN) {
+        (void)reliefos_auth_users_alloc(&users, 1, &count);
     } else if (current_user.username[0]) {
         if (!users) users = calloc(1, sizeof(*users));
         if (!users) { user_count = 0; return; }
@@ -848,8 +848,8 @@ static void inputm_provider_key(char *key, uint32_t capacity, uint32_t index,
 
 static int inputm_append_config(const char *key, const char *value)
 {
-    char path[LEONOS_FS_PATH_LEN];
-    char line[LEONOS_FS_PATH_LEN + 80U];
+    char path[RELIEFOS_FS_PATH_LEN];
+    char line[RELIEFOS_FS_PATH_LEN + 80U];
     uint32_t pos = 0;
     int fd;
     long wrote;
@@ -862,7 +862,7 @@ static int inputm_append_config(const char *key, const char *value)
     append_char(line, &pos, sizeof(line), '=');
     append_text(line, &pos, sizeof(line), value);
     append_char(line, &pos, sizeof(line), '\n');
-    fd = open(path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_APPEND, 0666);
+    fd = open(path, RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_APPEND, 0666);
     if (fd < 0) {
         return 0;
     }
@@ -953,7 +953,7 @@ static void inputm_load_extension_options(const char *config)
     if (!entry || !entry->settings_path[0]) {
         return;
     }
-    fd = open(entry->settings_path, LEONOS_O_RDONLY, 0);
+    fd = open(entry->settings_path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return;
     }
@@ -1020,7 +1020,7 @@ static void inputm_sort_entries(void)
 
 static void inputm_reload_extension_options(void)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     char config[SETTINGS_INPUTM_CONFIG_MAX];
     int fd;
     long got;
@@ -1028,7 +1028,7 @@ static void inputm_reload_extension_options(void)
     if (!inputm_config_path(path, sizeof(path))) {
         return;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return;
     }
@@ -1043,9 +1043,9 @@ static void inputm_reload_extension_options(void)
 
 static void inputm_load_settings(void)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     char config[SETTINGS_INPUTM_CONFIG_MAX];
-    char value[LEONOS_FS_PATH_LEN];
+    char value[RELIEFOS_FS_PATH_LEN];
     int fd;
     long got;
     uint32_t configured = 0;
@@ -1061,7 +1061,7 @@ static void inputm_load_settings(void)
     if (!inputm_config_path(path, sizeof(path))) {
         return;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return;
     }
@@ -1149,24 +1149,24 @@ static const char *inputm_startup_label(uint32_t mode)
 
 static void request_display(uint32_t action, uint32_t mode, uint32_t scale)
 {
-    struct leonos_display_request request;
+    struct reliefos_display_request request;
     request.action = action;
     request.mode_index = mode;
     request.scale_index = scale;
-    (void)leonos_display_request(&request);
+    (void)reliefos_display_request(&request);
 }
 
 static void request_appearance_change(const char *ok_text)
 {
-    struct leonos_appearance_request request;
+    struct reliefos_appearance_request request;
     request.theme = appearance_state.theme;
     request.metro_color_scheme = appearance_state.metro_color_scheme;
     request.win95_color_scheme = appearance_state.win95_color_scheme;
     request.wallpaper_mode = appearance_state.wallpaper_mode;
     copy_text(request.wallpaper_path, sizeof(request.wallpaper_path),
               appearance_state.wallpaper_path);
-    if (leonos_appearance_request_theme(&request) > 0) {
-        (void)leonos_ui_theme_set_appearance(request.theme,
+    if (reliefos_appearance_request_theme(&request) > 0) {
+        (void)reliefos_ui_theme_set_appearance(request.theme,
                                              request.metro_color_scheme,
                                              request.win95_color_scheme);
         copy_text(status_text, sizeof(status_text),
@@ -1200,28 +1200,28 @@ static const char *language_label(void)
 
 static const char *theme_label(void)
 {
-    return appearance_state.theme == LEONOS_UI_THEME_WIN95 ? "Win95" : "Metro";
+    return appearance_state.theme == RELIEFOS_UI_THEME_WIN95 ? "Win95" : "Metro";
 }
 
-static void draw_display_page(struct leonos_ui_surface *ui)
+static void draw_display_page(struct reliefos_ui_surface *ui)
 {
     char line[128];
     uint32_t pos = 0;
-    struct leonos_ui_dropdown_item mode_items[SETTINGS_MODE_COUNT];
-    struct leonos_ui_dropdown_item scale_items[SETTINGS_SCALE_COUNT];
-    struct leonos_ui_dropdown_item lang_items[2];
+    struct reliefos_ui_dropdown_item mode_items[SETTINGS_MODE_COUNT];
+    struct reliefos_ui_dropdown_item scale_items[SETTINGS_SCALE_COUNT];
+    struct reliefos_ui_dropdown_item lang_items[2];
     for (uint32_t i = 0; i < SETTINGS_MODE_COUNT; ++i) {
         mode_items[i].label = mode_labels[i];
         mode_items[i].id = i;
-        mode_items[i].flags = mode_supported(i, display_state.scale_index) ? 0 : LEONOS_UI_MENU_DISABLED;
+        mode_items[i].flags = mode_supported(i, display_state.scale_index) ? 0 : RELIEFOS_UI_MENU_DISABLED;
     }
     for (uint32_t i = 0; i < SETTINGS_SCALE_COUNT; ++i) {
         scale_items[i].label = scale_labels[i];
         scale_items[i].id = i;
-        scale_items[i].flags = mode_supported(display_state.mode_index, i) ? 0 : LEONOS_UI_MENU_DISABLED;
+        scale_items[i].flags = mode_supported(display_state.mode_index, i) ? 0 : RELIEFOS_UI_MENU_DISABLED;
     }
-    lang_items[0] = (struct leonos_ui_dropdown_item){language_options[0].name, 0, 0};
-    lang_items[1] = (struct leonos_ui_dropdown_item){language_options[1].name, 1, 0};
+    lang_items[0] = (struct reliefos_ui_dropdown_item){language_options[0].name, 0, 0};
+    lang_items[1] = (struct reliefos_ui_dropdown_item){language_options[1].name, 1, 0};
 
     append_text(line, &pos, sizeof(line), T("Framebuffer "));
     append_dec(line, &pos, sizeof(line), display_state.fb_width);
@@ -1232,17 +1232,17 @@ static void draw_display_page(struct leonos_ui_surface *ui)
     append_dec(line, &pos, sizeof(line), display_state.logical_width);
     append_char(line, &pos, sizeof(line), 'x');
     append_dec(line, &pos, sizeof(line), display_state.logical_height);
-    leonos_ui_text_clipped(ui, 34, 64, SETTINGS_W - 68, line, LEONOS_UI_DARK, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 44, 104, T("Resolution"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_combobox(ui, 160, 98, 190, mode_label(), active_drop == DROP_RESOLUTION, 0);
-    leonos_ui_text(ui, 44, 144, T("Scale"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_combobox(ui, 160, 138, 190, scale_label(), active_drop == DROP_SCALE, 0);
-    leonos_ui_slider(ui, 370, 138, 150, LEONOS_UI_BUTTON_H,
+    reliefos_ui_text_clipped(ui, 34, 64, SETTINGS_W - 68, line, RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
+    reliefos_ui_text(ui, 44, 104, T("Resolution"), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_combobox(ui, 160, 98, 190, mode_label(), active_drop == DROP_RESOLUTION, 0);
+    reliefos_ui_text(ui, 44, 144, T("Scale"), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_combobox(ui, 160, 138, 190, scale_label(), active_drop == DROP_SCALE, 0);
+    reliefos_ui_slider(ui, 370, 138, 150, RELIEFOS_UI_BUTTON_H,
                      display_state.scale_index,
                      SETTINGS_SCALE_COUNT > 1 ? SETTINGS_SCALE_COUNT - 1 : 1,
                      0);
-    leonos_ui_text(ui, 44, 184, T("Language"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_combobox(ui, 160, 178, 190, language_label(), active_drop == DROP_LANGUAGE, 0);
+    reliefos_ui_text(ui, 44, 184, T("Language"), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_combobox(ui, 160, 178, 190, language_label(), active_drop == DROP_LANGUAGE, 0);
     if (display_state.pending_confirm) {
         uint32_t seconds = (display_state.confirm_remaining_ms + 999) / 1000;
         pos = 0;
@@ -1250,171 +1250,171 @@ static void draw_display_page(struct leonos_ui_surface *ui)
         append_text(line, &pos, sizeof(line), T("Keep these display settings? Reverting in "));
         append_dec(line, &pos, sizeof(line), seconds);
         append_text(line, &pos, sizeof(line), T("s"));
-        leonos_ui_panel(ui, 44, 272, SETTINGS_W - 88, 64, LEONOS_UI_LIGHT);
-        leonos_ui_text_clipped(ui, 54, 284, SETTINGS_W - 108, line, LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
-        leonos_ui_button(ui, 54, 306, 82, LEONOS_UI_BUTTON_H, T("Keep"), 0);
-        leonos_ui_button(ui, 146, 306, 82, LEONOS_UI_BUTTON_H, T("Revert"), 0);
+        reliefos_ui_panel(ui, 44, 272, SETTINGS_W - 88, 64, RELIEFOS_UI_LIGHT);
+        reliefos_ui_text_clipped(ui, 54, 284, SETTINGS_W - 108, line, RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
+        reliefos_ui_button(ui, 54, 306, 82, RELIEFOS_UI_BUTTON_H, T("Keep"), 0);
+        reliefos_ui_button(ui, 146, 306, 82, RELIEFOS_UI_BUTTON_H, T("Revert"), 0);
     }
     if (active_drop == DROP_LANGUAGE) {
-        leonos_ui_dropdown(ui, 160, 202, 190, lang_items, 2,
+        reliefos_ui_dropdown(ui, 160, 202, 190, lang_items, 2,
                            selected_language, SETTINGS_DROPDOWN_ROW_H, 1000);
     } else if (active_drop == DROP_SCALE) {
-        leonos_ui_dropdown(ui, 160, 162, 190, scale_items, SETTINGS_SCALE_COUNT,
+        reliefos_ui_dropdown(ui, 160, 162, 190, scale_items, SETTINGS_SCALE_COUNT,
                            display_state.scale_index, SETTINGS_DROPDOWN_ROW_H, 1000);
     } else if (active_drop == DROP_RESOLUTION) {
-        leonos_ui_dropdown(ui, 160, 122, 190, mode_items, SETTINGS_MODE_COUNT,
+        reliefos_ui_dropdown(ui, 160, 122, 190, mode_items, SETTINGS_MODE_COUNT,
                            display_state.mode_index, SETTINGS_DROPDOWN_ROW_H, 1000);
     }
 }
 
-static void draw_personalization_page(struct leonos_ui_surface *ui)
+static void draw_personalization_page(struct reliefos_ui_surface *ui)
 {
-    struct leonos_ui_dropdown_item theme_items[2];
-    struct leonos_ui_dropdown_item metro_items[LEONOS_UI_COLOR_SCHEME_COUNT];
-    struct leonos_ui_dropdown_item win95_items[LEONOS_UI_COLOR_SCHEME_COUNT];
-    struct leonos_ui_dropdown_item wallpaper_items[LEONOS_WALLPAPER_MODE_COUNT];
-    uint32_t disabled = current_user.username[0] ? 0 : LEONOS_UI_BUTTON_DISABLED;
-    theme_items[0] = (struct leonos_ui_dropdown_item){"Metro", LEONOS_UI_THEME_METRO, 0};
-    theme_items[1] = (struct leonos_ui_dropdown_item){"Win95", LEONOS_UI_THEME_WIN95, 0};
+    struct reliefos_ui_dropdown_item theme_items[2];
+    struct reliefos_ui_dropdown_item metro_items[RELIEFOS_UI_COLOR_SCHEME_COUNT];
+    struct reliefos_ui_dropdown_item win95_items[RELIEFOS_UI_COLOR_SCHEME_COUNT];
+    struct reliefos_ui_dropdown_item wallpaper_items[RELIEFOS_WALLPAPER_MODE_COUNT];
+    uint32_t disabled = current_user.username[0] ? 0 : RELIEFOS_UI_BUTTON_DISABLED;
+    theme_items[0] = (struct reliefos_ui_dropdown_item){"Metro", RELIEFOS_UI_THEME_METRO, 0};
+    theme_items[1] = (struct reliefos_ui_dropdown_item){"Win95", RELIEFOS_UI_THEME_WIN95, 0};
     fill_theme_color_items(metro_items);
     fill_theme_color_items(win95_items);
     fill_wallpaper_mode_items(wallpaper_items);
 
-    leonos_ui_text(ui, 34, 64,
+    reliefos_ui_text(ui, 34, 64,
                    T("Personalization is saved for the current user. Metro and Win95 keep separate colors."),
-                   LEONOS_UI_DARK, LEONOS_UI_GRAY);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
 
-    leonos_ui_text(ui, 44, 104, T("Theme style"),
-                   LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_combobox(ui, 160, 98, 190, theme_label(),
+    reliefos_ui_text(ui, 44, 104, T("Theme style"),
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_combobox(ui, 160, 98, 190, theme_label(),
                        active_drop == DROP_THEME, disabled);
 
-    leonos_ui_text(ui, 44, 144, T("Metro color"),
-                   LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_combobox(ui, 160, 138, 190,
+    reliefos_ui_text(ui, 44, 144, T("Metro color"),
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_combobox(ui, 160, 138, 190,
                        theme_color_label(appearance_state.metro_color_scheme),
                        active_drop == DROP_METRO_COLOR, disabled);
-    leonos_ui_rect(ui, 364, 141, 28, 18,
-                   leonos_ui_theme_scheme_accent(LEONOS_UI_THEME_METRO,
+    reliefos_ui_rect(ui, 364, 141, 28, 18,
+                   reliefos_ui_theme_scheme_accent(RELIEFOS_UI_THEME_METRO,
                                                  appearance_state.metro_color_scheme));
 
-    leonos_ui_text(ui, 44, 184, T("Win95 color"),
-                   LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_combobox(ui, 160, 178, 190,
+    reliefos_ui_text(ui, 44, 184, T("Win95 color"),
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_combobox(ui, 160, 178, 190,
                        theme_color_label(appearance_state.win95_color_scheme),
                        active_drop == DROP_WIN95_COLOR, disabled);
-    leonos_ui_rect(ui, 364, 181, 28, 18,
-                   leonos_ui_theme_scheme_accent(LEONOS_UI_THEME_WIN95,
+    reliefos_ui_rect(ui, 364, 181, 28, 18,
+                   reliefos_ui_theme_scheme_accent(RELIEFOS_UI_THEME_WIN95,
                                                  appearance_state.win95_color_scheme));
 
-    leonos_ui_text(ui, 44, 224, T("Wallpaper"),
-                   LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text_field(ui, 160, 218, 318, appearance_state.wallpaper_path,
-                         LEONOS_UI_EDIT_READONLY | disabled);
-    leonos_ui_button(ui, 486, 218, 82, LEONOS_UI_BUTTON_H,
+    reliefos_ui_text(ui, 44, 224, T("Wallpaper"),
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text_field(ui, 160, 218, 318, appearance_state.wallpaper_path,
+                         RELIEFOS_UI_EDIT_READONLY | disabled);
+    reliefos_ui_button(ui, 486, 218, 82, RELIEFOS_UI_BUTTON_H,
                      T("Browse"), disabled);
-    leonos_ui_button(ui, 576, 218, 82, LEONOS_UI_BUTTON_H,
+    reliefos_ui_button(ui, 576, 218, 82, RELIEFOS_UI_BUTTON_H,
                      T("Default"), disabled);
 
-    leonos_ui_text(ui, 44, 264, T("Display mode"),
-                   LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_combobox(ui, 160, 258, 190,
+    reliefos_ui_text(ui, 44, 264, T("Display mode"),
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_combobox(ui, 160, 258, 190,
                        wallpaper_mode_label(appearance_state.wallpaper_mode),
                        active_drop == DROP_WALLPAPER_MODE, disabled);
-    leonos_ui_text(ui, 360, 264,
+    reliefos_ui_text(ui, 360, 264,
                    T("BMP only, up to 1280 x 720."),
-                   LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
 
     if (!current_user.username[0]) {
-        leonos_ui_text(ui, 44, 318,
+        reliefos_ui_text(ui, 44, 318,
                        T("Sign in to change personalization."),
-                       LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                       RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     }
 
     if (active_drop == DROP_THEME) {
-        leonos_ui_dropdown(ui, 160, 122, 190, theme_items, 2,
+        reliefos_ui_dropdown(ui, 160, 122, 190, theme_items, 2,
                            appearance_state.theme, SETTINGS_DROPDOWN_ROW_H, 1000);
     } else if (active_drop == DROP_METRO_COLOR) {
-        leonos_ui_dropdown(ui, 160, 162, 190, metro_items,
-                           LEONOS_UI_COLOR_SCHEME_COUNT,
+        reliefos_ui_dropdown(ui, 160, 162, 190, metro_items,
+                           RELIEFOS_UI_COLOR_SCHEME_COUNT,
                            appearance_state.metro_color_scheme,
                            SETTINGS_DROPDOWN_ROW_H, 1000);
     } else if (active_drop == DROP_WIN95_COLOR) {
-        leonos_ui_dropdown(ui, 160, 202, 190, win95_items,
-                           LEONOS_UI_COLOR_SCHEME_COUNT,
+        reliefos_ui_dropdown(ui, 160, 202, 190, win95_items,
+                           RELIEFOS_UI_COLOR_SCHEME_COUNT,
                            appearance_state.win95_color_scheme,
                            SETTINGS_DROPDOWN_ROW_H, 1000);
     } else if (active_drop == DROP_WALLPAPER_MODE) {
-        leonos_ui_dropdown(ui, 160, 282, 190, wallpaper_items,
-                           LEONOS_WALLPAPER_MODE_COUNT,
+        reliefos_ui_dropdown(ui, 160, 282, 190, wallpaper_items,
+                           RELIEFOS_WALLPAPER_MODE_COUNT,
                            appearance_state.wallpaper_mode,
                            SETTINGS_DROPDOWN_ROW_H, 1000);
     }
 }
 
-static void draw_input_methods_page(struct leonos_ui_surface *ui)
+static void draw_input_methods_page(struct reliefos_ui_surface *ui)
 {
-    const struct leonos_ui_list_column cols[] = {
+    const struct reliefos_ui_list_column cols[] = {
         {T("Input method"), 220},
         {T("Enable"), 90},
         {T("Startup"), 150},
     };
-    struct leonos_ui_dropdown_item startup_items[3] = {
+    struct reliefos_ui_dropdown_item startup_items[3] = {
         {T("Manual"), TEXT_INPUT_START_MANUAL, 0},
         {T("At sign-in"), TEXT_INPUT_START_LOGIN, 0},
         {T("On demand"), TEXT_INPUT_START_ON_DEMAND, 0},
     };
-    struct leonos_ui_dropdown_item hotkey_items[2] = {
+    struct reliefos_ui_dropdown_item hotkey_items[2] = {
         {"Win + Space", 0, 0},
         {"Alt + Shift", 1, 0},
     };
     struct settings_inputm_entry *selected =
         inputm_selected < inputm_entry_count ? &inputm_entries[inputm_selected] : 0;
-    leonos_ui_text(ui, 34, 64,
+    reliefos_ui_text(ui, 34, 64,
                    T("Input methods and learning data are isolated for the current user."),
-                   LEONOS_UI_DARK, LEONOS_UI_GRAY);
-    leonos_ui_listview_header(ui, 34, 90, 460, cols, 3);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
+    reliefos_ui_listview_header(ui, 34, 90, 460, cols, 3);
     for (uint32_t i = 0; i < inputm_entry_count && i < 5U; ++i) {
         const char *cells[3];
         cells[0] = inputm_entries[i].id;
         cells[1] = inputm_entries[i].enabled ? T("Yes") : T("No");
         cells[2] = inputm_startup_label(inputm_entries[i].startup_mode);
-        leonos_ui_listview_row(ui, 34, 118 + i * 27U, 460, cols, cells, 3,
-                               i == inputm_selected ? LEONOS_UI_MENU_SELECTED : 0);
+        reliefos_ui_listview_row(ui, 34, 118 + i * 27U, 460, cols, cells, 3,
+                               i == inputm_selected ? RELIEFOS_UI_MENU_SELECTED : 0);
     }
-    leonos_ui_button(ui, 510, 92, 156, LEONOS_UI_BUTTON_H,
+    reliefos_ui_button(ui, 510, 92, 156, RELIEFOS_UI_BUTTON_H,
                      selected && selected->enabled ? T("Disable") :
                                                      T("Enable"),
                      !selected || !current_user.username[0] || inputm_selected == 0 ?
-                         LEONOS_UI_BUTTON_DISABLED : 0);
-    leonos_ui_button(ui, 510, 126, 156, LEONOS_UI_BUTTON_H,
+                         RELIEFOS_UI_BUTTON_DISABLED : 0);
+    reliefos_ui_button(ui, 510, 126, 156, RELIEFOS_UI_BUTTON_H,
                      T("Use as default"),
                      !selected || !selected->enabled || !current_user.username[0] ?
-                         LEONOS_UI_BUTTON_DISABLED : 0);
-    leonos_ui_combobox(ui, 510, 160, 156,
+                         RELIEFOS_UI_BUTTON_DISABLED : 0);
+    reliefos_ui_combobox(ui, 510, 160, 156,
                         selected ? inputm_startup_label(selected->startup_mode) : "-",
                         active_drop == DROP_INPUTM_STARTUP,
                         !selected || !current_user.username[0] || inputm_selected == 0 ?
-                            LEONOS_UI_BUTTON_DISABLED : 0);
-    leonos_ui_button(ui, 510, 194, 74, LEONOS_UI_BUTTON_H,
+                            RELIEFOS_UI_BUTTON_DISABLED : 0);
+    reliefos_ui_button(ui, 510, 194, 74, RELIEFOS_UI_BUTTON_H,
                      T("Move up"),
                      !selected || !current_user.username[0] || inputm_selected <= 1U ?
-                         LEONOS_UI_BUTTON_DISABLED : 0);
-    leonos_ui_button(ui, 592, 194, 74, LEONOS_UI_BUTTON_H,
+                         RELIEFOS_UI_BUTTON_DISABLED : 0);
+    reliefos_ui_button(ui, 592, 194, 74, RELIEFOS_UI_BUTTON_H,
                      T("Move down"),
                      !selected || !current_user.username[0] || inputm_selected == 0 ||
                          inputm_selected + 1U >= inputm_entry_count ?
-                         LEONOS_UI_BUTTON_DISABLED : 0);
-    leonos_ui_text(ui, 44, 266, T("Switch shortcut"),
-                   LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_combobox(ui, 170, 260, 180,
+                         RELIEFOS_UI_BUTTON_DISABLED : 0);
+    reliefos_ui_text(ui, 44, 266, T("Switch shortcut"),
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_combobox(ui, 170, 260, 180,
                         text_eq(inputm_hotkey, "alt-shift") ? "Alt + Shift" : "Win + Space",
                         active_drop == DROP_INPUTM_HOTKEY,
-                        current_user.username[0] ? 0 : LEONOS_UI_BUTTON_DISABLED);
-    leonos_ui_text(ui, 372, 266, T("Candidates"),
-                   LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 470, 266, T("System overlay"),
-                   LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                        current_user.username[0] ? 0 : RELIEFOS_UI_BUTTON_DISABLED);
+    reliefos_ui_text(ui, 372, 266, T("Candidates"),
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 470, 266, T("System overlay"),
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     if (inputm_option_count) {
         for (uint32_t i = 0; i < inputm_option_count; ++i) {
             char label[SETTINGS_INPUTM_OPTION_LABEL_LEN + 12U];
@@ -1423,194 +1423,194 @@ static void draw_input_methods_page(struct leonos_ui_surface *ui)
             label[0] = 0;
             append_text(label, &pos, sizeof(label), base);
             append_text(label, &pos, sizeof(label), inputm_options[i].value ? ": On" : ": Off");
-            leonos_ui_button(ui, 44U + i * 150U, 304, 140, LEONOS_UI_BUTTON_H,
+            reliefos_ui_button(ui, 44U + i * 150U, 304, 140, RELIEFOS_UI_BUTTON_H,
                              label, current_user.username[0] ?
-                                        (inputm_options[i].value ? LEONOS_UI_BUTTON_PRESSED : 0) :
-                                        LEONOS_UI_BUTTON_DISABLED);
+                                        (inputm_options[i].value ? RELIEFOS_UI_BUTTON_PRESSED : 0) :
+                                        RELIEFOS_UI_BUTTON_DISABLED);
         }
     } else {
-        leonos_ui_text(ui, 44, 314, T("This input method has no configurable options."),
-                       LEONOS_UI_DARK, LEONOS_UI_GRAY);
+        reliefos_ui_text(ui, 44, 314, T("This input method has no configurable options."),
+                       RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
     }
-    leonos_ui_button(ui, 510, 344, 156, LEONOS_UI_BUTTON_H,
+    reliefos_ui_button(ui, 510, 344, 156, RELIEFOS_UI_BUTTON_H,
                      selected && selected->settings_app[0] ?
                          T("Open provider settings") :
                          T("Update dictionary"),
                      !selected ||
                          (!(selected->settings_app[0]) &&
                           (!text_eq(selected->id, "oschinpt") || !selected->path[0])) ?
-                         LEONOS_UI_BUTTON_DISABLED : 0);
+                         RELIEFOS_UI_BUTTON_DISABLED : 0);
     if (active_drop == DROP_INPUTM_STARTUP && selected) {
-        leonos_ui_dropdown(ui, 510, 184, 156, startup_items, 3,
+        reliefos_ui_dropdown(ui, 510, 184, 156, startup_items, 3,
                            selected->startup_mode, SETTINGS_DROPDOWN_ROW_H, 1000);
     } else if (active_drop == DROP_INPUTM_HOTKEY) {
-        leonos_ui_dropdown(ui, 170, 284, 180, hotkey_items, 2,
+        reliefos_ui_dropdown(ui, 170, 284, 180, hotkey_items, 2,
                            text_eq(inputm_hotkey, "alt-shift") ? 1U : 0U,
                            SETTINGS_DROPDOWN_ROW_H, 1000);
     }
 }
 
-static void draw_users_page(struct leonos_ui_surface *ui)
+static void draw_users_page(struct reliefos_ui_surface *ui)
 {
-    const struct leonos_ui_list_column cols[] = {
+    const struct reliefos_ui_list_column cols[] = {
         {T("User"), 180},
         {T("Role"), 130},
         {T("State"), 120},
     };
     char state[32];
-    leonos_ui_text(ui, 34, 64,
-                   current_user.role == LEONOS_AUTH_ROLE_ADMIN
+    reliefos_ui_text(ui, 34, 64,
+                   current_user.role == RELIEFOS_AUTH_ROLE_ADMIN
                        ? T("Administrators can create and manage local accounts.")
                        : T("You can change your password."),
-                   LEONOS_UI_DARK, LEONOS_UI_GRAY);
-    leonos_ui_listview_header(ui, 34, 98, 430, cols, 3);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
+    reliefos_ui_listview_header(ui, 34, 98, 430, cols, 3);
     for (uint32_t row = 0; user_scroll + row < user_count && row < SETTINGS_USER_ROWS; ++row) {
         uint32_t i = user_scroll + row;
         const char *cells[3];
         copy_text(state, sizeof(state),
-                  (users[i].flags & LEONOS_AUTH_USER_DISABLED)
+                  (users[i].flags & RELIEFOS_AUTH_USER_DISABLED)
                       ? T("Disabled")
                       : T("Enabled"));
         cells[0] = users[i].username;
         cells[1] = role_label(users[i].role);
         cells[2] = state;
-        leonos_ui_listview_row(ui, 34, 126 + row * 28, 430, cols, cells, 3,
-                               i == selected_user ? LEONOS_UI_MENU_SELECTED : 0);
+        reliefos_ui_listview_row(ui, 34, 126 + row * 28, 430, cols, cells, 3,
+                               i == selected_user ? RELIEFOS_UI_MENU_SELECTED : 0);
     }
-    if (current_user.role == LEONOS_AUTH_ROLE_ADMIN) {
-        leonos_ui_button(ui, 484, 98, 104, LEONOS_UI_BUTTON_H, T("New User"), 0);
-        leonos_ui_button(ui, 484, 178, 104, LEONOS_UI_BUTTON_H,
-                         users[selected_user].flags & LEONOS_AUTH_USER_DISABLED
+    if (current_user.role == RELIEFOS_AUTH_ROLE_ADMIN) {
+        reliefos_ui_button(ui, 484, 98, 104, RELIEFOS_UI_BUTTON_H, T("New User"), 0);
+        reliefos_ui_button(ui, 484, 178, 104, RELIEFOS_UI_BUTTON_H,
+                         users[selected_user].flags & RELIEFOS_AUTH_USER_DISABLED
                              ? T("Enable")
                              : T("Disable"),
-                         user_count && users[selected_user].uid ? 0 : LEONOS_UI_BUTTON_DISABLED);
-        leonos_ui_button(ui, 484, 258, 104, LEONOS_UI_BUTTON_H, T("Reset Pass"),
-                         user_count ? 0 : LEONOS_UI_BUTTON_DISABLED);
+                         user_count && users[selected_user].uid ? 0 : RELIEFOS_UI_BUTTON_DISABLED);
+        reliefos_ui_button(ui, 484, 258, 104, RELIEFOS_UI_BUTTON_H, T("Reset Pass"),
+                         user_count ? 0 : RELIEFOS_UI_BUTTON_DISABLED);
     }
-    leonos_ui_button(ui, 34, 324, 150, LEONOS_UI_BUTTON_H, T("Change Password"),
-                     current_user.username[0] ? 0 : LEONOS_UI_BUTTON_DISABLED);
+    reliefos_ui_button(ui, 34, 324, 150, RELIEFOS_UI_BUTTON_H, T("Change Password"),
+                     current_user.username[0] ? 0 : RELIEFOS_UI_BUTTON_DISABLED);
 }
 
-static void draw_assoc_page(struct leonos_ui_surface *ui)
+static void draw_assoc_page(struct reliefos_ui_surface *ui)
 {
-    const struct leonos_ui_list_column cols[] = {
+    const struct reliefos_ui_list_column cols[] = {
         {T("Extension"), 82},
         {T("Type"), 170},
         {T("Default app"), 160},
     };
     uint32_t candidate_indices[SETTINGS_ASSOC_CANDIDATE_MAX];
     settings_ensure_assoc_apps();
-    leonos_ui_text(ui, 34, 64,
+    reliefos_ui_text(ui, 34, 64,
                    T("Choose the default app used by File Manager and desktop shortcuts."),
-                   LEONOS_UI_DARK, LEONOS_UI_GRAY);
-    leonos_ui_listview_header(ui, 34, 96, 412, cols, 3);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
+    reliefos_ui_listview_header(ui, 34, 96, 412, cols, 3);
     for (uint32_t i = 0; i < SETTINGS_ASSOC_ROWS; ++i) {
-        char fake[LEONOS_FS_PATH_LEN];
+        char fake[RELIEFOS_FS_PATH_LEN];
         const char *program;
         const char *cells[3];
         uint32_t y = 124 + i * 40;
         fake_path_for_extension(fake, sizeof(fake), assoc_rows[i].extension);
-        program = leonos_launch_resolve_default_app_for_path(fake);
+        program = reliefos_launch_resolve_default_app_for_path(fake);
         cells[0] = assoc_rows[i].extension;
         cells[1] = T(assoc_rows[i].description);
         cells[2] = program_label(program);
-        leonos_ui_listview_row(ui, 34, y, 412, cols, cells, 3, 0);
+        reliefos_ui_listview_row(ui, 34, y, 412, cols, cells, 3, 0);
         uint32_t candidate_count = settings_assoc_row_candidates(
             i, candidate_indices, SETTINGS_ASSOC_CANDIDATE_MAX);
         for (uint32_t slot = 0; slot < SETTINGS_ASSOC_CANDIDATE_MAX; ++slot) {
             const char *label = "";
-            uint32_t flags = LEONOS_UI_BUTTON_DISABLED;
+            uint32_t flags = RELIEFOS_UI_BUTTON_DISABLED;
             if (slot < candidate_count) {
-                const struct leonos_app_info *candidate =
+                const struct reliefos_app_info *candidate =
                     &settings_assoc_apps[candidate_indices[slot]];
                 label = candidate->name;
                 flags = text_eq(program, candidate->exec)
-                            ? LEONOS_UI_BUTTON_PRESSED : 0;
+                            ? RELIEFOS_UI_BUTTON_PRESSED : 0;
             }
-            leonos_ui_button(ui, settings_assoc_button_x[slot], y + 2,
-                             settings_assoc_button_w[slot], LEONOS_UI_BUTTON_H,
+            reliefos_ui_button(ui, settings_assoc_button_x[slot], y + 2,
+                             settings_assoc_button_w[slot], RELIEFOS_UI_BUTTON_H,
                              label, flags);
         }
     }
 }
 
-static void draw_services_page(struct leonos_ui_surface *ui)
+static void draw_services_page(struct reliefos_ui_surface *ui)
 {
-    leonos_ui_text(ui, 34, 64,
+    reliefos_ui_text(ui, 34, 64,
                    T("Startup policy is saved here; Service Manager shows runtime state."),
-                   LEONOS_UI_DARK, LEONOS_UI_GRAY);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
     for (uint32_t i = 0; i < SETTINGS_SERVICE_ROWS; ++i) {
         uint32_t y = 98 + i * 48;
         uint32_t flags = (service_rows[i].locked ||
-                          current_user.role != LEONOS_AUTH_ROLE_ADMIN)
-                             ? LEONOS_UI_BUTTON_DISABLED
+                          current_user.role != RELIEFOS_AUTH_ROLE_ADMIN)
+                             ? RELIEFOS_UI_BUTTON_DISABLED
                              : 0;
-        leonos_ui_panel(ui, 34, y, SETTINGS_W - 68, 40, LEONOS_UI_WHITE);
-        leonos_ui_checkbox(ui, 44, y + 9,
+        reliefos_ui_panel(ui, 34, y, SETTINGS_W - 68, 40, RELIEFOS_UI_WHITE);
+        reliefos_ui_checkbox(ui, 44, y + 9,
                            T(service_rows[i].name),
                            service_rows[i].enabled, flags);
-        leonos_ui_text_clipped(ui, 274, y + 11, SETTINGS_W - 318,
+        reliefos_ui_text_clipped(ui, 274, y + 11, SETTINGS_W - 318,
                                i == 4U ? ntp_runtime_detail :
                                          T(service_rows[i].detail),
-                               service_rows[i].locked ? LEONOS_UI_DARK : LEONOS_UI_BLACK,
-                               LEONOS_UI_WHITE);
+                               service_rows[i].locked ? RELIEFOS_UI_DARK : RELIEFOS_UI_BLACK,
+                               RELIEFOS_UI_WHITE);
     }
-    leonos_ui_text(ui, 34, 346, T("NTP runtime state:"),
-                   LEONOS_UI_DARK, LEONOS_UI_GRAY);
-    leonos_ui_text_clipped(ui, 174, 346, SETTINGS_W - 208, ntp_runtime_state,
+    reliefos_ui_text(ui, 34, 346, T("NTP runtime state:"),
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
+    reliefos_ui_text_clipped(ui, 174, 346, SETTINGS_W - 208, ntp_runtime_state,
                            text_eq(ntp_runtime_state, "failed") ? 0x00b03030U :
                            text_eq(ntp_runtime_state, "running") ? 0x00108040U :
-                           LEONOS_UI_DARK, LEONOS_UI_GRAY);
-    leonos_ui_button(ui, 34, SETTINGS_H - 66, 108, LEONOS_UI_BUTTON_H,
+                           RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
+    reliefos_ui_button(ui, 34, SETTINGS_H - 66, 108, RELIEFOS_UI_BUTTON_H,
                      T("Save"),
-                     current_user.role == LEONOS_AUTH_ROLE_ADMIN
+                     current_user.role == RELIEFOS_AUTH_ROLE_ADMIN
                          ? 0
-                         : LEONOS_UI_BUTTON_DISABLED);
+                         : RELIEFOS_UI_BUTTON_DISABLED);
 }
 
-static void draw_activation_page(struct leonos_ui_surface *ui)
+static void draw_activation_page(struct reliefos_ui_surface *ui)
 {
-    struct leonos_license_info info;
+    struct reliefos_license_info info;
     const char *status;
     uint32_t required;
     uint32_t ok;
-    required = (uint32_t)leonos_license_required();
+    required = (uint32_t)reliefos_license_required();
     if (!required) {
-        info = (struct leonos_license_info){0};
+        info = (struct reliefos_license_info){0};
         copy_text(info.detail, sizeof(info.detail), T("License validation is disabled for this build."));
         status = T("Not required");
         ok = 1;
-    } else if (leonos_license_status(&info) < 0) {
-        info = (struct leonos_license_info){0};
-        info.status = LEONOS_LICENSE_STATUS_INVALID;
+    } else if (reliefos_license_status(&info) < 0) {
+        info = (struct reliefos_license_info){0};
+        info.status = RELIEFOS_LICENSE_STATUS_INVALID;
         copy_text(info.detail, sizeof(info.detail), "license status unavailable");
         status = license_status_label(info.status);
         ok = 0;
     } else {
         status = license_status_label(info.status);
-        ok = info.status == LEONOS_LICENSE_STATUS_OK;
+        ok = info.status == RELIEFOS_LICENSE_STATUS_OK;
     }
-    leonos_ui_text(ui, 34, 64, T("Activation"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_panel(ui, 34, 94, SETTINGS_W - 68, 52,
-                    ok ? LEONOS_UI_WHITE : LEONOS_UI_LIGHT);
-    leonos_ui_text(ui, 50, 110, T("Computer"),
-                   LEONOS_UI_BLACK, ok ? LEONOS_UI_WHITE : LEONOS_UI_LIGHT);
-    leonos_ui_text_clipped(ui, 176, 110, SETTINGS_W - 226,
+    reliefos_ui_text(ui, 34, 64, T("Activation"), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_panel(ui, 34, 94, SETTINGS_W - 68, 52,
+                    ok ? RELIEFOS_UI_WHITE : RELIEFOS_UI_LIGHT);
+    reliefos_ui_text(ui, 50, 110, T("Computer"),
+                   RELIEFOS_UI_BLACK, ok ? RELIEFOS_UI_WHITE : RELIEFOS_UI_LIGHT);
+    reliefos_ui_text_clipped(ui, 176, 110, SETTINGS_W - 226,
                            status,
-                           ok ? LEONOS_UI_BLACK : LEONOS_UI_DARK,
-                           ok ? LEONOS_UI_WHITE : LEONOS_UI_LIGHT);
+                           ok ? RELIEFOS_UI_BLACK : RELIEFOS_UI_DARK,
+                           ok ? RELIEFOS_UI_WHITE : RELIEFOS_UI_LIGHT);
     draw_field(ui, 170, T("Activation mode"),
                !required ? T("Not required") :
                ok ? license_mode_label(info.mode) : "-");
     draw_field(ui, 202, T("Machine ID"), info.install_id);
     draw_field(ui, 234, T("Email hash"), info.email_hash);
     draw_field(ui, 266, T("Detail"), info.detail);
-    draw_field(ui, 298, T("License file"), LEONOS_PATH_LICENSE);
+    draw_field(ui, 298, T("License file"), RELIEFOS_PATH_LICENSE);
 }
 
-static void draw_settings(struct leonos_ui_surface *ui)
+static void draw_settings(struct reliefos_ui_surface *ui)
 {
-    struct leonos_ui_tab_item tabs[] = {
+    struct reliefos_ui_tab_item tabs[] = {
         {T("Display"), PAGE_DISPLAY, 0},
         {T("Personalize"), PAGE_PERSONALIZATION, 0},
         {T("Users"), PAGE_USERS, 0},
@@ -1619,11 +1619,11 @@ static void draw_settings(struct leonos_ui_surface *ui)
         {T("Activation"), PAGE_ACTIVATION, 0},
         {T("Input Method"), PAGE_INPUT_METHODS, 0},
     };
-    leonos_ui_rect(ui, 0, 0, SETTINGS_W, SETTINGS_H, LEONOS_UI_GRAY);
+    reliefos_ui_rect(ui, 0, 0, SETTINGS_W, SETTINGS_H, RELIEFOS_UI_GRAY);
     settings_tabs.selected_id = active_page;
-    leonos_ui_tab_control(ui, 18, SETTINGS_TAB_Y, SETTINGS_W - 36, tabs,
+    reliefos_ui_tab_control(ui, 18, SETTINGS_TAB_Y, SETTINGS_W - 36, tabs,
                           SETTINGS_TAB_COUNT, &settings_tabs);
-    leonos_ui_tab_body(ui, 18, SETTINGS_BODY_Y, SETTINGS_W - 36, SETTINGS_H - 84);
+    reliefos_ui_tab_body(ui, 18, SETTINGS_BODY_Y, SETTINGS_W - 36, SETTINGS_H - 84);
     if (active_page == PAGE_DISPLAY) {
         draw_display_page(ui);
     } else if (active_page == PAGE_PERSONALIZATION) {
@@ -1639,62 +1639,62 @@ static void draw_settings(struct leonos_ui_surface *ui)
     } else {
         draw_activation_page(ui);
     }
-    leonos_ui_statusbar(ui, SETTINGS_H - 28, 28, status_text);
+    reliefos_ui_statusbar(ui, SETTINGS_H - 28, 28, status_text);
 }
 
 static int handle_open_dropdown_hit(int32_t x, int32_t y)
 {
     uint32_t id = 0;
-    struct leonos_ui_dropdown_item mode_items[SETTINGS_MODE_COUNT];
-    struct leonos_ui_dropdown_item scale_items[SETTINGS_SCALE_COUNT];
-    struct leonos_ui_dropdown_item lang_items[2];
-    struct leonos_ui_dropdown_item theme_items[2];
-    struct leonos_ui_dropdown_item metro_items[LEONOS_UI_COLOR_SCHEME_COUNT];
-    struct leonos_ui_dropdown_item win95_items[LEONOS_UI_COLOR_SCHEME_COUNT];
-    struct leonos_ui_dropdown_item wallpaper_items[LEONOS_WALLPAPER_MODE_COUNT];
+    struct reliefos_ui_dropdown_item mode_items[SETTINGS_MODE_COUNT];
+    struct reliefos_ui_dropdown_item scale_items[SETTINGS_SCALE_COUNT];
+    struct reliefos_ui_dropdown_item lang_items[2];
+    struct reliefos_ui_dropdown_item theme_items[2];
+    struct reliefos_ui_dropdown_item metro_items[RELIEFOS_UI_COLOR_SCHEME_COUNT];
+    struct reliefos_ui_dropdown_item win95_items[RELIEFOS_UI_COLOR_SCHEME_COUNT];
+    struct reliefos_ui_dropdown_item wallpaper_items[RELIEFOS_WALLPAPER_MODE_COUNT];
     for (uint32_t i = 0; i < SETTINGS_MODE_COUNT; ++i) {
         mode_items[i].label = mode_labels[i];
         mode_items[i].id = i;
-        mode_items[i].flags = mode_supported(i, display_state.scale_index) ? 0 : LEONOS_UI_MENU_DISABLED;
+        mode_items[i].flags = mode_supported(i, display_state.scale_index) ? 0 : RELIEFOS_UI_MENU_DISABLED;
     }
     for (uint32_t i = 0; i < SETTINGS_SCALE_COUNT; ++i) {
         scale_items[i].label = scale_labels[i];
         scale_items[i].id = i;
-        scale_items[i].flags = mode_supported(display_state.mode_index, i) ? 0 : LEONOS_UI_MENU_DISABLED;
+        scale_items[i].flags = mode_supported(display_state.mode_index, i) ? 0 : RELIEFOS_UI_MENU_DISABLED;
     }
-    lang_items[0] = (struct leonos_ui_dropdown_item){language_options[0].name, 0, 0};
-    lang_items[1] = (struct leonos_ui_dropdown_item){language_options[1].name, 1, 0};
-    theme_items[0] = (struct leonos_ui_dropdown_item){"Metro", LEONOS_UI_THEME_METRO, 0};
-    theme_items[1] = (struct leonos_ui_dropdown_item){"Win95", LEONOS_UI_THEME_WIN95, 0};
+    lang_items[0] = (struct reliefos_ui_dropdown_item){language_options[0].name, 0, 0};
+    lang_items[1] = (struct reliefos_ui_dropdown_item){language_options[1].name, 1, 0};
+    theme_items[0] = (struct reliefos_ui_dropdown_item){"Metro", RELIEFOS_UI_THEME_METRO, 0};
+    theme_items[1] = (struct reliefos_ui_dropdown_item){"Win95", RELIEFOS_UI_THEME_WIN95, 0};
     fill_theme_color_items(metro_items);
     fill_theme_color_items(win95_items);
     fill_wallpaper_mode_items(wallpaper_items);
     if (active_drop == DROP_RESOLUTION &&
-        leonos_ui_dropdown_hit(x, y, 160, 122, 190, mode_items, SETTINGS_MODE_COUNT,
+        reliefos_ui_dropdown_hit(x, y, 160, 122, 190, mode_items, SETTINGS_MODE_COUNT,
                                SETTINGS_DROPDOWN_ROW_H, 1000, &id)) {
         active_drop = DROP_NONE;
         if (id < SETTINGS_MODE_COUNT && mode_supported(id, display_state.scale_index)) {
-            request_display(LEONOS_DISPLAY_REQUEST_APPLY, id, display_state.scale_index);
+            request_display(RELIEFOS_DISPLAY_REQUEST_APPLY, id, display_state.scale_index);
             copy_text(status_text, sizeof(status_text), T("Resolution changed"));
         }
         return 1;
     }
     if (active_drop == DROP_SCALE &&
-        leonos_ui_dropdown_hit(x, y, 160, 162, 190, scale_items, SETTINGS_SCALE_COUNT,
+        reliefos_ui_dropdown_hit(x, y, 160, 162, 190, scale_items, SETTINGS_SCALE_COUNT,
                                SETTINGS_DROPDOWN_ROW_H, 1000, &id)) {
         active_drop = DROP_NONE;
         if (id < SETTINGS_SCALE_COUNT && mode_supported(display_state.mode_index, id)) {
-            request_display(LEONOS_DISPLAY_REQUEST_APPLY, display_state.mode_index, id);
+            request_display(RELIEFOS_DISPLAY_REQUEST_APPLY, display_state.mode_index, id);
             copy_text(status_text, sizeof(status_text), T("Scale changed"));
         }
         return 1;
     }
     if (active_drop == DROP_LANGUAGE &&
-        leonos_ui_dropdown_hit(x, y, 160, 202, 190, lang_items, 2,
+        reliefos_ui_dropdown_hit(x, y, 160, 202, 190, lang_items, 2,
                                SETTINGS_DROPDOWN_ROW_H, 1000, &id)) {
         active_drop = DROP_NONE;
         if (id < 2) {
-            if (leonos_environment_set(LEONOS_ENV_SCOPE_USER, "LANG",
+            if (reliefos_environment_set(RELIEFOS_ENV_SCOPE_USER, "LANG",
                                        language_options[id].locale) == 0) {
                 selected_language = id;
                 copy_text(status_text, sizeof(status_text), T("Reopen applications to apply the language"));
@@ -1705,44 +1705,44 @@ static int handle_open_dropdown_hit(int32_t x, int32_t y)
         return 1;
     }
     if (active_drop == DROP_THEME &&
-        leonos_ui_dropdown_hit(x, y, 160, 122, 190, theme_items, 2,
+        reliefos_ui_dropdown_hit(x, y, 160, 122, 190, theme_items, 2,
                                SETTINGS_DROPDOWN_ROW_H, 1000, &id)) {
         active_drop = DROP_NONE;
         if (current_user.username[0] &&
-            (id == LEONOS_UI_THEME_METRO || id == LEONOS_UI_THEME_WIN95)) {
+            (id == RELIEFOS_UI_THEME_METRO || id == RELIEFOS_UI_THEME_WIN95)) {
             appearance_state.theme = id;
             request_appearance_change(T("Theme style changed"));
         }
         return 1;
     }
     if (active_drop == DROP_METRO_COLOR &&
-        leonos_ui_dropdown_hit(x, y, 160, 162, 190, metro_items,
-                               LEONOS_UI_COLOR_SCHEME_COUNT,
+        reliefos_ui_dropdown_hit(x, y, 160, 162, 190, metro_items,
+                               RELIEFOS_UI_COLOR_SCHEME_COUNT,
                                SETTINGS_DROPDOWN_ROW_H, 1000, &id)) {
         active_drop = DROP_NONE;
-        if (current_user.username[0] && id < LEONOS_UI_COLOR_SCHEME_COUNT) {
+        if (current_user.username[0] && id < RELIEFOS_UI_COLOR_SCHEME_COUNT) {
             appearance_state.metro_color_scheme = id;
             request_appearance_change(T("Metro color changed"));
         }
         return 1;
     }
     if (active_drop == DROP_WIN95_COLOR &&
-        leonos_ui_dropdown_hit(x, y, 160, 202, 190, win95_items,
-                               LEONOS_UI_COLOR_SCHEME_COUNT,
+        reliefos_ui_dropdown_hit(x, y, 160, 202, 190, win95_items,
+                               RELIEFOS_UI_COLOR_SCHEME_COUNT,
                                SETTINGS_DROPDOWN_ROW_H, 1000, &id)) {
         active_drop = DROP_NONE;
-        if (current_user.username[0] && id < LEONOS_UI_COLOR_SCHEME_COUNT) {
+        if (current_user.username[0] && id < RELIEFOS_UI_COLOR_SCHEME_COUNT) {
             appearance_state.win95_color_scheme = id;
             request_appearance_change(T("Win95 color changed"));
         }
         return 1;
     }
     if (active_drop == DROP_WALLPAPER_MODE &&
-        leonos_ui_dropdown_hit(x, y, 160, 282, 190, wallpaper_items,
-                               LEONOS_WALLPAPER_MODE_COUNT,
+        reliefos_ui_dropdown_hit(x, y, 160, 282, 190, wallpaper_items,
+                               RELIEFOS_WALLPAPER_MODE_COUNT,
                                SETTINGS_DROPDOWN_ROW_H, 1000, &id)) {
         active_drop = DROP_NONE;
-        if (current_user.username[0] && id < LEONOS_WALLPAPER_MODE_COUNT) {
+        if (current_user.username[0] && id < RELIEFOS_WALLPAPER_MODE_COUNT) {
             appearance_state.wallpaper_mode = id;
             request_appearance_change(T("Wallpaper mode changed"));
         }
@@ -1753,19 +1753,19 @@ static int handle_open_dropdown_hit(int32_t x, int32_t y)
 
 static void create_user_dialog(uint32_t role)
 {
-    char name[LEONOS_AUTH_USERNAME_LEN] = "";
-    char pass[LEONOS_AUTH_PASSWORD_LEN] = "";
-    struct leonos_user_info user;
-    if (leonos_ui_show_input_dialog(T("Create user"), T("Username"),
+    char name[RELIEFOS_AUTH_USERNAME_LEN] = "";
+    char pass[RELIEFOS_AUTH_PASSWORD_LEN] = "";
+    struct reliefos_user_info user;
+    if (reliefos_ui_show_input_dialog(T("Create user"), T("Username"),
                                     name, sizeof(name)) <= 0) {
         return;
     }
-    if (leonos_ui_show_password_dialog(T("Create user"), T("Password"),
+    if (reliefos_ui_show_password_dialog(T("Create user"), T("Password"),
                                        pass, sizeof(pass)) <= 0) {
         explicit_bzero(pass, sizeof(pass));
         return;
     }
-    if (leonos_auth_create_user(name, pass, role, &user) == 0) {
+    if (reliefos_auth_create_user(name, pass, role, &user) == 0) {
         copy_text(status_text, sizeof(status_text), T("User created"));
         refresh_users();
     } else {
@@ -1780,7 +1780,7 @@ static void reset_password_dialog(uint32_t uid)
     if (!account) return;
     char *args[] = {"/usr/lib/leonos/apps/terminal/terminal.elf", "-e",
                      "/usr/bin/passwd", account->pw_name, NULL};
-    if (leonos_spawn_argv(args[0], args) < 0)
+    if (reliefos_spawn_argv(args[0], args) < 0)
         copy_text(status_text, sizeof(status_text), T("Could not start passwd"));
 }
 
@@ -1797,23 +1797,23 @@ static void handle_users_click(int32_t x, int32_t y)
             return;
         }
     }
-    if (current_user.role == LEONOS_AUTH_ROLE_ADMIN) {
-        if (hit_rect_i(x, y, 484, 98, 104, LEONOS_UI_BUTTON_H)) {
-            create_user_dialog(LEONOS_AUTH_ROLE_USER);
-        } else if (user_count && users[selected_user].uid && hit_rect_i(x, y, 484, 178, 104, LEONOS_UI_BUTTON_H)) {
-            uint32_t flags = users[selected_user].flags ^ LEONOS_AUTH_USER_DISABLED;
-            if (leonos_auth_update_user(users[selected_user].uid, LEONOS_AUTH_UPDATE_FLAGS,
+    if (current_user.role == RELIEFOS_AUTH_ROLE_ADMIN) {
+        if (hit_rect_i(x, y, 484, 98, 104, RELIEFOS_UI_BUTTON_H)) {
+            create_user_dialog(RELIEFOS_AUTH_ROLE_USER);
+        } else if (user_count && users[selected_user].uid && hit_rect_i(x, y, 484, 178, 104, RELIEFOS_UI_BUTTON_H)) {
+            uint32_t flags = users[selected_user].flags ^ RELIEFOS_AUTH_USER_DISABLED;
+            if (reliefos_auth_update_user(users[selected_user].uid, RELIEFOS_AUTH_UPDATE_FLAGS,
                                         users[selected_user].role, flags) == 0) {
                 copy_text(status_text, sizeof(status_text), T("User state updated"));
             } else {
                 copy_text(status_text, sizeof(status_text), T("User state change denied"));
             }
             refresh_users();
-        } else if (user_count && hit_rect_i(x, y, 484, 258, 104, LEONOS_UI_BUTTON_H)) {
+        } else if (user_count && hit_rect_i(x, y, 484, 258, 104, RELIEFOS_UI_BUTTON_H)) {
             reset_password_dialog(users[selected_user].uid);
         }
     }
-    if (hit_rect_i(x, y, 34, 324, 150, LEONOS_UI_BUTTON_H)) {
+    if (hit_rect_i(x, y, 34, 324, 150, RELIEFOS_UI_BUTTON_H)) {
         change_my_password();
     }
 }
@@ -1824,51 +1824,51 @@ static void handle_display_click(int32_t x, int32_t y)
         return;
     }
     active_drop = DROP_NONE;
-    if (hit_rect_i(x, y, 160, 98, 190, LEONOS_FONT_H + 8)) {
+    if (hit_rect_i(x, y, 160, 98, 190, RELIEFOS_FONT_H + 8)) {
         active_drop = DROP_RESOLUTION;
         return;
     }
-    if (hit_rect_i(x, y, 160, 138, 190, LEONOS_FONT_H + 8)) {
+    if (hit_rect_i(x, y, 160, 138, 190, RELIEFOS_FONT_H + 8)) {
         active_drop = DROP_SCALE;
         return;
     }
-    if (hit_rect_i(x, y, 370, 138, 150, LEONOS_UI_BUTTON_H)) {
+    if (hit_rect_i(x, y, 370, 138, 150, RELIEFOS_UI_BUTTON_H)) {
         uint32_t next = display_state.scale_index;
-        if (leonos_ui_slider_handle_mouse(&next,
+        if (reliefos_ui_slider_handle_mouse(&next,
                                           SETTINGS_SCALE_COUNT > 1 ? SETTINGS_SCALE_COUNT - 1 : 1,
-                                          370, 138, 150, LEONOS_UI_BUTTON_H,
+                                          370, 138, 150, RELIEFOS_UI_BUTTON_H,
                                           x, y) &&
             next < SETTINGS_SCALE_COUNT &&
             mode_supported(display_state.mode_index, next)) {
-            request_display(LEONOS_DISPLAY_REQUEST_APPLY,
+            request_display(RELIEFOS_DISPLAY_REQUEST_APPLY,
                             display_state.mode_index, next);
             copy_text(status_text, sizeof(status_text), T("Scale changed"));
         }
         return;
     }
-    if (hit_rect_i(x, y, 160, 178, 190, LEONOS_FONT_H + 8)) {
+    if (hit_rect_i(x, y, 160, 178, 190, RELIEFOS_FONT_H + 8)) {
         active_drop = DROP_LANGUAGE;
         return;
     }
-    if (display_state.pending_confirm && hit_rect_i(x, y, 54, 306, 82, LEONOS_UI_BUTTON_H)) {
-        request_display(LEONOS_DISPLAY_REQUEST_KEEP, display_state.mode_index, display_state.scale_index);
+    if (display_state.pending_confirm && hit_rect_i(x, y, 54, 306, 82, RELIEFOS_UI_BUTTON_H)) {
+        request_display(RELIEFOS_DISPLAY_REQUEST_KEEP, display_state.mode_index, display_state.scale_index);
         copy_text(status_text, sizeof(status_text), T("Display settings saved"));
         return;
     }
-    if (display_state.pending_confirm && hit_rect_i(x, y, 146, 306, 82, LEONOS_UI_BUTTON_H)) {
-        request_display(LEONOS_DISPLAY_REQUEST_REVERT, display_state.mode_index, display_state.scale_index);
+    if (display_state.pending_confirm && hit_rect_i(x, y, 146, 306, 82, RELIEFOS_UI_BUTTON_H)) {
+        request_display(RELIEFOS_DISPLAY_REQUEST_REVERT, display_state.mode_index, display_state.scale_index);
         copy_text(status_text, sizeof(status_text), T("Display settings reverted"));
     }
 }
 
 static void choose_wallpaper_dialog(void)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     copy_text(path, sizeof(path),
               appearance_state.wallpaper_path[0]
                   ? appearance_state.wallpaper_path
                   : SETTINGS_DEFAULT_WALLPAPER_PATH);
-    if (leonos_ui_show_open_dialog(T("Choose wallpaper"),
+    if (reliefos_ui_show_open_dialog(T("Choose wallpaper"),
                                    path, sizeof(path),
                                    T("Bitmap (*.bmp)"),
                                    ".bmp") <= 0) {
@@ -1895,30 +1895,30 @@ static void handle_personalization_click(int32_t x, int32_t y)
                   T("Sign in to change personalization."));
         return;
     }
-    if (hit_rect_i(x, y, 160, 98, 190, LEONOS_FONT_H + 8)) {
+    if (hit_rect_i(x, y, 160, 98, 190, RELIEFOS_FONT_H + 8)) {
         active_drop = DROP_THEME;
         return;
     }
-    if (hit_rect_i(x, y, 160, 138, 190, LEONOS_FONT_H + 8)) {
+    if (hit_rect_i(x, y, 160, 138, 190, RELIEFOS_FONT_H + 8)) {
         active_drop = DROP_METRO_COLOR;
         return;
     }
-    if (hit_rect_i(x, y, 160, 178, 190, LEONOS_FONT_H + 8)) {
+    if (hit_rect_i(x, y, 160, 178, 190, RELIEFOS_FONT_H + 8)) {
         active_drop = DROP_WIN95_COLOR;
         return;
     }
-    if (hit_rect_i(x, y, 486, 218, 82, LEONOS_UI_BUTTON_H)) {
+    if (hit_rect_i(x, y, 486, 218, 82, RELIEFOS_UI_BUTTON_H)) {
         choose_wallpaper_dialog();
         return;
     }
-    if (hit_rect_i(x, y, 576, 218, 82, LEONOS_UI_BUTTON_H)) {
+    if (hit_rect_i(x, y, 576, 218, 82, RELIEFOS_UI_BUTTON_H)) {
         copy_text(appearance_state.wallpaper_path,
                   sizeof(appearance_state.wallpaper_path),
                   SETTINGS_DEFAULT_WALLPAPER_PATH);
         request_appearance_change(T("Default wallpaper restored"));
         return;
     }
-    if (hit_rect_i(x, y, 160, 258, 190, LEONOS_FONT_H + 8)) {
+    if (hit_rect_i(x, y, 160, 258, 190, RELIEFOS_FONT_H + 8)) {
         active_drop = DROP_WALLPAPER_MODE;
         return;
     }
@@ -1930,7 +1930,7 @@ static void set_assoc_for_row(uint32_t row, const char *program)
     if (row >= SETTINGS_ASSOC_ROWS) {
         return;
     }
-    ret = leonos_launch_set_extension_association(assoc_rows[row].extension,
+    ret = reliefos_launch_set_extension_association(assoc_rows[row].extension,
                                                   program);
     if (ret == 0) {
         copy_text(status_text, sizeof(status_text),
@@ -1952,7 +1952,7 @@ static void handle_assoc_click(int32_t x, int32_t y)
         for (uint32_t slot = 0; slot < candidate_count; ++slot) {
             if (hit_rect_i(x, y, (int32_t)settings_assoc_button_x[slot],
                            row_y + 2, settings_assoc_button_w[slot],
-                           LEONOS_UI_BUTTON_H)) {
+                           RELIEFOS_UI_BUTTON_H)) {
                 set_assoc_for_row(i, settings_assoc_apps[candidate_indices[slot]].exec);
                 return;
             }
@@ -1964,7 +1964,7 @@ static void handle_services_click(int32_t x, int32_t y)
 {
     for (uint32_t i = 0; i < SETTINGS_SERVICE_ROWS; ++i) {
         int32_t row_y = 98 + (int32_t)i * 48;
-        if (current_user.role == LEONOS_AUTH_ROLE_ADMIN &&
+        if (current_user.role == RELIEFOS_AUTH_ROLE_ADMIN &&
             !service_rows[i].locked &&
             hit_rect_i(x, y, 44, row_y + 4, 220, 32)) {
             service_rows[i].enabled = service_rows[i].enabled ? 0 : 1;
@@ -1973,7 +1973,7 @@ static void handle_services_click(int32_t x, int32_t y)
             return;
         }
     }
-    if (hit_rect_i(x, y, 34, SETTINGS_H - 66, 108, LEONOS_UI_BUTTON_H)) {
+    if (hit_rect_i(x, y, 34, SETTINGS_H - 66, 108, RELIEFOS_UI_BUTTON_H)) {
         save_services_config();
     }
 }
@@ -1985,13 +1985,13 @@ static void inputm_set_status(int ok, const char *success, const char *failure)
 
 static void inputm_request_login_start(const struct settings_inputm_entry *entry)
 {
-    struct leonos_startup_command command = {0};
+    struct reliefos_startup_command command = {0};
     uint32_t request_id = 0;
     if (!entry || !entry->path[0] || text_len(entry->path) >= sizeof(command.path)) {
         return;
     }
     copy_text(command.path, sizeof(command.path), entry->path);
-    if (leonos_startup_request(&command, &request_id) == 0) {
+    if (reliefos_startup_request(&command, &request_id) == 0) {
         copy_text(status_text, sizeof(status_text),
                   T("Login startup approval requested"));
     }
@@ -2002,13 +2002,13 @@ static void handle_input_methods_click(int32_t x, int32_t y)
     struct settings_inputm_entry *entry =
         inputm_selected < inputm_entry_count ? &inputm_entries[inputm_selected] : 0;
     if (active_drop == DROP_INPUTM_STARTUP && entry) {
-        struct leonos_ui_dropdown_item items[3] = {
+        struct reliefos_ui_dropdown_item items[3] = {
             {T("Manual"), TEXT_INPUT_START_MANUAL, 0},
             {T("At sign-in"), TEXT_INPUT_START_LOGIN, 0},
             {T("On demand"), TEXT_INPUT_START_ON_DEMAND, 0},
         };
         uint32_t id = 0;
-        if (leonos_ui_dropdown_hit(x, y, 510, 184, 156, items, 3,
+        if (reliefos_ui_dropdown_hit(x, y, 510, 184, 156, items, 3,
                                    SETTINGS_DROPDOWN_ROW_H, 1000, &id)) {
             char key[48];
             char value[4];
@@ -2029,12 +2029,12 @@ static void handle_input_methods_click(int32_t x, int32_t y)
         }
     }
     if (active_drop == DROP_INPUTM_HOTKEY) {
-        struct leonos_ui_dropdown_item items[2] = {
+        struct reliefos_ui_dropdown_item items[2] = {
             {"Win + Space", 0, 0},
             {"Alt + Shift", 1, 0},
         };
         uint32_t id = 0;
-        if (leonos_ui_dropdown_hit(x, y, 170, 284, 180, items, 2,
+        if (reliefos_ui_dropdown_hit(x, y, 170, 284, 180, items, 2,
                                    SETTINGS_DROPDOWN_ROW_H, 1000, &id)) {
             active_drop = DROP_NONE;
             copy_text(inputm_hotkey, sizeof(inputm_hotkey),
@@ -2061,7 +2061,7 @@ static void handle_input_methods_click(int32_t x, int32_t y)
     if (!entry) {
         return;
     }
-    if (hit_rect_i(x, y, 510, 92, 156, LEONOS_UI_BUTTON_H) && inputm_selected != 0) {
+    if (hit_rect_i(x, y, 510, 92, 156, RELIEFOS_UI_BUTTON_H) && inputm_selected != 0) {
         char key[48];
         entry->enabled = entry->enabled ? 0 : 1;
         inputm_provider_key(key, sizeof(key), entry->config_index, "enabled");
@@ -2078,18 +2078,18 @@ static void handle_input_methods_click(int32_t x, int32_t y)
         }
         return;
     }
-    if (hit_rect_i(x, y, 510, 126, 156, LEONOS_UI_BUTTON_H) && entry->enabled) {
+    if (hit_rect_i(x, y, 510, 126, 156, RELIEFOS_UI_BUTTON_H) && entry->enabled) {
         copy_text(inputm_default, sizeof(inputm_default), entry->id);
         inputm_set_status(inputm_append_config("default", entry->id),
                           T("Default input method saved"),
                           T("Could not save input method"));
         return;
     }
-    if (hit_rect_i(x, y, 510, 160, 156, LEONOS_UI_BUTTON_H) && inputm_selected != 0) {
+    if (hit_rect_i(x, y, 510, 160, 156, RELIEFOS_UI_BUTTON_H) && inputm_selected != 0) {
         active_drop = DROP_INPUTM_STARTUP;
         return;
     }
-    if (hit_rect_i(x, y, 510, 194, 74, LEONOS_UI_BUTTON_H) && inputm_selected > 1U) {
+    if (hit_rect_i(x, y, 510, 194, 74, RELIEFOS_UI_BUTTON_H) && inputm_selected > 1U) {
         struct settings_inputm_entry *previous = &inputm_entries[inputm_selected - 1U];
         char key[48];
         char value[12];
@@ -2120,7 +2120,7 @@ static void handle_input_methods_click(int32_t x, int32_t y)
         copy_text(status_text, sizeof(status_text), T("Input method moved"));
         return;
     }
-    if (hit_rect_i(x, y, 592, 194, 74, LEONOS_UI_BUTTON_H) && inputm_selected != 0 &&
+    if (hit_rect_i(x, y, 592, 194, 74, RELIEFOS_UI_BUTTON_H) && inputm_selected != 0 &&
         inputm_selected + 1U < inputm_entry_count) {
         struct settings_inputm_entry *next = &inputm_entries[inputm_selected + 1U];
         char key[48];
@@ -2152,12 +2152,12 @@ static void handle_input_methods_click(int32_t x, int32_t y)
         copy_text(status_text, sizeof(status_text), T("Input method moved"));
         return;
     }
-    if (hit_rect_i(x, y, 170, 260, 180, LEONOS_UI_BUTTON_H)) {
+    if (hit_rect_i(x, y, 170, 260, 180, RELIEFOS_UI_BUTTON_H)) {
         active_drop = DROP_INPUTM_HOTKEY;
         return;
     }
     for (uint32_t i = 0; i < inputm_option_count; ++i) {
-        if (hit_rect_i(x, y, 44 + (int32_t)i * 150, 304, 140, LEONOS_UI_BUTTON_H)) {
+        if (hit_rect_i(x, y, 44 + (int32_t)i * 150, 304, 140, RELIEFOS_UI_BUTTON_H)) {
             inputm_options[i].value = inputm_options[i].value ? 0 : 1;
             inputm_set_status(inputm_append_config(inputm_options[i].key,
                                                    inputm_options[i].value ? "1" : "0"),
@@ -2166,22 +2166,22 @@ static void handle_input_methods_click(int32_t x, int32_t y)
             return;
         }
     }
-    if (hit_rect_i(x, y, 510, 344, 156, LEONOS_UI_BUTTON_H) && entry->settings_app[0]) {
+    if (hit_rect_i(x, y, 510, 344, 156, RELIEFOS_UI_BUTTON_H) && entry->settings_app[0]) {
         char *argv[2];
         argv[0] = entry->settings_app;
         argv[1] = 0;
-        inputm_set_status(leonos_spawn_argv(entry->settings_app, argv) > 0,
+        inputm_set_status(reliefos_spawn_argv(entry->settings_app, argv) > 0,
                           T("Provider settings started"),
                           T("Could not start provider settings"));
         return;
     }
-    if (hit_rect_i(x, y, 510, 344, 156, LEONOS_UI_BUTTON_H) &&
+    if (hit_rect_i(x, y, 510, 344, 156, RELIEFOS_UI_BUTTON_H) &&
         text_eq(entry->id, "oschinpt") && entry->path[0]) {
         char *argv[3];
         argv[0] = entry->path;
         argv[1] = "--update";
         argv[2] = 0;
-        inputm_set_status(leonos_spawn_argv(entry->path, argv) > 0,
+        inputm_set_status(reliefos_spawn_argv(entry->path, argv) > 0,
                           T("Dictionary update started"),
                           T("Could not start dictionary update"));
     }
@@ -2189,7 +2189,7 @@ static void handle_input_methods_click(int32_t x, int32_t y)
 
 static void handle_click(int32_t x, int32_t y)
 {
-    struct leonos_ui_tab_item tabs[] = {
+    struct reliefos_ui_tab_item tabs[] = {
         {T("Display"), PAGE_DISPLAY, 0},
         {T("Personalize"), PAGE_PERSONALIZATION, 0},
         {T("Users"), PAGE_USERS, 0},
@@ -2198,7 +2198,7 @@ static void handle_click(int32_t x, int32_t y)
         {T("Activation"), PAGE_ACTIVATION, 0},
         {T("Input Method"), PAGE_INPUT_METHODS, 0},
     };
-    if (leonos_ui_tab_control_handle_mouse(&settings_tabs, x, y, 18,
+    if (reliefos_ui_tab_control_handle_mouse(&settings_tabs, x, y, 18,
                                            SETTINGS_TAB_Y, SETTINGS_W - 36,
                                            tabs, SETTINGS_TAB_COUNT)) {
         active_page = (uint8_t)settings_tabs.selected_id;
@@ -2223,24 +2223,24 @@ static void handle_click(int32_t x, int32_t y)
 int main(void)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
     selected_language = language_selection();
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
     unsigned long last_refresh = 0;
     puts("[settings.elf] settings starting");
-    leonos_ui_tab_state_init(&settings_tabs, PAGE_DISPLAY);
-    window_id = leonos_gui_create_app_window_ex(T("Settings"),
+    reliefos_ui_tab_state_init(&settings_tabs, PAGE_DISPLAY);
+    window_id = reliefos_gui_create_app_window_ex(T("Settings"),
                                                 T("System settings"),
                                                 SETTINGS_W, SETTINGS_H,
-                                                LEONOS_GUI_WINDOW_NO_RESIZE);
+                                                RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[settings.elf] create window failed=%d\n", window_id);
         return 1;
     }
-    leonos_ui_bind(&ui, pixels, SETTINGS_W, SETTINGS_H, SETTINGS_W);
+    reliefos_ui_bind(&ui, pixels, SETTINGS_W, SETTINGS_H, SETTINGS_W);
     refresh_display_state();
     refresh_appearance_state();
     refresh_users();
@@ -2248,62 +2248,62 @@ int main(void)
     load_services_config();
     refresh_ntp_runtime_state();
     draw_settings(&ui);
-    leonos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
+    reliefos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
     for (;;) {
         if (poll_settings_openrc()) {
             draw_settings(&ui);
-            leonos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
+            reliefos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
         }
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_THEME_CHANGED) {
-                (void)leonos_ui_theme_set_appearance((uint32_t)event.x,
+            if (event.type == RELIEFOS_GUI_APP_EVENT_THEME_CHANGED) {
+                (void)reliefos_ui_theme_set_appearance((uint32_t)event.x,
                                                      (uint32_t)event.y,
                                                      (uint32_t)event.dx);
                 refresh_appearance_state();
                 draw_settings(&ui);
-                leonos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u)) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u)) {
                 handle_click(event.x, event.y);
                 refresh_display_state();
                 refresh_appearance_state();
                 refresh_users();
                 refresh_ntp_runtime_state();
                 draw_settings(&ui);
-                leonos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_WHEEL && active_page == PAGE_USERS) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_WHEEL && active_page == PAGE_USERS) {
                 if (event.dy > 0 && user_scroll) --user_scroll;
                 if (event.dy < 0 && user_scroll + SETTINGS_USER_ROWS < user_count) ++user_scroll;
                 draw_settings(&ui);
-                leonos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN && event.pressed &&
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN && event.pressed &&
                 event.keycode == SETTINGS_KEY_ESCAPE) {
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_FOCUS || event.type == LEONOS_GUI_APP_EVENT_RESIZE) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_FOCUS || event.type == RELIEFOS_GUI_APP_EVENT_RESIZE) {
                 refresh_display_state();
                 refresh_appearance_state();
                 refresh_users();
                 inputm_load_settings();
                 refresh_ntp_runtime_state();
                 draw_settings(&ui);
-                leonos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
             }
         } else {
-            unsigned long now = leonos_uptime_ms();
+            unsigned long now = reliefos_uptime_ms();
             if (now - last_refresh >= 250) {
                 refresh_display_state();
                 refresh_appearance_state();
                 refresh_users();
                 draw_settings(&ui);
-                leonos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, SETTINGS_W, SETTINGS_H, SETTINGS_W, pixels);
                 last_refresh = now;
             }
             sleep_ms(20);

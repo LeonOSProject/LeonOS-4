@@ -1,15 +1,15 @@
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
-#include <leonos/admin.h>
-#include <leonos/sudo.h>
+#include <reliefos/admin.h>
+#include <reliefos/sudo.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 /* An existing process cannot acquire identity from a password cache.
  * Relaunch its exact command through sudo; privileged work runs in that process. */
-int leonos_admin_elevate(void)
+int reliefos_admin_elevate(void)
 {
     if (geteuid() == 0) return 1;
     size_t size = 256;
@@ -49,7 +49,7 @@ int leonos_admin_elevate(void)
             }
             args[0] = path;
             uint32_t pid;
-            if (leonos_sudo_run(NULL, NULL, args, &pid) == 0) errno = EINPROGRESS;
+            if (reliefos_sudo_run(NULL, NULL, args, &pid) == 0) errno = EINPROGRESS;
             free(args);
             break;
         }
@@ -59,3 +59,5 @@ int leonos_admin_elevate(void)
     close(fd); free(data); free(path); errno = error;
     return 0;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_admin_elevate) leonos_admin_elevate __attribute__((alias("reliefos_admin_elevate")));

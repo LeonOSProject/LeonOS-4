@@ -61,7 +61,7 @@ pleditor)
  END {if (changed != 1) exit 1}
  ' "$source/src/pleditor.c" > "$work/generated/src/pleditor.c"
  for name in main pleditor syntax; do compile -include "$autoconf" -fPIE -c "$work/generated/src/$name.c" -o "$work/objects/$name.o"; done
- compile -include "$autoconf" -fPIE -c "$src/userland/apps/pleditor/platform_leonos.c" -o "$work/objects/platform.o"
+ compile -include "$autoconf" -fPIE -c "$src/userland/apps/pleditor/platform_reliefos.c" -o "$work/objects/platform.o"
  executable "$work"/objects/*.o
  ;;
 sl)

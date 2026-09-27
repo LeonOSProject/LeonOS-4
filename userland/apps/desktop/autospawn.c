@@ -10,7 +10,7 @@
 #include "desktop.h"
 #include <errno.h>
 #include <fcntl.h>
-#include <leonos/launch.h>
+#include <reliefos/launch.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -34,16 +34,16 @@ static const char *const ioctl_argv[] = {"linux-ioctl-cloexec", 0};
 static const char *const python_argv[] = {"python3", "/bin/hello.py", 0};
 
 static struct autospawn_target autospawn_targets[] = {
-    {"hello", LEONOS_LAYOUT_LEONOS_APPS "/hello/hello.elf", NULL, NULL, 0},
-    {"uidemo", LEONOS_LAYOUT_LEONOS_APPS "/uidemo/uidemo.elf", NULL, NULL, 0},
-    {"terminal", LEONOS_LAYOUT_LEONOS_APPS "/terminal/terminal.elf", NULL, NULL, 0},
-    {"memtest", LEONOS_LAYOUT_LEONOS_APPS "/memtest/memtest.elf", NULL, NULL, 0},
-    {"linuxabi", LEONOS_LAYOUT_LEONOS_TESTS "/musl-abi-dynamic.elf", NULL, "dynamic", 0},
-    {"linuxabi", LEONOS_LAYOUT_LEONOS_TESTS "/musl-abi-static.elf", NULL, "static", 0},
-    {"ltp", LEONOS_LAYOUT_LEONOS_TESTS "/ltp-runner.elf", NULL, NULL, 0},
-    {"gcc", LEONOS_LAYOUT_LEONOS_TESTS "/gcc-probe.elf", NULL, NULL, 0},
-    {"inventory", LEONOS_LAYOUT_LEONOS_TESTS "/linux-inventory.elf", inventory_argv, NULL, 0},
-    {"ioctlcloexec", LEONOS_LAYOUT_LEONOS_TESTS "/linux-ioctl-cloexec.elf", ioctl_argv, NULL, 0},
+    {"hello", RELIEFOS_LAYOUT_RELIEFOS_APPS "/hello/hello.elf", NULL, NULL, 0},
+    {"uidemo", RELIEFOS_LAYOUT_RELIEFOS_APPS "/uidemo/uidemo.elf", NULL, NULL, 0},
+    {"terminal", RELIEFOS_LAYOUT_RELIEFOS_APPS "/terminal/terminal.elf", NULL, NULL, 0},
+    {"memtest", RELIEFOS_LAYOUT_RELIEFOS_APPS "/memtest/memtest.elf", NULL, NULL, 0},
+    {"linuxabi", RELIEFOS_LAYOUT_RELIEFOS_TESTS "/musl-abi-dynamic.elf", NULL, "dynamic", 0},
+    {"linuxabi", RELIEFOS_LAYOUT_RELIEFOS_TESTS "/musl-abi-static.elf", NULL, "static", 0},
+    {"ltp", RELIEFOS_LAYOUT_RELIEFOS_TESTS "/ltp-runner.elf", NULL, NULL, 0},
+    {"gcc", RELIEFOS_LAYOUT_RELIEFOS_TESTS "/gcc-probe.elf", NULL, NULL, 0},
+    {"inventory", RELIEFOS_LAYOUT_RELIEFOS_TESTS "/linux-inventory.elf", inventory_argv, NULL, 0},
+    {"ioctlcloexec", RELIEFOS_LAYOUT_RELIEFOS_TESTS "/linux-ioctl-cloexec.elf", ioctl_argv, NULL, 0},
     {"python315", "/opt/python/bin/python3.15", python_argv, NULL, 0},
 };
 
@@ -108,7 +108,7 @@ static int autospawn_spawn(const struct autospawn_target *target)
             }
         }
     }
-    pid = leonos_spawn_argv(target->path, argv);
+    pid = reliefos_spawn_argv(target->path, argv);
     if (bound) {
         for (int i = 0; i < 3; ++i) {
             if (saved[i] >= 0) {
@@ -151,7 +151,7 @@ void desktop_autospawn_from_cmdline(void)
      * kernel spawns did; the login-session identity application must not run
      * for them (no session exists at desktop startup and its failure would
      * kill the child). */
-    leonos_launch_use_session(0);
+    reliefos_launch_use_session(0);
     for (char *token = cmdline; *token;) {
         char *end = token;
         char *name;
@@ -185,7 +185,7 @@ void desktop_autospawn_from_cmdline(void)
     if (saw_token && !handled) {
         autospawn_log("[desktop] autospawn: no matching targets\n");
     }
-    leonos_launch_use_session(1);
+    reliefos_launch_use_session(1);
     if (autospawn_console_fd >= 0) {
         close(autospawn_console_fd);
         autospawn_console_fd = -1;

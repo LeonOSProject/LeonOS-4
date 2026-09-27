@@ -1,9 +1,9 @@
 #include "../../../third_party/stardustui/platforms/platform.hpp"
 
 extern "C" {
-#include <leonos/fs.h>
-#include <leonos/gui.h>
-#include <leonos/ui.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
+#include <reliefos/ui.h>
 #include <sys/stat.h>
 #include <sys/stat.h>
 #include <stdint.h>
@@ -21,10 +21,10 @@ size_t strlen(const char *text);
 
 using namespace stardustui;
 
-#define STARDUST_O_WRONLY LEONOS_O_WRONLY
-#define STARDUST_O_CREAT LEONOS_O_CREAT
-#define STARDUST_O_TRUNC LEONOS_O_TRUNC
-#define STARDUST_O_APPEND LEONOS_O_APPEND
+#define STARDUST_O_WRONLY RELIEFOS_O_WRONLY
+#define STARDUST_O_CREAT RELIEFOS_O_CREAT
+#define STARDUST_O_TRUNC RELIEFOS_O_TRUNC
+#define STARDUST_O_APPEND RELIEFOS_O_APPEND
 
 #define STARDUST_SYS_NANOSLEEP 35
 
@@ -41,7 +41,7 @@ struct LeonosSurface {
 LeonosSurface g_surface = {0, 0, 0, nullptr, false, false};
 window_message_proc g_message_proc = nullptr;
 
-uint32_t leonos_color(unsigned int color)
+uint32_t reliefos_color(unsigned int color)
 {
     return ((color >> 24) & 0xFFu) << 16 |
            ((color >> 16) & 0xFFu) << 8 |
@@ -86,25 +86,25 @@ bool resize_surface(uint32_t width, uint32_t height)
     return true;
 }
 
-void dispatch_event(const struct leonos_gui_app_event &event)
+void dispatch_event(const struct reliefos_gui_app_event &event)
 {
     if (g_message_proc == nullptr) {
         return;
     }
     switch (event.type) {
-    case LEONOS_GUI_APP_EVENT_CLOSE:
+    case RELIEFOS_GUI_APP_EVENT_CLOSE:
         g_surface.open = false;
         return;
-    case LEONOS_GUI_APP_EVENT_RESIZE:
+    case RELIEFOS_GUI_APP_EVENT_RESIZE:
         if (resize_surface(event.width, event.height)) {
             g_message_proc(kWindowMessageResize, event.width, event.height);
         }
         return;
-    case LEONOS_GUI_APP_EVENT_MOUSE_MOVE:
+    case RELIEFOS_GUI_APP_EVENT_MOUSE_MOVE:
         g_message_proc(kWindowMessageMove, static_cast<unsigned long long>(event.x),
                        static_cast<unsigned long long>(event.y));
         return;
-    case LEONOS_GUI_APP_EVENT_MOUSE_BUTTON:
+    case RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON:
         if (event.pressed) {
             g_message_proc(kWindowMessageLeftButtonDown, static_cast<unsigned long long>(event.x),
                            static_cast<unsigned long long>(event.y));
@@ -113,13 +113,13 @@ void dispatch_event(const struct leonos_gui_app_event &event)
                            static_cast<unsigned long long>(event.y));
         }
         return;
-    case LEONOS_GUI_APP_EVENT_KEY_DOWN: {
-        if (event.keycode == LEONOS_KEY_LEFT_SHIFT || event.keycode == LEONOS_KEY_RIGHT_SHIFT) {
+    case RELIEFOS_GUI_APP_EVENT_KEY_DOWN: {
+        if (event.keycode == RELIEFOS_KEY_LEFT_SHIFT || event.keycode == RELIEFOS_KEY_RIGHT_SHIFT) {
             g_surface.shift = true;
             return;
         }
         char ch = 0;
-        if (leonos_ui_keycode_to_char_shift(event.keycode, g_surface.shift, &ch)) {
+        if (reliefos_ui_keycode_to_char_shift(event.keycode, g_surface.shift, &ch)) {
             if (ch == '\b' || ch == '\n' || ch == '\t') {
                 g_message_proc(kWindowMessageSpecialChar, 0,
                                static_cast<unsigned long long>(static_cast<unsigned char>(ch)));
@@ -130,8 +130,8 @@ void dispatch_event(const struct leonos_gui_app_event &event)
         }
         return;
     }
-    case LEONOS_GUI_APP_EVENT_KEY_UP:
-        if (event.keycode == LEONOS_KEY_LEFT_SHIFT || event.keycode == LEONOS_KEY_RIGHT_SHIFT) {
+    case RELIEFOS_GUI_APP_EVENT_KEY_UP:
+        if (event.keycode == RELIEFOS_KEY_LEFT_SHIFT || event.keycode == RELIEFOS_KEY_RIGHT_SHIFT) {
             g_surface.shift = false;
         }
         return;
@@ -161,13 +161,13 @@ bool create_window(char *title, int width, int height, bool resizable, unsigned 
     if (title == nullptr || handle == nullptr || width <= 0 || height <= 0 || g_surface.open) {
         return false;
     }
-    const uint32_t flags = resizable ? 0u : LEONOS_GUI_WINDOW_NO_RESIZE;
-    const int native_handle = leonos_gui_create_app_window_ex(title, title,
+    const uint32_t flags = resizable ? 0u : RELIEFOS_GUI_WINDOW_NO_RESIZE;
+    const int native_handle = reliefos_gui_create_app_window_ex(title, title,
                                                                static_cast<uint32_t>(width),
                                                                static_cast<uint32_t>(height), flags);
     if (native_handle <= 0 || !resize_surface(static_cast<uint32_t>(width), static_cast<uint32_t>(height))) {
         if (native_handle > 0) {
-            leonos_gui_destroy_app_window(static_cast<uint32_t>(native_handle));
+            reliefos_gui_destroy_app_window(static_cast<uint32_t>(native_handle));
         }
         return false;
     }
@@ -199,7 +199,7 @@ void append_debug_log(const char *) {}
 void refresh_window(unsigned long long handle)
 {
     if (g_surface.open && handle == g_surface.handle) {
-        leonos_gui_present_window(g_surface.handle, g_surface.width, g_surface.height,
+        reliefos_gui_present_window(g_surface.handle, g_surface.width, g_surface.height,
                                   g_surface.width, g_surface.pixels);
     }
 }
@@ -219,9 +219,9 @@ void wait_window()
 
 void pump_window_events()
 {
-    struct leonos_gui_app_event event{};
+    struct reliefos_gui_app_event event{};
     event.window_id = g_surface.handle;
-    while (leonos_gui_poll_app_event(&event) > 0) {
+    while (reliefos_gui_poll_app_event(&event) > 0) {
         dispatch_event(event);
         event.window_id = g_surface.handle;
     }
@@ -247,7 +247,7 @@ bool delete_window(unsigned long long handle)
         return false;
     }
     g_surface.open = false;
-    leonos_gui_destroy_app_window(g_surface.handle);
+    reliefos_gui_destroy_app_window(g_surface.handle);
     free(g_surface.pixels);
     g_surface = {0, 0, 0, nullptr, false, false};
     g_message_proc = nullptr;
@@ -257,7 +257,7 @@ bool delete_window(unsigned long long handle)
 void draw_pixel(unsigned long long, int x, int y, unsigned int color)
 {
     if (valid_surface_point(x, y)) {
-        g_surface.pixels[static_cast<uint32_t>(y) * g_surface.width + static_cast<uint32_t>(x)] = leonos_color(color);
+        g_surface.pixels[static_cast<uint32_t>(y) * g_surface.width + static_cast<uint32_t>(x)] = reliefos_color(color);
     }
 }
 
@@ -266,7 +266,7 @@ void draw_rect(unsigned long long, int x, int y, int width, int height, unsigned
     if (width <= 0 || height <= 0) {
         return;
     }
-    const uint32_t pixel = leonos_color(color);
+    const uint32_t pixel = reliefos_color(color);
     for (int row = 0; row < height; ++row) {
         for (int column = 0; column < width; ++column) {
             if (valid_surface_point(x + column, y + row)) {
@@ -288,7 +288,7 @@ void draw_round_rect(unsigned long long handle, int x, int y, int width, int hei
         draw_rect(handle, x, y, width, height, color);
         return;
     }
-    const uint32_t pixel = leonos_color(color);
+    const uint32_t pixel = reliefos_color(color);
     const int r2 = bounded * bounded;
     for (int row = 0; row < height; ++row) {
         for (int column = 0; column < width; ++column) {
@@ -311,11 +311,11 @@ void draw_text(unsigned long long, int x, int y, unsigned int color, unsigned in
                const stardustui::string &text)
 {
     if (g_surface.pixels == nullptr) return;
-    struct leonos_ui_surface surface = {g_surface.pixels, g_surface.width, g_surface.height, g_surface.width};
+    struct reliefos_ui_surface surface = {g_surface.pixels, g_surface.width, g_surface.height, g_surface.width};
     (void)size;
-    leonos_ui_text_transparent_clipped(&surface, static_cast<uint32_t>(x < 0 ? 0 : x),
+    reliefos_ui_text_transparent_clipped(&surface, static_cast<uint32_t>(x < 0 ? 0 : x),
                                        static_cast<uint32_t>(y < 0 ? 0 : y),
-                                       g_surface.width, text.c_str(), leonos_color(color));
+                                       g_surface.width, text.c_str(), reliefos_color(color));
 }
 
 void draw_text_on_solid_background(unsigned long long, int x, int y, unsigned int color,
@@ -323,21 +323,21 @@ void draw_text_on_solid_background(unsigned long long, int x, int y, unsigned in
                                    const stardustui::string &text)
 {
     if (g_surface.pixels == nullptr) return;
-    struct leonos_ui_surface surface = {g_surface.pixels, g_surface.width, g_surface.height, g_surface.width};
+    struct reliefos_ui_surface surface = {g_surface.pixels, g_surface.width, g_surface.height, g_surface.width};
     const uint32_t cell_h = size == 0 ? 16u : size;
     const uint32_t cell_w = cell_h / 2u < 6u ? 6u : cell_h / 2u;
-    const uint32_t width = leonos_ui_text_width(text.c_str()) * cell_w / 8u + cell_w;
-    leonos_ui_text_resized_clipped(&surface, static_cast<uint32_t>(x < 0 ? 0 : x),
+    const uint32_t width = reliefos_ui_text_width(text.c_str()) * cell_w / 8u + cell_w;
+    reliefos_ui_text_resized_clipped(&surface, static_cast<uint32_t>(x < 0 ? 0 : x),
                                    static_cast<uint32_t>(y < 0 ? 0 : y), width,
-                                   text.c_str(), leonos_color(color),
-                                   leonos_color(background_color), cell_w, cell_h);
+                                   text.c_str(), reliefos_color(color),
+                                   reliefos_color(background_color), cell_w, cell_h);
 }
 
 unsigned int calc_text_width(const stardustui::string &text, unsigned int size)
 {
     const uint32_t cell_h = size == 0 ? 16u : size;
     const uint32_t cell_w = cell_h / 2u < 6u ? 6u : cell_h / 2u;
-    return leonos_ui_text_width(text.c_str()) * cell_w / 8u;
+    return reliefos_ui_text_width(text.c_str()) * cell_w / 8u;
 }
 
 unsigned int calc_text_height(const stardustui::string &, unsigned int size)
@@ -373,7 +373,7 @@ bool file_read_bytes_platform(const char *path, File::byte *&out_data, int &out_
     if (path == nullptr || path[0] == '\0') return false;
     struct stat info{};
     if (stat(path, &info) != 0 || info.st_size > 0x7FFFFFFFULL) return false;
-    const int fd = open(path, LEONOS_O_RDONLY, 0);
+    const int fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) return false;
     if (info.st_size == 0) { close(fd); return true; }
     File::byte *data = new File::byte[static_cast<int>(info.st_size)];

@@ -11,10 +11,10 @@ void kernel_free(void *memory) { free(memory); }
 int storage_lookup_path(const char *path, struct storage_node *node)
 {
     if (!strcmp(path,"/") || !strcmp(path,"/etc") || !strcmp(path,"/home") || !strcmp(path,"/home/test")) {
-        *node=(struct storage_node){.type=LEONOS_FS_TYPE_DIR}; return 0;
+        *node=(struct storage_node){.type=RELIEFOS_FS_TYPE_DIR}; return 0;
     }
     if (!strcmp(path,"/etc/mtab")) {
-        *node=(struct storage_node){.type=LEONOS_FS_TYPE_SYMLINK}; return 0;
+        *node=(struct storage_node){.type=RELIEFOS_FS_TYPE_SYMLINK}; return 0;
     }
     return -2;
 }
@@ -24,22 +24,22 @@ int storage_readlink(const char *path,char *out,uint32_t capacity,uint32_t *leng
     const char *target="../proc/mounts"; *length=strlen(target);
     assert(*length<capacity); memcpy(out,target,*length); return 0;
 }
-int storage_inode_permissions(const struct storage_node *node,struct leonos_permissions *out,bool write)
+int storage_inode_permissions(const struct storage_node *node,struct reliefos_permissions *out,bool write)
 { (void)node; (void)out; (void)write; assert(0); return -95; }
-int pty_inode_permissions(const struct storage_node *node,struct leonos_permissions *out,bool write)
+int pty_inode_permissions(const struct storage_node *node,struct reliefos_permissions *out,bool write)
 { (void)node; (void)out; (void)write; assert(0); return -95; }
-int storage_sidecar_permissions(const char *path, struct leonos_permissions *value, bool write)
+int storage_sidecar_permissions(const char *path, struct reliefos_permissions *value, bool write)
 {
     (void)path;
     (void)write;
-    *value = (struct leonos_permissions){0755, 0, 0};
+    *value = (struct reliefos_permissions){0755, 0, 0};
     return 0;
 }
 int main(void)
 {
     current.uid=current.euid=current.fsuid=0;
     strcpy(sched_task_cwd(&current),"/home/test");
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     assert(fs_permissions_resolve_flags(&current,"/","/etc/mtab",path,sizeof(path),false,FS_LOOKUP_FOLLOW)==0);
     assert(!strcmp(path,"/proc/42/mounts"));
     assert(fs_permissions_resolve_flags(&current,"/","/proc/self/mountinfo",path,sizeof(path),false,FS_LOOKUP_FOLLOW)==0);

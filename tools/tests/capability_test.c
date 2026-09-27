@@ -12,9 +12,9 @@ bool user_range_writable(uint64_t p, uint64_t n) { return p != readonly && user_
 /* Standard ID syscalls must not consult a userspace service or mutate peers. */
 int storage_read_file(const char *p, const void **d, size_t *n)
 { (void)p; (void)d; (void)n; assert(0); return -1; }
-void sched_set_task_identity(uint32_t p, const struct leonos_user_info *u, uint32_t s)
+void sched_set_task_identity(uint32_t p, const struct reliefos_user_info *u, uint32_t s)
 { (void)p; (void)u; (void)s; assert(0); }
-void sched_set_session_identity(uint32_t p, const struct leonos_user_info *u, uint32_t s)
+void sched_set_session_identity(uint32_t p, const struct reliefos_user_info *u, uint32_t s)
 { (void)p; (void)u; (void)s; assert(0); }
 uint32_t sched_next_session_id(void) { assert(0); return 0; }
 void mm_free_pages(uint64_t p, uint32_t n) { (void)p; (void)n; assert(0); }

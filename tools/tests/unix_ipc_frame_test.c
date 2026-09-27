@@ -5,7 +5,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <leonos/unix_ipc.h>
+#include <reliefos/unix_ipc.h>
 
 /* Linux stream ancillary data accompanies bytes and reports its actual size. */
 static uint8_t stream[256];
@@ -50,8 +50,8 @@ ssize_t recvmsg(int fd, struct msghdr *message, int flags)
 
 static void queue_frame(uint32_t type, uint32_t value)
 {
-    struct leonos_ipc_frame frame = {
-        .magic = LEONOS_IPC_MAGIC, .version = LEONOS_IPC_VERSION,
+    struct reliefos_ipc_frame frame = {
+        .magic = RELIEFOS_IPC_MAGIC, .version = RELIEFOS_IPC_VERSION,
         .length = 2 * sizeof(uint32_t),
     };
     memcpy(stream + head, &frame, sizeof(frame));
@@ -71,11 +71,11 @@ int main(void)
         pending_fd = 42;
         queue_frame(100, 1234);
         if (with_following_frame) queue_frame(200, 5678);
-        assert(leonos_ipc_recv_fd(4, &type, &value, sizeof(value), &length,
+        assert(reliefos_ipc_recv_fd(4, &type, &value, sizeof(value), &length,
                                   &received_fd) == 0);
         assert(type == 100 && value == 1234 && length == 4 && received_fd == 42);
         if (with_following_frame) {
-            int ret = leonos_ipc_recv(4, &type, &value, sizeof(value), &length);
+            int ret = reliefos_ipc_recv(4, &type, &value, sizeof(value), &length);
             if (ret != 0) {
                 fprintf(stderr, "following input frame corrupted: errno=%d tail=%zu\n",
                         errno, tail);

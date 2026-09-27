@@ -111,7 +111,7 @@ def compiler_flags(root: Path, region: str, source: Path) -> list[str]:
         flags += ["-fPIC", *(["-fPIE"] if region == "userland" else []),
                   "-ffunction-sections", "-fdata-sections",
                   "-DLEONOS_USE_MUSL", "-D_POSIX_C_SOURCE=200809L",
-                  '-DMBEDTLS_CONFIG_FILE="leonos_mbedtls_config.h"',
+                  '-DMBEDTLS_CONFIG_FILE="reliefos_mbedtls_config.h"',
                   f"-DLEONOS_{region.upper()}=1",
                   *include_flags(root, region),
                   ]

@@ -76,7 +76,7 @@ int storage_lookup_path(const char *path, struct storage_node *node)
 int main(void)
 {
     struct task *task = calloc(1, sizeof(*task)), *other = calloc(1, sizeof(*other));
-    struct task_file file = {.used = 1, .flags = LEONOS_O_RDWR, .node.first_cluster = 2};
+    struct task_file file = {.used = 1, .flags = RELIEFOS_O_RDWR, .node.first_cluster = 2};
     assert(task && other);
     task->pid = 10;
     other->pid = 11;

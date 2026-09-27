@@ -49,6 +49,6 @@ int main(void)
     ahci_pending_command.port = &port;
     ahci_pending_command.active = 1;
     ahci_pending_command.start_tick = 1;
-    assert(ahci_pending_poll() == -LEONOS_EAGAIN && ahci_pending_command.active);
+    assert(ahci_pending_poll() == -RELIEFOS_EAGAIN && ahci_pending_command.active);
     puts("AHCI completion: error with PxCI set, success and asynchronous pending PASS");
 }

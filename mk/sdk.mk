@@ -1,8 +1,8 @@
 # Relocatable musl SDK subset (the developer kit assembled from build output).
-MUSL_SDK := $(O)/sdk/leonos-musl-sdk
-MUSL_SDK_ARCHIVE := $(O_PACKAGES)/leonos-musl-sdk.tar.gz
+MUSL_SDK := $(O)/sdk/reliefos-musl-sdk
+MUSL_SDK_ARCHIVE := $(O_PACKAGES)/reliefos-musl-sdk.tar.gz
 SDK_EPOCH := $(or $(SOURCE_DATE_EPOCH),$(shell git -C $(RELIEFOS_SRC) show -s --format=%ct HEAD))
-SDK_INPUT_HEADERS := $(shell find $(RELIEFNT_DIR)/include/uapi $(RELIEFOS_SRC)/include/leonos $(RELIEFOS_SRC)/userland/runtime/include/leonos -type f -name '*.h' | LC_ALL=C sort)
+SDK_INPUT_HEADERS := $(shell find $(RELIEFNT_DIR)/include/uapi $(RELIEFOS_SRC)/include/leonos $(RELIEFOS_SRC)/include/reliefos $(RELIEFOS_SRC)/userland/runtime/include/leonos $(RELIEFOS_SRC)/userland/runtime/include/reliefos -type f \( -name '*.h' -o -name '*.inc' \) | LC_ALL=C sort)
 RELIEFOS_SIG_sdk := epoch=$(SDK_EPOCH)|headers=$(SDK_INPUT_HEADERS)|driver=$(RELIEFOS_SDK_DRIVER)
 $(if $(RELIEFOS_PASSIVE),,$(eval $(call RELIEFOS_SIGNATURE_RULE,sdk)))
 
@@ -14,12 +14,13 @@ $(COMPONENT_SELECTION): $(O_CONFIG)/components.mk $(RELIEFOS_CONFIG_FILE) $(RELI
 MUSL_SDK_REQUIRED := $(MUSL_SDK)/bin/reliefos-musl-cc $(MUSL_SDK)/include/stdio.h \
  $(MUSL_SDK)/include/pnglibconf.h $(MUSL_SDK)/lib/crt1.o $(MUSL_SDK)/lib/crti.o \
  $(MUSL_SDK)/lib/crtn.o $(MUSL_SDK)/lib/libc.a $(MUSL_SDK)/lib/libc.so \
- $(MUSL_SDK)/lib/libleonos.so.2 $(MUSL_SDK)/lib/libleonos.a
-$(MUSL_SDK_REQUIRED) &: $(RUNTIME_SO) $(RUNTIME_ARCHIVE) $(RUNTIME_BUILTINS) \
+ $(MUSL_SDK)/lib/libreliefos.so.2 $(MUSL_SDK)/lib/libleonos.so.2 \
+ $(MUSL_SDK)/lib/libreliefos.a $(MUSL_SDK)/lib/libleonos.a
+$(MUSL_SDK_REQUIRED) &: $(RUNTIME_SO) $(RUNTIME_COMPAT_SO) $(RUNTIME_ARCHIVE) $(RUNTIME_COMPAT_ARCHIVE) $(RUNTIME_BUILTINS) \
  $(MUSL_STAMP) $(RELIEFOS_MUSL_ARTIFACTS) $(PAM_STAMP) $(AUTH_STAMP) $(SDK_INPUT_HEADERS) \
  $(HEADER_EXPORT_MANIFEST) \
  $(PNG_CONFIG) $(RELIEFOS_SDK_DRIVER) $(O_META)/sdk.sig $(RELIEFOS_SRC)/tools/build/musl-sdk.sh
-	$(Q)set -eu; RUNTIME_BUILTINS=$(RUNTIME_BUILTINS) PNG_CONFIG=$(PNG_CONFIG) sh $(RELIEFOS_SRC)/tools/build/musl-sdk.sh $(RELIEFOS_SRC) $(MUSL_SYSROOT) $(RUNTIME_SO) $(RUNTIME_ARCHIVE) $(PAM_ROOT) $(AUTH_ROOT) $(RELIEFOS_SDK_DRIVER) $(MUSL_SDK) $(SDK_EPOCH) $(HEADER_EXPORT_INCLUDE)
+	$(Q)set -eu; RUNTIME_BUILTINS=$(RUNTIME_BUILTINS) PNG_CONFIG=$(PNG_CONFIG) sh $(RELIEFOS_SRC)/tools/build/musl-sdk.sh $(RELIEFOS_SRC) $(MUSL_SYSROOT) $(RUNTIME_SO) $(RUNTIME_ARCHIVE) $(RUNTIME_COMPAT_SO) $(RUNTIME_COMPAT_ARCHIVE) $(PAM_ROOT) $(AUTH_ROOT) $(RELIEFOS_SDK_DRIVER) $(MUSL_SDK) $(SDK_EPOCH) $(HEADER_EXPORT_INCLUDE)
 	$(Q)set -eu; for product in $(MUSL_SDK_REQUIRED); do test -f "$$product" || exit 1; touch "$$product"; done
 	$(Q)set -eu; find $(MUSL_SDK) -mindepth 1 ! -type d -printf '%P\n' | LC_ALL=C sort >$(MUSL_SDK).files
 

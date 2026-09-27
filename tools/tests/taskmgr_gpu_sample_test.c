@@ -4,13 +4,13 @@
 
 #include "../../userland/apps/taskmgr/gpu_sample.h"
 
-static struct leonos_gpu_info sample(uint32_t generation, uint64_t ticks,
+static struct reliefos_gpu_info sample(uint32_t generation, uint64_t ticks,
                                       uint64_t busy)
 {
-    return (struct leonos_gpu_info){
-        .size = sizeof(struct leonos_gpu_info),
-        .version = LEONOS_GPU_ABI_VERSION,
-        .flags = LEONOS_GPU_AVAILABLE | LEONOS_GPU_BUSY_ESTIMATED,
+    return (struct reliefos_gpu_info){
+        .size = sizeof(struct reliefos_gpu_info),
+        .version = RELIEFOS_GPU_ABI_VERSION,
+        .flags = RELIEFOS_GPU_AVAILABLE | RELIEFOS_GPU_BUSY_ESTIMATED,
         .generation = generation,
         .sample_ticks = ticks,
         .busy_ticks = busy,
@@ -20,7 +20,7 @@ static struct leonos_gpu_info sample(uint32_t generation, uint64_t ticks,
 int main(void)
 {
     struct taskmgr_gpu_sample state = {0};
-    struct leonos_gpu_info info = sample(1, 1000, 900);
+    struct reliefos_gpu_info info = sample(1, 1000, 900);
 
     assert(taskmgr_gpu_sample_update(&state, &info));
     assert(state.available && !state.valid && state.percent == 0);

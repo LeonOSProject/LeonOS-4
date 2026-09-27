@@ -1,6 +1,6 @@
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/system.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/system.h>
 
 #include <stdlib.h>
 #include <errno.h>
@@ -197,7 +197,7 @@ int installer_tty_main(const struct installer_tty_context *context)
     }
     if (tty_read_line("Reboot now? [Y/n]: ", input, sizeof(input)) &&
         input[0] != 'n' && input[0] != 'N') {
-        if (leonos_system_reboot() < 0) perror("Restart failed");
+        if (reliefos_system_reboot() < 0) perror("Restart failed");
     }
 
     puts("Installation finished.");
@@ -206,9 +206,9 @@ int installer_tty_main(const struct installer_tty_context *context)
             return 0;
         }
         if (tty_line_is(input, "reboot") || tty_line_is(input, "r")) {
-            if (leonos_system_reboot() < 0) perror("Restart failed");
+            if (reliefos_system_reboot() < 0) perror("Restart failed");
         } else if (tty_line_is(input, "shutdown") || tty_line_is(input, "poweroff")) {
-            if (leonos_system_shutdown() < 0) perror("Shutdown failed");
+            if (reliefos_system_shutdown() < 0) perror("Shutdown failed");
         } else if (tty_line_is(input, "exit") || tty_line_is(input, "q")) {
             return 0;
         } else {

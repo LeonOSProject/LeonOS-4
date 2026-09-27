@@ -1,42 +1,86 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/sudo.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_SUDO_H
 #define LEONOS_SUDO_H
-#include <leonos/fs.h>
-#include <stdint.h>
+#include <reliefos/sudo.h>
 
-#define LEONOS_FILEOP_LIST 1U
-#define LEONOS_FILEOP_MKDIR 2U
-#define LEONOS_FILEOP_RENAME 3U
-#define LEONOS_FILEOP_UNLINK 4U
-#define LEONOS_FILEOP_CONFIRM "DELETE"
-#define LEONOS_SUDO_CACHED 1
-#define LEONOS_SUDO_NEEDS_PASSWORD 0
-
-/* These adapters invoke upstream sudo/su with dynamically allocated argv.
- * Password arguments must be NULL/empty: the executable owns PAM conversation.
- * Use the actual CLI for its complete options and shell/login semantics. */
-int leonos_sudo_run(const char *username, const char *password,
-                    char *const argv[], uint32_t *out_pid);
-/* Redirect the command's stdout to an already-open fd; caller retains the fd.
- * This always uses GUI askpass so a parent window owns the interaction. */
-int leonos_sudo_run_stdout(const char *username, char *const argv[],
-                           int output_fd, uint32_t *out_pid);
-int leonos_sudo_run_switch(const char *username, const char *password,
-                           char *const argv[], uint32_t *out_pid);
-int leonos_sudo_run_login(const char *username, const char *password,
-                         char *const argv[], uint32_t *out_pid);
-/* The returned PID is a direct child. wait uses WNOHANG, wait_command blocks. */
-int leonos_sudo_wait(uint32_t child_pid, int *out_status);
-int leonos_sudo_wait_command(uint32_t child_pid, int *out_status);
-/* UI hint / sudo -v only. Neither confers authority for a later operation. */
-int leonos_sudo_check(void);
-int leonos_sudo_verify(const char *username, const char *password);
-int leonos_sudo_kill(void);
-
-/* Each operation runs sudo -A with a fixed root-owned worker and exact args.
- * username/password must be NULL/empty. Results arrive through a private pipe. */
-int leonos_fileop(uint32_t op, const char *path1, const char *path2,
-                  const char *username, const char *password,
-                  struct leonos_dir_entry *entries, uint32_t capacity,
-                  uint32_t *out_count);
-int leonos_read_password(const char *prompt, char *buffer, uint32_t capacity);
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_FILEOP_CONFIRM RELIEFOS_FILEOP_CONFIRM
+#define LEONOS_FILEOP_LIST RELIEFOS_FILEOP_LIST
+#define LEONOS_FILEOP_MKDIR RELIEFOS_FILEOP_MKDIR
+#define LEONOS_FILEOP_RENAME RELIEFOS_FILEOP_RENAME
+#define LEONOS_FILEOP_UNLINK RELIEFOS_FILEOP_UNLINK
+#define LEONOS_FS_ACL_ACE_INHERITED RELIEFOS_FS_ACL_ACE_INHERITED
+#define LEONOS_FS_ACL_FLAG_CORRUPT RELIEFOS_FS_ACL_FLAG_CORRUPT
+#define LEONOS_FS_ACL_FLAG_SYNTHETIC RELIEFOS_FS_ACL_FLAG_SYNTHETIC
+#define LEONOS_FS_ACL_MAX_ACE RELIEFOS_FS_ACL_MAX_ACE
+#define LEONOS_FS_ACL_PRINCIPAL_ADMINISTRATORS RELIEFOS_FS_ACL_PRINCIPAL_ADMINISTRATORS
+#define LEONOS_FS_ACL_PRINCIPAL_EVERYONE RELIEFOS_FS_ACL_PRINCIPAL_EVERYONE
+#define LEONOS_FS_ACL_PRINCIPAL_GROUP RELIEFOS_FS_ACL_PRINCIPAL_GROUP
+#define LEONOS_FS_ACL_PRINCIPAL_OWNER RELIEFOS_FS_ACL_PRINCIPAL_OWNER
+#define LEONOS_FS_ACL_PRINCIPAL_SYSTEM RELIEFOS_FS_ACL_PRINCIPAL_SYSTEM
+#define LEONOS_FS_ACL_PRINCIPAL_USERS RELIEFOS_FS_ACL_PRINCIPAL_USERS
+#define LEONOS_FS_ACL_VERSION RELIEFOS_FS_ACL_VERSION
+#define LEONOS_FS_FILE_WRITE_SLICE_BYTES RELIEFOS_FS_FILE_WRITE_SLICE_BYTES
+#define LEONOS_FS_H RELIEFOS_FS_H
+#define LEONOS_FS_IO_SLICE_BYTES RELIEFOS_FS_IO_SLICE_BYTES
+#define LEONOS_FS_MAX_ENTRIES RELIEFOS_FS_MAX_ENTRIES
+#define LEONOS_FS_NAME_LEN RELIEFOS_FS_NAME_LEN
+#define LEONOS_FS_PATH_LEN RELIEFOS_FS_PATH_LEN
+#define LEONOS_FS_PERM_DELETE RELIEFOS_FS_PERM_DELETE
+#define LEONOS_FS_PERM_EXEC RELIEFOS_FS_PERM_EXEC
+#define LEONOS_FS_PERM_FULL RELIEFOS_FS_PERM_FULL
+#define LEONOS_FS_PERM_MANAGE RELIEFOS_FS_PERM_MANAGE
+#define LEONOS_FS_PERM_READ RELIEFOS_FS_PERM_READ
+#define LEONOS_FS_PERM_WRITE RELIEFOS_FS_PERM_WRITE
+#define LEONOS_FS_READ_SLICE_BYTES RELIEFOS_FS_READ_SLICE_BYTES
+#define LEONOS_FS_TYPE_DEVICE RELIEFOS_FS_TYPE_DEVICE
+#define LEONOS_FS_TYPE_DIR RELIEFOS_FS_TYPE_DIR
+#define LEONOS_FS_TYPE_FIFO RELIEFOS_FS_TYPE_FIFO
+#define LEONOS_FS_TYPE_FILE RELIEFOS_FS_TYPE_FILE
+#define LEONOS_FS_TYPE_SOCKET RELIEFOS_FS_TYPE_SOCKET
+#define LEONOS_FS_TYPE_SYMLINK RELIEFOS_FS_TYPE_SYMLINK
+#define LEONOS_O_ACCMODE RELIEFOS_O_ACCMODE
+#define LEONOS_O_APPEND RELIEFOS_O_APPEND
+#define LEONOS_O_CLOEXEC RELIEFOS_O_CLOEXEC
+#define LEONOS_O_CREAT RELIEFOS_O_CREAT
+#define LEONOS_O_DIRECTORY RELIEFOS_O_DIRECTORY
+#define LEONOS_O_EXCL RELIEFOS_O_EXCL
+#define LEONOS_O_NOFOLLOW RELIEFOS_O_NOFOLLOW
+#define LEONOS_O_NONBLOCK RELIEFOS_O_NONBLOCK
+#define LEONOS_O_RDONLY RELIEFOS_O_RDONLY
+#define LEONOS_O_RDWR RELIEFOS_O_RDWR
+#define LEONOS_O_TRUNC RELIEFOS_O_TRUNC
+#define LEONOS_O_WRONLY RELIEFOS_O_WRONLY
+#define LEONOS_SEEK_CUR RELIEFOS_SEEK_CUR
+#define LEONOS_SEEK_END RELIEFOS_SEEK_END
+#define LEONOS_SEEK_SET RELIEFOS_SEEK_SET
+#define LEONOS_SUDO_CACHED RELIEFOS_SUDO_CACHED
+#define LEONOS_SUDO_NEEDS_PASSWORD RELIEFOS_SUDO_NEEDS_PASSWORD
+#define LEONOS_UAPI_FS_ABI_H RELIEFOS_UAPI_FS_ABI_H
+#define leonos_dir_entry reliefos_dir_entry
+#define leonos_dir_list reliefos_dir_list
+#define leonos_fileop reliefos_fileop
+#define leonos_fs_acl reliefos_fs_acl
+#define leonos_fs_acl_ace reliefos_fs_acl_ace
+#define leonos_fs_acl_get reliefos_fs_acl_get
+#define leonos_fs_acl_repair reliefos_fs_acl_repair
+#define leonos_fs_acl_set reliefos_fs_acl_set
+#define leonos_fs_acl_take_ownership reliefos_fs_acl_take_ownership
+#define leonos_fstat_legacy reliefos_fstat_legacy
+#define leonos_list_dir reliefos_list_dir
+#define leonos_read_password reliefos_read_password
+#define leonos_readdir reliefos_readdir
+#define leonos_stat reliefos_stat
+#define leonos_stat_legacy reliefos_stat_legacy
+#define leonos_sudo_check reliefos_sudo_check
+#define leonos_sudo_kill reliefos_sudo_kill
+#define leonos_sudo_run reliefos_sudo_run
+#define leonos_sudo_run_login reliefos_sudo_run_login
+#define leonos_sudo_run_stdout reliefos_sudo_run_stdout
+#define leonos_sudo_run_switch reliefos_sudo_run_switch
+#define leonos_sudo_verify reliefos_sudo_verify
+#define leonos_sudo_wait reliefos_sudo_wait
+#define leonos_sudo_wait_command reliefos_sudo_wait_command
+#endif /* LEONOS_SUDO_H */

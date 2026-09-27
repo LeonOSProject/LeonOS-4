@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <errno.h>
-#include <leonos/net_control.h>
+#include <reliefos/net_control.h>
 #include <fcntl.h>
 int lease_test_open(const char *path, int flags, ...);
 #define open lease_test_open
@@ -22,29 +22,29 @@ static int operations, failure;
 int ioctl(int fd, unsigned long op, ...)
 {
     (void)fd;
-    assert(op == LEONOS_NET_CONTROL_IOCTL);
+    assert(op == RELIEFOS_NET_CONTROL_IOCTL);
     va_list args; va_start(args, op);
-    struct leonos_net_control *control = va_arg(args, struct leonos_net_control *);
+    struct reliefos_net_control *control = va_arg(args, struct reliefos_net_control *);
     va_end(args);
     ++operations;
-    assert(control->version == LEONOS_NET_CONTROL_VERSION);
+    assert(control->version == RELIEFOS_NET_CONTROL_VERSION);
     if (failure) { errno = ENETDOWN; return -1; }
-    assert(control->operation == LEONOS_NET_CONTROL_CONFIG);
+    assert(control->operation == RELIEFOS_NET_CONTROL_CONFIG);
     control->data.config.local_ip = 0x0a00020f;
     return 0;
 }
-int leonos_openrc_run(const char *service, const char *action)
+int reliefos_openrc_run(const char *service, const char *action)
 { assert(!strcmp(service, "leonos-dhcp") && !strcmp(action, "restart")); return 1; }
 int main(void)
 {
-    struct leonos_net_config config;
-    assert(leonos_net_config(&config) == 0 && config.local_ip == 0x0a00020f && operations == 1);
+    struct reliefos_net_config config;
+    assert(reliefos_net_config(&config) == 0 && config.local_ip == 0x0a00020f && operations == 1);
     failure = 1;
-    assert(leonos_net_config(&config) == -1 && errno == ENETDOWN);
-    assert(leonos_net_config(NULL) == -1 && errno == EINVAL);
-    struct leonos_net_dhcp lease;
-    assert(leonos_net_dhcp_renew(100, &lease) == -1 && errno == EIO);
-    assert(lease.status == LEONOS_NET_STATUS_DHCP_FAILED && operations == 2);
+    assert(reliefos_net_config(&config) == -1 && errno == ENETDOWN);
+    assert(reliefos_net_config(NULL) == -1 && errno == EINVAL);
+    struct reliefos_net_dhcp lease;
+    assert(reliefos_net_dhcp_renew(100, &lease) == -1 && errno == EIO);
+    assert(lease.status == RELIEFOS_NET_STATUS_DHCP_FAILED && operations == 2);
     char path[] = "/tmp/leonos-lease-test-XXXXXX";
     int fd = mkstemp(path);
     assert(fd >= 0);
@@ -55,11 +55,11 @@ int main(void)
     int size = snprintf(text, sizeof(text), "ip=10.0.2.15\nsubnet=255.255.255.0\ndns=10.0.2.3\nlease=60\nacquired=%lld\n", (long long)now.tv_sec);
     assert(write(fd, text, size) == size);
     assert(fchmod(fd, 0600) == 0);
-    config = (struct leonos_net_config){.local_ip=0x0a00020f, .subnet_mask=0xffffff00};
+    config = (struct reliefos_net_config){.local_ip=0x0a00020f, .subnet_mask=0xffffff00};
     net_merge_dhcp_lease(&config);
     if (geteuid() == 0) {
-        assert(config.source == LEONOS_NET_CONFIG_SOURCE_DHCP && config.dns_ip == 0x0a000203);
-    } else assert(config.source != LEONOS_NET_CONFIG_SOURCE_DHCP);
+        assert(config.source == RELIEFOS_NET_CONFIG_SOURCE_DHCP && config.dns_ip == 0x0a000203);
+    } else assert(config.source != RELIEFOS_NET_CONFIG_SOURCE_DHCP);
     assert(fchmod(fd, 0666) == 0);
     config.source = 0;
     net_merge_dhcp_lease(&config);

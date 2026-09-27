@@ -7,7 +7,7 @@ int main(void)
 {
     char root[] = "/tmp/leonos-sudod-XXXXXX";
     assert(mkdtemp(root));
-    char link[512], child[512], name[LEONOS_FS_PATH_LEN];
+    char link[512], child[512], name[RELIEFOS_FS_PATH_LEN];
     snprintf(link, sizeof(link), "%s/link", root);
     snprintf(child, sizeof(child), "%s/link/self", root);
     assert(symlink("/proc", link) == 0);

@@ -62,16 +62,16 @@ void draw_alt_tab_overlay(void)
     if (!alt_tab_active || alt_tab_count == 0) {
         return;
     }
-    uint32_t row_h = LEONOS_FONT_H + 8;
+    uint32_t row_h = RELIEFOS_FONT_H + 8;
     uint32_t box_h = 20 + row_h * alt_tab_count;
     uint32_t x = fb_w() > ALT_TAB_W ? (fb_w() - ALT_TAB_W) / 2 : 4;
     uint32_t y = fb_h() > box_h + TASKBAR_H ? (fb_h() - TASKBAR_H - box_h) / 2 : 4;
-    leonos_ui_bevel(&ui, x, y, ALT_TAB_W, box_h, LEONOS_UI_GRAY, 0);
-    leonos_ui_text(&ui, x + 10, y + 8, T("Switch To"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    reliefos_ui_bevel(&ui, x, y, ALT_TAB_W, box_h, RELIEFOS_UI_GRAY, 0);
+    reliefos_ui_text(&ui, x + 10, y + 8, T("Switch To"), RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
     for (uint32_t i = 0; i < alt_tab_count; ++i) {
         uint8_t id = alt_tab_ids[i];
-        uint32_t flags = i == alt_tab_selected ? LEONOS_UI_MENU_SELECTED : 0;
-        leonos_ui_list_row(&ui, x + 8, y + 24 + i * row_h, ALT_TAB_W - 16,
+        uint32_t flags = i == alt_tab_selected ? RELIEFOS_UI_MENU_SELECTED : 0;
+        reliefos_ui_list_row(&ui, x + 8, y + 24 + i * row_h, ALT_TAB_W - 16,
                            windows[id].title ? windows[id].title : T("Window"), flags);
     }
 }

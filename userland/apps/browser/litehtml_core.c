@@ -2,8 +2,8 @@
 
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/stdio.h>
+#include <reliefos/layout.h>
+#include <reliefos/stdio.h>
 
 #define T(s) gettext(s)
 #define CORE_CSS_RULE_MAX 48U
@@ -13,7 +13,7 @@
 
 struct core_http_url {
     char host[96];
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     uint32_t port;
     uint8_t secure;
 };
@@ -1443,7 +1443,7 @@ static void core_resolve_href(const char *base, const char *href,
                               char *out, uint32_t cap)
 {
     struct core_http_url parsed;
-    char dir[LEONOS_FS_PATH_LEN];
+    char dir[RELIEFOS_FS_PATH_LEN];
     uint32_t pos = 0;
     if (!out || cap == 0) {
         return;
@@ -1541,8 +1541,8 @@ static char core_entity_to_char(const char *entity)
 static void core_parse_tag(struct core_render_ctx *ctx, const char *tag,
                            const char *base_url)
 {
-    char href[LEONOS_FS_PATH_LEN];
-    char resolved[LEONOS_FS_PATH_LEN];
+    char href[RELIEFOS_FS_PATH_LEN];
+    char resolved[RELIEFOS_FS_PATH_LEN];
     char alt[128];
     char align_attr[24];
     char tag_name[16];

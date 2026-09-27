@@ -99,7 +99,7 @@ upstream-busybox: $(BUSYBOX_ELF) $(BUSYBOX_LINKS)
 reliefos-upstream: upstream-busybox
 upstream_app_pleditor_outputs := pleditor.elf
 $(eval $(call RELIEFOS_UPSTREAM_APP,pleditor))
-$(UPSTREAM_APP_DIR)/pleditor.elf: $(RELIEFOS_SRC)/userland/apps/pleditor/platform_leonos.c $(RELIEFOS_SRC)/mk/upstream.mk
+$(UPSTREAM_APP_DIR)/pleditor.elf: $(RELIEFOS_SRC)/userland/apps/pleditor/platform_reliefos.c $(RELIEFOS_SRC)/mk/upstream.mk
 reliefos-upstream: upstream-app-pleditor
 
 FASTFETCH_ELF := $(UPSTREAM_APP_DIR)/fastfetch.elf

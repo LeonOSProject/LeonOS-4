@@ -13,8 +13,8 @@ uint64_t time_ticks(void) { return scheduler_ticks; }
 int time_clock_get(int32_t clock, struct linux_timespec *out)
 {
     (void)clock;
-    *out = (struct linux_timespec){scheduler_ticks / NTCLKS_TICK_HZ,
-        (scheduler_ticks % NTCLKS_TICK_HZ) * (1000000000 / NTCLKS_TICK_HZ)};
+    *out = (struct linux_timespec){scheduler_ticks / RELIEFNT_TICK_HZ,
+        (scheduler_ticks % RELIEFNT_TICK_HZ) * (1000000000 / RELIEFNT_TICK_HZ)};
     return 0;
 }
 int user_copy_to_task(struct task *task, uint64_t address, const void *source, uint64_t size)

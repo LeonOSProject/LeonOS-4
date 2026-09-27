@@ -22,7 +22,7 @@
 #include <unistd.h>
 #include <linux/fb.h>
 #include <linux/kd.h>
-#include <leonos/fb.h>
+#include <reliefos/fb.h>
 
 int main(void)
 {
@@ -40,10 +40,10 @@ int main(void)
     info.xres = 1024;
     info.yres = 600;
     assert(ioctl(fb, FBIOPUT_VSCREENINFO, &info) == 0);
-    struct leonos_fb_present fill = {
+    struct reliefos_fb_present fill = {
         .x = 0, .y = 0, .width = 1024, .height = 600, .color = 0xFF0000u,
     };
-    assert(ioctl(fb, LEONOS_FBIOBLIT, &fill) == 0);
+    assert(ioctl(fb, RELIEFOS_FBIOBLIT, &fill) == 0);
     dprintf(report, "VT-STRIP-PAINTED\n");
     assert(ioctl(0, KDSETMODE, KD_TEXT) == 0);
     dprintf(report, "VT-STRIP-READY\n");

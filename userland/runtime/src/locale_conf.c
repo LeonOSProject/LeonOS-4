@@ -8,7 +8,7 @@ static const char *const locale_known[] = {
 
 #define LOCALE_KNOWN_COUNT ((int)(sizeof locale_known / sizeof *locale_known))
 
-static int locale_slot(const struct leonos_locale_setting *out, int count,
+static int locale_slot(const struct reliefos_locale_setting *out, int count,
                        const char *name, size_t name_len)
 {
     int i;
@@ -50,7 +50,7 @@ static size_t locale_trim_end(const char *t, size_t start, size_t end)
 static int locale_value_clean(const char *value, size_t length)
 {
     size_t i;
-    if (length == 0 || length + 1U > LEONOS_LOCALE_VALUE_LEN)
+    if (length == 0 || length + 1U > RELIEFOS_LOCALE_VALUE_LEN)
         return 0;
     for (i = 0; i < length; i++) {
         unsigned char c = (unsigned char)value[i];
@@ -62,8 +62,8 @@ static int locale_value_clean(const char *value, size_t length)
     return 1;
 }
 
-int leonos_locale_parse(const char *text, size_t length,
-                        struct leonos_locale_setting *out, int capacity)
+int reliefos_locale_parse(const char *text, size_t length,
+                        struct reliefos_locale_setting *out, int capacity)
 {
     size_t pos = 0;
     int count = 0;
@@ -132,3 +132,5 @@ int leonos_locale_parse(const char *text, size_t length,
     }
     return count;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_locale_parse) leonos_locale_parse __attribute__((alias("reliefos_locale_parse")));

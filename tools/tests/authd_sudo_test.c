@@ -39,7 +39,7 @@ struct spawn_log {
     int last_pid;
 };
 
-static struct leonos_auth_record record_storage[3];
+static struct reliefos_auth_record record_storage[3];
 static struct authd_sudo_records records;
 static struct record_log replies;
 static struct spawn_log spawned;
@@ -50,20 +50,20 @@ static uint32_t verified_seen;
  * hooks, so the adapters are unreachable here; they still need definitions to
  * link. Keeping them as failing stubs means a test that accidentally starts
  * depending on the real ones fails loudly instead of silently passing. */
-int leonos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
+int reliefos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
 {
     (void)fd; (void)type; (void)payload; (void)length;
     assert(0 && "the injected channel must be used instead of the daemon socket");
     return -1;
 }
 
-int leonos_ipc_send_fd(int fd, uint32_t type, const void *payload, uint32_t length, int send_fd)
+int reliefos_ipc_send_fd(int fd, uint32_t type, const void *payload, uint32_t length, int send_fd)
 {
     (void)send_fd;
-    return leonos_ipc_send(fd, type, payload, length);
+    return reliefos_ipc_send(fd, type, payload, length);
 }
 
-int authd_check_password(const struct leonos_auth_record *record,
+int authd_check_password(const struct reliefos_auth_record *record,
                          const char *password)
 {
     (void)record; (void)password;
@@ -153,7 +153,7 @@ static void drain(void)
 
 /* Deterministic stand-in for the PBKDF2 check: the password is the account
  * name followed by "-pw". Records which account was actually compared. */
-static int verify_record(void *context, const struct leonos_user_info *user,
+static int verify_record(void *context, const struct reliefos_user_info *user,
                          const char *password)
 {
     (void)context;
@@ -169,22 +169,22 @@ static void records_init(void)
     records.records = record_storage;
     records.count = 3;
     record_storage[0].user.uid = 0;
-    record_storage[0].user.role = LEONOS_AUTH_ROLE_ADMIN;
+    record_storage[0].user.role = RELIEFOS_AUTH_ROLE_ADMIN;
     strcpy(record_storage[0].user.username, "root");
     strcpy(record_storage[0].user.home, "/root");
     record_storage[1].user.uid = 1000;
-    record_storage[1].user.role = LEONOS_AUTH_ROLE_USER;
+    record_storage[1].user.role = RELIEFOS_AUTH_ROLE_USER;
     strcpy(record_storage[1].user.username, "alice");
     strcpy(record_storage[1].user.home, "/home/alice");
     record_storage[2].user.uid = 1001;
-    record_storage[2].user.role = LEONOS_AUTH_ROLE_USER;
+    record_storage[2].user.role = RELIEFOS_AUTH_ROLE_USER;
     strcpy(record_storage[2].user.username, "bob");
     strcpy(record_storage[2].user.home, "/home/bob");
 }
 
 /* `require_admin` mirrors what the client sends: sudo always sets it, su
  * clears it so a switch to an ordinary account is expressible. */
-static void fill_run_ex(struct leonos_authd_run *run, const char *username,
+static void fill_run_ex(struct reliefos_authd_run *run, const char *username,
                         const char *password, const char *command,
                         uint32_t require_admin)
 {
@@ -196,25 +196,25 @@ static void fill_run_ex(struct leonos_authd_run *run, const char *username,
         snprintf(run->password, sizeof(run->password), "%s", password);
     }
     run->argc = 1;
-    run->flags = require_admin ? LEONOS_AUTHD_RUN_REQUIRE_ADMIN : 0u;
+    run->flags = require_admin ? RELIEFOS_AUTHD_RUN_REQUIRE_ADMIN : 0u;
     snprintf(run->argv[0], sizeof(run->argv[0]), "%s", command);
 }
 
-static void fill_run(struct leonos_authd_run *run, const char *username,
+static void fill_run(struct reliefos_authd_run *run, const char *username,
                      const char *password, const char *command)
 {
     fill_run_ex(run, username, password, command,
-                LEONOS_AUTHD_RUN_REQUIRE_ADMIN);
+                RELIEFOS_AUTHD_RUN_REQUIRE_ADMIN);
 }
 
 /* Send a RUN and, unless the test wants to inspect the slot itself, collect
  * the child's status the way the real client does. Collecting is what releases
  * the daemon slot, so skipping it would leak one slot per request. */
-static int run_request_ex(uint32_t requester_uid, struct leonos_authd_run *run,
+static int run_request_ex(uint32_t requester_uid, struct reliefos_authd_run *run,
                           int stdio_fd, int collect)
 {
     struct authd_sudo_channel channel = {.send = channel_send, .context = NULL};
-    struct leonos_authd_wait wait;
+    struct reliefos_authd_wait wait;
     int result = authd_sudo_run_from_peer(requester_uid, (const uint8_t *)run,
                                           sizeof(*run), stdio_fd, &channel,
                                           &records, spawn_record, verify_record,
@@ -229,7 +229,7 @@ static int run_request_ex(uint32_t requester_uid, struct leonos_authd_run *run,
     return result;
 }
 
-static int run_request(uint32_t requester_uid, struct leonos_authd_run *run,
+static int run_request(uint32_t requester_uid, struct reliefos_authd_run *run,
                        int stdio_fd)
 {
     return run_request_ex(requester_uid, run, stdio_fd, 1);
@@ -237,7 +237,7 @@ static int run_request(uint32_t requester_uid, struct leonos_authd_run *run,
 
 static void test_run_requires_a_password(void)
 {
-    struct leonos_authd_run run;
+    struct reliefos_authd_run run;
     reset_logs();
     /* A normal user asking for root without a password and without a cached
      * window must be refused, and no child may be created. */
@@ -245,29 +245,29 @@ static void test_run_requires_a_password(void)
     assert(run_request(1000, &run, -1) == 0);
     assert(spawned.calls == 0);
     assert(replies.count == 1);
-    assert(replies.type[0] == LEONOS_AUTHD_MSG_RUN);
-    struct leonos_authd_run_ack ack;
+    assert(replies.type[0] == RELIEFOS_AUTHD_MSG_RUN);
+    struct reliefos_authd_run_ack ack;
     memcpy(&ack, replies.payload[0], sizeof(ack));
     assert(ack.code == -EACCES && ack.child_pid == 0);
 }
 
 static void test_run_rejects_a_wrong_password(void)
 {
-    struct leonos_authd_run run;
+    struct reliefos_authd_run run;
     reset_logs();
     fill_run(&run, "root", "not-the-password", "/bin/id");
     assert(run_request(1000, &run, -1) == 0);
     assert(verified_seen == 1);
     assert(spawned.calls == 0);
-    struct leonos_authd_run_ack ack;
+    struct reliefos_authd_run_ack ack;
     memcpy(&ack, replies.payload[0], sizeof(ack));
     assert(ack.code == -EACCES);
 }
 
 static void test_run_elevates_with_the_target_password(void)
 {
-    struct leonos_authd_run run;
-    struct leonos_authd_run_ack ack;
+    struct reliefos_authd_run run;
+    struct reliefos_authd_run_ack ack;
     reset_logs();
     fill_run(&run, "root", "root-pw", "/bin/id");
     assert(run_request(1000, &run, -1) == 0);
@@ -277,7 +277,7 @@ static void test_run_elevates_with_the_target_password(void)
     assert(spawned.uid == 0);
     assert(strcmp(spawned.username, "root") == 0);
     assert(strcmp(spawned.home, "/root") == 0);
-    assert(replies.type[0] == LEONOS_AUTHD_MSG_RUN);
+    assert(replies.type[0] == RELIEFOS_AUTHD_MSG_RUN);
     memcpy(&ack, replies.payload[0], sizeof(ack));
     assert(ack.code == 0);
     assert(ack.child_pid == (uint32_t)spawned.last_pid);
@@ -285,8 +285,8 @@ static void test_run_elevates_with_the_target_password(void)
 
 static void test_cached_window_is_per_requester_and_revocable(void)
 {
-    struct leonos_authd_run run;
-    struct leonos_authd_run_ack ack;
+    struct reliefos_authd_run run;
+    struct reliefos_authd_run_ack ack;
     struct authd_sudo_channel channel = {.send = channel_send, .context = NULL};
     /* The window is module state shared across requests, so start from a clean
      * slate rather than relying on the order the suites run in. */
@@ -342,10 +342,10 @@ static void test_cached_window_is_per_requester_and_revocable(void)
 static void test_sudo_check_reports_the_window(void)
 {
     struct authd_sudo_channel channel = {.send = channel_send, .context = NULL};
-    struct leonos_authd_run run;
+    struct reliefos_authd_run run;
     reset_logs();
     authd_sudo_check_from_peer(1000, &channel);
-    struct leonos_authd_ack ack;
+    struct reliefos_authd_ack ack;
     memcpy(&ack, replies.payload[0], sizeof(ack));
     assert(ack.code == 0);
     fill_run(&run, "root", "root-pw", "/bin/id");
@@ -358,7 +358,7 @@ static void test_sudo_check_reports_the_window(void)
 
 static void test_su_switch_to_a_normal_user(void)
 {
-    struct leonos_authd_run run;
+    struct reliefos_authd_run run;
     reset_logs();
     /* A uid 0 requester switching to a normal account needs no password: this
      * is real Unix `su alice` and the only passwordless path. */
@@ -373,8 +373,8 @@ static void test_su_switch_to_a_normal_user(void)
 
 static void test_su_cannot_impersonate_with_the_wrong_account(void)
 {
-    struct leonos_authd_run run;
-    struct leonos_authd_run_ack ack;
+    struct reliefos_authd_run run;
+    struct reliefos_authd_run_ack ack;
     reset_logs();
     /* alice supplying her OWN password to become bob must fail: the password
      * is checked against bob, not against the caller. */
@@ -407,8 +407,8 @@ static void test_su_cannot_impersonate_with_the_wrong_account(void)
 
 static void test_sudo_never_targets_a_non_admin(void)
 {
-    struct leonos_authd_run run;
-    struct leonos_authd_run_ack ack;
+    struct reliefos_authd_run run;
+    struct reliefos_authd_run_ack ack;
     reset_logs();
     /* sudo without -u always elevates, so a normal-account target is refused
      * even with that account's correct password: it must not become a way to
@@ -422,8 +422,8 @@ static void test_sudo_never_targets_a_non_admin(void)
 
 static void test_unknown_and_disabled_targets(void)
 {
-    struct leonos_authd_run run;
-    struct leonos_authd_run_ack ack;
+    struct reliefos_authd_run run;
+    struct reliefos_authd_run_ack ack;
     reset_logs();
     fill_run(&run, "nobody", "nobody-pw", "/bin/id");
     assert(run_request(1000, &run, -1) == 0);
@@ -431,7 +431,7 @@ static void test_unknown_and_disabled_targets(void)
     memcpy(&ack, replies.payload[0], sizeof(ack));
     assert(ack.code == -EACCES);
 
-    record_storage[0].user.flags = LEONOS_AUTH_USER_DISABLED;
+    record_storage[0].user.flags = RELIEFOS_AUTH_USER_DISABLED;
     reset_logs();
     fill_run(&run, "root", "root-pw", "/bin/id");
     assert(run_request(1000, &run, -1) == 0);
@@ -443,8 +443,8 @@ static void test_unknown_and_disabled_targets(void)
 
 static void test_malformed_requests_are_refused(void)
 {
-    struct leonos_authd_run run;
-    struct leonos_authd_run_ack ack;
+    struct reliefos_authd_run run;
+    struct reliefos_authd_run_ack ack;
     struct authd_sudo_channel channel = {.send = channel_send, .context = NULL};
     reset_logs();
     /* Truncated frame. */
@@ -472,7 +472,7 @@ static void test_malformed_requests_are_refused(void)
     /* argc above the wire limit. */
     reset_logs();
     fill_run(&run, "root", "root-pw", "/bin/id");
-    run.argc = LEONOS_AUTHD_RUN_MAX_ARGS + 1;
+    run.argc = RELIEFOS_AUTHD_RUN_MAX_ARGS + 1;
     assert(run_request(1000, &run, -1) == 0);
     memcpy(&ack, replies.payload[0], sizeof(ack));
     assert(ack.code == -EINVAL);
@@ -490,9 +490,9 @@ static void test_malformed_requests_are_refused(void)
 
 static void test_wait_is_owner_only(void)
 {
-    struct leonos_authd_run run;
-    struct leonos_authd_wait wait;
-    struct leonos_authd_wait_ack ack;
+    struct reliefos_authd_run run;
+    struct reliefos_authd_wait wait;
+    struct reliefos_authd_wait_ack ack;
     struct authd_sudo_channel channel = {.send = channel_send, .context = NULL};
     reset_logs();
     fill_run(&run, "root", "root-pw", "/bin/id");
@@ -504,7 +504,7 @@ static void test_wait_is_owner_only(void)
                               &channel);
     uint32_t wait_type = 0;
     memcpy(&ack, last_reply(&wait_type, NULL), sizeof(ack));
-    assert(wait_type == LEONOS_AUTHD_MSG_WAIT);
+    assert(wait_type == RELIEFOS_AUTHD_MSG_WAIT);
     assert(ack.code == -ESRCH);
     /* The owner collects it and gets the real exit status. */
     reset_logs();
@@ -525,7 +525,7 @@ static void test_wait_is_owner_only(void)
  * slots: each collected command returns its slot to the pool. */
 static void test_slot_table_recycles(void)
 {
-    struct leonos_authd_run run;
+    struct reliefos_authd_run run;
     reset_logs();
     fill_run(&run, "root", "root-pw", "/bin/id");
     for (uint32_t i = 0; i < 64; ++i) {
@@ -537,7 +537,7 @@ static void test_slot_table_recycles(void)
 
 static void test_full_table_does_not_execute(void)
 {
-    struct leonos_authd_run run;
+    struct reliefos_authd_run run;
     uint32_t pids[16];
     fill_run(&run, "root", "root-pw", "/bin/id");
     for (unsigned i = 0; i < 16; ++i) {
@@ -549,27 +549,27 @@ static void test_full_table_does_not_execute(void)
     reset_logs();
     assert(run_request_ex(1000, &run, -1, 0) == 0);
     assert(spawned.calls == 0);
-    struct leonos_authd_run_ack ack;
+    struct reliefos_authd_run_ack ack;
     memcpy(&ack, last_reply(NULL, NULL), sizeof(ack));
     assert(ack.code == -ENOSPC);
     struct authd_sudo_channel channel = {.send = channel_send};
     for (unsigned i = 0; i < 16; ++i) {
         reset_logs();
-        struct leonos_authd_wait wait = {.child_pid = pids[i]};
+        struct reliefos_authd_wait wait = {.child_pid = pids[i]};
         assert(authd_sudo_wait_from_peer(1000, (const uint8_t *)&wait, sizeof(wait), &channel) == 0);
     }
 }
 
 static void test_fileop_validates_before_authorizing(void)
 {
-    struct leonos_authd_fileop op;
-    struct leonos_authd_fileop_ack ack;
+    struct reliefos_authd_fileop op;
+    struct reliefos_authd_fileop_ack ack;
     struct authd_sudo_channel channel = {.send = channel_send, .context = NULL};
     reset_logs();
     memset(&op, 0, sizeof(op));
     snprintf(op.username, sizeof(op.username), "root");
     snprintf(op.password, sizeof(op.password), "root-pw");
-    op.op = LEONOS_FILEOP_LIST;
+    op.op = RELIEFOS_FILEOP_LIST;
     snprintf(op.path1, sizeof(op.path1), "/proc/self");
     /* A denied path is rejected without consuming a password check. */
     assert(authd_sudo_fileop_from_peer(1000, (const uint8_t *)&op, sizeof(op),
@@ -590,7 +590,7 @@ static void test_fileop_validates_before_authorizing(void)
                                        verify_record, NULL, &records) == 0);
     assert(spawned.calls == 0);
     reset_logs();
-    op.op = LEONOS_FILEOP_RENAME;
+    op.op = RELIEFOS_FILEOP_RENAME;
     memset(op.path2, 0, sizeof(op.path2));
     assert(authd_sudo_fileop_from_peer(1000, (const uint8_t *)&op, sizeof(op),
                                        &channel, &records, spawn_record,

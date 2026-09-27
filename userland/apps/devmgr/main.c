@@ -1,17 +1,17 @@
-#include <leonos/devmgr_service.h>
-#include <leonos/gui.h>
+#include <reliefos/devmgr_service.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 
 #define DEVMGR_W 720
 #define DEVMGR_H 420
-#define DEVMGR_MAX_W LEONOS_GUI_MAX_WINDOW_WIDTH
-#define DEVMGR_MAX_H LEONOS_GUI_MAX_WINDOW_HEIGHT
+#define DEVMGR_MAX_W RELIEFOS_GUI_MAX_WINDOW_WIDTH
+#define DEVMGR_MAX_H RELIEFOS_GUI_MAX_WINDOW_HEIGHT
 #define DEVMGR_ROW_H 24
 #define DEVMGR_STATUS_H 28
 #define DEVMGR_DETAIL_PANEL_H 96
@@ -28,7 +28,7 @@ static system_device_info_t devices[SYSTEM_DEVICE_MAX];
 static const char *class_text[SYSTEM_DEVICE_MAX];
 static char flags_text[SYSTEM_DEVICE_MAX][48];
 static uint32_t device_count;
-static struct leonos_ui_listview_state device_list;
+static struct reliefos_ui_listview_state device_list;
 static char status_text[128] = "Ready";
 static uint32_t view_w = DEVMGR_W;
 static uint32_t view_h = DEVMGR_H;
@@ -131,7 +131,7 @@ static void refresh_devices(void)
     if (ret < 0) {
         device_count = 0;
         device_list.selected = -1;
-        leonos_ui_listview_state_set_count(&device_list, 0);
+        reliefos_ui_listview_state_set_count(&device_list, 0);
         set_status_code(T("Device refresh failed"), ret);
         return;
     }
@@ -140,7 +140,7 @@ static void refresh_devices(void)
         class_text[i] = device_class_name(devices[i].device_class);
         format_flags(flags_text[i], sizeof(flags_text[i]), devices[i].flags);
     }
-    leonos_ui_listview_state_set_count(&device_list, device_count);
+    reliefos_ui_listview_state_set_count(&device_list, device_count);
     if (device_count && device_list.selected < 0) {
         device_list.selected = 0;
     }
@@ -192,16 +192,16 @@ static uint32_t visible_rows(void)
 static void update_device_list_layout(void)
 {
     device_list.visible_rows = visible_rows();
-    leonos_ui_listview_state_set_count(&device_list, device_count);
+    reliefos_ui_listview_state_set_count(&device_list, device_count);
 }
 
-static void draw_devmgr(struct leonos_ui_surface *ui)
+static void draw_devmgr(struct reliefos_ui_surface *ui)
 {
     uint32_t panel_y = details_y();
     uint32_t frame_h = list_frame_h();
     uint32_t scroll_h = list_scroll_h();
     uint32_t list_w = view_w > 52 ? view_w - 52 : 668;
-    struct leonos_ui_list_column cols[] = {
+    struct reliefos_ui_list_column cols[] = {
         {T("Class"), 86},
         {T("Device"), 138},
         {T("Status"), 98},
@@ -213,14 +213,14 @@ static void draw_devmgr(struct leonos_ui_surface *ui)
     update_device_list_layout();
     uint32_t rows = device_count > device_list.visible_rows ? device_list.visible_rows : device_count;
     const system_device_info_t *selected;
-    leonos_ui_rect(ui, 0, 0, view_w, view_h, LEONOS_UI_GRAY);
-    leonos_ui_toolbar(ui, 8, DEVMGR_TOOLBAR_Y, view_w > 16 ? view_w - 16 : view_w, 36);
-    leonos_ui_toolbar_button(ui, 18, DEVMGR_BUTTON_Y, 88, T("Refresh"), 0);
-    leonos_ui_text(ui, 120, DEVMGR_BUTTON_Y + 6, T("Hardware detected by the kernel"),
-                   LEONOS_UI_DARK, LEONOS_UI_GRAY);
+    reliefos_ui_rect(ui, 0, 0, view_w, view_h, RELIEFOS_UI_GRAY);
+    reliefos_ui_toolbar(ui, 8, DEVMGR_TOOLBAR_Y, view_w > 16 ? view_w - 16 : view_w, 36);
+    reliefos_ui_toolbar_button(ui, 18, DEVMGR_BUTTON_Y, 88, T("Refresh"), 0);
+    reliefos_ui_text(ui, 120, DEVMGR_BUTTON_Y + 6, T("Hardware detected by the kernel"),
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
 
-    leonos_ui_scroll_view_frame(ui, 12, DEVMGR_LIST_FRAME_Y, view_w > 24 ? view_w - 24 : view_w, frame_h);
-    leonos_ui_listview_header(ui, 14, DEVMGR_LIST_HEADER_Y, list_w, cols, 5);
+    reliefos_ui_scroll_view_frame(ui, 12, DEVMGR_LIST_FRAME_Y, view_w > 24 ? view_w - 24 : view_w, frame_h);
+    reliefos_ui_listview_header(ui, 14, DEVMGR_LIST_HEADER_Y, list_w, cols, 5);
     for (uint32_t row = 0; row < rows; ++row) {
         uint32_t i = device_list.scroll + row;
         const char *cells[5];
@@ -232,34 +232,34 @@ static void draw_devmgr(struct leonos_ui_surface *ui)
         cells[2] = devices[i].status;
         cells[3] = flags_text[i];
         cells[4] = devices[i].detail;
-        leonos_ui_listview_row(ui, 14, DEVMGR_LIST_ROW_Y + row * DEVMGR_ROW_H, list_w,
+        reliefos_ui_listview_row(ui, 14, DEVMGR_LIST_ROW_Y + row * DEVMGR_ROW_H, list_w,
                                cols, cells, 5,
-                               device_list.selected == (int32_t)i ? LEONOS_UI_MENU_SELECTED : 0);
+                               device_list.selected == (int32_t)i ? RELIEFOS_UI_MENU_SELECTED : 0);
     }
-    leonos_ui_vscrollbar(ui, view_w > 30 ? view_w - 30 : 690, DEVMGR_LIST_HEADER_Y, 18, scroll_h,
+    reliefos_ui_vscrollbar(ui, view_w > 30 ? view_w - 30 : 690, DEVMGR_LIST_HEADER_Y, 18, scroll_h,
                          device_list.scroll,
                          device_count > device_list.visible_rows ? device_count : device_list.visible_rows,
                          device_list.visible_rows,
-                         device_count <= device_list.visible_rows ? LEONOS_UI_SCROLLBAR_DISABLED : 0);
+                         device_count <= device_list.visible_rows ? RELIEFOS_UI_SCROLLBAR_DISABLED : 0);
 
-    leonos_ui_panel(ui, 12, panel_y, view_w > 24 ? view_w - 24 : view_w,
-                    DEVMGR_DETAIL_PANEL_H, LEONOS_UI_GRAY);
+    reliefos_ui_panel(ui, 12, panel_y, view_w > 24 ? view_w - 24 : view_w,
+                    DEVMGR_DETAIL_PANEL_H, RELIEFOS_UI_GRAY);
     selected = selected_device();
     if (selected) {
-        struct leonos_ui_property_item props[] = {
+        struct reliefos_ui_property_item props[] = {
             {T("Device:"), selected->name, 0},
             {T("Status:"), selected->status, 0},
             {T("Details:"), selected->detail, 0},
         };
-        leonos_ui_property_grid(ui, 20, panel_y + 10,
+        reliefos_ui_property_grid(ui, 20, panel_y + 10,
                                 view_w > 40 ? view_w - 40 : view_w,
                                 props, sizeof(props) / sizeof(props[0]),
                                 86, 22);
     } else {
-        leonos_ui_text(ui, 20, panel_y + 30, T("No device selected"),
-                       LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+        reliefos_ui_text(ui, 20, panel_y + 30, T("No device selected"),
+                       RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
     }
-    leonos_ui_statusbar(ui, view_h - DEVMGR_STATUS_H, DEVMGR_STATUS_H, status_text);
+    reliefos_ui_statusbar(ui, view_h - DEVMGR_STATUS_H, DEVMGR_STATUS_H, status_text);
 }
 
 static int hit_rect_i(int32_t x, int32_t y, int32_t rx, int32_t ry, int32_t rw, int32_t rh)
@@ -270,38 +270,38 @@ static int hit_rect_i(int32_t x, int32_t y, int32_t rx, int32_t ry, int32_t rw, 
 int main(void)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
     puts("[devmgr.elf] device manager starting");
-    window_id = leonos_gui_create_app_window_ex(T("Device Manager"),
+    window_id = reliefos_gui_create_app_window_ex(T("Device Manager"),
                                                 T("Kernel device list"),
                                                 DEVMGR_W, DEVMGR_H, 0);
     if (window_id <= 0) {
         printf("[devmgr.elf] create window failed=%d\n", window_id);
         return 1;
     }
-    leonos_ui_bind(&ui, pixels, view_w, view_h, DEVMGR_MAX_W);
-    leonos_ui_listview_state_init(&device_list, visible_rows(), DEVMGR_ROW_H);
+    reliefos_ui_bind(&ui, pixels, view_w, view_h, DEVMGR_MAX_W);
+    reliefos_ui_listview_state_init(&device_list, visible_rows(), DEVMGR_ROW_H);
     device_list.focused = 1;
     refresh_devices();
     draw_devmgr(&ui);
-    leonos_gui_present_window((uint32_t)window_id, view_w, view_h, DEVMGR_MAX_W, pixels);
+    reliefos_gui_present_window((uint32_t)window_id, view_w, view_h, DEVMGR_MAX_W, pixels);
 
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        while (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        while (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u)) {
-                if (hit_rect_i(event.x, event.y, 18, DEVMGR_BUTTON_Y, 88, LEONOS_UI_BUTTON_H)) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u)) {
+                if (hit_rect_i(event.x, event.y, 18, DEVMGR_BUTTON_Y, 88, RELIEFOS_UI_BUTTON_H)) {
                     refresh_devices();
                 } else if (event.x >= (int32_t)(view_w > 30 ? view_w - 30 : 690) &&
                            event.y >= DEVMGR_LIST_HEADER_Y && event.y < (int32_t)(DEVMGR_LIST_HEADER_Y + list_scroll_h())) {
-                    leonos_ui_vscrollbar_handle_mouse(&device_list.scroll,
+                    reliefos_ui_vscrollbar_handle_mouse(&device_list.scroll,
                                                       device_count > device_list.visible_rows
                                                           ? device_count
                                                           : device_list.visible_rows,
@@ -311,33 +311,33 @@ int main(void)
                                                       event.x, event.y);
                 } else {
                     uint32_t activate = 0;
-                    leonos_ui_listview_state_handle_mouse(&device_list, event.x, event.y,
+                    reliefos_ui_listview_state_handle_mouse(&device_list, event.x, event.y,
                                                           14, DEVMGR_LIST_ROW_Y,
                                                           view_w > 52 ? view_w - 52 : 668,
                                                           &activate);
                     (void)activate;
                 }
                 draw_devmgr(&ui);
-                leonos_gui_present_window((uint32_t)window_id, view_w, view_h, DEVMGR_MAX_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, view_w, view_h, DEVMGR_MAX_W, pixels);
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_WHEEL) {
-                if (leonos_ui_listview_state_handle_wheel(&device_list, event.dy)) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_WHEEL) {
+                if (reliefos_ui_listview_state_handle_wheel(&device_list, event.dy)) {
                     draw_devmgr(&ui);
-                    leonos_gui_present_window((uint32_t)window_id, view_w, view_h, DEVMGR_MAX_W, pixels);
+                    reliefos_gui_present_window((uint32_t)window_id, view_w, view_h, DEVMGR_MAX_W, pixels);
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN) {
                 uint32_t activate = 0;
                 if (event.keycode == DEVMGR_KEY_ESCAPE) {
                     return 0;
                 }
-                if (leonos_ui_listview_state_handle_key(&device_list, event.keycode, &activate)) {
+                if (reliefos_ui_listview_state_handle_key(&device_list, event.keycode, &activate)) {
                     draw_devmgr(&ui);
-                    leonos_gui_present_window((uint32_t)window_id, view_w, view_h, DEVMGR_MAX_W, pixels);
+                    reliefos_gui_present_window((uint32_t)window_id, view_w, view_h, DEVMGR_MAX_W, pixels);
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_RESIZE ||
-                event.type == LEONOS_GUI_APP_EVENT_FOCUS) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_RESIZE ||
+                event.type == RELIEFOS_GUI_APP_EVENT_FOCUS) {
                 if (event.width >= DEVMGR_W) {
                     view_w = event.width > DEVMGR_MAX_W ? DEVMGR_MAX_W : event.width;
                 }
@@ -345,9 +345,9 @@ int main(void)
                     view_h = event.height > DEVMGR_MAX_H ? DEVMGR_MAX_H : event.height;
                 }
                 update_device_list_layout();
-                leonos_ui_bind(&ui, pixels, view_w, view_h, DEVMGR_MAX_W);
+                reliefos_ui_bind(&ui, pixels, view_w, view_h, DEVMGR_MAX_W);
                 draw_devmgr(&ui);
-                leonos_gui_present_window((uint32_t)window_id, view_w, view_h, DEVMGR_MAX_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, view_w, view_h, DEVMGR_MAX_W, pixels);
             }
         }
         sleep_ms(20);

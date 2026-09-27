@@ -20,7 +20,7 @@ USERLAND_DIR := $(O)/userland
 USERLAND_FLAGS := $(RUNTIME_FLAGS) -fPIE -nostdinc -isystem $(if $(RELIEFOS_PASSIVE),deferred,$(shell $(TARGET_CC) -print-resource-dir 2>/dev/null))/include -D_POSIX_C_SOURCE=200809L
 USERLAND_CFLAGS ?=
 USERLAND_LDFLAGS ?=
-USERLAND_EXTRA_doom := -DRELIEFOS_DOOM -DFEATURE_SOUND -I$(RELIEFOS_SRC)/third_party/doomgeneric/doomgeneric
+USERLAND_EXTRA_doom := -DRELIEFOS_DOOM -DLEONOS_DOOM -DFEATURE_SOUND -I$(RELIEFOS_SRC)/third_party/doomgeneric/doomgeneric
 USERLAND_EXTRA_mp3play := -I$(RELIEFOS_SRC)/third_party/minimp3
 USERLAND_EXTRA_glxgears = -I$(RELIEFOS_SRC)/third_party/portablegl -I$(RELIEFOS_SRC)/userland/apps/glxgears -I$(dir $(GLXGEARS_SOURCE))
 PORTABLEGL_SO ?= $(O)/userland/libportablegl.so.1

@@ -54,6 +54,7 @@ file "$out/pam/root/sbin/unix_chkpwd" sbin/unix_chkpwd 4755 authentication overr
 file "$out/sysroot/musl/lib/libc.so" lib/ld-musl-x86_64.so.1 0755 musl
 file "$out/sysroot/musl/lib/libc.so" lib/libc.so 0755 musl
 file "$out/sysroot/musl/lib/libmimalloc.so.3" lib/libmimalloc.so.3 0755 leonos-mimalloc
+file "$out/system/lib/libreliefos.so.2" usr/lib/reliefos/libreliefos.so.2 0755 leonos-apps
 file "$out/system/lib/libleonos.so.2" usr/lib/leonos/libleonos.so.2 0755 leonos-apps
 for package in musl mimalloc; do tree "$out/sysroot/musl/share/licenses/$package" "usr/share/licenses/$package" "$package"; done
 printf '/lib:/usr/local/lib:/usr/lib:/usr/lib/leonos\n' > "$work/data/ld.path"

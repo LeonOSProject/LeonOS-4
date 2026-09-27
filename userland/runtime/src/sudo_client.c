@@ -2,7 +2,7 @@
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
-#include <leonos/sudo.h>
+#include <reliefos/sudo.h>
 #include <signal.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -19,7 +19,7 @@ struct fileop_result {
     uint32_t magic;
     int32_t status;
     uint32_t count, reserved;
-    struct leonos_dir_entry entries[LEONOS_FS_MAX_ENTRIES];
+    struct reliefos_dir_entry entries[RELIEFOS_FS_MAX_ENTRIES];
 };
 
 static void sudo_clear_secret(char *text, uint32_t length)
@@ -115,26 +115,26 @@ static int run_as(const char *user, const char *password, char *const argv[],
     return result;
 }
 
-int leonos_sudo_run(const char *u, const char *p, char *const a[], uint32_t *pid)
+int reliefos_sudo_run(const char *u, const char *p, char *const a[], uint32_t *pid)
 { return run_as(u, p, a, 0, -1, pid); }
-int leonos_sudo_run_stdout(const char *u, char *const a[], int output, uint32_t *pid)
+int reliefos_sudo_run_stdout(const char *u, char *const a[], int output, uint32_t *pid)
 {
     if (output < 0) { errno = EBADF; return -1; }
     return run_as(u, NULL, a, 0, output, pid);
 }
-int leonos_sudo_run_switch(const char *u, const char *p, char *const a[], uint32_t *pid)
+int reliefos_sudo_run_switch(const char *u, const char *p, char *const a[], uint32_t *pid)
 { return run_as(u, p, a, 1, -1, pid); }
-int leonos_sudo_run_login(const char *u, const char *p, char *const a[], uint32_t *pid)
+int reliefos_sudo_run_login(const char *u, const char *p, char *const a[], uint32_t *pid)
 { return run_as(u, p, a, 2, -1, pid); }
 
-int leonos_sudo_wait(uint32_t pid, int *status)
+int reliefos_sudo_wait(uint32_t pid, int *status)
 {
     if (!pid || !status) { errno = EINVAL; return -1; }
     pid_t result = waitpid((pid_t)pid, status, WNOHANG);
     if (!result) { errno = EAGAIN; return -1; }
     return result < 0 ? -1 : 0;
 }
-int leonos_sudo_wait_command(uint32_t pid, int *status)
+int reliefos_sudo_wait_command(uint32_t pid, int *status)
 {
     if (!pid || !status) { errno = EINVAL; return -1; }
     pid_t result;
@@ -146,24 +146,24 @@ static int sudo_option(char *option, int noninteractive)
 {
     char *args[] = {"/usr/bin/sudo", noninteractive ? "-n" : "-A", option, NULL};
     uint32_t pid; int status;
-    if (spawn(args, -1, &pid) < 0 || leonos_sudo_wait_command(pid, &status) < 0) return -1;
+    if (spawn(args, -1, &pid) < 0 || reliefos_sudo_wait_command(pid, &status) < 0) return -1;
     if (!WIFEXITED(status) || WEXITSTATUS(status)) { errno = EACCES; return -1; }
     return 0;
 }
-int leonos_sudo_check(void)
+int reliefos_sudo_check(void)
 {
     /* This is a UI hint only. Every subsequent command invokes sudo again. */
     char *args[] = {"/usr/bin/sudo", "-n", "-N", "-v", NULL};
     uint32_t pid; int status;
-    if (spawn(args, -1, &pid) < 0 || leonos_sudo_wait_command(pid, &status) < 0) return -1;
+    if (spawn(args, -1, &pid) < 0 || reliefos_sudo_wait_command(pid, &status) < 0) return -1;
     return WIFEXITED(status) && !WEXITSTATUS(status) ? 1 : 0;
 }
-int leonos_sudo_verify(const char *user, const char *password)
+int reliefos_sudo_verify(const char *user, const char *password)
 {
     if ((user && *user) || (password && *password)) { errno = ENOTSUP; return -1; }
     return sudo_option("-v", 0);
 }
-int leonos_sudo_kill(void) { return sudo_option("-k", 1); }
+int reliefos_sudo_kill(void) { return sudo_option("-k", 1); }
 
 static volatile sig_atomic_t password_signal;
 
@@ -172,7 +172,7 @@ static void password_interrupted(int signal_number)
     password_signal = signal_number;
 }
 
-int leonos_read_password(const char *prompt, char *buffer, uint32_t capacity)
+int reliefos_read_password(const char *prompt, char *buffer, uint32_t capacity)
 {
     struct termios saved;
     struct termios current;
@@ -241,13 +241,13 @@ int leonos_read_password(const char *prompt, char *buffer, uint32_t capacity)
 }
 
 
-int leonos_fileop(uint32_t op, const char *path1, const char *path2,
+int reliefos_fileop(uint32_t op, const char *path1, const char *path2,
                   const char *username, const char *password,
-                  struct leonos_dir_entry *entries, uint32_t capacity,
+                  struct reliefos_dir_entry *entries, uint32_t capacity,
                   uint32_t *out_count)
 {
     if (!path1 || !*path1 || !out_count || (!entries && capacity) ||
-        op < LEONOS_FILEOP_LIST || op > LEONOS_FILEOP_UNLINK) { errno = EINVAL; return -1; }
+        op < RELIEFOS_FILEOP_LIST || op > RELIEFOS_FILEOP_UNLINK) { errno = EINVAL; return -1; }
     *out_count = 0;
     if ((username && *username) || (password && *password)) { errno = ENOTSUP; return -1; }
     char verb[16];
@@ -271,9 +271,9 @@ int leonos_fileop(uint32_t op, const char *path1, const char *path2,
         length += (size_t)n;
     }
     close(pair[0]);
-    if (leonos_sudo_wait_command(pid, &status) < 0 && !error) error = errno;
+    if (reliefos_sudo_wait_command(pid, &status) < 0 && !error) error = errno;
     if (!error && (length != sizeof(*reply) || reply->magic != RESULT_MAGIC ||
-                   reply->reserved || reply->count > LEONOS_FS_MAX_ENTRIES)) error = EPROTO;
+                   reply->reserved || reply->count > RELIEFOS_FS_MAX_ENTRIES)) error = EPROTO;
     if (!error && reply->status) error = reply->status < 0 && reply->status >= -4095 ? -reply->status : EIO;
     if (!error && (!WIFEXITED(status) || WEXITSTATUS(status))) error = EACCES;
     if (!error) {
@@ -288,3 +288,15 @@ int leonos_fileop(uint32_t op, const char *path1, const char *path2,
     free(reply); errno = error;
     return error ? -1 : 0;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_fileop) leonos_fileop __attribute__((alias("reliefos_fileop")));
+extern __typeof__(reliefos_read_password) leonos_read_password __attribute__((alias("reliefos_read_password")));
+extern __typeof__(reliefos_sudo_check) leonos_sudo_check __attribute__((alias("reliefos_sudo_check")));
+extern __typeof__(reliefos_sudo_kill) leonos_sudo_kill __attribute__((alias("reliefos_sudo_kill")));
+extern __typeof__(reliefos_sudo_run) leonos_sudo_run __attribute__((alias("reliefos_sudo_run")));
+extern __typeof__(reliefos_sudo_run_login) leonos_sudo_run_login __attribute__((alias("reliefos_sudo_run_login")));
+extern __typeof__(reliefos_sudo_run_stdout) leonos_sudo_run_stdout __attribute__((alias("reliefos_sudo_run_stdout")));
+extern __typeof__(reliefos_sudo_run_switch) leonos_sudo_run_switch __attribute__((alias("reliefos_sudo_run_switch")));
+extern __typeof__(reliefos_sudo_verify) leonos_sudo_verify __attribute__((alias("reliefos_sudo_verify")));
+extern __typeof__(reliefos_sudo_wait) leonos_sudo_wait __attribute__((alias("reliefos_sudo_wait")));
+extern __typeof__(reliefos_sudo_wait_command) leonos_sudo_wait_command __attribute__((alias("reliefos_sudo_wait_command")));

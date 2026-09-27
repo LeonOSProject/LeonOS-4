@@ -54,7 +54,7 @@ def main() -> int:
             extra = ["-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections"]
             extra += (["-Ithird_party/mbedtls/include",
                       "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                      '-DMBEDTLS_CONFIG_FILE="leonos_mbedtls_config.h"']
+                      '-DMBEDTLS_CONFIG_FILE="reliefos_mbedtls_config.h"']
                      if name == "sudo-security" else [])
             if name == "sudo-client":
                 extra += ["-Wl,--wrap=leonos_ipc_connect,--wrap=leonos_ipc_peer_credentials"]

@@ -54,7 +54,7 @@ static void controller_outb(uint16_t port, uint8_t value)
 
 int main(void)
 {
-    static const struct leonos_driver_kernel_api api = {
+    static const struct reliefos_driver_kernel_api api = {
         .inb = controller_inb, .outb = controller_outb,
         .input_push_mouse = pointer_event, .input_push_mouse_wheel = wheel_event,
     };

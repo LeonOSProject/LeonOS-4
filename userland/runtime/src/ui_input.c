@@ -1,4 +1,4 @@
-#include <leonos/ui.h>
+#include <reliefos/ui.h>
 
 #include "ui_internal.h"
 
@@ -8,7 +8,7 @@ static uint8_t ui_caps_lock;
 
 int ui_is_shift_key(uint8_t keycode)
 {
-    return keycode == LEONOS_KEY_LEFT_SHIFT || keycode == LEONOS_KEY_RIGHT_SHIFT;
+    return keycode == RELIEFOS_KEY_LEFT_SHIFT || keycode == RELIEFOS_KEY_RIGHT_SHIFT;
 }
 
 static int ui_keycode_is_letter(uint8_t keycode)
@@ -18,22 +18,22 @@ static int ui_keycode_is_letter(uint8_t keycode)
            (keycode >= 44 && keycode <= 50);
 }
 
-void leonos_ui_set_keyboard_modifiers(uint8_t modifiers)
+void reliefos_ui_set_keyboard_modifiers(uint8_t modifiers)
 {
-    ui_caps_lock = (modifiers & LEONOS_INPUT_MOD_CAPS_LOCK) != 0;
+    ui_caps_lock = (modifiers & RELIEFOS_INPUT_MOD_CAPS_LOCK) != 0;
 }
 
-uint8_t leonos_ui_keyboard_modifiers(void)
+uint8_t reliefos_ui_keyboard_modifiers(void)
 {
-    return ui_caps_lock ? LEONOS_INPUT_MOD_CAPS_LOCK : 0;
+    return ui_caps_lock ? RELIEFOS_INPUT_MOD_CAPS_LOCK : 0;
 }
 
-int leonos_ui_keycode_to_char(uint8_t keycode, char *out)
+int reliefos_ui_keycode_to_char(uint8_t keycode, char *out)
 {
-    return leonos_ui_keycode_to_char_shift(keycode, ui_shift_down, out);
+    return reliefos_ui_keycode_to_char_shift(keycode, ui_shift_down, out);
 }
 
-int leonos_ui_keycode_to_char_shift(uint8_t keycode, uint8_t shifted, char *out)
+int reliefos_ui_keycode_to_char_shift(uint8_t keycode, uint8_t shifted, char *out)
 {
     if (!out) {
         return 0;
@@ -43,9 +43,9 @@ int leonos_ui_keycode_to_char_shift(uint8_t keycode, uint8_t shifted, char *out)
         shifted = (shifted != ui_caps_lock);
     }
     switch (keycode) {
-    case LEONOS_KEY_BACKSPACE: *out = '\b'; return 1;
-    case LEONOS_KEY_TAB: *out = '\t'; return 1;
-    case LEONOS_KEY_ENTER: *out = '\n'; return 1;
+    case RELIEFOS_KEY_BACKSPACE: *out = '\b'; return 1;
+    case RELIEFOS_KEY_TAB: *out = '\t'; return 1;
+    case RELIEFOS_KEY_ENTER: *out = '\n'; return 1;
     case 2: *out = shifted ? '!' : '1'; return 1;
     case 3: *out = shifted ? '@' : '2'; return 1;
     case 4: *out = shifted ? '#' : '3'; return 1;
@@ -93,8 +93,13 @@ int leonos_ui_keycode_to_char_shift(uint8_t keycode, uint8_t shifted, char *out)
     case 51: *out = shifted ? '<' : ','; return 1;
     case 52: *out = shifted ? '>' : '.'; return 1;
     case 53: *out = shifted ? '?' : '/'; return 1;
-    case LEONOS_KEY_SPACE: *out = ' '; return 1;
+    case RELIEFOS_KEY_SPACE: *out = ' '; return 1;
     default:
         return 0;
     }
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_ui_keyboard_modifiers) leonos_ui_keyboard_modifiers __attribute__((alias("reliefos_ui_keyboard_modifiers")));
+extern __typeof__(reliefos_ui_keycode_to_char) leonos_ui_keycode_to_char __attribute__((alias("reliefos_ui_keycode_to_char")));
+extern __typeof__(reliefos_ui_keycode_to_char_shift) leonos_ui_keycode_to_char_shift __attribute__((alias("reliefos_ui_keycode_to_char_shift")));
+extern __typeof__(reliefos_ui_set_keyboard_modifiers) leonos_ui_set_keyboard_modifiers __attribute__((alias("reliefos_ui_set_keyboard_modifiers")));

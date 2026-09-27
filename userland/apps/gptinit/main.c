@@ -1,4 +1,4 @@
-#include <leonos/blockdev.h>
+#include <reliefos/blockdev.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -17,7 +17,7 @@ static int parse_disk(const char *path)
         return -1;
     }
     value = strtoul(digits, &end, 10);
-    if (!end || *end || value >= LEONOS_BLOCK_MAX_DISKS) {
+    if (!end || *end || value >= RELIEFOS_BLOCK_MAX_DISKS) {
         return -1;
     }
     return 0;
@@ -57,7 +57,7 @@ int main(int argc, char **argv)
         puts("gptinit: cancelled");
         return 1;
     }
-    ret = leonos_block_gpt_initialize(path, force);
+    ret = reliefos_block_gpt_initialize(path, force);
     if (ret < 0) {
         printf("gptinit: GPT initialization failed for %s (ret=%d)\n", path, ret);
         if (ret == -17) {

@@ -6,7 +6,7 @@
 
 static struct task first, second, *current = &first;
 static struct task_file file = {.used = 1, .flags = LINUX_O_RDWR,
-    .node = {.type = LEONOS_FS_TYPE_FILE, .volume_id = 1, .first_cluster = 50}};
+    .node = {.type = RELIEFOS_FS_TYPE_FILE, .volume_id = 1, .first_cluster = 50}};
 static int allocation_fails;
 struct task *sched_current_task(void) { return current; }
 struct task_file *task_file_for_fd(struct task *task, int fd)

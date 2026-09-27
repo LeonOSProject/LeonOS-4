@@ -21,8 +21,8 @@ static int log_mkdir(const char *path, mode_t mode)
 
 static unsigned relaunches, workers;
 static int child_result, spawn_error, send_progress = 1;
-int leonos_admin_elevate(void) { ++relaunches; errno = EINPROGRESS; return 0; }
-int leonos_sudo_run_stdout(const char *user, char *const argv[], int output, uint32_t *pid)
+int reliefos_admin_elevate(void) { ++relaunches; errno = EINPROGRESS; return 0; }
+int reliefos_sudo_run_stdout(const char *user, char *const argv[], int output, uint32_t *pid)
 {
     assert(!user && !strcmp(argv[0], APIAPP_PATH));
     assert(!strcmp(argv[1], "--install-worker") && !argv[5]);
@@ -44,33 +44,33 @@ int leonos_sudo_run_stdout(const char *user, char *const argv[], int output, uin
     *pid = (uint32_t)child;
     return 0;
 }
-int leonos_sudo_wait(uint32_t pid, int *status)
+int reliefos_sudo_wait(uint32_t pid, int *status)
 {
     int result = waitpid((pid_t)pid, status, WNOHANG);
     if (!result) { errno = EAGAIN; return -1; }
     return result < 0 ? -1 : 0;
 }
-unsigned long leonos_uptime_ms(void)
+unsigned long reliefos_uptime_ms(void)
 { struct timespec now; assert(clock_gettime(CLOCK_MONOTONIC, &now) == 0); return now.tv_sec * 1000UL + now.tv_nsec / 1000000UL; }
-uint32_t leonos_ui_color(uint32_t role) { return role; }
-void leonos_ui_bind(struct leonos_ui_surface *s, uint32_t *p, uint32_t w, uint32_t h, uint32_t stride)
+uint32_t reliefos_ui_color(uint32_t role) { return role; }
+void reliefos_ui_bind(struct reliefos_ui_surface *s, uint32_t *p, uint32_t w, uint32_t h, uint32_t stride)
 { (void)s; (void)p; (void)w; (void)h; (void)stride; }
-void leonos_ui_rect(struct leonos_ui_surface *s, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t c)
+void reliefos_ui_rect(struct reliefos_ui_surface *s, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t c)
 { (void)s; (void)x; (void)y; (void)w; (void)h; (void)c; }
-void leonos_ui_text(struct leonos_ui_surface *s, uint32_t x, uint32_t y, const char *t, uint32_t fg, uint32_t bg)
+void reliefos_ui_text(struct reliefos_ui_surface *s, uint32_t x, uint32_t y, const char *t, uint32_t fg, uint32_t bg)
 { (void)s; (void)x; (void)y; (void)t; (void)fg; (void)bg; }
-void leonos_ui_progress(struct leonos_ui_surface *s, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t value, uint32_t max)
+void reliefos_ui_progress(struct reliefos_ui_surface *s, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t value, uint32_t max)
 { (void)s; (void)x; (void)y; (void)w; (void)h; (void)value; (void)max; }
-void leonos_ui_activity_bar(struct leonos_ui_surface *s, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t phase)
+void reliefos_ui_activity_bar(struct reliefos_ui_surface *s, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t phase)
 { (void)s; (void)x; (void)y; (void)w; (void)h; (void)phase; }
-int leonos_gui_present_window(uint32_t id, uint32_t w, uint32_t h, uint32_t stride, const uint32_t *p)
+int reliefos_gui_present_window(uint32_t id, uint32_t w, uint32_t h, uint32_t stride, const uint32_t *p)
 { (void)id; (void)w; (void)h; (void)stride; (void)p; return 0; }
-int leonos_gui_wait_app_event(struct leonos_gui_app_event *event, uint32_t timeout)
+int reliefos_gui_wait_app_event(struct reliefos_gui_app_event *event, uint32_t timeout)
 { (void)event; (void)timeout; usleep(1000); return 0; }
-int leonos_spawn_argv(const char *p, char *const a[]) { (void)p; (void)a; abort(); }
-int leonos_task_snapshot(struct leonos_task_info *t, uint32_t c, uint64_t *tick)
+int reliefos_spawn_argv(const char *p, char *const a[]) { (void)p; (void)a; abort(); }
+int reliefos_task_snapshot(struct reliefos_task_info *t, uint32_t c, uint64_t *tick)
 { (void)t; (void)c; (void)tick; abort(); }
-int leonos_task_kill(uint32_t pid) { (void)pid; abort(); }
+int reliefos_task_kill(uint32_t pid) { (void)pid; abort(); }
 
 int main(void)
 {

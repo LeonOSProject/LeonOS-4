@@ -1,14 +1,14 @@
-#include <leonos/fs.h>
-#include <leonos/gui.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/system.h>
-#include <leonos/ui.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/system.h>
+#include <reliefos/ui.h>
 #include <fcntl.h>
 #include <pty.h>
 #include <unistd.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 
 #define BUGTEST_W 620
 #define BUGTEST_H 430
@@ -132,12 +132,12 @@ static int safe_write_bad_src(void)
 
 static int safe_open_bad_path(void)
 {
-    return nonfatal_result(open((const char *)0x200000ULL, LEONOS_O_RDONLY, 0));
+    return nonfatal_result(open((const char *)0x200000ULL, RELIEFOS_O_RDONLY, 0));
 }
 
 static int safe_stat_bad_out(void)
 {
-    return nonfatal_result(leonos_stat_legacy(LEONOS_PATH_LEONOS_CONF, (struct leonos_stat *)0x200000ULL));
+    return nonfatal_result(reliefos_stat_legacy(RELIEFOS_PATH_RELIEFOS_CONF, (struct reliefos_stat *)0x200000ULL));
 }
 
 static int safe_getcwd_bad_out(void)
@@ -148,64 +148,64 @@ static int safe_getcwd_bad_out(void)
 static int safe_list_dir_bad_entries(void)
 {
     uint32_t count = 0;
-    return nonfatal_result(leonos_list_dir(
-        LEONOS_LAYOUT_LEONOS_APPS, (struct leonos_dir_entry *)0x200000ULL, 4, &count));
+    return nonfatal_result(reliefos_list_dir(
+        RELIEFOS_LAYOUT_RELIEFOS_APPS, (struct reliefos_dir_entry *)0x200000ULL, 4, &count));
 }
 
 static int safe_system_info_bad_out(void)
 {
-    return nonfatal_result(leonos_system_info((void *)0x200000ULL));
+    return nonfatal_result(reliefos_system_info((void *)0x200000ULL));
 }
 
 static int safe_gui_event_bad_out(void)
 {
-    return nonfatal_result(leonos_gui_next_event((void *)0x200000ULL));
+    return nonfatal_result(reliefos_gui_next_event((void *)0x200000ULL));
 }
 
 static int safe_create_window_bad_title(void)
 {
-    return nonfatal_result(leonos_gui_create_app_window_ex(
+    return nonfatal_result(reliefos_gui_create_app_window_ex(
         (const char *)0x200000ULL, "bad title", 120, 80, 0));
 }
 
 static int safe_fb_text_bad_string(void)
 {
-    return nonfatal_result(leonos_fb_text(0, 0, (const char *)0x200000ULL,
-                                          LEONOS_UI_WHITE, LEONOS_UI_BLACK));
+    return nonfatal_result(reliefos_fb_text(0, 0, (const char *)0x200000ULL,
+                                          RELIEFOS_UI_WHITE, RELIEFOS_UI_BLACK));
 }
 
 static int safe_fb_blit_bad_pixels(void)
 {
-    return nonfatal_result(leonos_fb_blit(0, 0, 8, 8, 8,
+    return nonfatal_result(reliefos_fb_blit(0, 0, 8, 8, 8,
                                           (const uint32_t *)0x200000ULL));
 }
 
 static int safe_present_bad_pixels(void)
 {
-    return nonfatal_result(leonos_gui_present_window(
+    return nonfatal_result(reliefos_gui_present_window(
         0x12345678U, 8, 8, 8, (const uint32_t *)0x200000ULL));
 }
 
 static int safe_fetch_bad_pixels(void)
 {
-    return nonfatal_result(leonos_gui_fetch_window(
+    return nonfatal_result(reliefos_gui_fetch_window(
         0x12345678U, 8, 8, 8, (uint32_t *)0x200000ULL, 0, 0));
 }
 
 static int safe_window_event_bad_out(void)
 {
-    return nonfatal_result(leonos_gui_poll_app_event((void *)0x200000ULL));
+    return nonfatal_result(reliefos_gui_poll_app_event((void *)0x200000ULL));
 }
 
 static int safe_send_window_event_bad_src(void)
 {
-    return nonfatal_result(leonos_gui_send_app_event((void *)0x200000ULL));
+    return nonfatal_result(reliefos_gui_send_app_event((void *)0x200000ULL));
 }
 
 static int safe_task_snapshot_bad_tasks(void)
 {
-    return nonfatal_result(leonos_task_snapshot(
-        (struct leonos_task_info *)0x200000ULL, 4, 0));
+    return nonfatal_result(reliefos_task_snapshot(
+        (struct reliefos_task_info *)0x200000ULL, 4, 0));
 }
 
 static int safe_pty_bad_buffer(void)
@@ -271,11 +271,11 @@ static uint32_t row_y(uint32_t index)
     return 38 + index * 18;
 }
 
-static void draw_status_mark(struct leonos_ui_surface *ui, uint32_t index, uint32_t y)
+static void draw_status_mark(struct reliefos_ui_surface *ui, uint32_t index, uint32_t y)
 {
     uint32_t bit = 1u << index;
     const char *mark = "-";
-    uint32_t fg = LEONOS_UI_DARK;
+    uint32_t fg = RELIEFOS_UI_DARK;
     if (pass_mask & bit) {
         mark = "OK";
         fg = 0x00008000u;
@@ -286,58 +286,58 @@ static void draw_status_mark(struct leonos_ui_surface *ui, uint32_t index, uint3
         mark = "RUN";
         fg = 0x00000080u;
     }
-    leonos_ui_text(ui, 18, y, mark, fg, LEONOS_UI_WHITE);
+    reliefos_ui_text(ui, 18, y, mark, fg, RELIEFOS_UI_WHITE);
 }
 
-static void draw_bugtest(struct leonos_ui_surface *ui)
+static void draw_bugtest(struct reliefos_ui_surface *ui)
 {
     char line[96];
     uint32_t pos;
-    leonos_ui_rect(ui, 0, 0, BUGTEST_W, BUGTEST_H, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 18, 14, "Safe tests should return errors. Fault tests may crash current kernel.", LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    reliefos_ui_rect(ui, 0, 0, BUGTEST_W, BUGTEST_H, RELIEFOS_UI_GRAY);
+    reliefos_ui_text(ui, 18, 14, "Safe tests should return errors. Fault tests may crash current kernel.", RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
 
     for (uint32_t i = 0; i < TEST_COUNT; ++i) {
         uint32_t y = row_y(i);
-        uint32_t bg = i == selected_test ? LEONOS_UI_LIGHT : LEONOS_UI_WHITE;
-        leonos_ui_rect(ui, 12, y - 2, 316, 17, bg);
+        uint32_t bg = i == selected_test ? RELIEFOS_UI_LIGHT : RELIEFOS_UI_WHITE;
+        reliefos_ui_rect(ui, 12, y - 2, 316, 17, bg);
         draw_status_mark(ui, i, y);
-        leonos_ui_text_clipped(ui, 62, y, 250, tests[i].name,
-                               tests[i].kind == TEST_DESTRUCTIVE ? 0x00800000u : LEONOS_UI_BLACK,
+        reliefos_ui_text_clipped(ui, 62, y, 250, tests[i].name,
+                               tests[i].kind == TEST_DESTRUCTIVE ? 0x00800000u : RELIEFOS_UI_BLACK,
                                bg);
     }
 
-    leonos_ui_panel(ui, 344, 34, 258, 174, LEONOS_UI_LIGHT);
-    leonos_ui_text(ui, 358, 52, tests[selected_test].name, LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
-    leonos_ui_text_clipped(ui, 358, 80, 220, tests[selected_test].desc, LEONOS_UI_DARK, LEONOS_UI_LIGHT);
-    leonos_ui_text_clipped(ui, 358, 102, 220, tests[selected_test].desc + (str_len(tests[selected_test].desc) > 32 ? 32 : str_len(tests[selected_test].desc)), LEONOS_UI_DARK, LEONOS_UI_LIGHT);
-    leonos_ui_button(ui, 358, 136, 108, LEONOS_UI_BUTTON_H, "Run Test", 0);
-    leonos_ui_button(ui, 478, 136, 108, LEONOS_UI_BUTTON_H, "Safe Suite", 0);
-    leonos_ui_button(ui, 358, 170, 108, LEONOS_UI_BUTTON_H, extra_destructive_tests[0].name, 0);
-    leonos_ui_button(ui, 478, 170, 108, LEONOS_UI_BUTTON_H, extra_destructive_tests[1].name, 0);
+    reliefos_ui_panel(ui, 344, 34, 258, 174, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text(ui, 358, 52, tests[selected_test].name, RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text_clipped(ui, 358, 80, 220, tests[selected_test].desc, RELIEFOS_UI_DARK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text_clipped(ui, 358, 102, 220, tests[selected_test].desc + (str_len(tests[selected_test].desc) > 32 ? 32 : str_len(tests[selected_test].desc)), RELIEFOS_UI_DARK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_button(ui, 358, 136, 108, RELIEFOS_UI_BUTTON_H, "Run Test", 0);
+    reliefos_ui_button(ui, 478, 136, 108, RELIEFOS_UI_BUTTON_H, "Safe Suite", 0);
+    reliefos_ui_button(ui, 358, 170, 108, RELIEFOS_UI_BUTTON_H, extra_destructive_tests[0].name, 0);
+    reliefos_ui_button(ui, 478, 170, 108, RELIEFOS_UI_BUTTON_H, extra_destructive_tests[1].name, 0);
 
-    leonos_ui_panel(ui, 344, 220, 258, 126, LEONOS_UI_LIGHT);
-    leonos_ui_text(ui, 358, 236, "Report", LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
+    reliefos_ui_panel(ui, 344, 220, 258, 126, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text(ui, 358, 236, "Report", RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
     pos = 0;
     line[0] = 0;
     append_text(line, sizeof(line), &pos, "Safe ran ");
     append_dec(line, sizeof(line), &pos, (int)safe_ran_count);
     append_text(line, sizeof(line), &pos, " / ");
     append_dec(line, sizeof(line), &pos, (int)(TEST_COUNT - 1));
-    leonos_ui_text(ui, 358, 260, line, LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
+    reliefos_ui_text(ui, 358, 260, line, RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
     pos = 0;
     line[0] = 0;
     append_text(line, sizeof(line), &pos, "Pass ");
     append_dec(line, sizeof(line), &pos, (int)safe_pass_count);
     append_text(line, sizeof(line), &pos, "  Fail ");
     append_dec(line, sizeof(line), &pos, (int)safe_fail_count);
-    leonos_ui_text(ui, 358, 282, line, safe_fail_count ? 0x00800000u : 0x00008000u,
-                   LEONOS_UI_LIGHT);
-    leonos_ui_text_clipped(ui, 358, 306, 226,
+    reliefos_ui_text(ui, 358, 282, line, safe_fail_count ? 0x00800000u : 0x00008000u,
+                   RELIEFOS_UI_LIGHT);
+    reliefos_ui_text_clipped(ui, 358, 306, 226,
                            safe_ran_count ? status_text : "No report yet. Run Safe Suite.",
-                           safe_fail_count ? 0x00800000u : LEONOS_UI_DARK,
-                           LEONOS_UI_LIGHT);
+                           safe_fail_count ? 0x00800000u : RELIEFOS_UI_DARK,
+                           RELIEFOS_UI_LIGHT);
 
-    leonos_ui_statusbar(ui, BUGTEST_H - 28, 28, status_text);
+    reliefos_ui_statusbar(ui, BUGTEST_H - 28, 28, status_text);
 }
 
 static int hit_rect_i(int32_t x, int32_t y, int32_t rx, int32_t ry,
@@ -405,60 +405,60 @@ static void run_safe_suite(void)
 
 int main(void)
 {
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
 
     puts("[bugtest.elf] kernel bug test app starting");
-    window_id = leonos_gui_create_app_window_ex("Kernel Bug Test", "Kernel crash probe",
+    window_id = reliefos_gui_create_app_window_ex("Kernel Bug Test", "Kernel crash probe",
                                                 BUGTEST_W, BUGTEST_H, 0);
     if (window_id <= 0) {
         printf("[bugtest.elf] create window failed=%d\n", window_id);
         return 1;
     }
-    leonos_ui_bind(&ui, pixels, BUGTEST_W, BUGTEST_H, BUGTEST_W);
+    reliefos_ui_bind(&ui, pixels, BUGTEST_W, BUGTEST_H, BUGTEST_W);
     draw_bugtest(&ui);
-    leonos_gui_present_window((uint32_t)window_id, BUGTEST_W, BUGTEST_H, BUGTEST_W, pixels);
+    reliefos_gui_present_window((uint32_t)window_id, BUGTEST_W, BUGTEST_H, BUGTEST_W, pixels);
 
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        while (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        while (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u)) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u)) {
                 for (uint32_t i = 0; i < TEST_COUNT; ++i) {
                     if (hit_rect_i(event.x, event.y, 12, (int32_t)row_y(i) - 3, 316, 18)) {
                         selected_test = i;
                     }
                 }
-                if (hit_rect_i(event.x, event.y, 358, 136, 108, LEONOS_UI_BUTTON_H)) {
+                if (hit_rect_i(event.x, event.y, 358, 136, 108, RELIEFOS_UI_BUTTON_H)) {
                     run_test_index(selected_test);
-                } else if (hit_rect_i(event.x, event.y, 478, 136, 108, LEONOS_UI_BUTTON_H)) {
+                } else if (hit_rect_i(event.x, event.y, 478, 136, 108, RELIEFOS_UI_BUTTON_H)) {
                     run_safe_suite();
-                } else if (hit_rect_i(event.x, event.y, 358, 170, 108, LEONOS_UI_BUTTON_H)) {
+                } else if (hit_rect_i(event.x, event.y, 358, 170, 108, RELIEFOS_UI_BUTTON_H)) {
                     run_extra_destructive(0);
-                } else if (hit_rect_i(event.x, event.y, 478, 170, 108, LEONOS_UI_BUTTON_H)) {
+                } else if (hit_rect_i(event.x, event.y, 478, 170, 108, RELIEFOS_UI_BUTTON_H)) {
                     run_extra_destructive(1);
                 }
                 draw_bugtest(&ui);
-                leonos_gui_present_window((uint32_t)window_id, BUGTEST_W, BUGTEST_H, BUGTEST_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, BUGTEST_W, BUGTEST_H, BUGTEST_W, pixels);
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN && event.pressed) {
-                if (event.keycode == LEONOS_KEY_ENTER) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN && event.pressed) {
+                if (event.keycode == RELIEFOS_KEY_ENTER) {
                     run_test_index(selected_test);
-                } else if (event.keycode == LEONOS_KEY_TAB) {
+                } else if (event.keycode == RELIEFOS_KEY_TAB) {
                     selected_test = (selected_test + 1) % TEST_COUNT;
                 } else if (event.keycode == 1) {
                     return 0;
                 }
                 draw_bugtest(&ui);
-                leonos_gui_present_window((uint32_t)window_id, BUGTEST_W, BUGTEST_H, BUGTEST_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, BUGTEST_W, BUGTEST_H, BUGTEST_W, pixels);
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_RESIZE ||
-                event.type == LEONOS_GUI_APP_EVENT_FOCUS) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_RESIZE ||
+                event.type == RELIEFOS_GUI_APP_EVENT_FOCUS) {
                 draw_bugtest(&ui);
-                leonos_gui_present_window((uint32_t)window_id, BUGTEST_W, BUGTEST_H, BUGTEST_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, BUGTEST_W, BUGTEST_H, BUGTEST_W, pixels);
             }
         }
         sleep_ms(10);

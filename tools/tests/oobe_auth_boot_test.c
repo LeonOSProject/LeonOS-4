@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <sys/un.h>
-#include <leonos/syscall.h>
+#include <reliefos/syscall.h>
 
 static int test_open(const char *path, int flags, ...);
 static long test_read(int fd, void *buffer, unsigned long count);
@@ -24,7 +24,7 @@ static unsigned read_index;
 static int listener_attempted;
 static int database_fixture;
 
-int authd_export_accounts(const char *directory, const struct leonos_auth_record *records, unsigned count)
+int authd_export_accounts(const char *directory, const struct reliefos_auth_record *records, unsigned count)
 {
     assert(!strcmp(directory, "/etc") && count == 1 && records[0].user.uid == 0);
     assert(!strcmp(records[0].user.username, "root"));
@@ -38,26 +38,26 @@ int authd_username_valid(const char *name, unsigned capacity)
     return 0;
 }
 
-int authd_account_valid(const struct leonos_user_info *user)
+int authd_account_valid(const struct reliefos_user_info *user)
 {
-    assert(!user->uid && user->role == LEONOS_AUTH_ROLE_ADMIN && !strcmp(user->username, "root"));
+    assert(!user->uid && user->role == RELIEFOS_AUTH_ROLE_ADMIN && !strcmp(user->username, "root"));
     return 1;
 }
 
-int leonos_auth_password_valid(const char *password, uint32_t capacity)
+int reliefos_auth_password_valid(const char *password, uint32_t capacity)
 { (void)password; (void)capacity; assert(0); return 0; }
-int authd_set_password(struct leonos_auth_record *record, const char *password)
+int authd_set_password(struct reliefos_auth_record *record, const char *password)
 { (void)record; (void)password; assert(0); return -1; }
-int authd_check_password(const struct leonos_auth_record *record, const char *password)
+int authd_check_password(const struct reliefos_auth_record *record, const char *password)
 { (void)record; (void)password; assert(0); return 0; }
-int authd_store_database(const char *path, const struct leonos_auth_record *records, unsigned count)
+int authd_store_database(const char *path, const struct reliefos_auth_record *records, unsigned count)
 { (void)path; (void)records; (void)count; assert(0); return -1; }
-int authd_publish_session(const char *path, const struct leonos_user_info *user)
+int authd_publish_session(const char *path, const struct reliefos_user_info *user)
 { (void)path; (void)user; assert(0); return -1; }
 
 static int test_open(const char *path, int flags, ...)
 {
-    assert(!strcmp(path, LEONOS_PATH_USERS_DB) && flags == LEONOS_O_RDONLY);
+    assert(!strcmp(path, RELIEFOS_PATH_USERS_DB) && flags == RELIEFOS_O_RDONLY);
     return 10;
 }
 
@@ -73,7 +73,7 @@ static long test_read(int fd, void *buffer, unsigned long count)
         assert(count == sizeof(uint32_t));
         *(uint32_t *)buffer = 1;
     } else {
-        struct leonos_auth_record record = {.user = {.uid = 0, .role = LEONOS_AUTH_ROLE_ADMIN}};
+        struct reliefos_auth_record record = {.user = {.uid = 0, .role = RELIEFOS_AUTH_ROLE_ADMIN}};
         assert(read_index == 2 && count == sizeof(record));
         strcpy(record.user.username, "root");
         strcpy(record.user.home, "/root");
@@ -99,7 +99,7 @@ static int test_unlink(const char *path)
     return 0;
 }
 
-int leonos_ipc_bind_listen_mode(const char *path, int backlog, uint32_t mode)
+int reliefos_ipc_bind_listen_mode(const char *path, int backlog, uint32_t mode)
 {
     assert(mode == 0666);
     (void)path; (void)backlog;
@@ -109,15 +109,15 @@ int leonos_ipc_bind_listen_mode(const char *path, int backlog, uint32_t mode)
     errno = EADDRINUSE;
     return -1;
 }
-int leonos_ipc_set_nonblock(int fd, int enabled) { (void)fd; (void)enabled; assert(0); return -1; }
-int leonos_ipc_accept(int fd, struct ucred *peer) { (void)fd; (void)peer; assert(0); return -1; }
-int leonos_ipc_peer_credentials(int fd, struct ucred *peer) { (void)fd; (void)peer; assert(0); return -1; }
-int leonos_ipc_recv(int fd, uint32_t *type, void *payload, uint32_t capacity, uint32_t *length)
+int reliefos_ipc_set_nonblock(int fd, int enabled) { (void)fd; (void)enabled; assert(0); return -1; }
+int reliefos_ipc_accept(int fd, struct ucred *peer) { (void)fd; (void)peer; assert(0); return -1; }
+int reliefos_ipc_peer_credentials(int fd, struct ucred *peer) { (void)fd; (void)peer; assert(0); return -1; }
+int reliefos_ipc_recv(int fd, uint32_t *type, void *payload, uint32_t capacity, uint32_t *length)
 {
     (void)fd; (void)type; (void)payload; (void)capacity; (void)length;
     assert(0); return -1;
 }
-int leonos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
+int reliefos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
 {
     (void)fd; (void)type; (void)payload; (void)length;
     assert(0); return -1;

@@ -7,15 +7,15 @@
 
 int tcsetwinsize(int fd, const struct winsize *winsize);
 
-#define ioctl leonos_decl_ioctl
-#define wait4 leonos_decl_wait4
+#define ioctl reliefos_decl_ioctl
+#define wait4 reliefos_decl_wait4
 #define main terminal_app_main
 #include "../../userland/apps/terminal/main.c"
 #undef main
 #undef wait4
 #undef ioctl
 
-uint32_t leonos_ui_tab_height(void)
+uint32_t reliefos_ui_tab_height(void)
 {
     return 26;
 }

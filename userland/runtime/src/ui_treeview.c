@@ -1,13 +1,13 @@
-#include <leonos/ui.h>
+#include <reliefos/ui.h>
 
 #include "ui_internal.h"
 
 static uint32_t treeview_count(uint32_t count)
 {
-    return count > LEONOS_UI_TREEVIEW_MAX_ITEMS ? LEONOS_UI_TREEVIEW_MAX_ITEMS : count;
+    return count > RELIEFOS_UI_TREEVIEW_MAX_ITEMS ? RELIEFOS_UI_TREEVIEW_MAX_ITEMS : count;
 }
 
-static int treeview_item_index(const struct leonos_ui_treeview_item *items,
+static int treeview_item_index(const struct reliefos_ui_treeview_item *items,
                                uint32_t count, uint32_t id)
 {
     for (uint32_t i = 0; i < count; ++i) {
@@ -18,7 +18,7 @@ static int treeview_item_index(const struct leonos_ui_treeview_item *items,
     return -1;
 }
 
-static int treeview_parent_index(const struct leonos_ui_treeview_item *items,
+static int treeview_parent_index(const struct reliefos_ui_treeview_item *items,
                                  uint32_t count, uint32_t index)
 {
     uint32_t parent_id;
@@ -32,7 +32,7 @@ static int treeview_parent_index(const struct leonos_ui_treeview_item *items,
     return treeview_item_index(items, count, parent_id);
 }
 
-static int treeview_has_children(const struct leonos_ui_treeview_item *items,
+static int treeview_has_children(const struct reliefos_ui_treeview_item *items,
                                  uint32_t count, uint32_t index)
 {
     if (!items || index >= count || items[index].id == 0) {
@@ -46,7 +46,7 @@ static int treeview_has_children(const struct leonos_ui_treeview_item *items,
     return 0;
 }
 
-static int treeview_is_collapsed(const struct leonos_ui_treeview_state *state,
+static int treeview_is_collapsed(const struct reliefos_ui_treeview_state *state,
                                  uint32_t id)
 {
     if (!state) {
@@ -60,7 +60,7 @@ static int treeview_is_collapsed(const struct leonos_ui_treeview_state *state,
     return 0;
 }
 
-static void treeview_remove_collapsed(struct leonos_ui_treeview_state *state,
+static void treeview_remove_collapsed(struct reliefos_ui_treeview_state *state,
                                       uint32_t id)
 {
     if (!state) {
@@ -77,7 +77,7 @@ static void treeview_remove_collapsed(struct leonos_ui_treeview_state *state,
     }
 }
 
-static void treeview_set_collapsed(struct leonos_ui_treeview_state *state,
+static void treeview_set_collapsed(struct reliefos_ui_treeview_state *state,
                                    uint32_t id, int collapsed)
 {
     if (!state) {
@@ -88,22 +88,22 @@ static void treeview_set_collapsed(struct leonos_ui_treeview_state *state,
         return;
     }
     if (treeview_is_collapsed(state, id) ||
-        state->collapsed_count >= LEONOS_UI_TREEVIEW_MAX_ITEMS) {
+        state->collapsed_count >= RELIEFOS_UI_TREEVIEW_MAX_ITEMS) {
         return;
     }
     state->collapsed_ids[state->collapsed_count++] = id;
 }
 
-static void treeview_prune_collapsed(struct leonos_ui_treeview_state *state,
-                                     const struct leonos_ui_treeview_item *items,
+static void treeview_prune_collapsed(struct reliefos_ui_treeview_state *state,
+                                     const struct reliefos_ui_treeview_item *items,
                                      uint32_t count)
 {
     uint32_t kept = 0;
     if (!state) {
         return;
     }
-    if (state->collapsed_count > LEONOS_UI_TREEVIEW_MAX_ITEMS) {
-        state->collapsed_count = LEONOS_UI_TREEVIEW_MAX_ITEMS;
+    if (state->collapsed_count > RELIEFOS_UI_TREEVIEW_MAX_ITEMS) {
+        state->collapsed_count = RELIEFOS_UI_TREEVIEW_MAX_ITEMS;
     }
     for (uint32_t i = 0; i < state->collapsed_count; ++i) {
         int index = treeview_item_index(items, count, state->collapsed_ids[i]);
@@ -114,13 +114,13 @@ static void treeview_prune_collapsed(struct leonos_ui_treeview_state *state,
     state->collapsed_count = kept;
 }
 
-static void treeview_append_visible(struct leonos_ui_treeview_state *state,
-                                    const struct leonos_ui_treeview_item *items,
+static void treeview_append_visible(struct reliefos_ui_treeview_state *state,
+                                    const struct reliefos_ui_treeview_item *items,
                                     uint32_t count, uint32_t index, uint8_t depth,
-                                    uint8_t visited[LEONOS_UI_TREEVIEW_MAX_ITEMS])
+                                    uint8_t visited[RELIEFOS_UI_TREEVIEW_MAX_ITEMS])
 {
     if (!state || !items || index >= count || visited[index] ||
-        state->visible_count >= LEONOS_UI_TREEVIEW_MAX_ITEMS) {
+        state->visible_count >= RELIEFOS_UI_TREEVIEW_MAX_ITEMS) {
         return;
     }
     visited[index] = 1;
@@ -140,8 +140,8 @@ static void treeview_append_visible(struct leonos_ui_treeview_state *state,
 }
 
 /* Keep the fallback walk from reintroducing descendants skipped by collapse. */
-static int treeview_has_collapsed_ancestor(const struct leonos_ui_treeview_state *state,
-                                           const struct leonos_ui_treeview_item *items,
+static int treeview_has_collapsed_ancestor(const struct reliefos_ui_treeview_state *state,
+                                           const struct reliefos_ui_treeview_item *items,
                                            uint32_t count, uint32_t index)
 {
     for (uint32_t steps = 0; steps < count; ++steps) {
@@ -157,8 +157,8 @@ static int treeview_has_collapsed_ancestor(const struct leonos_ui_treeview_state
     return 0;
 }
 
-static int treeview_selected_row(const struct leonos_ui_treeview_state *state,
-                                 const struct leonos_ui_treeview_item *items)
+static int treeview_selected_row(const struct reliefos_ui_treeview_state *state,
+                                 const struct reliefos_ui_treeview_item *items)
 {
     if (!state || !items || !state->has_selection) {
         return -1;
@@ -171,8 +171,8 @@ static int treeview_selected_row(const struct leonos_ui_treeview_state *state,
     return -1;
 }
 
-static void treeview_clamp(struct leonos_ui_treeview_state *state,
-                           const struct leonos_ui_treeview_item *items)
+static void treeview_clamp(struct reliefos_ui_treeview_state *state,
+                           const struct reliefos_ui_treeview_item *items)
 {
     uint32_t visible;
     uint32_t max_scroll;
@@ -198,8 +198,8 @@ static void treeview_clamp(struct leonos_ui_treeview_state *state,
     }
 }
 
-static void treeview_select_row(struct leonos_ui_treeview_state *state,
-                                const struct leonos_ui_treeview_item *items,
+static void treeview_select_row(struct reliefos_ui_treeview_state *state,
+                                const struct reliefos_ui_treeview_item *items,
                                 uint32_t row)
 {
     if (!state || !items || row >= state->visible_count) {
@@ -214,7 +214,7 @@ static void treeview_select_row(struct leonos_ui_treeview_state *state,
     else if (row >= state->scroll + visible) state->scroll = row - visible + 1;
 }
 
-void leonos_ui_treeview_state_init(struct leonos_ui_treeview_state *state,
+void reliefos_ui_treeview_state_init(struct reliefos_ui_treeview_state *state,
                                    uint32_t visible_rows, uint32_t row_height)
 {
     if (!state) {
@@ -224,10 +224,10 @@ void leonos_ui_treeview_state_init(struct leonos_ui_treeview_state *state,
         ((uint8_t *)state)[i] = 0;
     }
     state->visible_rows = visible_rows ? visible_rows : 1;
-    state->row_height = row_height ? row_height : LEONOS_FONT_H + 8U;
+    state->row_height = row_height ? row_height : RELIEFOS_FONT_H + 8U;
 }
 
-void leonos_ui_treeview_state_set_viewport(struct leonos_ui_treeview_state *state,
+void reliefos_ui_treeview_state_set_viewport(struct reliefos_ui_treeview_state *state,
                                            uint32_t visible_rows)
 {
     if (!state) {
@@ -236,11 +236,11 @@ void leonos_ui_treeview_state_set_viewport(struct leonos_ui_treeview_state *stat
     state->visible_rows = visible_rows ? visible_rows : 1;
 }
 
-void leonos_ui_treeview_state_sync(struct leonos_ui_treeview_state *state,
-                                   const struct leonos_ui_treeview_item *items,
+void reliefos_ui_treeview_state_sync(struct reliefos_ui_treeview_state *state,
+                                   const struct reliefos_ui_treeview_item *items,
                                    uint32_t count)
 {
-    uint8_t visited[LEONOS_UI_TREEVIEW_MAX_ITEMS] = {0};
+    uint8_t visited[RELIEFOS_UI_TREEVIEW_MAX_ITEMS] = {0};
     count = treeview_count(count);
     if (!state) {
         return;
@@ -265,11 +265,11 @@ void leonos_ui_treeview_state_sync(struct leonos_ui_treeview_state *state,
     treeview_clamp(state, items);
 }
 
-void leonos_ui_treeview(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
-                        uint32_t w, const struct leonos_ui_list_column *cols,
+void reliefos_ui_treeview(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
+                        uint32_t w, const struct reliefos_ui_list_column *cols,
                         uint32_t col_count,
-                        const struct leonos_ui_treeview_item *items,
-                        uint32_t count, struct leonos_ui_treeview_state *state)
+                        const struct reliefos_ui_treeview_item *items,
+                        uint32_t count, struct reliefos_ui_treeview_state *state)
 {
     uint32_t row_h;
     uint32_t rows_y;
@@ -277,31 +277,31 @@ void leonos_ui_treeview(struct leonos_ui_surface *surface, uint32_t x, uint32_t 
     if (!surface || !state) {
         return;
     }
-    if (state->row_height < LEONOS_FONT_H + 4U) {
-        state->row_height = LEONOS_FONT_H + 4U;
+    if (state->row_height < RELIEFOS_FONT_H + 4U) {
+        state->row_height = RELIEFOS_FONT_H + 4U;
     }
-    leonos_ui_treeview_state_sync(state, items, count);
+    reliefos_ui_treeview_state_sync(state, items, count);
     row_h = state->row_height;
-    rows_y = y + LEONOS_FONT_H + 12U;
-    leonos_ui_listview_header(surface, x, y, w, cols, col_count);
+    rows_y = y + RELIEFOS_FONT_H + 12U;
+    reliefos_ui_listview_header(surface, x, y, w, cols, col_count);
     rows = state->visible_count > state->scroll ? state->visible_count - state->scroll : 0;
     if (rows > state->visible_rows) {
         rows = state->visible_rows;
     }
-    leonos_ui_cursor_region(surface, (int32_t)x, (int32_t)rows_y, w,
-                            rows * row_h, LEONOS_GUI_CURSOR_HAND, 0);
+    reliefos_ui_cursor_region(surface, (int32_t)x, (int32_t)rows_y, w,
+                            rows * row_h, RELIEFOS_GUI_CURSOR_HAND, 0);
     for (uint32_t row = 0; row < rows; ++row) {
         uint32_t visible_index = state->scroll + row;
         uint32_t item_index = state->visible_indices[visible_index];
         uint32_t depth = state->visible_depths[visible_index];
         uint32_t bg = state->has_selection && items[item_index].id == state->selected_id
-                          ? LEONOS_UI_ACTIVE_TITLE : LEONOS_UI_WHITE;
-        uint32_t fg = bg == LEONOS_UI_ACTIVE_TITLE ? LEONOS_UI_WHITE : LEONOS_UI_BLACK;
+                          ? RELIEFOS_UI_ACTIVE_TITLE : RELIEFOS_UI_WHITE;
+        uint32_t fg = bg == RELIEFOS_UI_ACTIVE_TITLE ? RELIEFOS_UI_WHITE : RELIEFOS_UI_BLACK;
         uint32_t row_y = rows_y + row * row_h;
         uint32_t cx = x;
         uint32_t indent = depth * 14U;
         int has_children = treeview_has_children(items, treeview_count(count), item_index);
-        leonos_ui_rect(surface, x, row_y, w, row_h, bg);
+        reliefos_ui_rect(surface, x, row_y, w, row_h, bg);
         for (uint32_t col = 0; col < col_count && cx < x + w; ++col) {
             uint32_t cw = cols[col].width ? cols[col].width : x + w - cx;
             uint32_t text_x = cx + 4U;
@@ -312,19 +312,19 @@ void leonos_ui_treeview(struct leonos_ui_surface *surface, uint32_t x, uint32_t 
                 uint32_t glyph_x = cx + 4U + indent;
                 text_x = glyph_x + 16U;
                 if (has_children && glyph_x + 10U < cx + cw) {
-                    leonos_ui_rect(surface, glyph_x, row_y + 6U, 10U, 10U, bg);
-                    leonos_ui_rect(surface, glyph_x, row_y + 6U, 10U, 1U, fg);
-                    leonos_ui_rect(surface, glyph_x, row_y + 15U, 10U, 1U, fg);
-                    leonos_ui_rect(surface, glyph_x, row_y + 6U, 1U, 10U, fg);
-                    leonos_ui_rect(surface, glyph_x + 9U, row_y + 6U, 1U, 10U, fg);
-                    leonos_ui_rect(surface, glyph_x + 2U, row_y + 10U, 6U, 1U, fg);
+                    reliefos_ui_rect(surface, glyph_x, row_y + 6U, 10U, 10U, bg);
+                    reliefos_ui_rect(surface, glyph_x, row_y + 6U, 10U, 1U, fg);
+                    reliefos_ui_rect(surface, glyph_x, row_y + 15U, 10U, 1U, fg);
+                    reliefos_ui_rect(surface, glyph_x, row_y + 6U, 1U, 10U, fg);
+                    reliefos_ui_rect(surface, glyph_x + 9U, row_y + 6U, 1U, 10U, fg);
+                    reliefos_ui_rect(surface, glyph_x + 2U, row_y + 10U, 6U, 1U, fg);
                     if (treeview_is_collapsed(state, items[item_index].id)) {
-                        leonos_ui_rect(surface, glyph_x + 5U, row_y + 8U, 1U, 6U, fg);
+                        reliefos_ui_rect(surface, glyph_x + 5U, row_y + 8U, 1U, 6U, fg);
                     }
                 }
             }
             if (text_x < cx + cw) {
-                leonos_ui_text_clipped(surface, text_x, row_y + 4U,
+                reliefos_ui_text_clipped(surface, text_x, row_y + 4U,
                                        cx + cw - text_x,
                                        items[item_index].cells && items[item_index].cells[col]
                                            ? items[item_index].cells[col] : "",
@@ -335,8 +335,8 @@ void leonos_ui_treeview(struct leonos_ui_surface *surface, uint32_t x, uint32_t 
     }
 }
 
-int leonos_ui_treeview_state_handle_key(struct leonos_ui_treeview_state *state,
-                                        const struct leonos_ui_treeview_item *items,
+int reliefos_ui_treeview_state_handle_key(struct reliefos_ui_treeview_state *state,
+                                        const struct reliefos_ui_treeview_item *items,
                                         uint32_t count, uint8_t keycode,
                                         uint32_t *activated)
 {
@@ -349,7 +349,7 @@ int leonos_ui_treeview_state_handle_key(struct leonos_ui_treeview_state *state,
     if (!state || !state->focused) {
         return 0;
     }
-    leonos_ui_treeview_state_sync(state, items, count);
+    reliefos_ui_treeview_state_sync(state, items, count);
     if (state->visible_count == 0) {
         return 0;
     }
@@ -392,7 +392,7 @@ int leonos_ui_treeview_state_handle_key(struct leonos_ui_treeview_state *state,
         if (treeview_has_children(items, treeview_count(count), selected_index) &&
             !treeview_is_collapsed(state, items[selected_index].id)) {
             treeview_set_collapsed(state, items[selected_index].id, 1);
-            leonos_ui_treeview_state_sync(state, items, count);
+            reliefos_ui_treeview_state_sync(state, items, count);
             return 1;
         }
         {
@@ -400,7 +400,7 @@ int leonos_ui_treeview_state_handle_key(struct leonos_ui_treeview_state *state,
             if (parent >= 0) {
                 state->selected_id = items[parent].id;
                 state->has_selection = 1;
-                leonos_ui_treeview_state_sync(state, items, count);
+                reliefos_ui_treeview_state_sync(state, items, count);
                 int row = treeview_selected_row(state, items);
                 if (row >= 0) treeview_select_row(state, items, (uint32_t)row);
                 return 1;
@@ -411,7 +411,7 @@ int leonos_ui_treeview_state_handle_key(struct leonos_ui_treeview_state *state,
         if (treeview_has_children(items, treeview_count(count), selected_index)) {
             if (treeview_is_collapsed(state, items[selected_index].id)) {
                 treeview_set_collapsed(state, items[selected_index].id, 0);
-                leonos_ui_treeview_state_sync(state, items, count);
+                reliefos_ui_treeview_state_sync(state, items, count);
             } else if ((uint32_t)selected_row + 1U < state->visible_count &&
                        state->visible_depths[selected_row + 1] >
                            state->visible_depths[selected_row]) {
@@ -420,11 +420,11 @@ int leonos_ui_treeview_state_handle_key(struct leonos_ui_treeview_state *state,
             return 1;
         }
         return 0;
-    case LEONOS_KEY_ENTER:
+    case RELIEFOS_KEY_ENTER:
         if (treeview_has_children(items, treeview_count(count), selected_index)) {
             treeview_set_collapsed(state, items[selected_index].id,
                                    !treeview_is_collapsed(state, items[selected_index].id));
-            leonos_ui_treeview_state_sync(state, items, count);
+            reliefos_ui_treeview_state_sync(state, items, count);
         }
         if (activated) {
             *activated = 1;
@@ -435,8 +435,8 @@ int leonos_ui_treeview_state_handle_key(struct leonos_ui_treeview_state *state,
     }
 }
 
-int leonos_ui_treeview_state_handle_mouse(struct leonos_ui_treeview_state *state,
-                                          const struct leonos_ui_treeview_item *items,
+int reliefos_ui_treeview_state_handle_mouse(struct reliefos_ui_treeview_state *state,
+                                          const struct reliefos_ui_treeview_item *items,
                                           uint32_t count, int32_t px, int32_t py,
                                           uint32_t x, uint32_t rows_y, uint32_t w,
                                           uint32_t *activated)
@@ -451,8 +451,8 @@ int leonos_ui_treeview_state_handle_mouse(struct leonos_ui_treeview_state *state
     if (!state) {
         return 0;
     }
-    leonos_ui_treeview_state_sync(state, items, count);
-    if (!leonos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)x, (int32_t)rows_y,
+    reliefos_ui_treeview_state_sync(state, items, count);
+    if (!reliefos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)x, (int32_t)rows_y,
                        w, state->visible_rows * state->row_height)) {
         state->focused = 0;
         return 0;
@@ -471,7 +471,7 @@ int leonos_ui_treeview_state_handle_mouse(struct leonos_ui_treeview_state *state
         state->has_selection = 1;
         treeview_set_collapsed(state, items[item_index].id,
                                !treeview_is_collapsed(state, items[item_index].id));
-        leonos_ui_treeview_state_sync(state, items, count);
+        reliefos_ui_treeview_state_sync(state, items, count);
         return 1;
     }
     if (state->has_selection && state->selected_id == items[item_index].id && activated) {
@@ -481,7 +481,7 @@ int leonos_ui_treeview_state_handle_mouse(struct leonos_ui_treeview_state *state
     return 1;
 }
 
-int leonos_ui_treeview_state_handle_wheel(struct leonos_ui_treeview_state *state,
+int reliefos_ui_treeview_state_handle_wheel(struct reliefos_ui_treeview_state *state,
                                           int32_t wheel_delta)
 {
     uint32_t old;
@@ -508,3 +508,11 @@ int leonos_ui_treeview_state_handle_wheel(struct leonos_ui_treeview_state *state
     }
     return old != state->scroll;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_ui_treeview) leonos_ui_treeview __attribute__((alias("reliefos_ui_treeview")));
+extern __typeof__(reliefos_ui_treeview_state_handle_key) leonos_ui_treeview_state_handle_key __attribute__((alias("reliefos_ui_treeview_state_handle_key")));
+extern __typeof__(reliefos_ui_treeview_state_handle_mouse) leonos_ui_treeview_state_handle_mouse __attribute__((alias("reliefos_ui_treeview_state_handle_mouse")));
+extern __typeof__(reliefos_ui_treeview_state_handle_wheel) leonos_ui_treeview_state_handle_wheel __attribute__((alias("reliefos_ui_treeview_state_handle_wheel")));
+extern __typeof__(reliefos_ui_treeview_state_init) leonos_ui_treeview_state_init __attribute__((alias("reliefos_ui_treeview_state_init")));
+extern __typeof__(reliefos_ui_treeview_state_set_viewport) leonos_ui_treeview_state_set_viewport __attribute__((alias("reliefos_ui_treeview_state_set_viewport")));
+extern __typeof__(reliefos_ui_treeview_state_sync) leonos_ui_treeview_state_sync __attribute__((alias("reliefos_ui_treeview_state_sync")));

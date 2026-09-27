@@ -1,21 +1,22 @@
-/*
- * LeonOS kernel-debug control ABI.
- * Lets trusted desktop applications arm the next Ring-0 diagnostic boot.
- */
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/kernel_debug.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_KERNEL_DEBUG_H
 #define LEONOS_KERNEL_DEBUG_H
+#include <reliefos/kernel_debug.h>
 
-/*
- * Userland kernel-debug control API. The wire types and constants moved to the
- * kernel UAPI (<leonos/kernel_debug_abi.h>); this header re-exports them so
- * existing `#include <leonos/kernel_debug.h>` callers keep working.
- */
-#include <leonos/kernel_debug_abi.h>
-#include <stdint.h>
-
-int leonos_kernel_debug_get_state(uint32_t *flags);
-int leonos_kernel_debug_set_enabled(int enabled);
-int leonos_kernel_debug_arm_next_boot(void);
-int leonos_kernel_debug_clear(void);
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_KERNEL_DEBUG_CONTROL_ARM_NEXT_BOOT RELIEFOS_KERNEL_DEBUG_CONTROL_ARM_NEXT_BOOT
+#define LEONOS_KERNEL_DEBUG_CONTROL_CLEAR RELIEFOS_KERNEL_DEBUG_CONTROL_CLEAR
+#define LEONOS_KERNEL_DEBUG_CONTROL_GET_STATE RELIEFOS_KERNEL_DEBUG_CONTROL_GET_STATE
+#define LEONOS_KERNEL_DEBUG_CONTROL_SET_ENABLED RELIEFOS_KERNEL_DEBUG_CONTROL_SET_ENABLED
+#define LEONOS_KERNEL_DEBUG_STATE_ENABLED RELIEFOS_KERNEL_DEBUG_STATE_ENABLED
+#define LEONOS_KERNEL_DEBUG_STATE_NEXT_BOOT RELIEFOS_KERNEL_DEBUG_STATE_NEXT_BOOT
+#define LEONOS_KERNEL_DEBUG_VERSION RELIEFOS_KERNEL_DEBUG_VERSION
+#define LEONOS_UAPI_KERNEL_DEBUG_ABI_H RELIEFOS_UAPI_KERNEL_DEBUG_ABI_H
+#define leonos_kernel_debug_arm_next_boot reliefos_kernel_debug_arm_next_boot
+#define leonos_kernel_debug_clear reliefos_kernel_debug_clear
+#define leonos_kernel_debug_control reliefos_kernel_debug_control
+#define leonos_kernel_debug_get_state reliefos_kernel_debug_get_state
+#define leonos_kernel_debug_set_enabled reliefos_kernel_debug_set_enabled
+#endif /* LEONOS_KERNEL_DEBUG_H */

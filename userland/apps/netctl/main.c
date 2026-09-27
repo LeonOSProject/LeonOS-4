@@ -1,15 +1,15 @@
-#include <leonos/fs.h>
-#include <leonos/gui.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/net_service.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
-#include <leonos/layout.h>
-#include <leonos/sudo.h>
+#include <reliefos/layout.h>
+#include <reliefos/net_service.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/sudo.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -20,16 +20,16 @@
 #define NETCTL_H 584
 #define DOMAIN_LEN NET_SERVICE_HOSTNAME_LEN
 #define DNS_INPUT_LEN 16U
-#define NETCTL_NETWORK_CONFIG_PATH LEONOS_PATH_NETWORK_CONF
-#define NETCTL_NETWORK_CONFIG_TEMP_PATH LEONOS_PATH_NETWORK_TMP
-#define NETCTL_NETWORK_CONFIG_BACKUP_PATH LEONOS_PATH_NETWORK_BAK
+#define NETCTL_NETWORK_CONFIG_PATH RELIEFOS_PATH_NETWORK_CONF
+#define NETCTL_NETWORK_CONFIG_TEMP_PATH RELIEFOS_PATH_NETWORK_TMP
+#define NETCTL_NETWORK_CONFIG_BACKUP_PATH RELIEFOS_PATH_NETWORK_BAK
 #define NETCTL_SAVE_RETRIES 3U
 #define CONN_VISIBLE_ROWS 4U
-#define CONN_ROW_H (LEONOS_FONT_H + 4U)
+#define CONN_ROW_H (RELIEFOS_FONT_H + 4U)
 #define CONN_X 34U
 #define CONN_Y 398U
 #define CONN_W (NETCTL_W - 68U)
-#define CONN_ROWS_Y (CONN_Y + LEONOS_FONT_H + 8U)
+#define CONN_ROWS_Y (CONN_Y + RELIEFOS_FONT_H + 8U)
 #define T(s) gettext(s)
 
 static uint32_t pixels[NETCTL_W * NETCTL_H];
@@ -42,9 +42,9 @@ static char domain_input[DOMAIN_LEN] = "example.com";
 static char dns_input[DNS_INPUT_LEN] = "1.1.1.1";
 static char status_text[128] = "Ready";
 static char dns_text[192] = "Enter a host name and resolve an A record.";
-static struct leonos_ui_edit_state domain_edit;
-static struct leonos_ui_edit_state dns_edit;
-static struct leonos_ui_listview_state connections_view;
+static struct reliefos_ui_edit_state domain_edit;
+static struct reliefos_ui_edit_state dns_edit;
+static struct reliefos_ui_listview_state connections_view;
 static uint32_t dhcp_child;
 
 static void copy_text(char *dst, uint32_t cap, const char *src)
@@ -342,7 +342,7 @@ static void refresh_connections(void)
         set_status_ret(T("Connection query failed"), ret);
         return;
     }
-    leonos_ui_listview_state_set_count(&connections_view, connection_count);
+    reliefos_ui_listview_state_set_count(&connections_view, connection_count);
 }
 
 static void renew_dhcp(void)
@@ -350,7 +350,7 @@ static void renew_dhcp(void)
     if (dhcp_child) return;
     if (geteuid() != 0) {
         char *args[] = {"/usr/lib/leonos/apps/netctl/netctl.elf", "--renew-dhcp", NULL};
-        if (leonos_sudo_run(NULL, NULL, args, &dhcp_child) < 0) {
+        if (reliefos_sudo_run(NULL, NULL, args, &dhcp_child) < 0) {
             set_status_ret(T("Authorization failed"), -1);
             return;
         }
@@ -391,7 +391,7 @@ static int poll_dhcp_command(void)
 {
     if (!dhcp_child) return 0;
     int status;
-    if (leonos_sudo_wait(dhcp_child, &status) < 0) {
+    if (reliefos_sudo_wait(dhcp_child, &status) < 0) {
         if (errno == EAGAIN || errno == EINTR) return 0;
         dhcp_child = 0;
         set_status_ret(T("DHCP worker failed"), -1);
@@ -418,7 +418,7 @@ static int poll_dhcp_command(void)
 
 static int path_exists(const char *path)
 {
-    int fd = open(path, LEONOS_O_RDONLY, 0);
+    int fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return 0;
     }
@@ -462,7 +462,7 @@ static int save_dns_policy(uint32_t mode, uint32_t custom_dns_ip)
             unlink(NETCTL_NETWORK_CONFIG_BACKUP_PATH);
         }
         fd = open(NETCTL_NETWORK_CONFIG_TEMP_PATH,
-                  LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
+                  RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0666);
         if (fd >= 0) {
             wrote = write(fd, config_text, pos);
             if (close(fd) == 0 && wrote == (long)pos) {
@@ -576,16 +576,16 @@ static void resolve_domain(void)
     refresh_connections();
 }
 
-static void draw_row(struct leonos_ui_surface *ui, uint32_t y,
+static void draw_row(struct reliefos_ui_surface *ui, uint32_t y,
                      const char *label, const char *value)
 {
-    leonos_ui_text(ui, 26, y, label, LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_text_clipped(ui, 146, y, NETCTL_W - 170, value, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+    reliefos_ui_text(ui, 26, y, label, RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text_clipped(ui, 146, y, NETCTL_W - 170, value, RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
 }
 
-static void draw_netctl(struct leonos_ui_surface *ui)
+static void draw_netctl(struct reliefos_ui_surface *ui)
 {
-    static const struct leonos_ui_list_column conn_cols[] = {
+    static const struct reliefos_ui_list_column conn_cols[] = {
         { "Socket", 58 },
         { "PID", 48 },
         { "State", 112 },
@@ -612,8 +612,8 @@ static void draw_netctl(struct leonos_ui_surface *ui)
     append_u32(lease, &pos, sizeof(lease), config.lease_seconds);
     append_text(lease, &pos, sizeof(lease), "s");
 
-    leonos_ui_rect(ui, 0, 0, NETCTL_W, NETCTL_H, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 24, 16, T("Intel e1000 Network"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    reliefos_ui_rect(ui, 0, 0, NETCTL_W, NETCTL_H, RELIEFOS_UI_GRAY);
+    reliefos_ui_text(ui, 24, 16, T("Intel e1000 Network"), RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
 
     draw_row(ui, 50, T("State:"),
              ((config.flags & NET_SERVICE_CONFIG_FLAG_ACTIVE) &&
@@ -632,35 +632,35 @@ static void draw_netctl(struct leonos_ui_surface *ui)
     draw_row(ui, 218, T("Lease:"), lease);
     draw_row(ui, 242, T("DNS mode:"), dns_mode_text);
 
-    leonos_ui_button(ui, 24, 270, 110, LEONOS_UI_BUTTON_H,
+    reliefos_ui_button(ui, 24, 270, 110, RELIEFOS_UI_BUTTON_H,
                      T("Cloudflare"),
                      dns_mode == NET_SERVICE_DNS_MODE_CLOUDFLARE
-                         ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_button(ui, 144, 270, 96, LEONOS_UI_BUTTON_H, T("DHCP"),
+                         ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_button(ui, 144, 270, 96, RELIEFOS_UI_BUTTON_H, T("DHCP"),
                      dns_mode == NET_SERVICE_DNS_MODE_DHCP
-                         ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_button(ui, 250, 270, 92, LEONOS_UI_BUTTON_H, T("Custom"),
+                         ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_button(ui, 250, 270, 92, RELIEFOS_UI_BUTTON_H, T("Custom"),
                      dns_mode == NET_SERVICE_DNS_MODE_CUSTOM
-                         ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_edit_state_draw(ui, 352, 270, 154, &dns_edit, 0);
-    leonos_ui_button(ui, 516, 270, 104, LEONOS_UI_BUTTON_H, T("Apply"), 0);
+                         ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_edit_state_draw(ui, 352, 270, 154, &dns_edit, 0);
+    reliefos_ui_button(ui, 516, 270, 104, RELIEFOS_UI_BUTTON_H, T("Apply"), 0);
 
-    leonos_ui_button(ui, 24, 312, 88, LEONOS_UI_BUTTON_H, T("Refresh"), 0);
-    leonos_ui_button(ui, 124, 312, 118, LEONOS_UI_BUTTON_H, T("Renew DHCP"), 0);
-    leonos_ui_text(ui, 254, 316, T("Domain:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_edit_state_draw(ui, 298, 312, 220, &domain_edit, 0);
-    leonos_ui_button(ui, 532, 312, 86, LEONOS_UI_BUTTON_H, T("Resolve"), 0);
-    leonos_ui_text_clipped(ui, 24, 348, NETCTL_W - 48, dns_text,
-                           LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+    reliefos_ui_button(ui, 24, 312, 88, RELIEFOS_UI_BUTTON_H, T("Refresh"), 0);
+    reliefos_ui_button(ui, 124, 312, 118, RELIEFOS_UI_BUTTON_H, T("Renew DHCP"), 0);
+    reliefos_ui_text(ui, 254, 316, T("Domain:"), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_edit_state_draw(ui, 298, 312, 220, &domain_edit, 0);
+    reliefos_ui_button(ui, 532, 312, 86, RELIEFOS_UI_BUTTON_H, T("Resolve"), 0);
+    reliefos_ui_text_clipped(ui, 24, 348, NETCTL_W - 48, dns_text,
+                           RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
 
-    leonos_ui_groupbox(ui, 24, 376, NETCTL_W - 48, 154,
+    reliefos_ui_groupbox(ui, 24, 376, NETCTL_W - 48, 154,
                        T("TCP Connections"));
-    leonos_ui_listview_header(ui, CONN_X, CONN_Y, CONN_W,
+    reliefos_ui_listview_header(ui, CONN_X, CONN_Y, CONN_W,
                               conn_cols, 6);
     if (connection_count == 0) {
-        leonos_ui_text(ui, CONN_X + 8, CONN_ROWS_Y + 8,
+        reliefos_ui_text(ui, CONN_X + 8, CONN_ROWS_Y + 8,
                        T("No TCP client sockets."),
-                       LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                       RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     } else {
         for (uint32_t row = 0; row < CONN_VISIBLE_ROWS; ++row) {
             uint32_t index = connections_view.scroll + row;
@@ -700,14 +700,14 @@ static void draw_netctl(struct leonos_ui_surface *ui)
             cells[3] = local_text;
             cells[4] = remote_text;
             cells[5] = bytes_text;
-            leonos_ui_listview_row(ui, CONN_X, CONN_ROWS_Y + row * CONN_ROW_H,
+            reliefos_ui_listview_row(ui, CONN_X, CONN_ROWS_Y + row * CONN_ROW_H,
                                    CONN_W, conn_cols, cells, 6,
                                    connections_view.selected == (int32_t)index
-                                       ? LEONOS_UI_MENU_SELECTED
+                                       ? RELIEFOS_UI_MENU_SELECTED
                                        : 0);
         }
     }
-    leonos_ui_statusbar(ui, NETCTL_H - 28, 28, status_text);
+    reliefos_ui_statusbar(ui, NETCTL_H - 28, 28, status_text);
 }
 
 static int hit_rect(int32_t px, int32_t py, int32_t x, int32_t y,
@@ -720,28 +720,28 @@ static int hit_rect(int32_t px, int32_t py, int32_t x, int32_t y,
 int main(int argc, char **argv)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
 
     if (argc == 2 && !strcmp(argv[1], "--renew-dhcp")) return renew_dhcp_command();
     if (argc != 1) return 2;
 
     puts("[netctl.elf] network controller starting");
-    window_id = leonos_gui_create_app_window_ex(T("Network Controller"),
+    window_id = reliefos_gui_create_app_window_ex(T("Network Controller"),
                                                 T("DHCP and DNS"),
                                                 NETCTL_W, NETCTL_H,
-                                                LEONOS_GUI_WINDOW_NO_RESIZE);
+                                                RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[netctl.elf] create window failed=%d\n", window_id);
         return 1;
     }
-    leonos_ui_bind(&ui, pixels, NETCTL_W, NETCTL_H, NETCTL_W);
-    leonos_ui_edit_state_init(&domain_edit, domain_input, sizeof(domain_input));
-    leonos_ui_edit_state_init(&dns_edit, dns_input, sizeof(dns_input));
-    leonos_ui_listview_state_init(&connections_view, CONN_VISIBLE_ROWS, CONN_ROW_H);
+    reliefos_ui_bind(&ui, pixels, NETCTL_W, NETCTL_H, NETCTL_W);
+    reliefos_ui_edit_state_init(&domain_edit, domain_input, sizeof(domain_input));
+    reliefos_ui_edit_state_init(&dns_edit, dns_input, sizeof(dns_input));
+    reliefos_ui_listview_state_init(&connections_view, CONN_VISIBLE_ROWS, CONN_ROW_H);
     domain_edit.focused = 0;
     dns_edit.focused = 0;
     refresh_config();
@@ -749,85 +749,85 @@ int main(int argc, char **argv)
                        ? dns_custom_ip
                        : NET_SERVICE_CLOUDFLARE_DNS_IP);
     draw_netctl(&ui);
-    leonos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
+    reliefos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
 
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        while (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        while (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON) {
-                if (leonos_ui_edit_state_handle_mouse(&dns_edit, event.x, event.y,
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON) {
+                if (reliefos_ui_edit_state_handle_mouse(&dns_edit, event.x, event.y,
                                                       352, 270, 154, event.buttons) ||
-                    leonos_ui_edit_state_handle_mouse(&domain_edit, event.x, event.y,
+                    reliefos_ui_edit_state_handle_mouse(&domain_edit, event.x, event.y,
                                                       298, 312, 220, event.buttons)) {
                     draw_netctl(&ui);
-                    leonos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
+                    reliefos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
                 }
-                if (leonos_ui_listview_state_handle_mouse(&connections_view,
+                if (reliefos_ui_listview_state_handle_mouse(&connections_view,
                                                           event.x, event.y,
                                                           CONN_X, CONN_ROWS_Y,
                                                           CONN_W, 0)) {
                     draw_netctl(&ui);
-                    leonos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
+                    reliefos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
                 }
                 if (event.buttons & 1u) {
-                    if (hit_rect(event.x, event.y, 24, 270, 110, LEONOS_UI_BUTTON_H)) {
+                    if (hit_rect(event.x, event.y, 24, 270, 110, RELIEFOS_UI_BUTTON_H)) {
                         apply_dns_policy(NET_SERVICE_DNS_MODE_CLOUDFLARE);
-                    } else if (hit_rect(event.x, event.y, 144, 270, 96, LEONOS_UI_BUTTON_H)) {
+                    } else if (hit_rect(event.x, event.y, 144, 270, 96, RELIEFOS_UI_BUTTON_H)) {
                         apply_dns_policy(NET_SERVICE_DNS_MODE_DHCP);
-                    } else if (hit_rect(event.x, event.y, 250, 270, 92, LEONOS_UI_BUTTON_H)) {
+                    } else if (hit_rect(event.x, event.y, 250, 270, 92, RELIEFOS_UI_BUTTON_H)) {
                         dns_edit.focused = 1;
                         domain_edit.focused = 0;
-                    } else if (hit_rect(event.x, event.y, 516, 270, 104, LEONOS_UI_BUTTON_H)) {
+                    } else if (hit_rect(event.x, event.y, 516, 270, 104, RELIEFOS_UI_BUTTON_H)) {
                         apply_dns_policy(NET_SERVICE_DNS_MODE_CUSTOM);
-                    } else if (hit_rect(event.x, event.y, 24, 312, 88, LEONOS_UI_BUTTON_H)) {
+                    } else if (hit_rect(event.x, event.y, 24, 312, 88, RELIEFOS_UI_BUTTON_H)) {
                         refresh_config();
-                    } else if (hit_rect(event.x, event.y, 124, 312, 118, LEONOS_UI_BUTTON_H)) {
+                    } else if (hit_rect(event.x, event.y, 124, 312, 118, RELIEFOS_UI_BUTTON_H)) {
                         renew_dhcp();
-                    } else if (hit_rect(event.x, event.y, 532, 312, 86, LEONOS_UI_BUTTON_H)) {
+                    } else if (hit_rect(event.x, event.y, 532, 312, 86, RELIEFOS_UI_BUTTON_H)) {
                         resolve_domain();
                     }
                     draw_netctl(&ui);
-                    leonos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
+                    reliefos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_WHEEL) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_WHEEL) {
                 if (hit_rect(event.x, event.y, CONN_X, CONN_ROWS_Y,
                              CONN_W, CONN_VISIBLE_ROWS * CONN_ROW_H) &&
-                    leonos_ui_listview_state_handle_wheel(&connections_view, event.dy)) {
+                    reliefos_ui_listview_state_handle_wheel(&connections_view, event.dy)) {
                     draw_netctl(&ui);
-                    leonos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
+                    reliefos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN ||
-                event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN ||
+                event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
                 if (event.pressed && event.keycode == 1) {
                     return 0;
                 }
-                if (event.pressed && event.keycode == LEONOS_KEY_ENTER) {
+                if (event.pressed && event.keycode == RELIEFOS_KEY_ENTER) {
                     if (dns_edit.focused) {
                         apply_dns_policy(NET_SERVICE_DNS_MODE_CUSTOM);
                     } else {
                         resolve_domain();
                     }
-                } else if (!leonos_ui_edit_state_handle_key(&dns_edit, event.keycode, event.pressed) &&
-                           !leonos_ui_edit_state_handle_key(&domain_edit, event.keycode, event.pressed)) {
+                } else if (!reliefos_ui_edit_state_handle_key(&dns_edit, event.keycode, event.pressed) &&
+                           !reliefos_ui_edit_state_handle_key(&domain_edit, event.keycode, event.pressed)) {
                     continue;
                 }
                 draw_netctl(&ui);
-                leonos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_FOCUS ||
-                event.type == LEONOS_GUI_APP_EVENT_RESIZE) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_FOCUS ||
+                event.type == RELIEFOS_GUI_APP_EVENT_RESIZE) {
                 draw_netctl(&ui);
-                leonos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
             }
         }
         if (poll_dhcp_command()) {
             draw_netctl(&ui);
-            leonos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
+            reliefos_gui_present_window((uint32_t)window_id, NETCTL_W, NETCTL_H, NETCTL_W, pixels);
         }
         sleep_ms(10);
     }

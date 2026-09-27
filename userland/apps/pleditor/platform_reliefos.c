@@ -7,15 +7,15 @@
 #include <termios.h>
 #include <unistd.h>
 
-#include <leonos/syscall.h>
-#include <leonos/system.h>
-#include <leonos/text.h>
+#include <reliefos/syscall.h>
+#include <reliefos/system.h>
+#include <reliefos/text.h>
 
 #include "../../../third_party/pl_editor/src/platform.h"
 
 static struct termios saved_termios;
 static int terminal_active;
-static uint32_t file_encoding = LEONOS_TEXT_ENCODING_UTF8;
+static uint32_t file_encoding = RELIEFOS_TEXT_ENCODING_UTF8;
 
 static int read_byte(unsigned char *value, unsigned long timeout_ms)
 {
@@ -176,13 +176,13 @@ bool pleditor_platform_read_file(const char *filename, char **buffer, size_t *le
         free(raw_buffer);
         return false;
     }
-    if (leonos_text_detect_encoding(raw_buffer, (uint32_t)read_length,
+    if (reliefos_text_detect_encoding(raw_buffer, (uint32_t)read_length,
                                     &detected_encoding) < 0 ||
         !(*buffer = malloc(read_length * 3U + 1U))) {
         free(raw_buffer);
         return false;
     }
-    result = leonos_text_decode(raw_buffer, (uint32_t)read_length, detected_encoding,
+    result = reliefos_text_decode(raw_buffer, (uint32_t)read_length, detected_encoding,
                                 *buffer, (uint32_t)(read_length * 3U),
                                 &decoded_length, &replacements);
     free(raw_buffer);
@@ -213,7 +213,7 @@ bool pleditor_platform_write_file(const char *filename, const char *buffer, size
         !(encoded = malloc(length * 2U + 4U))) {
         return false;
     }
-    result = leonos_text_encode(buffer, (uint32_t)length, file_encoding, encoded,
+    result = reliefos_text_encode(buffer, (uint32_t)length, file_encoding, encoded,
                                 (uint32_t)(length * 2U + 4U),
                                 &encoded_length, &replacements);
     if (result < 0 || replacements) {
@@ -233,6 +233,6 @@ bool pleditor_platform_write_file(const char *filename, const char *buffer, size
 
 bool pleditor_platform_path_exists(const char *filename)
 {
-    struct leonos_stat status;
-    return filename && leonos_stat_legacy(filename, &status) == 0;
+    struct reliefos_stat status;
+    return filename && reliefos_stat_legacy(filename, &status) == 0;
 }

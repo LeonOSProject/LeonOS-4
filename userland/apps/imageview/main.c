@@ -1,10 +1,10 @@
-#include <leonos/gui.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/png.h>
-#include <leonos/stdio.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/png.h>
+#include <reliefos/stdio.h>
+#include <reliefos/ui.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -18,8 +18,8 @@
 #define IMAGEVIEW_H 520U
 #define IMAGEVIEW_MIN_W 420U
 #define IMAGEVIEW_MIN_H 300U
-#define IMAGEVIEW_MAX_W LEONOS_GUI_MAX_WINDOW_WIDTH
-#define IMAGEVIEW_MAX_H LEONOS_GUI_MAX_WINDOW_HEIGHT
+#define IMAGEVIEW_MAX_W RELIEFOS_GUI_MAX_WINDOW_WIDTH
+#define IMAGEVIEW_MAX_H RELIEFOS_GUI_MAX_WINDOW_HEIGHT
 #define IMAGEVIEW_TOOLBAR_Y 4U
 #define IMAGEVIEW_TOOLBAR_H 36U
 #define IMAGEVIEW_STATUS_H 28U
@@ -200,7 +200,7 @@ static void build_child_path(char *dst, uint32_t cap, const char *dir,
 
 static void free_image(void)
 {
-    leonos_png_free(image_pixels);
+    reliefos_png_free(image_pixels);
     image_pixels = 0;
     image_w = 0;
     image_h = 0;
@@ -381,7 +381,7 @@ static int load_image_path(const char *path)
         return -1;
     }
     if (ends_with_ignore_case(path, ".png")) {
-        ret = leonos_png_decode_file(path, &decoded, &decoded_w, &decoded_h);
+        ret = reliefos_png_decode_file(path, &decoded, &decoded_w, &decoded_h);
         if (ret < 0) {
             copy_text(status_text, sizeof(status_text),
                       T("Could not decode PNG (maximum 1024x1024)."));
@@ -440,7 +440,7 @@ static uint32_t detail_y(void)
     return y;
 }
 
-static void draw_scaled_image(struct leonos_ui_surface *ui)
+static void draw_scaled_image(struct reliefos_ui_surface *ui)
 {
     uint32_t x0 = 12U;
     uint32_t y0 = canvas_y();
@@ -457,11 +457,11 @@ static void draw_scaled_image(struct leonos_ui_surface *ui)
     uint32_t scale;
     uint32_t dst_x;
     uint32_t dst_y;
-    leonos_ui_inset(ui, x0, y0, w0, h0, LEONOS_UI_WHITE);
+    reliefos_ui_inset(ui, x0, y0, w0, h0, RELIEFOS_UI_WHITE);
     if (!image_pixels || !image_w || !image_h) {
-        leonos_ui_text_clipped(ui, x0 + 18U, y0 + 18U, w0 > 36U ? w0 - 36U : w0,
+        reliefos_ui_text_clipped(ui, x0 + 18U, y0 + 18U, w0 > 36U ? w0 - 36U : w0,
                                 T("Use Open, File Manager, Run, or the command line to open a BMP or PNG file."),
-                                LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                                RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
         return;
     }
     if (zoom_mode == ZOOM_FIT) {
@@ -494,48 +494,48 @@ static void draw_scaled_image(struct leonos_ui_surface *ui)
             if (dst_x + x < content_x) {
                 continue;
             }
-            leonos_ui_pixel(ui, dst_x + x, dst_y + y,
+            reliefos_ui_pixel(ui, dst_x + x, dst_y + y,
                             image_pixels[sy * image_w + sx]);
         }
     }
 }
 
-static void present(int window_id, struct leonos_ui_surface *ui)
+static void present(int window_id, struct reliefos_ui_surface *ui)
 {
-    leonos_ui_bind(ui, pixels, view_w, view_h, IMAGEVIEW_MAX_W);
-    leonos_ui_rect(ui, 0, 0, view_w, view_h, LEONOS_UI_GRAY);
-    leonos_ui_toolbar(ui, 0, IMAGEVIEW_TOOLBAR_Y, view_w, IMAGEVIEW_TOOLBAR_H);
-    leonos_ui_button(ui, IMAGEVIEW_OPEN_X, IMAGEVIEW_TOOLBAR_Y + 6U,
+    reliefos_ui_bind(ui, pixels, view_w, view_h, IMAGEVIEW_MAX_W);
+    reliefos_ui_rect(ui, 0, 0, view_w, view_h, RELIEFOS_UI_GRAY);
+    reliefos_ui_toolbar(ui, 0, IMAGEVIEW_TOOLBAR_Y, view_w, IMAGEVIEW_TOOLBAR_H);
+    reliefos_ui_button(ui, IMAGEVIEW_OPEN_X, IMAGEVIEW_TOOLBAR_Y + 6U,
                      IMAGEVIEW_OPEN_W,
-                     LEONOS_UI_BUTTON_H, T("Open"), 0);
-    leonos_ui_button(ui, IMAGEVIEW_PREVIOUS_X, IMAGEVIEW_TOOLBAR_Y + 6U, 72,
-                     LEONOS_UI_BUTTON_H, T("Previous"),
-                     sibling_count > 1U ? 0 : LEONOS_UI_BUTTON_DISABLED);
-    leonos_ui_button(ui, IMAGEVIEW_NEXT_X, IMAGEVIEW_TOOLBAR_Y + 6U, 72,
-                     LEONOS_UI_BUTTON_H, T("Next Image"),
-                     sibling_count > 1U ? 0 : LEONOS_UI_BUTTON_DISABLED);
-    leonos_ui_button(ui, IMAGEVIEW_FIT_X, IMAGEVIEW_TOOLBAR_Y + 6U, 56,
-                     LEONOS_UI_BUTTON_H, "Fit",
-                     zoom_mode == ZOOM_FIT ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_button(ui, IMAGEVIEW_1X_X, IMAGEVIEW_TOOLBAR_Y + 6U, 48,
-                     LEONOS_UI_BUTTON_H, "1x",
-                     zoom_mode == ZOOM_1X ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_button(ui, IMAGEVIEW_2X_X, IMAGEVIEW_TOOLBAR_Y + 6U, 48,
-                     LEONOS_UI_BUTTON_H, "2x",
-                     zoom_mode == ZOOM_2X ? LEONOS_UI_BUTTON_PRESSED : 0);
+                     RELIEFOS_UI_BUTTON_H, T("Open"), 0);
+    reliefos_ui_button(ui, IMAGEVIEW_PREVIOUS_X, IMAGEVIEW_TOOLBAR_Y + 6U, 72,
+                     RELIEFOS_UI_BUTTON_H, T("Previous"),
+                     sibling_count > 1U ? 0 : RELIEFOS_UI_BUTTON_DISABLED);
+    reliefos_ui_button(ui, IMAGEVIEW_NEXT_X, IMAGEVIEW_TOOLBAR_Y + 6U, 72,
+                     RELIEFOS_UI_BUTTON_H, T("Next Image"),
+                     sibling_count > 1U ? 0 : RELIEFOS_UI_BUTTON_DISABLED);
+    reliefos_ui_button(ui, IMAGEVIEW_FIT_X, IMAGEVIEW_TOOLBAR_Y + 6U, 56,
+                     RELIEFOS_UI_BUTTON_H, "Fit",
+                     zoom_mode == ZOOM_FIT ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_button(ui, IMAGEVIEW_1X_X, IMAGEVIEW_TOOLBAR_Y + 6U, 48,
+                     RELIEFOS_UI_BUTTON_H, "1x",
+                     zoom_mode == ZOOM_1X ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_button(ui, IMAGEVIEW_2X_X, IMAGEVIEW_TOOLBAR_Y + 6U, 48,
+                     RELIEFOS_UI_BUTTON_H, "2x",
+                     zoom_mode == ZOOM_2X ? RELIEFOS_UI_BUTTON_PRESSED : 0);
     if (view_w > IMAGEVIEW_PATH_X + 8U) {
-        leonos_ui_text_clipped(ui, IMAGEVIEW_PATH_X, IMAGEVIEW_TOOLBAR_Y + 12U,
+        reliefos_ui_text_clipped(ui, IMAGEVIEW_PATH_X, IMAGEVIEW_TOOLBAR_Y + 12U,
                                view_w - IMAGEVIEW_PATH_X - 8U,
                                current_path[0] ? current_path : T("No file"),
-                               LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+                               RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
     }
     draw_scaled_image(ui);
-    leonos_ui_text_clipped(ui, 14, detail_y(),
+    reliefos_ui_text_clipped(ui, 14, detail_y(),
                            view_w > 28U ? view_w - 28U : view_w,
-                           detail_text, LEONOS_UI_DARK, LEONOS_UI_GRAY);
-    leonos_ui_statusbar(ui, view_h - IMAGEVIEW_STATUS_H, IMAGEVIEW_STATUS_H,
+                           detail_text, RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
+    reliefos_ui_statusbar(ui, view_h - IMAGEVIEW_STATUS_H, IMAGEVIEW_STATUS_H,
                         status_text);
-    leonos_gui_present_window((uint32_t)window_id, view_w, view_h,
+    reliefos_gui_present_window((uint32_t)window_id, view_w, view_h,
                               IMAGEVIEW_MAX_W, pixels);
 }
 
@@ -566,7 +566,7 @@ static void open_image_via_dialog(void)
 {
     char path[PATH_MAX];
     path[0] = 0;
-    if (leonos_ui_show_open_dialog(T("Open image"), path, sizeof(path),
+    if (reliefos_ui_show_open_dialog(T("Open image"), path, sizeof(path),
                                    T("Images (*.bmp; *.dib; *.png)"),
                                    ".bmp;.dib;.png") > 0 && path[0]) {
         (void)load_image_path(path);
@@ -577,24 +577,24 @@ static void handle_click(int32_t x, int32_t y)
 {
     uint32_t button_y = IMAGEVIEW_TOOLBAR_Y + 6U;
     if (hit_rect(x, y, IMAGEVIEW_OPEN_X, button_y, IMAGEVIEW_OPEN_W,
-                 LEONOS_UI_BUTTON_H)) {
+                 RELIEFOS_UI_BUTTON_H)) {
         open_image_via_dialog();
     } else if (hit_rect(x, y, IMAGEVIEW_PREVIOUS_X, button_y, 72,
-                        LEONOS_UI_BUTTON_H)) {
+                        RELIEFOS_UI_BUTTON_H)) {
         load_sibling_delta(-1);
     } else if (hit_rect(x, y, IMAGEVIEW_NEXT_X, button_y, 72,
-                        LEONOS_UI_BUTTON_H)) {
+                        RELIEFOS_UI_BUTTON_H)) {
         load_sibling_delta(1);
     } else if (hit_rect(x, y, IMAGEVIEW_FIT_X, button_y, 56,
-                        LEONOS_UI_BUTTON_H)) {
+                        RELIEFOS_UI_BUTTON_H)) {
         zoom_mode = ZOOM_FIT;
         rebuild_detail();
     } else if (hit_rect(x, y, IMAGEVIEW_1X_X, button_y, 48,
-                        LEONOS_UI_BUTTON_H)) {
+                        RELIEFOS_UI_BUTTON_H)) {
         zoom_mode = ZOOM_1X;
         rebuild_detail();
     } else if (hit_rect(x, y, IMAGEVIEW_2X_X, button_y, 48,
-                        LEONOS_UI_BUTTON_H)) {
+                        RELIEFOS_UI_BUTTON_H)) {
         zoom_mode = ZOOM_2X;
         rebuild_detail();
     }
@@ -603,10 +603,10 @@ static void handle_click(int32_t x, int32_t y)
 int main(int argc, char **argv, char **envp)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
     (void)envp;
     if (argc > 1 && argv && argv[1] && argv[1][0]) {
@@ -615,7 +615,7 @@ int main(int argc, char **argv, char **envp)
         copy_text(detail_text, sizeof(detail_text),
                   T("No image loaded."));
     }
-    window_id = leonos_gui_create_app_window_ex(T("Image Viewer"),
+    window_id = reliefos_gui_create_app_window_ex(T("Image Viewer"),
                                                 T("BMP and PNG image viewer"),
                                                 view_w, view_h, 0);
     if (window_id <= 0) {
@@ -626,23 +626,23 @@ int main(int argc, char **argv, char **envp)
     present(window_id, &ui);
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 free_image();
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON &&
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON &&
                 (event.buttons & 1U)) {
                 handle_click(event.x, event.y);
                 present(window_id, &ui);
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN &&
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN &&
                 event.pressed && event.keycode == 1U) {
                 free_image();
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_RESIZE ||
-                event.type == LEONOS_GUI_APP_EVENT_FOCUS) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_RESIZE ||
+                event.type == RELIEFOS_GUI_APP_EVENT_FOCUS) {
                 if (event.width) {
                     view_w = event.width > IMAGEVIEW_MAX_W ? IMAGEVIEW_MAX_W : event.width;
                     if (view_w < IMAGEVIEW_MIN_W) {

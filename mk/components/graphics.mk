@@ -27,7 +27,7 @@ $(PORTABLEGL_ARCHIVE): $(PORTABLEGL_OBJ) $(O_META)/portablegl.sig
 	$(Q)mv $@.tmp $@
 
 STARDUSTUI_ARCHIVE := $(O)/userland/libstardustui.a
-STARDUSTUI_SOURCES := third_party/stardustui/src/file.cpp third_party/stardustui/src/network.cpp third_party/stardustui/src/sytel.cpp third_party/stardustui/src/theme.cpp third_party/stardustui/src/window.cpp third_party/stardustui/src/text/font.cpp userland/stardustui/src/platform_leonos.cpp $(patsubst $(RELIEFOS_SRC)/%,%,$(wildcard $(RELIEFOS_SRC)/third_party/stardustui/src/components/*.cpp))
+STARDUSTUI_SOURCES := third_party/stardustui/src/file.cpp third_party/stardustui/src/network.cpp third_party/stardustui/src/sytel.cpp third_party/stardustui/src/theme.cpp third_party/stardustui/src/window.cpp third_party/stardustui/src/text/font.cpp userland/stardustui/src/platform_reliefos.cpp $(patsubst $(RELIEFOS_SRC)/%,%,$(wildcard $(RELIEFOS_SRC)/third_party/stardustui/src/components/*.cpp))
 STARDUSTUI_OBJECTS := $(addprefix $(O_OBJ)/stardustui/,$(addsuffix .o,$(STARDUSTUI_SOURCES)))
 STARDUSTUI_FLAGS := $(filter-out -std=c11 -fPIE,$(USERLAND_FLAGS)) -std=c++17 -nostdinc++ -fno-exceptions -fno-rtti -fno-use-cxa-atexit -fno-threadsafe-statics -Wno-unused-parameter -DSTARDUSTUI_LINUX -I$(RELIEFOS_SRC)/userland/stardustui/include -I$(RELIEFOS_SRC)/third_party/stardustui/includes -I$(RELIEFOS_SRC)/third_party/stardustui
 RELIEFOS_SIG_stardustui-cc := cxx=$(TARGET_CXX)|identity=$(if $(RELIEFOS_PASSIVE),deferred,$(shell $(TARGET_CXX) --version 2>/dev/null | head -n1))|flags=$(STARDUSTUI_FLAGS)

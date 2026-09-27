@@ -1,23 +1,23 @@
-#include <leonos/gui.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/png.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/system.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
+#include <reliefos/png.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/system.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
+#include <reliefos/layout.h>
 
 #define OSVER_W 720
 #define OSVER_H 460
-#define OSVER_LOGO_PATH LEONOS_PATH_LOGO_PNG
+#define OSVER_LOGO_PATH RELIEFOS_PATH_LOGO_PNG
 #define OSVER_LOGO_BOX 196U
 #define T(s) gettext(s)
 
 static uint32_t pixels[OSVER_W * OSVER_H];
-static struct leonos_system_info info;
+static struct reliefos_system_info info;
 static char status_text[96];
 static uint32_t *logo_pixels;
 static uint32_t logo_width;
@@ -56,7 +56,7 @@ static void osver_kernel_debug_click(uint32_t x, uint32_t y)
     uint32_t top;
     uint32_t width;
     uint32_t height;
-    const uint32_t now = (uint32_t)leonos_uptime_ms();
+    const uint32_t now = (uint32_t)reliefos_uptime_ms();
     uint32_t flags = 0;
     if (!osver_logo_rect(&left, &top, &width, &height) ||
         x < left || y < top || x >= left + width || y >= top + height) {
@@ -71,17 +71,17 @@ static void osver_kernel_debug_click(uint32_t x, uint32_t y)
     ++logo_clicks;
     if (logo_clicks < 5U) return;
     logo_clicks = 0U;
-    if (leonos_kernel_debug_get_state(&flags) < 0 ||
-        (flags & LEONOS_KERNEL_DEBUG_STATE_ENABLED) == 0U) {
-        if (leonos_kernel_debug_set_enabled(1) == 0) {
+    if (reliefos_kernel_debug_get_state(&flags) < 0 ||
+        (flags & RELIEFOS_KERNEL_DEBUG_STATE_ENABLED) == 0U) {
+        if (reliefos_kernel_debug_set_enabled(1) == 0) {
             copy_text(status_text, sizeof(status_text),
                       T("Kernel debug mode enabled"));
-            (void)leonos_ui_show_message_box(
+            (void)reliefos_ui_show_message_box(
                 T("Kernel debug mode"),
                 T("Kernel debug mode enabled. Use Start > Power to reboot into it."),
                 T("OK"));
         } else {
-            (void)leonos_ui_show_message_box(
+            (void)reliefos_ui_show_message_box(
                 T("Kernel debug mode"),
                 T("Could not persist kernel debug mode."),
                 T("OK"));
@@ -102,7 +102,7 @@ static void copy_text(char *dst, uint32_t cap, const char *src)
     dst[i] = 0;
 }
 
-static void draw_logo(struct leonos_ui_surface *ui, uint32_t x, uint32_t y,
+static void draw_logo(struct reliefos_ui_surface *ui, uint32_t x, uint32_t y,
                       uint32_t w, uint32_t h)
 {
     uint32_t draw_w;
@@ -111,12 +111,12 @@ static void draw_logo(struct leonos_ui_surface *ui, uint32_t x, uint32_t y,
     uint32_t draw_y;
 
     if (!logo_pixels || !logo_width || !logo_height || !w || !h) {
-        leonos_ui_rect(ui, x, y, w, h, LEONOS_UI_WHITE);
-        leonos_ui_text_resized_clipped(ui, x + 12, y + h / 2U - 8U,
+        reliefos_ui_rect(ui, x, y, w, h, RELIEFOS_UI_WHITE);
+        reliefos_ui_text_resized_clipped(ui, x + 12, y + h / 2U - 8U,
                                        w > 24U ? w - 24U : w,
                                        T("Logo unavailable"),
-                                       LEONOS_UI_DARK, LEONOS_UI_WHITE,
-                                       LEONOS_FONT_W, LEONOS_FONT_H);
+                                       RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE,
+                                       RELIEFOS_FONT_W, RELIEFOS_FONT_H);
         return;
     }
 
@@ -149,9 +149,9 @@ static void draw_logo(struct leonos_ui_surface *ui, uint32_t x, uint32_t y,
     }
 }
 
-static void draw_osver(struct leonos_ui_surface *ui)
+static void draw_osver(struct reliefos_ui_surface *ui)
 {
-    struct leonos_ui_property_item props[] = {
+    struct reliefos_ui_property_item props[] = {
         {T("Kernel"), info.kernel_name, 0},
         {T("Kernel version"), info.kernel_version, 0},
         {T("Build time"), info.build_time, 0},
@@ -164,69 +164,69 @@ static void draw_osver(struct leonos_ui_surface *ui)
     const uint32_t info_x = 282U;
     const uint32_t info_w = OSVER_W - info_x - 16U;
 
-    leonos_ui_rect(ui, 0, 0, OSVER_W, OSVER_H, LEONOS_UI_GRAY);
-    leonos_ui_toolbar(ui, 0, 0, OSVER_W, 68U);
-    leonos_ui_rect(ui, 0, 0, 8U, 68U, LEONOS_UI_ACTIVE_TITLE);
-    leonos_ui_text_resized_clipped(ui, 28U, 12U, 300U, "LeonOS 4",
-                                   LEONOS_UI_BLACK, LEONOS_UI_GRAY, 12U, 24U);
-    leonos_ui_text(ui, 29U, 43U,
+    reliefos_ui_rect(ui, 0, 0, OSVER_W, OSVER_H, RELIEFOS_UI_GRAY);
+    reliefos_ui_toolbar(ui, 0, 0, OSVER_W, 68U);
+    reliefos_ui_rect(ui, 0, 0, 8U, 68U, RELIEFOS_UI_ACTIVE_TITLE);
+    reliefos_ui_text_resized_clipped(ui, 28U, 12U, 300U, "LeonOS 4",
+                                   RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY, 12U, 24U);
+    reliefos_ui_text(ui, 29U, 43U,
                    T("About this operating system"),
-                   LEONOS_UI_DARK, LEONOS_UI_GRAY);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
 
-    leonos_ui_panel(ui, hero_x, hero_y, hero_w, content_h, LEONOS_UI_LIGHT);
-    leonos_ui_text(ui, hero_x + 16U, hero_y + 14U,
-                   T("LeonOS 4"), LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
-    leonos_ui_rect(ui, hero_x + 16U, hero_y + 38U, hero_w - 32U, 1U,
-                   LEONOS_UI_WHITE);
-    leonos_ui_panel(ui, hero_x + 27U, hero_y + 50U, OSVER_LOGO_BOX,
-                    OSVER_LOGO_BOX, LEONOS_UI_WHITE);
+    reliefos_ui_panel(ui, hero_x, hero_y, hero_w, content_h, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text(ui, hero_x + 16U, hero_y + 14U,
+                   T("LeonOS 4"), RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_rect(ui, hero_x + 16U, hero_y + 38U, hero_w - 32U, 1U,
+                   RELIEFOS_UI_WHITE);
+    reliefos_ui_panel(ui, hero_x + 27U, hero_y + 50U, OSVER_LOGO_BOX,
+                    OSVER_LOGO_BOX, RELIEFOS_UI_WHITE);
     draw_logo(ui, hero_x + 35U, hero_y + 58U, OSVER_LOGO_BOX - 16U,
               OSVER_LOGO_BOX - 16U);
-    leonos_ui_text_resized_clipped(ui, hero_x + 16U, hero_y + 260U,
-                                   hero_w - 32U, "LeonOS 4", LEONOS_UI_BLACK,
-                                   LEONOS_UI_LIGHT, 10U, 20U);
-    leonos_ui_text(ui, hero_x + 16U, hero_y + 287U,
+    reliefos_ui_text_resized_clipped(ui, hero_x + 16U, hero_y + 260U,
+                                   hero_w - 32U, "LeonOS 4", RELIEFOS_UI_BLACK,
+                                   RELIEFOS_UI_LIGHT, 10U, 20U);
+    reliefos_ui_text(ui, hero_x + 16U, hero_y + 287U,
                    T("A compact desktop OS"),
-                   LEONOS_UI_DARK, LEONOS_UI_LIGHT);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_LIGHT);
 
-    leonos_ui_panel(ui, info_x, hero_y, info_w, content_h, LEONOS_UI_LIGHT);
-    leonos_ui_rect(ui, info_x + 1U, hero_y + 1U, info_w - 2U, 54U,
-                   LEONOS_UI_WHITE);
-    leonos_ui_text(ui, info_x + 16U, hero_y + 10U,
-                   T("System information"), LEONOS_UI_BLACK,
-                   LEONOS_UI_WHITE);
-    leonos_ui_text(ui, info_x + 16U, hero_y + 31U,
+    reliefos_ui_panel(ui, info_x, hero_y, info_w, content_h, RELIEFOS_UI_LIGHT);
+    reliefos_ui_rect(ui, info_x + 1U, hero_y + 1U, info_w - 2U, 54U,
+                   RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, info_x + 16U, hero_y + 10U,
+                   T("System information"), RELIEFOS_UI_BLACK,
+                   RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, info_x + 16U, hero_y + 31U,
                    T("Build and runtime components"),
-                   LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_property_grid(ui, info_x + 12U, hero_y + 68U, info_w - 24U,
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_property_grid(ui, info_x + 12U, hero_y + 68U, info_w - 24U,
                             props, sizeof(props) / sizeof(props[0]), 122U, 28U);
-    leonos_ui_text(ui, info_x + 16U, hero_y + 260U,
+    reliefos_ui_text(ui, info_x + 16U, hero_y + 260U,
                    T("This window reports the version embedded in the running kernel."),
-                   LEONOS_UI_DARK, LEONOS_UI_LIGHT);
-    leonos_ui_text(ui, info_x + 16U, hero_y + 282U,
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text(ui, info_x + 16U, hero_y + 282U,
                    T("LeonOS is free software for learning and experimentation."),
-                   LEONOS_UI_DARK, LEONOS_UI_LIGHT);
-    leonos_ui_statusbar(ui, OSVER_H - 28, 28, status_text);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_statusbar(ui, OSVER_H - 28, 28, status_text);
 }
 
 int main(void)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
     int ret;
 
     puts("[osver.elf] system version viewer starting");
-    (void)leonos_png_decode_file(OSVER_LOGO_PATH, &logo_pixels, &logo_width,
+    (void)reliefos_png_decode_file(OSVER_LOGO_PATH, &logo_pixels, &logo_width,
                                  &logo_height);
     if (!logo_pixels) {
         copy_text(status_text, sizeof(status_text),
                   T("System information (logo unavailable)"));
     }
-    ret = leonos_system_info(&info);
+    ret = reliefos_system_info(&info);
     if (ret < 0) {
         copy_text(status_text, sizeof(status_text), T("Could not read system version information"));
         copy_text(info.kernel_name, sizeof(info.kernel_name), "unknown");
@@ -241,41 +241,41 @@ int main(void)
     }
     {
         uint32_t debug_flags = 0;
-        if (leonos_kernel_debug_get_state(&debug_flags) == 0 &&
-            (debug_flags & LEONOS_KERNEL_DEBUG_STATE_ENABLED) != 0U) {
+        if (reliefos_kernel_debug_get_state(&debug_flags) == 0 &&
+            (debug_flags & RELIEFOS_KERNEL_DEBUG_STATE_ENABLED) != 0U) {
             copy_text(status_text, sizeof(status_text),
                       T("Kernel debug mode enabled"));
         }
     }
-    window_id = leonos_gui_create_app_window_ex(T("About LeonOS"), T("System version"),
-                                                OSVER_W, OSVER_H, LEONOS_GUI_WINDOW_NO_RESIZE);
+    window_id = reliefos_gui_create_app_window_ex(T("About LeonOS"), T("System version"),
+                                                OSVER_W, OSVER_H, RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[osver.elf] create window failed=%d\n", window_id);
         return 1;
     }
 
-    leonos_ui_bind(&ui, pixels, OSVER_W, OSVER_H, OSVER_W);
+    reliefos_ui_bind(&ui, pixels, OSVER_W, OSVER_H, OSVER_W);
     draw_osver(&ui);
-    leonos_gui_present_window((uint32_t)window_id, OSVER_W, OSVER_H, OSVER_W, pixels);
+    reliefos_gui_present_window((uint32_t)window_id, OSVER_W, OSVER_H, OSVER_W, pixels);
 
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        while (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
-                leonos_png_free(logo_pixels);
+        while (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
+                reliefos_png_free(logo_pixels);
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN && event.pressed && event.keycode == 1) {
-                leonos_png_free(logo_pixels);
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN && event.pressed && event.keycode == 1) {
+                reliefos_png_free(logo_pixels);
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1U)) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1U)) {
                 osver_kernel_debug_click((uint32_t)event.x, (uint32_t)event.y);
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_RESIZE ||
-                event.type == LEONOS_GUI_APP_EVENT_FOCUS) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_RESIZE ||
+                event.type == RELIEFOS_GUI_APP_EVENT_FOCUS) {
                 draw_osver(&ui);
-                leonos_gui_present_window((uint32_t)window_id, OSVER_W, OSVER_H, OSVER_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, OSVER_W, OSVER_H, OSVER_W, pixels);
             }
         }
         sleep_ms(20);

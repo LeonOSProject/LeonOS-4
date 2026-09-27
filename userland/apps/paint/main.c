@@ -1,10 +1,10 @@
-#include <leonos/gui.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/png.h>
-#include <leonos/stdio.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/png.h>
+#include <reliefos/stdio.h>
+#include <reliefos/ui.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <poll.h>
@@ -19,8 +19,8 @@
 #define PAINT_H 700U
 #define PAINT_MIN_W 560U
 #define PAINT_MIN_H 400U
-#define PAINT_MAX_W LEONOS_GUI_MAX_WINDOW_WIDTH
-#define PAINT_MAX_H LEONOS_GUI_MAX_WINDOW_HEIGHT
+#define PAINT_MAX_W RELIEFOS_GUI_MAX_WINDOW_WIDTH
+#define PAINT_MAX_H RELIEFOS_GUI_MAX_WINDOW_HEIGHT
 #define PAINT_MAX_PIXELS (1024U * 1024U)
 #define PAINT_PATH_CAP PATH_MAX
 #define TOOLBAR_H 44U
@@ -190,7 +190,7 @@ static int read_file(const char *path, uint8_t **out, uint32_t *out_len)
     int fd;
     if (!path || !out || !out_len || stat(path, &st) < 0 ||
         !S_ISREG(st.st_mode) || st.st_size <= 0 ||
-        (uint64_t)st.st_size > LEONOS_PNG_MAX_FILE_BYTES) {
+        (uint64_t)st.st_size > RELIEFOS_PNG_MAX_FILE_BYTES) {
         return -1;
     }
     data = (uint8_t *)malloc((size_t)st.st_size);
@@ -254,7 +254,7 @@ static int load_image(const char *path)
     uint32_t len = 0;
     int ret;
     if (ends_ci(path, ".png")) {
-        ret = leonos_png_decode_file(path, &pixels, &width, &height);
+        ret = reliefos_png_decode_file(path, &pixels, &width, &height);
     } else {
         ret = read_file(path, &data, &len);
         if (ret == 0) ret = decode_bmp(data, len, &pixels, &width, &height);
@@ -435,7 +435,7 @@ static void paint_line(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1)
 static void open_dialog(void)
 {
     char path[PAINT_PATH_CAP] = {0};
-    if (leonos_ui_show_open_dialog(T("Open image"), path, sizeof(path),
+    if (reliefos_ui_show_open_dialog(T("Open image"), path, sizeof(path),
                                    T("Images (*.bmp; *.dib; *.png)"),
                                    ".bmp;.dib;.png") > 0) {
         (void)load_image(path);
@@ -446,7 +446,7 @@ static void save_as_dialog(void)
 {
     char path[PAINT_PATH_CAP];
     copy_text(path, sizeof(path), current_path[0] ? current_path : "/untitled.bmp");
-    if (leonos_ui_show_save_dialog_ex(T("Save image"), path, sizeof(path),
+    if (reliefos_ui_show_save_dialog_ex(T("Save image"), path, sizeof(path),
                                       T("Bitmap or PNG (*.bmp; *.png)"),
                                       ".bmp;.png") > 0) {
         (void)save_image(path);
@@ -464,7 +464,7 @@ static void save_current(void)
 
 static void new_image(void)
 {
-    if (dirty && !leonos_ui_show_confirm_dialog(T("Discard changes?"),
+    if (dirty && !reliefos_ui_show_confirm_dialog(T("Discard changes?"),
                                                  T("The current drawing has not been saved."), 0)) return;
     if (new_canvas(800U, 520U) < 0) {
         set_status(T("Could not create canvas"));
@@ -473,40 +473,40 @@ static void new_image(void)
     }
 }
 
-static void draw(struct leonos_ui_surface *ui, uint32_t window_id)
+static void draw(struct reliefos_ui_surface *ui, uint32_t window_id)
 {
     uint32_t vw = canvas_view_w();
     uint32_t vh = canvas_view_h();
     if (ensure_screen_buffer() < 0) {
         return;
     }
-    leonos_ui_bind(ui, screen_pixels, view_w, view_h, screen_stride);
-    leonos_ui_rect(ui, 0, 0, view_w, view_h, LEONOS_UI_GRAY);
-    leonos_ui_toolbar(ui, 0, 0, view_w, TOOLBAR_H);
-    leonos_ui_button(ui, 8, 10, 52, LEONOS_UI_BUTTON_H, T("New"), 0);
-    leonos_ui_button(ui, 66, 10, 58, LEONOS_UI_BUTTON_H, T("Open"), 0);
-    leonos_ui_button(ui, 128, 10, 58, LEONOS_UI_BUTTON_H, T("Save"), dirty ? LEONOS_UI_BUTTON_ACTIVE : 0);
-    leonos_ui_button(ui, 190, 10, 76, LEONOS_UI_BUTTON_H, T("Save as"), 0);
-    leonos_ui_button(ui, 274, 10, 58, LEONOS_UI_BUTTON_H, T("Pencil"), tool == TOOL_PENCIL ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_button(ui, 336, 10, 58, LEONOS_UI_BUTTON_H, T("Brush"), tool == TOOL_BRUSH ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_button(ui, 398, 10, 58, LEONOS_UI_BUTTON_H, T("Eraser"), tool == TOOL_ERASER ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_text(ui, 466, 16, T("Brush Size"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    reliefos_ui_bind(ui, screen_pixels, view_w, view_h, screen_stride);
+    reliefos_ui_rect(ui, 0, 0, view_w, view_h, RELIEFOS_UI_GRAY);
+    reliefos_ui_toolbar(ui, 0, 0, view_w, TOOLBAR_H);
+    reliefos_ui_button(ui, 8, 10, 52, RELIEFOS_UI_BUTTON_H, T("New"), 0);
+    reliefos_ui_button(ui, 66, 10, 58, RELIEFOS_UI_BUTTON_H, T("Open"), 0);
+    reliefos_ui_button(ui, 128, 10, 58, RELIEFOS_UI_BUTTON_H, T("Save"), dirty ? RELIEFOS_UI_BUTTON_ACTIVE : 0);
+    reliefos_ui_button(ui, 190, 10, 76, RELIEFOS_UI_BUTTON_H, T("Save as"), 0);
+    reliefos_ui_button(ui, 274, 10, 58, RELIEFOS_UI_BUTTON_H, T("Pencil"), tool == TOOL_PENCIL ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_button(ui, 336, 10, 58, RELIEFOS_UI_BUTTON_H, T("Brush"), tool == TOOL_BRUSH ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_button(ui, 398, 10, 58, RELIEFOS_UI_BUTTON_H, T("Eraser"), tool == TOOL_ERASER ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_text(ui, 466, 16, T("Brush Size"), RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
     for (uint32_t i = 0; i < 3; ++i) {
         uint32_t sizes[3] = {2U, 6U, 14U};
         uint32_t x = 505U + i * 24U;
-        leonos_ui_button(ui, x, 10, 20, LEONOS_UI_BUTTON_H,
+        reliefos_ui_button(ui, x, 10, 20, RELIEFOS_UI_BUTTON_H,
                          i == 0 ? "S" : (i == 1 ? "M" : "L"),
-                         brush_size == sizes[i] ? LEONOS_UI_BUTTON_PRESSED : 0);
+                         brush_size == sizes[i] ? RELIEFOS_UI_BUTTON_PRESSED : 0);
     }
     {
         const uint32_t swatches[] = {0x00000000U, 0x00ff0000U, 0x000080ffU,
                                      0x0000aa00U, 0x00ffff00U, 0x00ffffffU};
         for (uint32_t i = 0; i < 6; ++i) {
             uint32_t x = 584U + i * 24U;
-            leonos_ui_bevel(ui, x, 11, 20, 20, swatches[i], color == swatches[i] ? LEONOS_UI_BUTTON_PRESSED : 0);
+            reliefos_ui_bevel(ui, x, 11, 20, 20, swatches[i], color == swatches[i] ? RELIEFOS_UI_BUTTON_PRESSED : 0);
         }
     }
-    leonos_ui_inset(ui, canvas_x(), canvas_y(), vw, vh, LEONOS_UI_WHITE);
+    reliefos_ui_inset(ui, canvas_x(), canvas_y(), vw, vh, RELIEFOS_UI_WHITE);
     if (canvas && canvas_w && canvas_h) {
         if (canvas_w == vw && canvas_h == vh) {
             for (uint32_t y = 0; y < vh; ++y) {
@@ -525,24 +525,24 @@ static void draw(struct leonos_ui_surface *ui, uint32_t window_id)
         }
     }
     /* The status bar stays below the canvas even when the window is resized. */
-    leonos_ui_statusbar(ui, view_h - STATUS_H, STATUS_H, status_text);
-    leonos_gui_present_window(window_id, view_w, view_h, screen_stride, screen_pixels);
+    reliefos_ui_statusbar(ui, view_h - STATUS_H, STATUS_H, status_text);
+    reliefos_gui_present_window(window_id, view_w, view_h, screen_stride, screen_pixels);
     (void)window_id;
 }
 
 static void handle_toolbar(int32_t x, int32_t y)
 {
-    if (y < 10 || y >= 10 + (int32_t)LEONOS_UI_BUTTON_H) return;
-    if (hit(x, y, 8, 10, 52, LEONOS_UI_BUTTON_H)) new_image();
-    else if (hit(x, y, 66, 10, 58, LEONOS_UI_BUTTON_H)) open_dialog();
-    else if (hit(x, y, 128, 10, 58, LEONOS_UI_BUTTON_H)) save_current();
-    else if (hit(x, y, 190, 10, 76, LEONOS_UI_BUTTON_H)) save_as_dialog();
-    else if (hit(x, y, 274, 10, 58, LEONOS_UI_BUTTON_H)) tool = TOOL_PENCIL;
-    else if (hit(x, y, 336, 10, 58, LEONOS_UI_BUTTON_H)) tool = TOOL_BRUSH;
-    else if (hit(x, y, 398, 10, 58, LEONOS_UI_BUTTON_H)) tool = TOOL_ERASER;
-    else if (hit(x, y, 505, 10, 20, LEONOS_UI_BUTTON_H)) brush_size = 2U;
-    else if (hit(x, y, 529, 10, 20, LEONOS_UI_BUTTON_H)) brush_size = 6U;
-    else if (hit(x, y, 553, 10, 20, LEONOS_UI_BUTTON_H)) brush_size = 14U;
+    if (y < 10 || y >= 10 + (int32_t)RELIEFOS_UI_BUTTON_H) return;
+    if (hit(x, y, 8, 10, 52, RELIEFOS_UI_BUTTON_H)) new_image();
+    else if (hit(x, y, 66, 10, 58, RELIEFOS_UI_BUTTON_H)) open_dialog();
+    else if (hit(x, y, 128, 10, 58, RELIEFOS_UI_BUTTON_H)) save_current();
+    else if (hit(x, y, 190, 10, 76, RELIEFOS_UI_BUTTON_H)) save_as_dialog();
+    else if (hit(x, y, 274, 10, 58, RELIEFOS_UI_BUTTON_H)) tool = TOOL_PENCIL;
+    else if (hit(x, y, 336, 10, 58, RELIEFOS_UI_BUTTON_H)) tool = TOOL_BRUSH;
+    else if (hit(x, y, 398, 10, 58, RELIEFOS_UI_BUTTON_H)) tool = TOOL_ERASER;
+    else if (hit(x, y, 505, 10, 20, RELIEFOS_UI_BUTTON_H)) brush_size = 2U;
+    else if (hit(x, y, 529, 10, 20, RELIEFOS_UI_BUTTON_H)) brush_size = 6U;
+    else if (hit(x, y, 553, 10, 20, RELIEFOS_UI_BUTTON_H)) brush_size = 14U;
     else {
         const uint32_t swatches[] = {0x00000000U, 0x00ff0000U, 0x000080ffU,
                                      0x0000aa00U, 0x00ffff00U, 0x00ffffffU};
@@ -555,31 +555,31 @@ static void handle_toolbar(int32_t x, int32_t y)
 int main(int argc, char **argv, char **envp)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     uint32_t last_x = 0, last_y = 0;
     int window_id;
     (void)envp;
     if (new_canvas(800U, 520U) < 0) return 1;
     set_status(T("Ready"));
     if (argc > 1 && argv && argv[1] && argv[1][0]) (void)load_image(argv[1]);
-    window_id = leonos_gui_create_app_window_ex(T("Paint"),
+    window_id = reliefos_gui_create_app_window_ex(T("Paint"),
                                                 T("LeonOS Paint"),
                                                 view_w, view_h, 0);
     if (window_id <= 0) { free_canvas(); free(screen_pixels); return 1; }
     draw(&ui, (uint32_t)window_id);
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) <= 0) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) <= 0) {
             (void)poll(0, 0, 10);
             continue;
         }
-        if (event.type == LEONOS_GUI_APP_EVENT_CLOSE ||
-            (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN && event.pressed && event.keycode == LEONOS_KEY_ESCAPE)) {
+        if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE ||
+            (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN && event.pressed && event.keycode == RELIEFOS_KEY_ESCAPE)) {
             if (dirty) {
-                int save = leonos_ui_show_confirm_dialog(
+                int save = reliefos_ui_show_confirm_dialog(
                     T("Save changes?"),
                     T("Save the current drawing before closing?"), 1);
                 if (save > 0) {
@@ -597,15 +597,15 @@ int main(int argc, char **argv, char **envp)
             screen_height = 0;
             return 0;
         }
-        if (event.type == LEONOS_GUI_APP_EVENT_RESIZE) {
+        if (event.type == RELIEFOS_GUI_APP_EVENT_RESIZE) {
             if (event.width >= PAINT_MIN_W && event.width <= PAINT_MAX_W) view_w = event.width;
             if (event.height >= PAINT_MIN_H && event.height <= PAINT_MAX_H) view_h = event.height;
             draw(&ui, (uint32_t)window_id);
             continue;
         }
-        if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN || event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
-            if (event.keycode == LEONOS_KEY_LEFT_CTRL || event.keycode == LEONOS_KEY_RIGHT_CTRL) ctrl_down = event.pressed;
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN && event.pressed && ctrl_down) {
+        if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN || event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
+            if (event.keycode == RELIEFOS_KEY_LEFT_CTRL || event.keycode == RELIEFOS_KEY_RIGHT_CTRL) ctrl_down = event.pressed;
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN && event.pressed && ctrl_down) {
                 if (event.keycode == 49U) new_image();
                 else if (event.keycode == 24U) open_dialog();
                 else if (event.keycode == 31U) save_current();
@@ -614,7 +614,7 @@ int main(int argc, char **argv, char **envp)
             }
             continue;
         }
-        if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON) {
+        if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON) {
             if (!(event.buttons & 1U)) { drawing = 0; continue; }
             if (event.y < (int32_t)TOOLBAR_H) {
                 handle_toolbar(event.x, event.y);
@@ -625,7 +625,7 @@ int main(int argc, char **argv, char **envp)
             draw(&ui, (uint32_t)window_id);
             continue;
         }
-        if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_MOVE && (event.buttons & 1U) && drawing) {
+        if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_MOVE && (event.buttons & 1U) && drawing) {
             uint32_t x, y;
             if (point_to_canvas(event.x, event.y, &x, &y)) {
                 paint_line(last_x, last_y, x, y);
@@ -634,6 +634,6 @@ int main(int argc, char **argv, char **envp)
             }
             continue;
         }
-        if (event.type == LEONOS_GUI_APP_EVENT_FOCUS) draw(&ui, (uint32_t)window_id);
+        if (event.type == RELIEFOS_GUI_APP_EVENT_FOCUS) draw(&ui, (uint32_t)window_id);
     }
 }

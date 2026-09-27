@@ -10,7 +10,7 @@ void kernel_spin_lock_irqsave(struct kernel_spinlock *lock, uint64_t *flags)
 void kernel_spin_unlock_irqrestore(struct kernel_spinlock *lock, uint64_t flags)
 { (void)lock; (void)flags; assert(locked); locked=0; }
 int storage_lookup_path(const char *path, struct storage_node *node)
-{ assert(!strcmp(path,"/etc/hostname")); *node=(struct storage_node){.type=LEONOS_FS_TYPE_FILE,.size=strlen(config)}; return lookup_error; }
+{ assert(!strcmp(path,"/etc/hostname")); *node=(struct storage_node){.type=RELIEFOS_FS_TYPE_FILE,.size=strlen(config)}; return lookup_error; }
 int storage_read_node(const struct storage_node *node,uint64_t offset,void *out,uint32_t cap,uint32_t *got)
 { assert(!locked && !offset && node->size<=cap); memcpy(out,config,node->size); *got=node->size; return read_error; }
 int main(void)

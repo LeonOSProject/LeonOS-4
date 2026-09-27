@@ -40,7 +40,7 @@ int desktop_load_service_config(void)
     uint8_t network_icon = 1;
     uint8_t rtc_clock = 1;
     int changed;
-    int fd = open(SERVICES_CONFIG_PATH, LEONOS_O_RDONLY, 0);
+    int fd = open(SERVICES_CONFIG_PATH, RELIEFOS_O_RDONLY, 0);
     if (fd >= 0) {
         while (len + 1U < sizeof(cfg)) {
             long got = read(fd, cfg + len, sizeof(cfg) - len - 1U);

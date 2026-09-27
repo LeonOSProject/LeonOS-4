@@ -19,8 +19,8 @@ int task_udp_send(struct task_file *f, const void *b, uint32_t n, uint32_t flags
 short net_socket_poll_fd(int32_t h, uint32_t p, short e)
 { (void)h; (void)p; (void)e; abort(); }
 int net_socket_error(int32_t h, bool c) { (void)h; (void)c; abort(); }
-int net_socket_recv(struct leonos_net_socket_io *r, uint32_t p) { (void)r; (void)p; abort(); }
-int net_socket_send(struct leonos_net_socket_io *r, uint32_t p) { (void)r; (void)p; abort(); }
+int net_socket_recv(struct reliefos_net_socket_io *r, uint32_t p) { (void)r; (void)p; abort(); }
+int net_socket_send(struct reliefos_net_socket_io *r, uint32_t p) { (void)r; (void)p; abort(); }
 int task_pty_export_fd(struct task *task, int fd, struct task_pty_fd *out)
 {
     (void)task;
@@ -100,7 +100,7 @@ int main(void)
             .type = SOCK_DGRAM, .state = UNIX_SOCKET_CONNECTED, .peer_handle = 2 - i,
             .receive_timeout = UINT64_MAX, .send_timeout = UINT64_MAX};
         endpoints[i] = (struct task_file){.used = 1, .references = 1, .aux = i + 1,
-            .flags = TASK_FILE_FLAG_SOCKET | TASK_FILE_FLAG_SOCKET_UNIX | LEONOS_O_RDWR};
+            .flags = TASK_FILE_FLAG_SOCKET | TASK_FILE_FLAG_SOCKET_UNIX | RELIEFOS_O_RDWR};
     }
     char payload[3][4] = {"one", "two", "end"}, buffer[3][4] = {{0}};
     struct iovec tx[3], rx[3];
@@ -155,7 +155,7 @@ int main(void)
     assert(batch(true, receives, 1, MSG_CMSG_CLOEXEC) == 1);
     header = (void *)control;
     memcpy(&fd, CMSG_DATA(header), sizeof(fd));
-    assert(fd == 6 && current.files[0].description == &passed && current.files[0].fd_flags == LEONOS_FD_CLOEXEC);
+    assert(fd == 6 && current.files[0].description == &passed && current.files[0].fd_flags == RELIEFOS_FD_CLOEXEC);
     assert(receives[0].msg_hdr.msg_flags & MSG_CMSG_CLOEXEC);
     assert(passed.references == 2 && !passed.scm_references);
     clear_task_file(&current.files[0]);

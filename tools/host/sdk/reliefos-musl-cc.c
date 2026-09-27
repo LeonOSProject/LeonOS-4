@@ -92,6 +92,12 @@ int main(int argc, char **argv)
     const char *compiler = getenv("RELIEFOS_CC");
     if (!compiler || !*compiler) compiler = getenv("LEONOS_CC");
     if (!compiler || !*compiler) compiler = "clang";
+    const char *abi = getenv("RELIEFOS_SDK_ABI");
+    int leonos_abi = abi && strcmp(abi, "leonos") == 0;
+    if (abi && *abi && !leonos_abi && strcmp(abi, "reliefos") != 0) {
+        fprintf(stderr, "reliefos-musl-cc: RELIEFOS_SDK_ABI must be reliefos or leonos\n");
+        return 2;
+    }
     char **args = calloc((size_t)argc + 48, sizeof(*args));
     if (!args) { perror("SDK driver"); return 126; }
     size_t n = 0;
@@ -131,7 +137,9 @@ int main(int argc, char **argv)
             else {
                 args[n++] = "-pie";
                 args[n++] = "-Wl,--dynamic-linker=/lib/ld-musl-x86_64.so.1";
-                args[n++] = "-Wl,-rpath,/usr/lib/leonos:/lib:/usr/lib";
+                args[n++] = leonos_abi
+                    ? "-Wl,-rpath,/usr/lib/leonos:/lib:/usr/lib"
+                    : "-Wl,-rpath,/usr/lib/reliefos:/lib:/usr/lib";
             }
         }
     }
@@ -140,9 +148,12 @@ int main(int argc, char **argv)
         args[n++] = "-x"; args[n++] = "none"; args[n++] = paths[8];
         if (static_link) {
             args[n++] = paths[5]; args[n++] = "-Wl,--start-group";
-            args[n++] = "-lleonos"; args[n++] = "-lc"; args[n++] = "-Wl,--end-group";
+            args[n++] = leonos_abi ? "-lleonos" : "-lreliefos";
+            args[n++] = "-lc"; args[n++] = "-Wl,--end-group";
         } else {
-            args[n++] = "-l:libmimalloc.so.3"; args[n++] = "-l:libleonos.so.2"; args[n++] = "-lc";
+            args[n++] = "-l:libmimalloc.so.3";
+            args[n++] = leonos_abi ? "-l:libleonos.so.2" : "-l:libreliefos.so.2";
+            args[n++] = "-lc";
         }
         args[n++] = "-l:libclang_rt.builtins.a";
         if (!shared) args[n++] = paths[4];

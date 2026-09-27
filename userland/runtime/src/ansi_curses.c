@@ -7,9 +7,9 @@
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
-#include <leonos/syscall.h>
+#include <reliefos/syscall.h>
 
-struct leonos_curses_window {
+struct reliefos_curses_window {
     int rows;
     int columns;
     int y;
@@ -27,8 +27,8 @@ static int curses_active;
 static struct termios saved_termios;
 static int have_saved_termios;
 static int pending_input = ERR;
-#define LEONOS_CURSES_OUTPUT_CAP 4096U
-static char output_buffer[LEONOS_CURSES_OUTPUT_CAP];
+#define RELIEFOS_CURSES_OUTPUT_CAP 4096U
+static char output_buffer[RELIEFOS_CURSES_OUTPUT_CAP];
 static size_t output_length;
 
 static void flush_output(void)

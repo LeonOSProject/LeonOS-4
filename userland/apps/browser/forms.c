@@ -422,7 +422,7 @@ static int form_add_form(const char *tag, const char *base_url,
     copy_text(browser_forms[index].method, sizeof(browser_forms[index].method),
               form_text_eq_ignore_case(method, "post") ? "post" : "get");
     if (action[0]) {
-        leonos_http_resolve_url(base_url && base_url[0] ? base_url : current_location,
+        reliefos_http_resolve_url(base_url && base_url[0] ? base_url : current_location,
                                 action,
                                 browser_forms[index].action,
                                 sizeof(browser_forms[index].action));
@@ -1006,7 +1006,7 @@ void browser_form_rebind_focus(void)
         browser_form_clear_focus();
         return;
     }
-    leonos_ui_edit_state_init(&browser_form_edit_state,
+    reliefos_ui_edit_state_init(&browser_form_edit_state,
                               browser_form_controls[browser_form_focus_control].value,
                               sizeof(browser_form_controls[browser_form_focus_control].value));
     if (cursor > browser_form_edit_state.length) {
@@ -1031,7 +1031,7 @@ static void form_focus_control(uint32_t control_index)
     }
     browser_form_focus_active = 1;
     browser_form_focus_control = control_index;
-    leonos_ui_edit_state_init(&browser_form_edit_state,
+    reliefos_ui_edit_state_init(&browser_form_edit_state,
                               browser_form_controls[control_index].value,
                               sizeof(browser_form_controls[control_index].value));
     browser_form_edit_state.focused = 1;
@@ -1205,7 +1205,7 @@ int browser_form_line_has_control(const struct browser_line *line)
 }
 
 void browser_form_control_rect(uint32_t control_index,
-                               struct leonos_ui_rect *rect)
+                               struct reliefos_ui_rect *rect)
 {
     uint32_t px = text_x();
     uint32_t py = text_y();
@@ -1215,11 +1215,11 @@ void browser_form_control_rect(uint32_t control_index,
     if (!rect) {
         return;
     }
-    *rect = (struct leonos_ui_rect){0};
+    *rect = (struct reliefos_ui_rect){0};
     for (uint32_t row = scroll_line; row < line_count && y < page_bottom; ++row) {
         struct browser_line *line = &lines[row];
         int32_t line_px = (int32_t)px - (int32_t)scroll_x +
-                          (int32_t)((uint32_t)line->indent * LEONOS_FONT_W);
+                          (int32_t)((uint32_t)line->indent * RELIEFOS_FONT_W);
         uint32_t image_text_offset = line->kind == BROWSER_LINE_IMAGE ? 20U : 0U;
         uint32_t cell_w = browser_line_cell_w(line->kind);
         uint32_t line_h = browser_line_render_height(line);
@@ -1286,11 +1286,11 @@ static void form_draw_password_mask(const char *value, char *out, uint32_t cap)
 
 static void form_edit_ensure_cursor_visible(uint32_t w)
 {
-    uint32_t cols = w > 8U ? (w - 8U) / LEONOS_FONT_W : 0;
+    uint32_t cols = w > 8U ? (w - 8U) / RELIEFOS_FONT_W : 0;
     if (!browser_form_edit_state.buffer || cols == 0) {
         return;
     }
-    leonos_ui_edit_state_sync(&browser_form_edit_state);
+    reliefos_ui_edit_state_sync(&browser_form_edit_state);
     if (browser_form_edit_state.cursor < browser_form_edit_state.scroll) {
         browser_form_edit_state.scroll = browser_form_edit_state.cursor;
     }
@@ -1317,40 +1317,40 @@ void browser_draw_form_control(uint32_t x, uint32_t y, uint32_t w,
     control = &browser_form_controls[control_index];
     if (control->kind == BROWSER_FORM_CONTROL_SUBMIT ||
         control->kind == BROWSER_FORM_CONTROL_RESET) {
-        leonos_ui_button(&ui, x, y, w, BROWSER_FORM_WIDGET_H,
+        reliefos_ui_button(&ui, x, y, w, BROWSER_FORM_WIDGET_H,
                          control->label[0] ? control->label
                                            : control->kind == BROWSER_FORM_CONTROL_RESET
                                                  ? "Reset"
                                                  : "Submit",
                          (control->flags & BROWSER_FORM_CONTROL_DISABLED)
-                             ? LEONOS_UI_BUTTON_DISABLED
+                             ? RELIEFOS_UI_BUTTON_DISABLED
                              : 0);
         return;
     }
     if (control->kind == BROWSER_FORM_CONTROL_CHECKBOX) {
-        leonos_ui_checkbox(&ui, x, y,
+        reliefos_ui_checkbox(&ui, x, y,
                            control->label[0] ? control->label : control->name,
                            (control->flags & BROWSER_FORM_CONTROL_CHECKED) != 0,
                            (control->flags & BROWSER_FORM_CONTROL_DISABLED)
-                               ? LEONOS_UI_BUTTON_DISABLED
+                               ? RELIEFOS_UI_BUTTON_DISABLED
                                : 0);
         return;
     }
     if (control->kind == BROWSER_FORM_CONTROL_RADIO) {
-        leonos_ui_radio(&ui, x, y,
+        reliefos_ui_radio(&ui, x, y,
                         control->label[0] ? control->label : control->value,
                         (control->flags & BROWSER_FORM_CONTROL_CHECKED) != 0,
                         (control->flags & BROWSER_FORM_CONTROL_DISABLED)
-                            ? LEONOS_UI_BUTTON_DISABLED
+                            ? RELIEFOS_UI_BUTTON_DISABLED
                             : 0);
         return;
     }
     if (control->kind == BROWSER_FORM_CONTROL_SELECT) {
-        leonos_ui_combobox(&ui, x, y, w,
+        reliefos_ui_combobox(&ui, x, y, w,
                            control->label[0] ? control->label : control->value,
                            0,
                            (control->flags & BROWSER_FORM_CONTROL_DISABLED)
-                               ? LEONOS_UI_EDIT_DISABLED
+                               ? RELIEFOS_UI_EDIT_DISABLED
                                : 0);
         return;
     }
@@ -1371,24 +1371,24 @@ void browser_draw_form_control(uint32_t x, uint32_t y, uint32_t w,
         text = control->value;
     }
     if (control->flags & BROWSER_FORM_CONTROL_DISABLED) {
-        flags |= LEONOS_UI_EDIT_DISABLED;
+        flags |= RELIEFOS_UI_EDIT_DISABLED;
     } else if (control->flags & BROWSER_FORM_CONTROL_READONLY) {
-        flags |= LEONOS_UI_EDIT_READONLY;
+        flags |= RELIEFOS_UI_EDIT_READONLY;
     }
     if (focused) {
         form_edit_ensure_cursor_visible(w);
-        flags |= LEONOS_UI_EDIT_FOCUSED;
+        flags |= RELIEFOS_UI_EDIT_FOCUSED;
         cursor = browser_form_edit_state.cursor;
         scroll = browser_form_edit_state.scroll;
     }
-    leonos_ui_edit(&ui, x, y, w, text, cursor, scroll, flags);
+    reliefos_ui_edit(&ui, x, y, w, text, cursor, scroll, flags);
     if (show_placeholder) {
-        uint32_t bg = (flags & LEONOS_UI_EDIT_DISABLED)
-                          ? LEONOS_UI_LIGHT
-                          : LEONOS_UI_WHITE;
-        leonos_ui_text_clipped(&ui, x + 4U, y + 4U,
+        uint32_t bg = (flags & RELIEFOS_UI_EDIT_DISABLED)
+                          ? RELIEFOS_UI_LIGHT
+                          : RELIEFOS_UI_WHITE;
+        reliefos_ui_text_clipped(&ui, x + 4U, y + 4U,
                                w > 8U ? w - 8U : w,
-                               control->label, LEONOS_UI_DARK, bg);
+                               control->label, RELIEFOS_UI_DARK, bg);
     }
 }
 
@@ -1609,7 +1609,7 @@ static void form_focus_next_input(void)
 
 int browser_form_handle_click(const char *href, int32_t mx, int32_t my)
 {
-    struct leonos_ui_rect rect;
+    struct reliefos_ui_rect rect;
     uint32_t control_index;
     if (!href || !form_starts_with(href, "form:")) {
         return 0;
@@ -1619,7 +1619,7 @@ int browser_form_handle_click(const char *href, int32_t mx, int32_t my)
         form_edit(control_index);
         browser_form_control_rect(control_index, &rect);
         if (rect.w && rect.h) {
-            (void)leonos_ui_edit_state_handle_mouse(&browser_form_edit_state,
+            (void)reliefos_ui_edit_state_handle_mouse(&browser_form_edit_state,
                                                     mx, my,
                                                     (uint32_t)rect.x,
                                                     (uint32_t)rect.y,
@@ -1648,14 +1648,14 @@ int browser_form_handle_click(const char *href, int32_t mx, int32_t my)
     return 1;
 }
 
-int browser_form_handle_key(struct leonos_gui_app_event *event)
+int browser_form_handle_key(struct reliefos_gui_app_event *event)
 {
     uint32_t submit_index;
     if (!event || !browser_form_input_active()) {
         return 0;
     }
     if (!event->pressed) {
-        (void)leonos_ui_edit_state_handle_key(&browser_form_edit_state,
+        (void)reliefos_ui_edit_state_handle_key(&browser_form_edit_state,
                                               event->keycode, event->pressed);
         return 1;
     }
@@ -1663,21 +1663,21 @@ int browser_form_handle_key(struct leonos_gui_app_event *event)
         browser_form_clear_focus();
         return 1;
     }
-    if (event->keycode == LEONOS_KEY_TAB) {
+    if (event->keycode == RELIEFOS_KEY_TAB) {
         form_focus_next_input();
         return 1;
     }
-    if (event->keycode == LEONOS_KEY_ENTER) {
+    if (event->keycode == RELIEFOS_KEY_ENTER) {
         submit_index = form_find_submit_for_control(browser_form_focus_control);
         if (submit_index < BROWSER_MAX_FORM_CONTROLS) {
             form_submit(submit_index);
         }
         return 1;
     }
-    if (leonos_ui_edit_state_handle_key(&browser_form_edit_state,
+    if (reliefos_ui_edit_state_handle_key(&browser_form_edit_state,
                                         event->keycode,
                                         event->pressed)) {
-        leonos_ui_edit_state_sync(&browser_form_edit_state);
+        reliefos_ui_edit_state_sync(&browser_form_edit_state);
         return 1;
     }
     return 1;

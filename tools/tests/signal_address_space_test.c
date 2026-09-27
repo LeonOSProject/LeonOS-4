@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <ntclks/paging.h>
+#include <reliefnt/paging.h>
 /* Model the kernel direct map with host pointers to the destination pages. */
-#undef NTCLKS_KERNEL_DIRECT_MAP_BASE
-#define NTCLKS_KERNEL_DIRECT_MAP_BASE 0
+#undef RELIEFNT_KERNEL_DIRECT_MAP_BASE
+#define RELIEFNT_KERNEL_DIRECT_MAP_BASE 0
 #include "../../kernel/reliefnt/kernel/reliefnt/signal.c"
 #include "../../kernel/reliefnt/kernel/reliefnt/signal_queue.c"
 #include "../../kernel/reliefnt/kernel/exec/usercopy_task.c"

@@ -1,11 +1,31 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/pty.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_PTY_H
 #define LEONOS_PTY_H
+#include <reliefos/pty.h>
 
-/*
- * PTY userland header is a thin alias layer. The wire ABI moved to the kernel
- * UAPI (<leonos/pty_abi.h>); this header re-exports it so existing
- * `#include <leonos/pty.h>` callers keep working.
- */
-#include <leonos/pty_abi.h>
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_PTY_CC_VEOF RELIEFOS_PTY_CC_VEOF
+#define LEONOS_PTY_CC_VEOL RELIEFOS_PTY_CC_VEOL
+#define LEONOS_PTY_CC_VERASE RELIEFOS_PTY_CC_VERASE
+#define LEONOS_PTY_CC_VINTR RELIEFOS_PTY_CC_VINTR
+#define LEONOS_PTY_CC_VKILL RELIEFOS_PTY_CC_VKILL
+#define LEONOS_PTY_CC_VMIN RELIEFOS_PTY_CC_VMIN
+#define LEONOS_PTY_CC_VQUIT RELIEFOS_PTY_CC_VQUIT
+#define LEONOS_PTY_CC_VSTART RELIEFOS_PTY_CC_VSTART
+#define LEONOS_PTY_CC_VSTOP RELIEFOS_PTY_CC_VSTOP
+#define LEONOS_PTY_CC_VSUSP RELIEFOS_PTY_CC_VSUSP
+#define LEONOS_PTY_CC_VTIME RELIEFOS_PTY_CC_VTIME
+#define LEONOS_PTY_IFLAG_ICRNL RELIEFOS_PTY_IFLAG_ICRNL
+#define LEONOS_PTY_LFLAG_ECHO RELIEFOS_PTY_LFLAG_ECHO
+#define LEONOS_PTY_LFLAG_ECHONL RELIEFOS_PTY_LFLAG_ECHONL
+#define LEONOS_PTY_LFLAG_ICANON RELIEFOS_PTY_LFLAG_ICANON
+#define LEONOS_PTY_LFLAG_IEXTEN RELIEFOS_PTY_LFLAG_IEXTEN
+#define LEONOS_PTY_LFLAG_ISIG RELIEFOS_PTY_LFLAG_ISIG
+#define LEONOS_PTY_NCCS RELIEFOS_PTY_NCCS
+#define LEONOS_PTY_PATH_LEN RELIEFOS_PTY_PATH_LEN
+#define LEONOS_UAPI_PTY_ABI_H RELIEFOS_UAPI_PTY_ABI_H
+#define leonos_pty_termios reliefos_pty_termios
+#define leonos_pty_winsize reliefos_pty_winsize
+#endif /* LEONOS_PTY_H */

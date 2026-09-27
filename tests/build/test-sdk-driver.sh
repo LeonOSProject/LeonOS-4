@@ -30,8 +30,19 @@ grep -Fx "$w/legacy-compiler" "$COMPILER_RECORD"
 "$w/sdk/bin/reliefos-musl-cc" -static -x c 'source.c' -o out
 grep -Fx "$w/sdk/lib/crt1.o" "$RECORD"
 grep -Fx "$w/sdk/lib/mimalloc.o" "$RECORD"
+grep -Fx -- '-lreliefos' "$RECORD"
 "$w/sdk/bin/reliefos-musl-cc" --version
 test "$(wc -l < "$RECORD")" -eq 2
+"$w/sdk/bin/reliefos-musl-cc" source.c -o reliefos.out
+grep -Fx -- '-l:libreliefos.so.2' "$RECORD"
+grep -Fx -- '-Wl,-rpath,/usr/lib/reliefos:/lib:/usr/lib' "$RECORD"
+RELIEFOS_SDK_ABI=leonos "$w/sdk/bin/reliefos-musl-cc" source.c -o leonos.out
+grep -Fx -- '-l:libleonos.so.2' "$RECORD"
+grep -Fx -- '-Wl,-rpath,/usr/lib/leonos:/lib:/usr/lib' "$RECORD"
+if grep -Fx -- '-l:libreliefos.so.2' "$RECORD"; then exit 1; fi
+status=0
+RELIEFOS_SDK_ABI=unknown "$w/sdk/bin/reliefos-musl-cc" -c a.c || status=$?
+test "$status" -eq 2
 mv "$w/sdk" "$w/relocated sdk"
 "$w/relocated sdk/bin/reliefos-musl-cc" source.c -o out
 grep -Fx "$w/relocated sdk/lib/Scrt1.o" "$RECORD"
@@ -41,4 +52,4 @@ test "$status" -eq 42
 status=0
 PROBE_STATUS=7 "$w/relocated sdk/bin/reliefos-musl-cc" -c a.c || status=$?
 test "$status" -ne 0
-echo 'ok - SDK argv, compile/static/dynamic modes, relocation and failures'
+echo 'ok - SDK argv, canonical/legacy ABI selection, relocation and failures'

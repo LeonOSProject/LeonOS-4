@@ -3,8 +3,8 @@
 #include <string.h>
 #include <sys/wait.h>
 
-#define wait4 leonos_decl_wait4
-int leonos_decl_wait4(int pid, int *status, int options, void *usage);
+#define wait4 reliefos_decl_wait4
+int reliefos_decl_wait4(int pid, int *status, int options, void *usage);
 #include "../../userland/apps/desktop/input.c"
 #undef wait4
 
@@ -16,8 +16,8 @@ uint32_t fb_w(void) { return 1920; }
 uint32_t fb_h(void) { return 1080; }
 int hit_rect(uint32_t x, uint32_t y, int bx, int by, uint32_t w, uint32_t h)
 { return x >= (uint32_t)bx && y >= (uint32_t)by && x - bx < w && y - by < h; }
-int leonos_system_reboot(void) { ++reboots; errno = EPERM; return -1; }
-int leonos_system_shutdown(void) { ++shutdowns; errno = EINVAL; return -1; }
+int reliefos_system_reboot(void) { ++reboots; errno = EPERM; return -1; }
+int reliefos_system_shutdown(void) { ++shutdowns; errno = EINVAL; return -1; }
 void desktop_show_message(const char *title, const char *message)
 {
     assert(strstr(title, "failed"));

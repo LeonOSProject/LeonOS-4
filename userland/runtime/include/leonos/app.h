@@ -1,51 +1,34 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/app.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_APP_H
 #define LEONOS_APP_H
+#include <reliefos/app.h>
 
-#include <stdint.h>
-
-/* The registry is intentionally bounded: a LeonOS image currently exposes a
- * small number of application directories, while the API remains independent
- * of the build-time component list. */
-#define LEONOS_APP_REGISTRY_MAX 128U
-#define LEONOS_APP_ID_LEN 64U
-#define LEONOS_APP_NAME_LEN 96U
-#define LEONOS_APP_VERSION_LEN 32U
-#define LEONOS_APP_CATEGORY_LEN 64U
-#define LEONOS_APP_PATH_LEN 256U
-#define LEONOS_APP_LIST_LEN 256U
-
-#define LEONOS_APP_FLAG_ENTRY 0x00000001U
-#define LEONOS_APP_FLAG_TERMINAL 0x00000002U
-#define LEONOS_APP_FLAG_SYSTEM 0x00000004U
-#define LEONOS_APP_FLAG_HIDDEN 0x00000008U
-#define LEONOS_APP_FLAG_OPEN_WITH 0x00000010U
-
-struct leonos_app_info {
-    char id[LEONOS_APP_ID_LEN];
-    char name[LEONOS_APP_NAME_LEN];
-    char version[LEONOS_APP_VERSION_LEN];
-    char category[LEONOS_APP_CATEGORY_LEN];
-    char exec[LEONOS_APP_PATH_LEN];
-    char icon[LEONOS_APP_PATH_LEN];
-    char commands[LEONOS_APP_LIST_LEN];
-    char extensions[LEONOS_APP_LIST_LEN];
-    uint32_t flags;
-};
-
-int leonos_app_registry_refresh(void);
-int leonos_app_registry_begin_refresh(void);
-int leonos_app_registry_refresh_step(uint32_t budget);
-int leonos_app_registry_is_loading(void);
-int leonos_app_registry_is_loaded(void);
-uint32_t leonos_app_registry_count(void);
-int leonos_app_registry_get(uint32_t index, struct leonos_app_info *info);
-int leonos_app_registry_find(const char *id_or_path,
-                             struct leonos_app_info *info);
-int leonos_app_registry_resolve(const char *name_or_path,
-                                char *path, uint32_t capacity);
-int leonos_app_registry_label(const char *path, char *label, uint32_t capacity);
-int leonos_app_registry_icon(const char *path, char *icon, uint32_t capacity);
-int leonos_app_registry_default_for_extension(const char *extension,
-                                              char *path, uint32_t capacity);
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_APP_CATEGORY_LEN RELIEFOS_APP_CATEGORY_LEN
+#define LEONOS_APP_FLAG_ENTRY RELIEFOS_APP_FLAG_ENTRY
+#define LEONOS_APP_FLAG_HIDDEN RELIEFOS_APP_FLAG_HIDDEN
+#define LEONOS_APP_FLAG_OPEN_WITH RELIEFOS_APP_FLAG_OPEN_WITH
+#define LEONOS_APP_FLAG_SYSTEM RELIEFOS_APP_FLAG_SYSTEM
+#define LEONOS_APP_FLAG_TERMINAL RELIEFOS_APP_FLAG_TERMINAL
+#define LEONOS_APP_ID_LEN RELIEFOS_APP_ID_LEN
+#define LEONOS_APP_LIST_LEN RELIEFOS_APP_LIST_LEN
+#define LEONOS_APP_NAME_LEN RELIEFOS_APP_NAME_LEN
+#define LEONOS_APP_PATH_LEN RELIEFOS_APP_PATH_LEN
+#define LEONOS_APP_REGISTRY_MAX RELIEFOS_APP_REGISTRY_MAX
+#define LEONOS_APP_VERSION_LEN RELIEFOS_APP_VERSION_LEN
+#define leonos_app_info reliefos_app_info
+#define leonos_app_registry_begin_refresh reliefos_app_registry_begin_refresh
+#define leonos_app_registry_count reliefos_app_registry_count
+#define leonos_app_registry_default_for_extension reliefos_app_registry_default_for_extension
+#define leonos_app_registry_find reliefos_app_registry_find
+#define leonos_app_registry_get reliefos_app_registry_get
+#define leonos_app_registry_icon reliefos_app_registry_icon
+#define leonos_app_registry_is_loaded reliefos_app_registry_is_loaded
+#define leonos_app_registry_is_loading reliefos_app_registry_is_loading
+#define leonos_app_registry_label reliefos_app_registry_label
+#define leonos_app_registry_refresh reliefos_app_registry_refresh
+#define leonos_app_registry_refresh_step reliefos_app_registry_refresh_step
+#define leonos_app_registry_resolve reliefos_app_registry_resolve
+#endif /* LEONOS_APP_H */

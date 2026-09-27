@@ -2,9 +2,9 @@
  * uid syscalls, and a tolerant AF_INET connect probe. Run from the LeonOS
  * shell as /usr/lib/leonos/apps/ipctest/ipctest.elf. */
 #include <errno.h>
-#include <leonos/device.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
+#include <reliefos/device.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
 #include <linux/input.h>
 #include <linux/utsname.h>
 #include <stdint.h>
@@ -54,7 +54,7 @@ int main(void)
     close(sockets[0]);
     (void)waitpid(pid, 0, 0);
 
-    shm_fd = open(LEONOS_DEV_SHM0, LEONOS_O_RDWR, 0);
+    shm_fd = open(RELIEFOS_DEV_SHM0, RELIEFOS_O_RDWR, 0);
     failures += !check(shm_fd >= 4, "open /dev/shm0");
     failures += !check(ftruncate(shm_fd, 4096) == 0, "shm ftruncate");
 

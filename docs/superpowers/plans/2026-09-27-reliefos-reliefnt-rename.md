@@ -132,7 +132,7 @@
 
 **文件：** 新增 `include/reliefos/`、`userland/runtime/include/reliefos/`、`tests/integration/brand-abi.sh`、`tests/fixtures/brand-abi/{old_api,new_api}.c`；修改原 `include/leonos/` 与 `userland/runtime/include/leonos/` 为兼容层；修改 `userland/runtime/src/`、`mk/{runtime,sdk}.mk`、`tools/build/musl-sdk.sh`、`configs/header-export.list`、`tests/integration/sdk-link.sh`、`tests/build/test-sdk-{driver,stage}.sh`。
 
-- [ ] **步骤 1：先把旧 SDK 的导出函数与 `libleonos.so.2` 的 `DT_SONAME`/符号表作为 ABI 基线保存到测试 fixture。** 新测试用旧头/旧 SDK 构建一个小 ELF，再用新镜像的兼容库加载；另用 `<reliefos/api.h>` 和 `reliefos-musl-cc` 构建新 ELF，确保 `DT_NEEDED` 为 `libreliefos.so.2`。
+- [x] **步骤 1：先把旧 SDK 的导出函数与 `libleonos.so.2` 的 `DT_SONAME`/符号表作为 ABI 基线保存到测试 fixture。** 新测试用旧头/旧 SDK 构建一个小 ELF，再用新镜像的兼容库加载；另用 `<reliefos/api.h>` 和 `reliefos-musl-cc` 构建新 ELF，确保 `DT_NEEDED` 为 `libreliefos.so.2`。
 
   ```sh
   # 以下断言写入 tests/integration/brand-abi.sh；work 是该脚本创建的临时目录。
@@ -146,8 +146,8 @@
   nm -D "$new_lib" | grep -q ' reliefos_'
   ```
 
-- [ ] **步骤 2：运行测试确认新头/新编译驱动缺失而失败。** 不用仅检查文件存在的测试代替实际编译链接。
-- [ ] **步骤 3：以新头为唯一声明源，为旧头生成/维护转发兼容层。** 一组旧与新结构/宏的 `_Static_assert(sizeof/offsetof/number)` 测试覆盖公开 ABI；针对 `leonos_*` 导出函数建立显式对应表。旧结构 tag 可在兼容头通过宏别名映射到同布局的新结构，不能形成两份独立布局定义。
+- [x] **步骤 2：运行测试确认新头/新编译驱动缺失而失败。** 不用仅检查文件存在的测试代替实际编译链接。
+- [x] **步骤 3：以新头为唯一声明源，为旧头生成/维护转发兼容层。** 一组旧与新结构/宏的 `_Static_assert(sizeof/offsetof/number)` 测试覆盖公开 ABI；针对 `leonos_*` 导出函数建立显式对应表。旧结构 tag 可在兼容头通过宏别名映射到同布局的新结构，不能形成两份独立布局定义。
 
   ```c
   /* 仅示意 include/leonos/system.h 的兼容映射模式。 */
@@ -156,9 +156,11 @@
   #define LEONOS_SYSTEM_NAME_LEN RELIEFOS_SYSTEM_NAME_LEN
   ```
 
-- [ ] **步骤 4：更新 `userland/runtime/src/` 中公开函数的规范名字，并在相同翻译单元为每个已发布旧导出提供真实 ELF alias 或等价包装。** 用任务 5 步骤 1 的符号基线逐项比对，不遗漏数据导出、弱符号和版本；然后把 `userland/apps/`、主仓 `tools/`、测试程序、内核子仓消费者逐组切换到新头和新调用名。`third_party/` 上游源码不批量替换，只改本仓适配层。每组完成后先编译对应应用，最后用旧 SDK fixture 验证仍能链接。
-- [ ] **步骤 5：更新共享/静态运行库和 SDK 装配。** 从同一对象集分别链接 `libreliefos.so.2` 与 `libleonos.so.2`，显式设置各自 SONAME；新 ELF 链到 `libreliefos.so.2`，旧 ELF 继续加载旧库。旧 ABI 库和新 ABI 库的依赖、安装路径、许可证、归档内容同步纳入 SDK 与 rootfs manifest。
-- [ ] **步骤 6：验证 `make runtime sdk`、`sh tests/integration/sdk-link.sh`、`sh tests/build/test-sdk-driver.sh`、`sh tests/build/test-sdk-stage.sh`、`python3 tools/test_header_export.py`；用 `readelf/nm` 比较新旧符号与 SONAME。** 旧 ELF 的最终加载还需在任务 11 的 QEMU 中证明；检查 `git diff --check`。
+- [x] **步骤 4：更新 `userland/runtime/src/` 中公开函数的规范名字，并在相同翻译单元为每个已发布旧导出提供真实 ELF alias 或等价包装。** 用任务 5 步骤 1 的符号基线逐项比对，不遗漏数据导出、弱符号和版本；然后把 `userland/apps/`、主仓 `tools/`、测试程序、内核子仓消费者逐组切换到新头和新调用名。`third_party/` 上游源码不批量替换，只改本仓适配层。每组完成后先编译对应应用，最后用旧 SDK fixture 验证仍能链接。
+- [x] **步骤 5：更新共享/静态运行库和 SDK 装配。** 从同一对象集分别链接 `libreliefos.so.2` 与 `libleonos.so.2`，显式设置各自 SONAME；新 ELF 链到 `libreliefos.so.2`，旧 ELF 继续加载旧库。旧 ABI 库和新 ABI 库的依赖、安装路径、许可证、归档内容同步纳入 SDK 与 rootfs manifest。
+- [x] **步骤 6：验证 `make runtime sdk`、`sh tests/integration/sdk-link.sh`、`sh tests/build/test-sdk-driver.sh`、`sh tests/build/test-sdk-stage.sh`、`python3 tools/test_header_export.py`；用 `readelf/nm` 比较新旧符号与 SONAME。** 旧 ELF 的最终加载还需在任务 11 的 QEMU 中证明；检查 `git diff --check`。
+
+> 执行记录（2026-09-28）：旧 SDK ABI fixture 的初次编译链接测试先因新头缺失红灯；记录了 `libleonos.so.2` 的旧 SONAME、1,466 项动态符号/类型表与 416 个旧 SDK 导出。实现后 `make runtime sdk`、`make userland`、`make tools`、`make test-tools`、旧/新 ABI ELF 与 PortableGL 双名导出检查、SDK 动态/静态链接、SDK driver/stage、82 头文件导出、rootfs/安装器 stage 和 APK 所有权测试均通过。主系统及安装器的旧兼容库均经 `readelf/nm` 验证 SONAME 与 1,466 项旧动态符号/类型表一致。构建发现并修复了 curses 结构 tag 不一致、PortableGL 源路径/旧符号 alias 缺失，以及适配未修改 Doom 上游宏的编译条件。`test-brand-identity.sh` 的主仓/子仓旧名命中审计通过；尚余断言对应任务 6/7/9 的来宾路径、可见产品名和镜像名，另有 1,121 条 `migration` 清单待任务 11 最终复审。`git diff --check` 与已暂存 diff 检查通过；旧 ELF 在 QEMU 的实际加载按计划留到任务 11 验证。
 
 ### 任务 6：来宾目录、OpenRC 服务与已有配置迁移
 

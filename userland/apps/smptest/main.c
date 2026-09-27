@@ -1,6 +1,6 @@
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/system.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/system.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/wait.h>
@@ -50,8 +50,8 @@ static uint64_t parse_rounds(const char *text)
 
 static int sample_target_cpu(uint32_t target_cpu, pid_t pid, int *observed)
 {
-    struct leonos_perf_info info = {0};
-    int ret = leonos_perf_info(&info);
+    struct reliefos_perf_info info = {0};
+    int ret = reliefos_perf_info(&info);
     if (ret < 0) {
         return ret;
     }
@@ -72,13 +72,13 @@ static int run_worker(uint32_t worker, uint32_t target_cpu, uint64_t mask,
     int observed = 0;
     int ret;
 
-    ret = leonos_task_affinity_set(0, mask);
+    ret = reliefos_task_affinity_set(0, mask);
     if (ret < 0) {
         printf("[smptest.elf] worker=%u pid=%d affinity set failed ret=%d\n",
                worker, pid, ret);
         return 10;
     }
-    ret = leonos_task_affinity_get(0, &actual_mask);
+    ret = reliefos_task_affinity_get(0, &actual_mask);
     if (ret < 0 || actual_mask != mask) {
         printf("[smptest.elf] worker=%u pid=%d affinity mismatch wanted=0x%lx got=0x%lx ret=%d\n",
                worker, pid, (unsigned long)mask, (unsigned long)actual_mask, ret);
@@ -111,7 +111,7 @@ static int run_worker(uint32_t worker, uint32_t target_cpu, uint64_t mask,
 }
 
 static void print_cpu_snapshot(const char *label,
-                               const struct leonos_perf_info *info)
+                               const struct reliefos_perf_info *info)
 {
     printf("[smptest.elf] %s cpus=%u online=%u tasks=%u running=%u ready=%u sleeping=%u\n",
            label, info->cpu_count, info->online_cpu_count, info->task_count,
@@ -131,10 +131,10 @@ static void print_cpu_snapshot(const char *label,
 
 int main(int argc, char **argv, char **envp)
 {
-    struct leonos_perf_info before = {0};
-    struct leonos_perf_info after = {0};
-    struct worker_record workers[LEONOS_PERF_MAX_CPUS];
-    uint32_t target_cpus[LEONOS_PERF_MAX_CPUS];
+    struct reliefos_perf_info before = {0};
+    struct reliefos_perf_info after = {0};
+    struct worker_record workers[RELIEFOS_PERF_MAX_CPUS];
+    uint32_t target_cpus[RELIEFOS_PERF_MAX_CPUS];
     uint32_t online = 0;
     uint32_t worker_count;
     uint32_t created = 0;
@@ -143,13 +143,13 @@ int main(int argc, char **argv, char **envp)
     int ret;
 
     (void)envp;
-    ret = leonos_perf_info(&before);
+    ret = reliefos_perf_info(&before);
     if (ret < 0) {
         printf("[smptest.elf] FAIL perf_info ret=%d\n", ret);
         return 1;
     }
     for (uint32_t cpu = 0; cpu < before.cpu_count &&
-                            cpu < LEONOS_PERF_MAX_CPUS; ++cpu) {
+                            cpu < RELIEFOS_PERF_MAX_CPUS; ++cpu) {
         if (before.cpus[cpu].online) {
             target_cpus[online++] = cpu;
         }
@@ -190,7 +190,7 @@ int main(int argc, char **argv, char **envp)
         }
     }
 
-    ret = leonos_perf_info(&after);
+    ret = reliefos_perf_info(&after);
     if (ret < 0) {
         printf("[smptest.elf] FAIL final perf_info ret=%d\n", ret);
         return 1;

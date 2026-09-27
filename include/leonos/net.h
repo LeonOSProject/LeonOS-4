@@ -1,36 +1,86 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/net.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_NET_H
 #define LEONOS_NET_H
+#include <reliefos/net.h>
 
-/*
- * Userland network client API. The wire types and constants moved to the
- * kernel UAPI (<leonos/net_abi.h>); this header re-exports them so existing
- * `#include <leonos/net.h>` callers keep working.
- */
-#include <leonos/net_abi.h>
-#include <stdint.h>
-
-int leonos_net_config(struct leonos_net_config *config);
-int leonos_net_get_dns_policy(struct leonos_net_dns_policy *result);
-int leonos_net_set_dns_policy(uint32_t mode, uint32_t custom_dns_ip,
-                              struct leonos_net_dns_policy *result);
-int leonos_net_dhcp_renew(uint32_t timeout_ms, struct leonos_net_dhcp *result);
-int leonos_net_ping(uint32_t target_ip, uint32_t timeout_ms,
-                    struct leonos_net_ping *result);
-int leonos_net_dns_resolve(const char *name, uint32_t timeout_ms,
-                           struct leonos_net_dns *result);
-int leonos_net_http_get(const char *host, const char *path,
-                        uint32_t port, uint32_t timeout_ms,
-                        struct leonos_net_http_get *result);
-int leonos_socket_tcp(void);
-int leonos_socket_connect(int socket, const char *host,
-                          uint32_t port, uint32_t timeout_ms,
-                          struct leonos_net_socket_connect *result);
-long leonos_socket_send(int socket, const void *buffer, uint32_t length,
-                        uint32_t timeout_ms, uint32_t *status);
-long leonos_socket_recv(int socket, void *buffer, uint32_t length,
-                        uint32_t timeout_ms, uint32_t *status);
-int leonos_socket_close(int socket);
-int leonos_net_connections(struct leonos_net_connection_info *entries,
-                           uint32_t capacity, uint32_t *out_count);
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_NET_AF_INET RELIEFOS_NET_AF_INET
+#define LEONOS_NET_CLOUDFLARE_DNS_IP RELIEFOS_NET_CLOUDFLARE_DNS_IP
+#define LEONOS_NET_CONFIG_FLAG_ACTIVE RELIEFOS_NET_CONFIG_FLAG_ACTIVE
+#define LEONOS_NET_CONFIG_FLAG_DHCP RELIEFOS_NET_CONFIG_FLAG_DHCP
+#define LEONOS_NET_CONFIG_FLAG_PRESENT RELIEFOS_NET_CONFIG_FLAG_PRESENT
+#define LEONOS_NET_CONFIG_SOURCE_DHCP RELIEFOS_NET_CONFIG_SOURCE_DHCP
+#define LEONOS_NET_CONFIG_SOURCE_NONE RELIEFOS_NET_CONFIG_SOURCE_NONE
+#define LEONOS_NET_CONFIG_SOURCE_STATIC RELIEFOS_NET_CONFIG_SOURCE_STATIC
+#define LEONOS_NET_DEFAULT_DNS_IP RELIEFOS_NET_DEFAULT_DNS_IP
+#define LEONOS_NET_DEFAULT_GATEWAY_IP RELIEFOS_NET_DEFAULT_GATEWAY_IP
+#define LEONOS_NET_DEFAULT_LOCAL_IP RELIEFOS_NET_DEFAULT_LOCAL_IP
+#define LEONOS_NET_DEFAULT_SUBNET_MASK RELIEFOS_NET_DEFAULT_SUBNET_MASK
+#define LEONOS_NET_DEFAULT_TIMEOUT_MS RELIEFOS_NET_DEFAULT_TIMEOUT_MS
+#define LEONOS_NET_DNS_MAX_ADDRESSES RELIEFOS_NET_DNS_MAX_ADDRESSES
+#define LEONOS_NET_DNS_MODE_CLOUDFLARE RELIEFOS_NET_DNS_MODE_CLOUDFLARE
+#define LEONOS_NET_DNS_MODE_CUSTOM RELIEFOS_NET_DNS_MODE_CUSTOM
+#define LEONOS_NET_DNS_MODE_DHCP RELIEFOS_NET_DNS_MODE_DHCP
+#define LEONOS_NET_DNS_MODE_QUERY RELIEFOS_NET_DNS_MODE_QUERY
+#define LEONOS_NET_HOSTNAME_LEN RELIEFOS_NET_HOSTNAME_LEN
+#define LEONOS_NET_HTTP_PATH_LEN RELIEFOS_NET_HTTP_PATH_LEN
+#define LEONOS_NET_HTTP_RESPONSE_MAX RELIEFOS_NET_HTTP_RESPONSE_MAX
+#define LEONOS_NET_IPPROTO_TCP RELIEFOS_NET_IPPROTO_TCP
+#define LEONOS_NET_MAX_TIMEOUT_MS RELIEFOS_NET_MAX_TIMEOUT_MS
+#define LEONOS_NET_SOCKET_MAX RELIEFOS_NET_SOCKET_MAX
+#define LEONOS_NET_SOCK_STREAM RELIEFOS_NET_SOCK_STREAM
+#define LEONOS_NET_STATUS_ARP_TIMEOUT RELIEFOS_NET_STATUS_ARP_TIMEOUT
+#define LEONOS_NET_STATUS_BAD_ARGUMENT RELIEFOS_NET_STATUS_BAD_ARGUMENT
+#define LEONOS_NET_STATUS_DHCP_FAILED RELIEFOS_NET_STATUS_DHCP_FAILED
+#define LEONOS_NET_STATUS_DHCP_TIMEOUT RELIEFOS_NET_STATUS_DHCP_TIMEOUT
+#define LEONOS_NET_STATUS_DNS_FAILED RELIEFOS_NET_STATUS_DNS_FAILED
+#define LEONOS_NET_STATUS_DNS_NO_ANSWER RELIEFOS_NET_STATUS_DNS_NO_ANSWER
+#define LEONOS_NET_STATUS_DNS_TIMEOUT RELIEFOS_NET_STATUS_DNS_TIMEOUT
+#define LEONOS_NET_STATUS_ECHO_TIMEOUT RELIEFOS_NET_STATUS_ECHO_TIMEOUT
+#define LEONOS_NET_STATUS_HTTP_FAILED RELIEFOS_NET_STATUS_HTTP_FAILED
+#define LEONOS_NET_STATUS_HTTP_TOO_LARGE RELIEFOS_NET_STATUS_HTTP_TOO_LARGE
+#define LEONOS_NET_STATUS_NO_ADDRESS RELIEFOS_NET_STATUS_NO_ADDRESS
+#define LEONOS_NET_STATUS_NO_DEVICE RELIEFOS_NET_STATUS_NO_DEVICE
+#define LEONOS_NET_STATUS_NTP_INVALID RELIEFOS_NET_STATUS_NTP_INVALID
+#define LEONOS_NET_STATUS_NTP_TIMEOUT RELIEFOS_NET_STATUS_NTP_TIMEOUT
+#define LEONOS_NET_STATUS_OK RELIEFOS_NET_STATUS_OK
+#define LEONOS_NET_STATUS_PROTOCOL_UNSUPPORTED RELIEFOS_NET_STATUS_PROTOCOL_UNSUPPORTED
+#define LEONOS_NET_STATUS_SOCKET_BAD_HANDLE RELIEFOS_NET_STATUS_SOCKET_BAD_HANDLE
+#define LEONOS_NET_STATUS_SOCKET_CLOSED RELIEFOS_NET_STATUS_SOCKET_CLOSED
+#define LEONOS_NET_STATUS_SOCKET_LIMIT RELIEFOS_NET_STATUS_SOCKET_LIMIT
+#define LEONOS_NET_STATUS_SOCKET_NOT_CONNECTED RELIEFOS_NET_STATUS_SOCKET_NOT_CONNECTED
+#define LEONOS_NET_STATUS_TCP_FAILED RELIEFOS_NET_STATUS_TCP_FAILED
+#define LEONOS_NET_STATUS_TCP_RESET RELIEFOS_NET_STATUS_TCP_RESET
+#define LEONOS_NET_STATUS_TCP_TIMEOUT RELIEFOS_NET_STATUS_TCP_TIMEOUT
+#define LEONOS_NET_STATUS_TLS_FAILED RELIEFOS_NET_STATUS_TLS_FAILED
+#define LEONOS_NET_STATUS_TX_FAILED RELIEFOS_NET_STATUS_TX_FAILED
+#define LEONOS_NET_TCP_CLOSED RELIEFOS_NET_TCP_CLOSED
+#define LEONOS_NET_TCP_ESTABLISHED RELIEFOS_NET_TCP_ESTABLISHED
+#define LEONOS_NET_TCP_SYN_SENT RELIEFOS_NET_TCP_SYN_SENT
+#define LEONOS_NET_TCP_TIME_WAIT RELIEFOS_NET_TCP_TIME_WAIT
+#define LEONOS_UAPI_NET_ABI_H RELIEFOS_UAPI_NET_ABI_H
+#define leonos_net_config reliefos_net_config
+#define leonos_net_connection_info reliefos_net_connection_info
+#define leonos_net_connection_list reliefos_net_connection_list
+#define leonos_net_connections reliefos_net_connections
+#define leonos_net_dhcp reliefos_net_dhcp
+#define leonos_net_dhcp_renew reliefos_net_dhcp_renew
+#define leonos_net_dns reliefos_net_dns
+#define leonos_net_dns_policy reliefos_net_dns_policy
+#define leonos_net_dns_resolve reliefos_net_dns_resolve
+#define leonos_net_get_dns_policy reliefos_net_get_dns_policy
+#define leonos_net_http_get reliefos_net_http_get
+#define leonos_net_ping reliefos_net_ping
+#define leonos_net_set_dns_policy reliefos_net_set_dns_policy
+#define leonos_net_socket_close reliefos_net_socket_close
+#define leonos_net_socket_connect reliefos_net_socket_connect
+#define leonos_net_socket_io reliefos_net_socket_io
+#define leonos_net_socket_open reliefos_net_socket_open
+#define leonos_socket_close reliefos_socket_close
+#define leonos_socket_connect reliefos_socket_connect
+#define leonos_socket_recv reliefos_socket_recv
+#define leonos_socket_send reliefos_socket_send
+#define leonos_socket_tcp reliefos_socket_tcp
+#endif /* LEONOS_NET_H */

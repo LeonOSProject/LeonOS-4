@@ -1,21 +1,21 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
-#include <leonos/api.h>
-#include <leonos/sudo.h>
-#include <leonos/auth.h>
-#include <leonos/fs.h>
-#include <leonos/gui.h>
-#include <leonos/http.h>
+#include <reliefos/api.h>
+#include <reliefos/sudo.h>
+#include <reliefos/auth.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
+#include <reliefos/http.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/launch.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/launch.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 #include <string.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -26,7 +26,7 @@
 
 #define WIZARD_W 480U
 #define WIZARD_H 360U
-#define DOWNLOAD_PATH_MAX LEONOS_FS_PATH_LEN
+#define DOWNLOAD_PATH_MAX RELIEFOS_FS_PATH_LEN
 #define DOWNLOAD_STATUS_PATH_MAX 96U
 #define DOWNLOAD_UPDATE_BYTES (64U * 1024U)
 #define DOWNLOAD_UPDATE_MS 100U
@@ -34,15 +34,15 @@
 #define INSTALL_UPDATE_MS 100U
 #define API_INSTALL_LOG_PATH "/var/log/apiapp-install.log"
 #define TASK_STATE_EXITED 3U
-#define APIAPP_PATH LEONOS_LAYOUT_LEONOS_APPS "/apiapp/apiapp.elf"
+#define APIAPP_PATH RELIEFOS_LAYOUT_RELIEFOS_APPS "/apiapp/apiapp.elf"
 
 static uint32_t wizard_pixels[WIZARD_W * WIZARD_H];
 
 struct install_state {
-    char api_path[LEONOS_API_PATH_MAX];
-    char install_path[LEONOS_API_PATH_MAX];
+    char api_path[RELIEFOS_API_PATH_MAX];
+    char install_path[RELIEFOS_API_PATH_MAX];
     uint32_t create_shortcut;
-    struct leonos_api_info info;
+    struct reliefos_api_info info;
     int step;
 };
 
@@ -121,10 +121,10 @@ static void append_u32(char *dst, uint32_t *pos, uint32_t capacity,
 
 static void download_path_for_user(char *dst, uint32_t capacity)
 {
-    struct leonos_user_info user;
+    struct reliefos_user_info user;
     uint32_t pos = 0;
     dst[0] = 0;
-    if (leonos_auth_current(&user) == 0 && user.home[0]) {
+    if (reliefos_auth_current(&user) == 0 && user.home[0]) {
         append_text(dst, &pos, capacity, user.home);
         append_text(dst, &pos, capacity, "/downloads");
         return;
@@ -134,7 +134,7 @@ static void download_path_for_user(char *dst, uint32_t capacity)
 
 static void build_download_path(char *dst, uint32_t capacity)
 {
-    char directory[LEONOS_FS_PATH_LEN];
+    char directory[RELIEFOS_FS_PATH_LEN];
     uint32_t pos = 0;
     download_path_for_user(directory, sizeof(directory));
     (void)mkdir(directory, 0700);
@@ -166,7 +166,7 @@ static void install_log(const char *message)
     (void)mkdir("/var", 0755);
     (void)mkdir("/var/log", 0755);
     fd = open(API_INSTALL_LOG_PATH,
-              LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_APPEND, 0666);
+              RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_APPEND, 0666);
     if (fd < 0) {
         return;
     }
@@ -180,7 +180,7 @@ static void install_log(const char *message)
 
 static void install_log_path(const char *label, const char *path)
 {
-    char line[LEONOS_FS_PATH_LEN + 48U];
+    char line[RELIEFOS_FS_PATH_LEN + 48U];
     uint32_t pos = 0;
     line[0] = 0;
     append_text(line, &pos, sizeof(line), label);
@@ -239,7 +239,7 @@ static int write_download_status(const char *path, char state,
     append_u32(text, &pos, sizeof(text), total);
     text[pos++] = '\n';
     text[pos] = 0;
-    fd = open(path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
+    fd = open(path, RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0666);
     if (fd < 0) {
         return -1;
     }
@@ -268,7 +268,7 @@ static int read_download_status(const char *path, char *state,
     if (!path || !state || !received || !total) {
         return -1;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return -1;
     }
@@ -294,9 +294,9 @@ static int read_download_status(const char *path, char *state,
 
 static int download_worker_exited(int pid)
 {
-    struct leonos_task_info tasks[LEONOS_TASK_MAX];
+    struct reliefos_task_info tasks[RELIEFOS_TASK_MAX];
     uint64_t tick;
-    int count = leonos_task_snapshot(tasks, LEONOS_TASK_MAX, &tick);
+    int count = reliefos_task_snapshot(tasks, RELIEFOS_TASK_MAX, &tick);
     (void)tick;
     if (count < 0) {
         return 0;
@@ -327,25 +327,25 @@ static int hit(int32_t x, int32_t y, uint32_t rx, uint32_t ry,
            x < (int32_t)(rx + rw) && y < (int32_t)(ry + rh);
 }
 
-static void draw_download_page(struct leonos_ui_surface *ui,
+static void draw_download_page(struct reliefos_ui_surface *ui,
                                const struct download_state *state)
 {
     uint32_t percent = state->total
                            ? (uint32_t)(((uint64_t)state->received * 100U) /
                                         state->total)
                            : 0U;
-    leonos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 32, 24, T("Downloading Application"),
-                   LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 32, 64, state->status, LEONOS_UI_DARK, LEONOS_UI_WHITE);
+    reliefos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 32, 24, T("Downloading Application"),
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 32, 64, state->status, RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     if (state->total) {
-        leonos_ui_progress(ui, 32, 100, WIZARD_W - 64U, 24, percent, 100);
+        reliefos_ui_progress(ui, 32, 100, WIZARD_W - 64U, 24, percent, 100);
     } else {
-        leonos_ui_activity_bar(ui, 32, 107, WIZARD_W - 64U, 10,
-                               (uint32_t)(leonos_uptime_ms() % 1000UL));
+        reliefos_ui_activity_bar(ui, 32, 107, WIZARD_W - 64U, 10,
+                               (uint32_t)(reliefos_uptime_ms() % 1000UL));
     }
-    leonos_ui_text(ui, 32, 144,
-                   T("Downloaded"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+    reliefos_ui_text(ui, 32, 144,
+                   T("Downloaded"), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     {
         char detail[96];
         uint32_t pos = 0;
@@ -356,13 +356,13 @@ static void draw_download_page(struct leonos_ui_surface *ui,
             append_text(detail, &pos, sizeof(detail), T(" of "));
             append_u32(detail, &pos, sizeof(detail), state->total);
         }
-        leonos_ui_text(ui, 32, 168, detail, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+        reliefos_ui_text(ui, 32, 168, detail, RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     }
-    leonos_ui_button(ui, WIZARD_W - 120U, WIZARD_H - 52U, 88U,
-                      LEONOS_UI_BUTTON_H, T("Cancel"), 0);
+    reliefos_ui_button(ui, WIZARD_W - 120U, WIZARD_H - 52U, 88U,
+                      RELIEFOS_UI_BUTTON_H, T("Cancel"), 0);
 }
 
-static void draw_install_progress_page(struct leonos_ui_surface *ui,
+static void draw_install_progress_page(struct reliefos_ui_surface *ui,
                                        const struct download_state *state)
 {
     uint32_t percent = state->total
@@ -371,15 +371,15 @@ static void draw_install_progress_page(struct leonos_ui_surface *ui,
                            : 0U;
     char detail[96];
     uint32_t pos = 0;
-    leonos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 32, 24, T("Installing Application"),
-                   LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 32, 64, state->status, LEONOS_UI_DARK, LEONOS_UI_WHITE);
+    reliefos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 32, 24, T("Installing Application"),
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 32, 64, state->status, RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     if (state->total) {
-        leonos_ui_progress(ui, 32, 100, WIZARD_W - 64U, 24, percent, 100);
+        reliefos_ui_progress(ui, 32, 100, WIZARD_W - 64U, 24, percent, 100);
     } else {
-        leonos_ui_activity_bar(ui, 32, 107, WIZARD_W - 64U, 10,
-                               (uint32_t)(leonos_uptime_ms() % 1000UL));
+        reliefos_ui_activity_bar(ui, 32, 107, WIZARD_W - 64U, 10,
+                               (uint32_t)(reliefos_uptime_ms() % 1000UL));
     }
     detail[0] = 0;
     append_u32(detail, &pos, sizeof(detail), state->received);
@@ -388,10 +388,10 @@ static void draw_install_progress_page(struct leonos_ui_surface *ui,
         append_text(detail, &pos, sizeof(detail), T(" of "));
         append_u32(detail, &pos, sizeof(detail), state->total);
     }
-    leonos_ui_text(ui, 32, 144, detail, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 32, 184,
+    reliefos_ui_text(ui, 32, 144, detail, RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 32, 184,
                    T("Please keep this window open until installation completes."),
-                   LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
 }
 
 static int download_worker_progress(uint32_t received, uint32_t total,
@@ -402,7 +402,7 @@ static int download_worker_progress(uint32_t received, uint32_t total,
     if (!state) {
         return -1;
     }
-    now = leonos_uptime_ms();
+    now = reliefos_uptime_ms();
     if (received && received - state->last_received < DOWNLOAD_UPDATE_BYTES &&
         now - state->last_update_ms < DOWNLOAD_UPDATE_MS) {
         return 0;
@@ -420,7 +420,7 @@ static int install_worker_progress(uint32_t processed, uint32_t total,
     if (!state) {
         return -1;
     }
-    now = leonos_uptime_ms();
+    now = reliefos_uptime_ms();
     if (processed && processed - state->last_processed < INSTALL_UPDATE_BYTES &&
         now - state->last_update_ms < INSTALL_UPDATE_MS) {
         return 0;
@@ -466,16 +466,16 @@ static int run_download_worker(const char *url, const char *output_path,
                                const char *status_path)
 {
     struct download_worker_state state;
-    struct leonos_http_response response;
+    struct reliefos_http_response response;
     int ret;
     memset(&state, 0, sizeof(state));
     copy_text(state.status_path, sizeof(state.status_path), status_path);
     if (write_download_status(state.status_path, 'R', 0, 0) < 0) {
         return 1;
     }
-    ret = leonos_http_download(url, output_path, LEONOS_HTTP_DEFAULT_TIMEOUT_MS,
+    ret = reliefos_http_download(url, output_path, RELIEFOS_HTTP_DEFAULT_TIMEOUT_MS,
                                download_worker_progress, &state, &response);
-    if (ret == 0 && response.net_status == LEONOS_NET_STATUS_OK &&
+    if (ret == 0 && response.net_status == RELIEFOS_NET_STATUS_OK &&
         response.http_status >= 200U && response.http_status < 300U) {
         (void)write_download_status(state.status_path, 'D', response.body_len,
                                     response.content_length);
@@ -505,7 +505,7 @@ static int run_install_worker(const char *api_path, const char *install_path,
         return 1;
     }
     install_log("calling leonos_api_install_with_progress");
-    ret = leonos_api_install_with_progress(api_path, install_path,
+    ret = reliefos_api_install_with_progress(api_path, install_path,
                                             create_shortcut,
                                             install_worker_progress, &state);
     install_log_progress(state.last_processed, state.total);
@@ -520,8 +520,8 @@ static int install_api_with_progress(int window_id, const char *api_path,
                                      uint32_t create_shortcut)
 {
     struct download_state state;
-    struct leonos_gui_app_event event;
-    struct leonos_ui_surface ui;
+    struct reliefos_gui_app_event event;
+    struct reliefos_ui_surface ui;
     struct install_progress progress;
     size_t received = 0;
     char *argv[6];
@@ -535,7 +535,7 @@ static int install_api_with_progress(int window_id, const char *api_path,
     install_log_path("install path: ", install_path);
     copy_text(state.status, sizeof(state.status),
               T("Authorizing installation..."));
-    leonos_ui_bind(&ui, wizard_pixels, WIZARD_W, WIZARD_H, WIZARD_W);
+    reliefos_ui_bind(&ui, wizard_pixels, WIZARD_W, WIZARD_H, WIZARD_W);
     argv[0] = APIAPP_PATH;
     argv[1] = "--install-worker";
     argv[2] = (char *)api_path;
@@ -544,7 +544,7 @@ static int install_api_with_progress(int window_id, const char *api_path,
     argv[5] = 0;
     if (pipe2(pair, O_CLOEXEC) < 0) return 0;
     if (fcntl(pair[0], F_SETFL, O_NONBLOCK) < 0 ||
-        leonos_sudo_run_stdout(NULL, argv, pair[1], &child) < 0) {
+        reliefos_sudo_run_stdout(NULL, argv, pair[1], &child) < 0) {
         int error = errno;
         close(pair[0]); close(pair[1]);
         errno = error;
@@ -564,7 +564,7 @@ static int install_api_with_progress(int window_id, const char *api_path,
             received = 0;
             copy_text(state.status, sizeof(state.status), T("Installing..."));
         }
-        if (leonos_sudo_wait(child, &worker_status) == 0) {
+        if (reliefos_sudo_wait(child, &worker_status) == 0) {
             int complete = WIFEXITED(worker_status) && WEXITSTATUS(worker_status) == 0;
             close(pair[0]);
             install_log_result("install worker exit status: ", worker_status);
@@ -577,28 +577,28 @@ static int install_api_with_progress(int window_id, const char *api_path,
             return 0;
         }
         draw_install_progress_page(&ui, &state);
-        leonos_gui_present_window((uint32_t)window_id, WIZARD_W, WIZARD_H,
+        reliefos_gui_present_window((uint32_t)window_id, WIZARD_W, WIZARD_H,
                                   WIZARD_W, wizard_pixels);
         event.window_id = (uint32_t)window_id;
-        (void)leonos_gui_wait_app_event(&event, 50U);
+        (void)reliefos_gui_wait_app_event(&event, 50U);
     }
 }
 
 static int wait_for_download_close(struct download_state *state,
-                                   struct leonos_ui_surface *ui)
+                                   struct reliefos_ui_surface *ui)
 {
-    struct leonos_gui_app_event event;
+    struct reliefos_gui_app_event event;
     for (;;) {
         draw_download_page(ui, state);
-        leonos_gui_present_window((uint32_t)state->window_id, WIZARD_W,
+        reliefos_gui_present_window((uint32_t)state->window_id, WIZARD_W,
                                   WIZARD_H, WIZARD_W, wizard_pixels);
         event.window_id = (uint32_t)state->window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0 &&
-            (event.type == LEONOS_GUI_APP_EVENT_CLOSE ||
-             (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON &&
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0 &&
+            (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE ||
+             (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON &&
               (event.buttons & 1U) &&
               hit(event.x, event.y, WIZARD_W - 120U, WIZARD_H - 52U,
-                  88U, LEONOS_UI_BUTTON_H)))) {
+                  88U, RELIEFOS_UI_BUTTON_H)))) {
             return 0;
         }
     }
@@ -607,8 +607,8 @@ static int wait_for_download_close(struct download_state *state,
 static int download_api(const char *url, char *api_path, uint32_t capacity)
 {
     struct download_state state;
-    struct leonos_gui_app_event event;
-    struct leonos_ui_surface ui;
+    struct reliefos_gui_app_event event;
+    struct reliefos_ui_surface ui;
     char status_state = 0;
     char *argv[6];
     int worker_status;
@@ -620,18 +620,18 @@ static int download_api(const char *url, char *api_path, uint32_t capacity)
         return 0;
     }
     unlink(state.status_path);
-    state.window_id = leonos_gui_create_app_window_ex(
+    state.window_id = reliefos_gui_create_app_window_ex(
         T("API Installer"),
         T("Downloading application"),
-        WIZARD_W, WIZARD_H, LEONOS_GUI_WINDOW_NO_RESIZE);
+        WIZARD_W, WIZARD_H, RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (state.window_id <= 0) {
         return 0;
     }
     copy_text(state.status, sizeof(state.status),
               T("Preparing download..."));
-    leonos_ui_bind(&ui, wizard_pixels, WIZARD_W, WIZARD_H, WIZARD_W);
+    reliefos_ui_bind(&ui, wizard_pixels, WIZARD_W, WIZARD_H, WIZARD_W);
     draw_download_page(&ui, &state);
-    leonos_gui_present_window((uint32_t)state.window_id, WIZARD_W, WIZARD_H,
+    reliefos_gui_present_window((uint32_t)state.window_id, WIZARD_W, WIZARD_H,
                               WIZARD_W, wizard_pixels);
     argv[0] = APIAPP_PATH;
     argv[1] = "--download-worker";
@@ -639,12 +639,12 @@ static int download_api(const char *url, char *api_path, uint32_t capacity)
     argv[3] = state.output_path;
     argv[4] = state.status_path;
     argv[5] = 0;
-    state.worker_pid = leonos_spawn_argv(APIAPP_PATH, argv);
+    state.worker_pid = reliefos_spawn_argv(APIAPP_PATH, argv);
     if (state.worker_pid < 0) {
         copy_text(state.status, sizeof(state.status),
                   T("Could not start download"));
         (void)wait_for_download_close(&state, &ui);
-        leonos_gui_destroy_app_window((uint32_t)state.window_id);
+        reliefos_gui_destroy_app_window((uint32_t)state.window_id);
         return 0;
     }
 
@@ -675,28 +675,28 @@ static int download_api(const char *url, char *api_path, uint32_t capacity)
             if (download_complete) {
                 copy_text(api_path, capacity, state.output_path);
                 unlink(state.status_path);
-                leonos_gui_destroy_app_window((uint32_t)state.window_id);
+                reliefos_gui_destroy_app_window((uint32_t)state.window_id);
                 return 1;
             }
             break;
         }
         draw_download_page(&ui, &state);
-        leonos_gui_present_window((uint32_t)state.window_id, WIZARD_W,
+        reliefos_gui_present_window((uint32_t)state.window_id, WIZARD_W,
                                   WIZARD_H, WIZARD_W, wizard_pixels);
         event.window_id = (uint32_t)state.window_id;
-        if (leonos_gui_wait_app_event(&event, 50U) > 0 &&
-            (event.type == LEONOS_GUI_APP_EVENT_CLOSE ||
-             (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON &&
+        if (reliefos_gui_wait_app_event(&event, 50U) > 0 &&
+            (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE ||
+             (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON &&
               (event.buttons & 1U) &&
               hit(event.x, event.y, WIZARD_W - 120U, WIZARD_H - 52U,
-                  88U, LEONOS_UI_BUTTON_H)))) {
+                  88U, RELIEFOS_UI_BUTTON_H)))) {
             state.cancelled = 1;
             break;
         }
     }
     if (state.worker_pid > 0) {
         if (state.cancelled) {
-            (void)leonos_task_kill((uint32_t)state.worker_pid);
+            (void)reliefos_task_kill((uint32_t)state.worker_pid);
         }
     }
     cleanup_download(&state);
@@ -704,101 +704,101 @@ static int download_api(const char *url, char *api_path, uint32_t capacity)
               state.cancelled ? T("Download cancelled")
                               : T("Download failed"));
     (void)wait_for_download_close(&state, &ui);
-    leonos_gui_destroy_app_window((uint32_t)state.window_id);
+    reliefos_gui_destroy_app_window((uint32_t)state.window_id);
     return 0;
 }
 
-static void draw_welcome_page(struct leonos_ui_surface *ui,
-                              const struct leonos_api_info *info)
+static void draw_welcome_page(struct reliefos_ui_surface *ui,
+                              const struct reliefos_api_info *info)
 {
-    leonos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 32, 24, T("Application Installer"),
-                   LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 32, 64,
+    reliefos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 32, 24, T("Application Installer"),
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 32, 64,
                    T("Ready to install:"),
-                   LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_text_clipped(ui, 32, 88, WIZARD_W - 64U, info->name,
-                           LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text_clipped(ui, 32, 88, WIZARD_W - 64U, info->name,
+                           RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     if (info->version[0]) {
-        leonos_ui_text(ui, 32, 112,
+        reliefos_ui_text(ui, 32, 112,
                        T("Version:"),
-                       LEONOS_UI_DARK, LEONOS_UI_WHITE);
-        leonos_ui_text(ui, 120, 112, info->version,
-                       LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+                       RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+        reliefos_ui_text(ui, 120, 112, info->version,
+                       RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     }
-    leonos_ui_text(ui, 32, 144,
+    reliefos_ui_text(ui, 32, 144,
                    T("Install location:"),
-                   LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_text_clipped(ui, 32, 168, WIZARD_W - 64U,
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text_clipped(ui, 32, 168, WIZARD_W - 64U,
                            info->default_path,
-                           LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_button(ui, WIZARD_W - 120U, WIZARD_H - 52U, 88U,
-                     LEONOS_UI_BUTTON_H,
+                           RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_button(ui, WIZARD_W - 120U, WIZARD_H - 52U, 88U,
+                     RELIEFOS_UI_BUTTON_H,
                      T("Next >"), 0);
-    leonos_ui_button(ui, WIZARD_W - 216U, WIZARD_H - 52U, 88U,
-                     LEONOS_UI_BUTTON_H,
+    reliefos_ui_button(ui, WIZARD_W - 216U, WIZARD_H - 52U, 88U,
+                     RELIEFOS_UI_BUTTON_H,
                      T("Cancel"), 0);
 }
 
-static void draw_install_page(struct leonos_ui_surface *ui,
+static void draw_install_page(struct reliefos_ui_surface *ui,
                               struct install_state *state)
 {
-    leonos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 32, 24,
+    reliefos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 32, 24,
                    T("Install Options"),
-                   LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 32, 64,
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 32, 64,
                    T("Install path:"),
-                   LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_text_clipped(ui, 32, 88, WIZARD_W - 64U, state->install_path,
-                           LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_checkbox(ui, 32, 132,
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text_clipped(ui, 32, 88, WIZARD_W - 64U, state->install_path,
+                           RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_checkbox(ui, 32, 132,
                        T("Create desktop shortcut"),
                        (int)state->create_shortcut, 0);
-    leonos_ui_button(ui, WIZARD_W - 120U, WIZARD_H - 52U, 88U,
-                     LEONOS_UI_BUTTON_H,
+    reliefos_ui_button(ui, WIZARD_W - 120U, WIZARD_H - 52U, 88U,
+                     RELIEFOS_UI_BUTTON_H,
                      T("Install"), 0);
-    leonos_ui_button(ui, WIZARD_W - 216U, WIZARD_H - 52U, 88U,
-                     LEONOS_UI_BUTTON_H,
+    reliefos_ui_button(ui, WIZARD_W - 216U, WIZARD_H - 52U, 88U,
+                     RELIEFOS_UI_BUTTON_H,
                      T("Cancel"), 0);
-    leonos_ui_button(ui, WIZARD_W - 312U, WIZARD_H - 52U, 88U,
-                     LEONOS_UI_BUTTON_H,
+    reliefos_ui_button(ui, WIZARD_W - 312U, WIZARD_H - 52U, 88U,
+                     RELIEFOS_UI_BUTTON_H,
                      T("< Back"), 0);
 }
 
-static void draw_finish_page(struct leonos_ui_surface *ui, int success,
+static void draw_finish_page(struct reliefos_ui_surface *ui, int success,
                              const char *name)
 {
-    leonos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, LEONOS_UI_WHITE);
+    reliefos_ui_rect(ui, 0, 0, WIZARD_W, WIZARD_H, RELIEFOS_UI_WHITE);
     if (success) {
-        leonos_ui_text(ui, 32, 24,
+        reliefos_ui_text(ui, 32, 24,
                        T("Installation Complete"),
-                       LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-        leonos_ui_text(ui, 32, 64,
+                       RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+        reliefos_ui_text(ui, 32, 64,
                        T("Successfully installed:"),
-                       LEONOS_UI_DARK, LEONOS_UI_WHITE);
-        leonos_ui_text_clipped(ui, 32, 88, WIZARD_W - 64U, name,
-                               LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+                       RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+        reliefos_ui_text_clipped(ui, 32, 88, WIZARD_W - 64U, name,
+                               RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     } else {
-        leonos_ui_text(ui, 32, 24,
+        reliefos_ui_text(ui, 32, 24,
                        T("Installation Failed"),
-                       LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-        leonos_ui_text(ui, 32, 64,
+                       RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+        reliefos_ui_text(ui, 32, 64,
                        T("Could not install:"),
-                       LEONOS_UI_DARK, LEONOS_UI_WHITE);
-        leonos_ui_text_clipped(ui, 32, 88, WIZARD_W - 64U, name,
-                               LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+                       RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+        reliefos_ui_text_clipped(ui, 32, 88, WIZARD_W - 64U, name,
+                               RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     }
-    leonos_ui_button(ui, WIZARD_W - 120U, WIZARD_H - 52U, 88U,
-                     LEONOS_UI_BUTTON_H,
+    reliefos_ui_button(ui, WIZARD_W - 120U, WIZARD_H - 52U, 88U,
+                     RELIEFOS_UI_BUTTON_H,
                      T("Close"), 0);
 }
 
 static int run_wizard(const char *api_path)
 {
     struct install_state state;
-    struct leonos_gui_app_event event;
-    struct leonos_ui_surface ui;
+    struct reliefos_gui_app_event event;
+    struct reliefos_ui_surface ui;
     int window_id;
     int done = 0;
     int result = 0;
@@ -812,24 +812,24 @@ static int run_wizard(const char *api_path)
     }
     memcpy(state.api_path, api_path, api_path_len + 1U);
 
-    if (!leonos_api_parse_info(api_path, &state.info)) {
+    if (!reliefos_api_parse_info(api_path, &state.info)) {
         return 1;
     }
     memcpy(state.install_path, state.info.default_path,
            strlen(state.info.default_path) + 1U);
     state.create_shortcut = state.info.desktop_shortcut;
 
-    window_id = leonos_gui_create_app_window_ex(
+    window_id = reliefos_gui_create_app_window_ex(
         T("API Installer"),
         T("API Installer"),
-        WIZARD_W, WIZARD_H, LEONOS_GUI_WINDOW_NO_RESIZE);
+        WIZARD_W, WIZARD_H, RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         return 1;
     }
-    leonos_ui_bind(&ui, wizard_pixels, WIZARD_W, WIZARD_H, WIZARD_W);
+    reliefos_ui_bind(&ui, wizard_pixels, WIZARD_W, WIZARD_H, WIZARD_W);
 
     while (!done) {
-        leonos_ui_rect(&ui, 0, 0, WIZARD_W, WIZARD_H, LEONOS_UI_WHITE);
+        reliefos_ui_rect(&ui, 0, 0, WIZARD_W, WIZARD_H, RELIEFOS_UI_WHITE);
 
         if (step == 0) {
             draw_welcome_page(&ui, &state.info);
@@ -838,34 +838,34 @@ static int run_wizard(const char *api_path)
         } else {
             draw_finish_page(&ui, result, state.info.name);
         }
-        leonos_gui_present_window((uint32_t)window_id, WIZARD_W, WIZARD_H,
+        reliefos_gui_present_window((uint32_t)window_id, WIZARD_W, WIZARD_H,
                                   WIZARD_W, wizard_pixels);
 
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 break;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON &&
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON &&
                 (event.buttons & 1U)) {
                 if (step == 0) {
                     if (event.x >= (int32_t)(WIZARD_W - 120) &&
                         event.x < (int32_t)(WIZARD_W - 32) &&
                         event.y >= (int32_t)(WIZARD_H - 52) &&
-                        event.y < (int32_t)(WIZARD_H - 52 + LEONOS_UI_BUTTON_H)) {
+                        event.y < (int32_t)(WIZARD_H - 52 + RELIEFOS_UI_BUTTON_H)) {
                         step = 1;
                     }
                     if (event.x >= (int32_t)(WIZARD_W - 216) &&
                         event.x < (int32_t)(WIZARD_W - 128) &&
                         event.y >= (int32_t)(WIZARD_H - 52) &&
-                        event.y < (int32_t)(WIZARD_H - 52 + LEONOS_UI_BUTTON_H)) {
+                        event.y < (int32_t)(WIZARD_H - 52 + RELIEFOS_UI_BUTTON_H)) {
                         done = 1;
                     }
                 } else if (step == 1) {
                     if (event.x >= (int32_t)(WIZARD_W - 120) &&
                         event.x < (int32_t)(WIZARD_W - 32) &&
                         event.y >= (int32_t)(WIZARD_H - 52) &&
-                        event.y < (int32_t)(WIZARD_H - 52 + LEONOS_UI_BUTTON_H)) {
+                        event.y < (int32_t)(WIZARD_H - 52 + RELIEFOS_UI_BUTTON_H)) {
                         result = install_api_with_progress(
                             window_id, state.api_path, state.install_path,
                             state.create_shortcut);
@@ -874,13 +874,13 @@ static int run_wizard(const char *api_path)
                     if (event.x >= (int32_t)(WIZARD_W - 216) &&
                         event.x < (int32_t)(WIZARD_W - 128) &&
                         event.y >= (int32_t)(WIZARD_H - 52) &&
-                        event.y < (int32_t)(WIZARD_H - 52 + LEONOS_UI_BUTTON_H)) {
+                        event.y < (int32_t)(WIZARD_H - 52 + RELIEFOS_UI_BUTTON_H)) {
                         done = 1;
                     }
                     if (event.x >= (int32_t)(WIZARD_W - 312) &&
                         event.x < (int32_t)(WIZARD_W - 224) &&
                         event.y >= (int32_t)(WIZARD_H - 52) &&
-                        event.y < (int32_t)(WIZARD_H - 52 + LEONOS_UI_BUTTON_H)) {
+                        event.y < (int32_t)(WIZARD_H - 52 + RELIEFOS_UI_BUTTON_H)) {
                         step = 0;
                     }
                     if (event.x >= 32 &&
@@ -894,23 +894,23 @@ static int run_wizard(const char *api_path)
                     if (event.x >= (int32_t)(WIZARD_W - 120) &&
                         event.x < (int32_t)(WIZARD_W - 32) &&
                         event.y >= (int32_t)(WIZARD_H - 52) &&
-                        event.y < (int32_t)(WIZARD_H - 52 + LEONOS_UI_BUTTON_H)) {
+                        event.y < (int32_t)(WIZARD_H - 52 + RELIEFOS_UI_BUTTON_H)) {
                         done = 1;
                     }
                 }
             }
         }
     }
-    leonos_gui_destroy_app_window((uint32_t)window_id);
+    reliefos_gui_destroy_app_window((uint32_t)window_id);
     return result ? 0 : 1;
 }
 
 int main(int argc, char *argv[])
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    char downloaded_path[LEONOS_API_PATH_MAX];
+    char downloaded_path[RELIEFOS_API_PATH_MAX];
     if (argc == 5 && argv && argv[1] && argv[2] && argv[3] && argv[4] &&
         strcmp(argv[1], "--download-worker") == 0) {
         return run_download_worker(argv[2], argv[3], argv[4]);

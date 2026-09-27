@@ -13,6 +13,8 @@ cp -a "$raw" "$work/installed-raw"
 for app in desktop settings; do
     cp "$out/userland-installer-policy/$app.elf" "$work/installed-raw/usr/lib/leonos/apps/$app/$app.elf"
 done
+mkdir -p "$work/installed-raw/usr/lib/reliefos"
+cp "$out/installer/lib/libreliefos.so.2" "$work/installed-raw/usr/lib/reliefos/libreliefos.so.2"
 cp "$out/installer/lib/libleonos.so.2" "$work/installed-raw/usr/lib/leonos/libleonos.so.2"
 rm -f "$work/installed-raw/etc/license.conf" "$work/installed-raw/etc/install.id"
 package_root() {
@@ -26,6 +28,8 @@ mkdir -p "$work/runtime-raw/usr/lib/leonos/apps/installer"
 cp "$out/userland/installer.elf" "$work/runtime-raw/usr/lib/leonos/apps/installer/installer.elf"
 chmod 755 "$work/runtime-raw/usr/lib/leonos/apps/installer/installer.elf"
 ln -s ../lib/leonos/apps/installer/installer.elf "$work/runtime-raw/usr/bin/installer"
+mkdir -p "$work/runtime-raw/usr/lib/reliefos"
+cp "$out/installer/lib/libreliefos.so.2" "$work/runtime-raw/usr/lib/reliefos/libreliefos.so.2"
 cp "$out/installer/lib/libleonos.so.2" "$work/runtime-raw/usr/lib/leonos/libleonos.so.2"
 mkdir -p "$work/runtime-raw/usr/lib/leonos/apps/gptinit" "$work/runtime-raw/root" "$work/runtime-raw/etc/leonos"
 cp "$out/userland-installer/gptinit.elf" "$work/runtime-raw/usr/lib/leonos/apps/gptinit/gptinit.elf"

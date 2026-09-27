@@ -1,31 +1,31 @@
-#ifndef LEONOS_BROWSER_APP_H
-#define LEONOS_BROWSER_APP_H
+#ifndef RELIEFOS_BROWSER_APP_H
+#define RELIEFOS_BROWSER_APP_H
 
-#include <leonos/fs.h>
-#include <leonos/gui.h>
-#include <leonos/auth.h>
-#include <leonos/http.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
+#include <reliefos/auth.h>
+#include <reliefos/http.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/launch.h>
-#include <leonos/net_service.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/system.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/launch.h>
+#include <reliefos/net_service.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/system.h>
+#include <reliefos/ui.h>
 
 #include "litehtml_core.h"
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 
 #define BROWSER_INITIAL_W 860U
 #define BROWSER_INITIAL_H 600U
 #define BROWSER_MIN_W 560U
 #define BROWSER_MIN_H 360U
-#define BROWSER_MAX_W LEONOS_GUI_MAX_WINDOW_WIDTH
-#define BROWSER_MAX_H LEONOS_GUI_MAX_WINDOW_HEIGHT
-#define BROWSER_URL_CAP LEONOS_FS_PATH_LEN
+#define BROWSER_MAX_W RELIEFOS_GUI_MAX_WINDOW_WIDTH
+#define BROWSER_MAX_H RELIEFOS_GUI_MAX_WINDOW_HEIGHT
+#define BROWSER_URL_CAP RELIEFOS_FS_PATH_LEN
 #define BROWSER_SOURCE_CAP 8192U
 #define BROWSER_STATUS_CAP 192U
 #define BROWSER_TITLE_CAP 72U
@@ -53,11 +53,11 @@
 #define BROWSER_BOOKMARK_TITLE_CAP 64U
 #define BROWSER_FIND_CAP 64U
 #define BROWSER_FORM_INPUT_CELLS 22U
-#define BROWSER_FORM_WIDGET_H LEONOS_UI_BUTTON_H
+#define BROWSER_FORM_WIDGET_H RELIEFOS_UI_BUTTON_H
 #define BROWSER_MENU_H 26U
 #define BROWSER_TOOLBAR_H 30U
 #define BROWSER_ADDR_H 34U
-#define BROWSER_MENU_ITEM_H (LEONOS_FONT_H + 8U)
+#define BROWSER_MENU_ITEM_H (RELIEFOS_FONT_H + 8U)
 #define BROWSER_MENU_ROW_STEP 26U
 #define BROWSER_MENU_FILE_X 8U
 #define BROWSER_MENU_FILE_W 52U
@@ -70,7 +70,7 @@
 #define BROWSER_MENU_HELP_X 280U
 #define BROWSER_MENU_HELP_W 52U
 #define BROWSER_PAGE_X 8U
-#define BROWSER_LINE_H (LEONOS_FONT_H + 2U)
+#define BROWSER_LINE_H (RELIEFOS_FONT_H + 2U)
 #define BROWSER_SCROLL_W 18U
 #define BROWSER_NAV_GAP 4U
 #define BROWSER_BACK_X 8U
@@ -82,8 +82,8 @@
 #define BROWSER_GO_W 54U
 #define BROWSER_DEVTOOLS_MIN_H 118U
 #define BROWSER_DEVTOOLS_MAX_H 142U
-#define BROWSER_FONT_PATH LEONOS_PATH_BROWSER_FONT
-#define BROWSER_FONT_FALLBACK_PATH LEONOS_PATH_BROWSER_CJK_FONT
+#define BROWSER_FONT_PATH RELIEFOS_PATH_BROWSER_FONT
+#define BROWSER_FONT_FALLBACK_PATH RELIEFOS_PATH_BROWSER_CJK_FONT
 #define BROWSER_USER_AGENT                                                   \
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "        \
     "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
@@ -202,12 +202,12 @@ struct browser_basic_auth {
 };
 
 extern uint32_t pixels[BROWSER_MAX_W * BROWSER_MAX_H];
-extern struct leonos_ui_surface ui;
+extern struct reliefos_ui_surface ui;
 extern int window_id;
 extern uint32_t view_w;
 extern uint32_t view_h;
 extern char address_input[BROWSER_URL_CAP];
-extern struct leonos_ui_edit_state address_edit;
+extern struct reliefos_ui_edit_state address_edit;
 extern char status_text[BROWSER_STATUS_CAP];
 extern char page_title[BROWSER_TITLE_CAP];
 extern char current_location[BROWSER_URL_CAP];
@@ -234,8 +234,8 @@ extern uint8_t browser_should_exit;
 extern uint8_t browser_embedded;
 extern uint8_t browser_form_focus_active;
 extern uint32_t browser_form_focus_control;
-extern struct leonos_ui_edit_state browser_form_edit_state;
-extern struct leonos_ui_toast_state browser_toast;
+extern struct reliefos_ui_edit_state browser_form_edit_state;
+extern struct reliefos_ui_toast_state browser_toast;
 extern struct browser_bookmark browser_bookmarks[BROWSER_MAX_BOOKMARKS];
 extern uint32_t browser_bookmark_count;
 extern char browser_find_query[BROWSER_FIND_CAP];
@@ -288,13 +288,13 @@ int browser_http_get_with_cookies(const char *url, uint32_t timeout_ms,
                                   uint32_t response_body_capacity,
                                   char *response_headers,
                                   uint32_t response_headers_capacity,
-                                  struct leonos_http_response *response);
+                                  struct reliefos_http_response *response);
 int browser_http_post_with_cookies(const char *url, const char *body,
                                    char *response_body,
                                    uint32_t response_body_capacity,
                                    char *response_headers,
                                    uint32_t response_headers_capacity,
-                                   struct leonos_http_response *response);
+                                   struct reliefos_http_response *response);
 void load_local_file(const char *path);
 void navigate_to(const char *input, uint8_t add_to_history);
 void browser_start_download(const char *url);
@@ -341,10 +341,10 @@ void draw_browser(void);
 void present_browser(void);
 void browser_embed_init(uint32_t width, uint32_t height, const char *initial_url);
 void browser_embed_resize(uint32_t width, uint32_t height);
-void browser_embed_draw(struct leonos_ui_surface *surface);
-void browser_embed_handle_mouse_button(struct leonos_gui_app_event *event);
-void browser_embed_handle_mouse_wheel(struct leonos_gui_app_event *event);
-void browser_embed_handle_key(struct leonos_gui_app_event *event);
+void browser_embed_draw(struct reliefos_ui_surface *surface);
+void browser_embed_handle_mouse_button(struct reliefos_gui_app_event *event);
+void browser_embed_handle_mouse_wheel(struct reliefos_gui_app_event *event);
+void browser_embed_handle_key(struct reliefos_gui_app_event *event);
 int browser_embed_should_exit(void);
 void browser_embed_clear_exit(void);
 int browser_embed_input_active(void);
@@ -358,21 +358,21 @@ int browser_form_input_active(void);
 int browser_form_line_has_control(const struct browser_line *line);
 int browser_form_control_from_href(const char *href, uint32_t *control_index);
 void browser_form_control_rect(uint32_t control_index,
-                               struct leonos_ui_rect *rect);
+                               struct reliefos_ui_rect *rect);
 void browser_draw_form_control(uint32_t x, uint32_t y, uint32_t w,
                                uint32_t control_index);
 int browser_form_handle_click(const char *href, int32_t mx, int32_t my);
-int browser_form_handle_key(struct leonos_gui_app_event *event);
+int browser_form_handle_key(struct reliefos_gui_app_event *event);
 int handle_toolbar_click(int32_t x, int32_t y);
 int address_edit_hit(int32_t x, int32_t y);
 void select_address_text(void);
 int handle_menu_click(int32_t x, int32_t y);
-void handle_mouse_button(struct leonos_gui_app_event *event);
-void handle_key(struct leonos_gui_app_event *event);
+void handle_mouse_button(struct reliefos_gui_app_event *event);
+void handle_key(struct reliefos_gui_app_event *event);
 void browser_bookmarks_load(void);
 void browser_bookmarks_add_current(void);
 int browser_show_bookmark_manager(char *out_url, uint32_t out_cap);
-void browser_bookmarks_build_menu(struct leonos_ui_context_menu_item *items,
+void browser_bookmarks_build_menu(struct reliefos_ui_context_menu_item *items,
                                   uint32_t capacity, uint32_t *out_count);
 int browser_bookmarks_handle_command(uint32_t command, char *out_url,
                                      uint32_t out_cap);

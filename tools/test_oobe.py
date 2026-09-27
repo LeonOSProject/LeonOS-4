@@ -8,7 +8,7 @@ from test_installer_setup import CRYPTO
 AUTH_SOURCES = ["userland/apps/authd/accounts.c", "userland/runtime/src/auth_password.c", *CRYPTO]
 AUTH_FLAGS = ["-Ithird_party/mbedtls/include", "-idirafter", "userland/runtime/include",
               "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-              '-DMBEDTLS_CONFIG_FILE="leonos_mbedtls_config.h"']
+              '-DMBEDTLS_CONFIG_FILE="reliefos_mbedtls_config.h"']
 
 ROOT = Path(__file__).resolve().parents[1]
 

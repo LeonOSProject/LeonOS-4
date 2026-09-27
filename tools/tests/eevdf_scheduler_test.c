@@ -41,13 +41,13 @@ int main(void)
         tasks[i]->kind = TASK_KIND_USER;
         tasks[i]->state = TASK_READY;
         tasks[i]->running_cpu = SCHED_CPU_NONE;
-        tasks[i]->entry = NTCLKS_USER_BASE;
-        tasks[i]->stack_top = NTCLKS_USER_TOP - 4096;
+        tasks[i]->entry = RELIEFNT_USER_BASE;
+        tasks[i]->stack_top = RELIEFNT_USER_TOP - 4096;
         tasks[i]->stack_low = tasks[i]->stack_top - 4096;
         tasks[i]->as.cr3 = 4096;
         tasks[i]->frame = (struct trap_frame){.rip = tasks[i]->entry,
-            .rsp = tasks[i]->stack_top - 16, .cs = NTCLKS_USER_CS,
-            .ss = NTCLKS_USER_DS, .rflags = 1ULL << 9};
+            .rsp = tasks[i]->stack_top - 16, .cs = RELIEFNT_USER_CS,
+            .ss = RELIEFNT_USER_DS, .rflags = 1ULL << 9};
         tasks[i]->affinity_mask = 1;
     }
     tasks[1]->priority = 5;

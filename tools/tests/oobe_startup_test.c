@@ -4,21 +4,21 @@
 #include <time.h>
 #include <unistd.h>
 
-#define wait4 leonos_decl_wait4
-int leonos_decl_wait4(int pid, int *status, int options, void *usage);
+#define wait4 reliefos_decl_wait4
+int reliefos_decl_wait4(int pid, int *status, int options, void *usage);
 #include "../../userland/apps/desktop/input.c"
 #undef wait4
 
 uint8_t desktop_startup_launched;
 static int completion[2];
 
-int leonos_decl_wait4(int pid, int *status, int options, void *usage)
+int reliefos_decl_wait4(int pid, int *status, int options, void *usage)
 {
     assert(options == WNOHANG && !usage);
     return waitpid(pid, status, options);
 }
 
-int leonos_startup_launch_current_user(void)
+int reliefos_startup_launch_current_user(void)
 {
     /* Model a session service occupied by a slow operation. */
     usleep(350000);

@@ -1,23 +1,52 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/system.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_SYSTEM_H
 #define LEONOS_SYSTEM_H
+#include <reliefos/system.h>
 
-/*
- * Userland system client API. The wire types and constants moved to the
- * kernel UAPI (<leonos/system_abi.h>); this header re-exports them so existing
- * `#include <leonos/system.h>` callers keep working.
- */
-#include <leonos/system_abi.h>
-#include <leonos/kernel_debug.h>
-#include <stdint.h>
-
-int leonos_system_info(struct leonos_system_info *info);
-int leonos_perf_info(struct leonos_perf_info *info);
-int leonos_task_affinity_get(uint32_t pid, uint64_t *mask);
-int leonos_task_affinity_set(uint32_t pid, uint64_t mask);
-int leonos_time_info(struct leonos_time_info *info);
-int leonos_time_ntp_sync(uint32_t timeout_ms, struct leonos_time_sync *result);
-int leonos_machine_identity(struct leonos_machine_identity *identity);
-int leonos_system_reboot(void);
-int leonos_system_shutdown(void);
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_KERNEL_DEBUG_CONTROL_ARM_NEXT_BOOT RELIEFOS_KERNEL_DEBUG_CONTROL_ARM_NEXT_BOOT
+#define LEONOS_KERNEL_DEBUG_CONTROL_CLEAR RELIEFOS_KERNEL_DEBUG_CONTROL_CLEAR
+#define LEONOS_KERNEL_DEBUG_CONTROL_GET_STATE RELIEFOS_KERNEL_DEBUG_CONTROL_GET_STATE
+#define LEONOS_KERNEL_DEBUG_CONTROL_SET_ENABLED RELIEFOS_KERNEL_DEBUG_CONTROL_SET_ENABLED
+#define LEONOS_KERNEL_DEBUG_H RELIEFOS_KERNEL_DEBUG_H
+#define LEONOS_KERNEL_DEBUG_STATE_ENABLED RELIEFOS_KERNEL_DEBUG_STATE_ENABLED
+#define LEONOS_KERNEL_DEBUG_STATE_NEXT_BOOT RELIEFOS_KERNEL_DEBUG_STATE_NEXT_BOOT
+#define LEONOS_KERNEL_DEBUG_VERSION RELIEFOS_KERNEL_DEBUG_VERSION
+#define LEONOS_MACHINE_IDENTITY_FLAG_BOOT_DISK_GUID RELIEFOS_MACHINE_IDENTITY_FLAG_BOOT_DISK_GUID
+#define LEONOS_MACHINE_IDENTITY_FLAG_BOOT_PARTITION_GUID RELIEFOS_MACHINE_IDENTITY_FLAG_BOOT_PARTITION_GUID
+#define LEONOS_MACHINE_IDENTITY_FLAG_PLATFORM_UUID RELIEFOS_MACHINE_IDENTITY_FLAG_PLATFORM_UUID
+#define LEONOS_MACHINE_IDENTITY_SOURCE_LEN RELIEFOS_MACHINE_IDENTITY_SOURCE_LEN
+#define LEONOS_MACHINE_IDENTITY_UUID_LEN RELIEFOS_MACHINE_IDENTITY_UUID_LEN
+#define LEONOS_MACHINE_IDENTITY_VENDOR_LEN RELIEFOS_MACHINE_IDENTITY_VENDOR_LEN
+#define LEONOS_MACHINE_IDENTITY_VERSION RELIEFOS_MACHINE_IDENTITY_VERSION
+#define LEONOS_NET_HOSTNAME_LEN RELIEFOS_NET_HOSTNAME_LEN
+#define LEONOS_PERF_MAX_CPUS RELIEFOS_PERF_MAX_CPUS
+#define LEONOS_SYSTEM_ARCH_LEN RELIEFOS_SYSTEM_ARCH_LEN
+#define LEONOS_SYSTEM_COPYRIGHT_LEN RELIEFOS_SYSTEM_COPYRIGHT_LEN
+#define LEONOS_SYSTEM_NAME_LEN RELIEFOS_SYSTEM_NAME_LEN
+#define LEONOS_SYSTEM_TIME_LEN RELIEFOS_SYSTEM_TIME_LEN
+#define LEONOS_SYSTEM_VERSION_LEN RELIEFOS_SYSTEM_VERSION_LEN
+#define LEONOS_TASK_AFFINITY_GET RELIEFOS_TASK_AFFINITY_GET
+#define LEONOS_TASK_AFFINITY_SET RELIEFOS_TASK_AFFINITY_SET
+#define LEONOS_UAPI_KERNEL_DEBUG_ABI_H RELIEFOS_UAPI_KERNEL_DEBUG_ABI_H
+#define LEONOS_UAPI_SYSTEM_ABI_H RELIEFOS_UAPI_SYSTEM_ABI_H
+#define leonos_kernel_debug_arm_next_boot reliefos_kernel_debug_arm_next_boot
+#define leonos_kernel_debug_clear reliefos_kernel_debug_clear
+#define leonos_kernel_debug_control reliefos_kernel_debug_control
+#define leonos_kernel_debug_get_state reliefos_kernel_debug_get_state
+#define leonos_kernel_debug_set_enabled reliefos_kernel_debug_set_enabled
+#define leonos_machine_identity reliefos_machine_identity
+#define leonos_perf_cpu_info reliefos_perf_cpu_info
+#define leonos_perf_info reliefos_perf_info
+#define leonos_system_info reliefos_system_info
+#define leonos_system_reboot reliefos_system_reboot
+#define leonos_system_shutdown reliefos_system_shutdown
+#define leonos_task_affinity reliefos_task_affinity
+#define leonos_task_affinity_get reliefos_task_affinity_get
+#define leonos_task_affinity_set reliefos_task_affinity_set
+#define leonos_time_info reliefos_time_info
+#define leonos_time_ntp_sync reliefos_time_ntp_sync
+#define leonos_time_sync reliefos_time_sync
+#endif /* LEONOS_SYSTEM_H */

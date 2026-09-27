@@ -1,8 +1,8 @@
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
 #include <stdlib.h>
 #include <sys/mman.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 
 #define STRESS_COUNT 96
 
@@ -225,16 +225,16 @@ static int has_substring(const char *text, const char *needle)
 
 static int run_file_mmap_tests(void)
 {
-    int fd = open(LEONOS_PATH_LEONOS_CONF, LEONOS_O_RDONLY, 0);
+    int fd = open(RELIEFOS_PATH_RELIEFOS_CONF, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return fail("file-open", fd);
     }
-    struct leonos_stat st;
-    if (leonos_fstat_legacy(fd, &st) < 0) {
+    struct reliefos_stat st;
+    if (reliefos_fstat_legacy(fd, &st) < 0) {
         close(fd);
         return fail("file-fstat", -1);
     }
-    if (st.type != LEONOS_FS_TYPE_FILE || st.size >= 4096) {
+    if (st.type != RELIEFOS_FS_TYPE_FILE || st.size >= 4096) {
         close(fd);
         return fail("file-stat", (int)st.size);
     }

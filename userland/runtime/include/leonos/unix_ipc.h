@@ -1,49 +1,30 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/unix_ipc.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_UNIX_IPC_H
 #define LEONOS_UNIX_IPC_H
+#include <reliefos/unix_ipc.h>
 
-#include <stdint.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-
-#define LEONOS_IPC_MAGIC 0x554e4c4cU /* 'LNXU' */
-#define LEONOS_IPC_VERSION 1U
-/* Maximum encoded frame size. The reader preserves partial frames and the
- * sender handles short writes; SOCK_STREAM has no atomic frame boundary. */
-#define LEONOS_IPC_ATOMIC_FRAME_CAP 8192u
-
-#define LEONOS_IPC_SOCK_WINDOWD "/run/leonos/windowd.sock"
-#define LEONOS_IPC_SOCK_INPUT_METHOD "/run/leonos/input-method.sock"
-#define LEONOS_IPC_SOCK_SESSION "/run/leonos/session.sock"
-#define LEONOS_IPC_SOCK_DEVICE "/run/leonos/devman.sock"
-
-struct leonos_ipc_frame {
-    uint32_t magic;
-    uint32_t version;
-    uint32_t length;
-};
-
-int leonos_ipc_connect(const char *path);
-int leonos_ipc_bind_listen(const char *path, int backlog);
-int leonos_ipc_bind_listen_mode(const char *path, int backlog, uint32_t mode);
-int leonos_ipc_accept(int listen_fd, struct ucred *peer);
-/* On nonblocking streams, success may retain one partially sent frame.
- * Call flush from the event loop until it succeeds (EAGAIN means backpressure).
- * A new send drains that frame first; EAGAIN rejects the new message entirely.
- * SCM_RIGHTS is attached once. Release pending state with leonos_ipc_close. */
-int leonos_ipc_flush(int fd);
-int leonos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length);
-int leonos_ipc_send_fd(int fd, uint32_t type, const void *payload,
-                       uint32_t length, int send_fd);
-int leonos_ipc_recv(int fd, uint32_t *type, void *payload, uint32_t capacity,
-                    uint32_t *length);
-int leonos_ipc_recv_fd(int fd, uint32_t *type, void *payload, uint32_t capacity,
-                       uint32_t *length, int *received_fd);
-/* Requires SO_PASSCRED before receiving. Every fragment must carry exactly
- * the expected kernel-supplied credentials; partial-frame retries preserve it. */
-int leonos_ipc_recv_cred_fd(int fd, uint32_t *type, void *payload, uint32_t capacity,
-                           uint32_t *length, int *received_fd, const struct ucred *expected);
-int leonos_ipc_set_nonblock(int fd, int enabled);
-int leonos_ipc_peer_credentials(int fd, struct ucred *credentials);
-int leonos_ipc_close(int fd);
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_IPC_ATOMIC_FRAME_CAP RELIEFOS_IPC_ATOMIC_FRAME_CAP
+#define LEONOS_IPC_MAGIC RELIEFOS_IPC_MAGIC
+#define LEONOS_IPC_SOCK_DEVICE RELIEFOS_IPC_SOCK_DEVICE
+#define LEONOS_IPC_SOCK_INPUT_METHOD RELIEFOS_IPC_SOCK_INPUT_METHOD
+#define LEONOS_IPC_SOCK_SESSION RELIEFOS_IPC_SOCK_SESSION
+#define LEONOS_IPC_SOCK_WINDOWD RELIEFOS_IPC_SOCK_WINDOWD
+#define LEONOS_IPC_VERSION RELIEFOS_IPC_VERSION
+#define leonos_ipc_accept reliefos_ipc_accept
+#define leonos_ipc_bind_listen reliefos_ipc_bind_listen
+#define leonos_ipc_bind_listen_mode reliefos_ipc_bind_listen_mode
+#define leonos_ipc_close reliefos_ipc_close
+#define leonos_ipc_connect reliefos_ipc_connect
+#define leonos_ipc_flush reliefos_ipc_flush
+#define leonos_ipc_frame reliefos_ipc_frame
+#define leonos_ipc_peer_credentials reliefos_ipc_peer_credentials
+#define leonos_ipc_recv reliefos_ipc_recv
+#define leonos_ipc_recv_cred_fd reliefos_ipc_recv_cred_fd
+#define leonos_ipc_recv_fd reliefos_ipc_recv_fd
+#define leonos_ipc_send reliefos_ipc_send
+#define leonos_ipc_send_fd reliefos_ipc_send_fd
+#define leonos_ipc_set_nonblock reliefos_ipc_set_nonblock
+#endif /* LEONOS_UNIX_IPC_H */

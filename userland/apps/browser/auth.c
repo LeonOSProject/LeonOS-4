@@ -97,11 +97,11 @@ int browser_auth_retry_from_challenge(const char *url, const char *headers)
     }
     username[0] = 0;
     password[0] = 0;
-    if (!leonos_ui_show_input_dialog(T("HTTP Authentication"),
+    if (!reliefos_ui_show_input_dialog(T("HTTP Authentication"),
                                      T("Username for this HTTP host:"),
                                      username, sizeof(username)) ||
         !username[0] ||
-        !leonos_ui_show_password_dialog(T("HTTP Authentication"),
+        !reliefos_ui_show_password_dialog(T("HTTP Authentication"),
                                         T("Password (kept only for this browser session):"),
                                         password, sizeof(password))) {
         return 0;

@@ -10,8 +10,8 @@
 #include <unistd.h>
 #include <linux/vt.h>
 #include <linux/kd.h>
-#include <leonos/fb.h>
-#include <leonos/device.h>
+#include <reliefos/fb.h>
+#include <reliefos/device.h>
 
 int main(void)
 {
@@ -54,21 +54,21 @@ int main(void)
     usleep(100000);
     assert(waitpid(child, &status, WNOHANG) == 0);
     uint64_t generation, current_generation;
-    assert(ioctl(0, LEONOS_VT_GETGENERATION, &generation) == 0);
+    assert(ioctl(0, RELIEFOS_VT_GETGENERATION, &generation) == 0);
     assert(ioctl(0, VT_ACTIVATE, 3) == 0);
     assert(waitpid(child, &status, 0) == child && status == 0);
     assert(ioctl(0, VT_ACTIVATE, 2) == 0);
-    assert(ioctl(0, LEONOS_VT_GETGENERATION, &current_generation) == 0);
+    assert(ioctl(0, RELIEFOS_VT_GETGENERATION, &current_generation) == 0);
     assert(current_generation == generation + 2);
     close(ready[0]);
     int fb = open("/dev/fb0", O_RDWR);
     assert(fb >= 0);
-    struct leonos_fb_present fill = {.width = 1, .height = 1, .color = 0x123456};
-    assert(ioctl(fb, LEONOS_FBIOBLIT, &fill) < 0 && errno == EAGAIN);
+    struct reliefos_fb_present fill = {.width = 1, .height = 1, .color = 0x123456};
+    assert(ioctl(fb, RELIEFOS_FBIOBLIT, &fill) < 0 && errno == EAGAIN);
     assert(ioctl(0, KDSETMODE, KD_GRAPHICS) == 0);
-    assert(ioctl(fb, LEONOS_FBIOBLIT, &fill) == 0);
+    assert(ioctl(fb, RELIEFOS_FBIOBLIT, &fill) == 0);
     fill.pixels = 1; fill.stride = 1;
-    assert(ioctl(fb, LEONOS_FBIOBLIT, &fill) < 0 && errno == EFAULT);
+    assert(ioctl(fb, RELIEFOS_FBIOBLIT, &fill) < 0 && errno == EFAULT);
     assert(ioctl(0, KDSETMODE, KD_TEXT) == 0);
     close(fb);
     dprintf(report, "VT-PROBE-PASS session, foreground group, VT permissions, wait, framebuffer\n");

@@ -1,13 +1,13 @@
-#include <leonos/gui.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/gui.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 #include <stdint.h>
 
 #include "doomgeneric.h"
 #include "doomkeys.h"
 #include "i_system.h"
 #include "m_argv.h"
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 
 #define DOOM_KEY_QUEUE_CAP 64U
 #define DOOM_WINDOW_WIDTH DOOMGENERIC_RESX
@@ -23,12 +23,12 @@ static uint32_t key_read;
 static uint32_t key_write;
 static uint32_t window_id;
 static uint32_t frame[DOOM_WINDOW_WIDTH * DOOM_WINDOW_HEIGHT];
-static struct leonos_ui_surface ui;
+static struct reliefos_ui_surface ui;
 
 static void restore_mouse(void)
 {
     if (window_id) {
-        leonos_gui_set_mouse_visible(window_id, 1);
+        reliefos_gui_set_mouse_visible(window_id, 1);
     }
 }
 
@@ -118,15 +118,15 @@ static void queue_key(uint8_t keycode, uint8_t pressed)
 
 static void pump_events(void)
 {
-    struct leonos_gui_app_event event = {.window_id = window_id};
-    while (leonos_gui_poll_app_event(&event) > 0) {
-        if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
-            leonos_gui_set_mouse_visible(window_id, 1);
-            leonos_gui_destroy_app_window(window_id);
+    struct reliefos_gui_app_event event = {.window_id = window_id};
+    while (reliefos_gui_poll_app_event(&event) > 0) {
+        if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
+            reliefos_gui_set_mouse_visible(window_id, 1);
+            reliefos_gui_destroy_app_window(window_id);
             exit(0);
         }
-        if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN ||
-            event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
+        if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN ||
+            event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
             queue_key(event.keycode, event.pressed);
         }
         event.window_id = window_id;
@@ -135,19 +135,19 @@ static void pump_events(void)
 
 void DG_Init(void)
 {
-    uint32_t flags = LEONOS_GUI_WINDOW_FULLSCREEN;
+    uint32_t flags = RELIEFOS_GUI_WINDOW_FULLSCREEN;
     if (M_CheckParm("-windowed") > 0) {
-        flags = LEONOS_GUI_WINDOW_NO_RESIZE;
+        flags = RELIEFOS_GUI_WINDOW_NO_RESIZE;
     }
-    window_id = (uint32_t)leonos_gui_create_app_window_ex("Doom", "DoomGeneric",
+    window_id = (uint32_t)reliefos_gui_create_app_window_ex("Doom", "DoomGeneric",
                                                              DOOM_WINDOW_WIDTH,
                                                              DOOM_WINDOW_HEIGHT,
                                                              flags);
     if (!window_id) {
         exit(1);
     }
-    if (flags & LEONOS_GUI_WINDOW_FULLSCREEN) {
-        leonos_gui_set_mouse_visible(window_id, 0);
+    if (flags & RELIEFOS_GUI_WINDOW_FULLSCREEN) {
+        reliefos_gui_set_mouse_visible(window_id, 0);
     }
     I_AtExit(restore_mouse, true);
 }
@@ -160,15 +160,15 @@ void DG_StartupProgress(uint32_t progress, const char *message)
     if (progress > 100U) {
         progress = 100U;
     }
-    leonos_ui_bind(&ui, frame, DOOM_WINDOW_WIDTH, DOOM_WINDOW_HEIGHT,
+    reliefos_ui_bind(&ui, frame, DOOM_WINDOW_WIDTH, DOOM_WINDOW_HEIGHT,
                    DOOM_WINDOW_WIDTH);
-    leonos_ui_rect(&ui, 0, 0, DOOM_WINDOW_WIDTH, DOOM_WINDOW_HEIGHT, 0x00101814U);
-    leonos_ui_rect(&ui, 64, 104, DOOM_WINDOW_WIDTH - 128U, 192, 0x001d2c25U);
-    leonos_ui_text(&ui, 96, 140, "DOOM", 0x00f0f5edU, 0x001d2c25U);
-    leonos_ui_text(&ui, 96, 184, message ? message : "Loading", 0x00f0f5edU,
+    reliefos_ui_rect(&ui, 0, 0, DOOM_WINDOW_WIDTH, DOOM_WINDOW_HEIGHT, 0x00101814U);
+    reliefos_ui_rect(&ui, 64, 104, DOOM_WINDOW_WIDTH - 128U, 192, 0x001d2c25U);
+    reliefos_ui_text(&ui, 96, 140, "DOOM", 0x00f0f5edU, 0x001d2c25U);
+    reliefos_ui_text(&ui, 96, 184, message ? message : "Loading", 0x00f0f5edU,
                    0x001d2c25U);
-    leonos_ui_progress(&ui, 96, 224, DOOM_WINDOW_WIDTH - 192U, 20, progress, 100);
-    leonos_gui_present_window(window_id, DOOM_WINDOW_WIDTH, DOOM_WINDOW_HEIGHT,
+    reliefos_ui_progress(&ui, 96, 224, DOOM_WINDOW_WIDTH - 192U, 20, progress, 100);
+    reliefos_gui_present_window(window_id, DOOM_WINDOW_WIDTH, DOOM_WINDOW_HEIGHT,
                                DOOM_WINDOW_WIDTH, frame);
     sched_yield();
 }
@@ -178,7 +178,7 @@ void DG_DrawFrame(void)
     if (!window_id || !DG_ScreenBuffer) {
         return;
     }
-    leonos_gui_present_window(window_id, DOOM_WINDOW_WIDTH, DOOM_WINDOW_HEIGHT,
+    reliefos_gui_present_window(window_id, DOOM_WINDOW_WIDTH, DOOM_WINDOW_HEIGHT,
                                DOOM_WINDOW_WIDTH, DG_ScreenBuffer);
     pump_events();
 }
@@ -191,7 +191,7 @@ void DG_SleepMs(uint32_t ms)
 
 uint32_t DG_GetTicksMs(void)
 {
-    return (uint32_t)leonos_uptime_ms();
+    return (uint32_t)reliefos_uptime_ms();
 }
 
 int DG_GetKey(int *pressed, unsigned char *key)
@@ -213,7 +213,7 @@ void DG_SetWindowTitle(const char *title)
 int main(int argc, char **argv, char **envp)
 {
     static char *default_argv[] = {
-        "doom.elf", "-iwad", LEONOS_LAYOUT_LEONOS_APPS "/doom/freedoom1.wad", 0
+        "doom.elf", "-iwad", RELIEFOS_LAYOUT_RELIEFOS_APPS "/doom/freedoom1.wad", 0
     };
     (void)envp;
     if (argc <= 1 || !argv || !argv[0]) {
@@ -224,7 +224,7 @@ int main(int argc, char **argv, char **envp)
     for (;;) {
         doomgeneric_Tick();
     }
-    leonos_gui_set_mouse_visible(window_id, 1);
-    leonos_gui_destroy_app_window(window_id);
+    reliefos_gui_set_mouse_visible(window_id, 1);
+    reliefos_gui_destroy_app_window(window_id);
     return 0;
 }

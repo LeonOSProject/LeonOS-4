@@ -310,5 +310,5 @@ int main(void)
     test_run_process_reports_signals();
     test_run_process_missing_program_fails_with_errno();
     test_run_process_rejects_unusable_working_directory();
-    return leonos_test_report("host/common");
+    return reliefos_test_report("host/common");
 }

@@ -1,5 +1,5 @@
-#ifndef LEONOS_GLXGEARS_SDL_COMPAT_H
-#define LEONOS_GLXGEARS_SDL_COMPAT_H
+#ifndef RELIEFOS_GLXGEARS_SDL_COMPAT_H
+#define RELIEFOS_GLXGEARS_SDL_COMPAT_H
 
 /*
  * The upstream gears translation unit keeps its SDL frontend for reference.

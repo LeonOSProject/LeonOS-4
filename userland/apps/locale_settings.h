@@ -1,5 +1,5 @@
-#ifndef LEONOS_APPS_LOCALE_SETTINGS_H
-#define LEONOS_APPS_LOCALE_SETTINGS_H
+#ifndef RELIEFOS_APPS_LOCALE_SETTINGS_H
+#define RELIEFOS_APPS_LOCALE_SETTINGS_H
 
 #include <errno.h>
 #include <fcntl.h>

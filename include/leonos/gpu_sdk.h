@@ -1,45 +1,46 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/gpu_sdk.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_GPU_SDK_H
 #define LEONOS_GPU_SDK_H
+#include <reliefos/gpu_sdk.h>
 
-/* Versioned GPU SDK client. Applications link these entry points; the
- * pre-migration leonos_gpu_* fd-3 ioctl wrappers remain only in the libc
- * transition layer. The service node is /dev/gpu. */
-#include <leonos/gpu.h>
-#include <stdint.h>
-
-#define GPU_SDK_ABI_VERSION 1U
-
-typedef struct leonos_gpu_info gpu_sdk_info_t;
-typedef struct leonos_gpu_context gpu_sdk_context_t;
-typedef struct leonos_gpu_vertex gpu_sdk_vertex_t;
-typedef struct leonos_gpu_draw gpu_sdk_draw_t;
-typedef struct leonos_gpu_frame gpu_sdk_frame_t;
-typedef struct leonos_gpu_destroy gpu_sdk_destroy_t;
-typedef struct leonos_gpu_diagnostics gpu_sdk_diagnostics_t;
-
-#define GPU_SDK_MAX_VERTICES LEONOS_GPU_MAX_VERTICES
-#define GPU_SDK_MAX_DRAWS LEONOS_GPU_MAX_DRAWS
-#define GPU_SDK_MAX_WIDTH LEONOS_GPU_MAX_WIDTH
-#define GPU_SDK_MAX_HEIGHT LEONOS_GPU_MAX_HEIGHT
-#define GPU_SDK_AVAILABLE LEONOS_GPU_AVAILABLE
-#define GPU_SDK_BUSY_ESTIMATED LEONOS_GPU_BUSY_ESTIMATED
-#define GPU_SDK_FILL_POINT LEONOS_GPU_FILL_POINT
-#define GPU_SDK_FILL_LINE LEONOS_GPU_FILL_LINE
-#define GPU_SDK_FILL_SOLID LEONOS_GPU_FILL_SOLID
-#define GPU_SDK_ERROR_NONE LEONOS_GPU_ERROR_NONE
-#define GPU_SDK_ERROR_REAP LEONOS_GPU_ERROR_REAP
-#define GPU_SDK_ERROR_PREPARE LEONOS_GPU_ERROR_PREPARE
-#define GPU_SDK_ERROR_UPLOAD LEONOS_GPU_ERROR_UPLOAD
-#define GPU_SDK_ERROR_STATE LEONOS_GPU_ERROR_STATE
-#define GPU_SDK_ERROR_DRAW LEONOS_GPU_ERROR_DRAW
-#define GPU_SDK_ERROR_READBACK LEONOS_GPU_ERROR_READBACK
-#define GPU_SDK_ERROR_FENCE LEONOS_GPU_ERROR_FENCE
-#define GPU_SDK_ERROR_COPYOUT LEONOS_GPU_ERROR_COPYOUT
-
-int gpu_sdk_diagnostics(gpu_sdk_diagnostics_t *diagnostics);
-int gpu_sdk_info(gpu_sdk_info_t *info);
-int gpu_sdk_create(gpu_sdk_context_t *context);
-int gpu_sdk_render(const gpu_sdk_frame_t *frame);
-int gpu_sdk_destroy(uint64_t handle);
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_GPU_ABI_VERSION RELIEFOS_GPU_ABI_VERSION
+#define LEONOS_GPU_AVAILABLE RELIEFOS_GPU_AVAILABLE
+#define LEONOS_GPU_BUSY_ESTIMATED RELIEFOS_GPU_BUSY_ESTIMATED
+#define LEONOS_GPU_ERROR_COPYOUT RELIEFOS_GPU_ERROR_COPYOUT
+#define LEONOS_GPU_ERROR_DRAW RELIEFOS_GPU_ERROR_DRAW
+#define LEONOS_GPU_ERROR_FENCE RELIEFOS_GPU_ERROR_FENCE
+#define LEONOS_GPU_ERROR_NONE RELIEFOS_GPU_ERROR_NONE
+#define LEONOS_GPU_ERROR_PREPARE RELIEFOS_GPU_ERROR_PREPARE
+#define LEONOS_GPU_ERROR_READBACK RELIEFOS_GPU_ERROR_READBACK
+#define LEONOS_GPU_ERROR_REAP RELIEFOS_GPU_ERROR_REAP
+#define LEONOS_GPU_ERROR_STATE RELIEFOS_GPU_ERROR_STATE
+#define LEONOS_GPU_ERROR_UPLOAD RELIEFOS_GPU_ERROR_UPLOAD
+#define LEONOS_GPU_FILL_LINE RELIEFOS_GPU_FILL_LINE
+#define LEONOS_GPU_FILL_POINT RELIEFOS_GPU_FILL_POINT
+#define LEONOS_GPU_FILL_SOLID RELIEFOS_GPU_FILL_SOLID
+#define LEONOS_GPU_H RELIEFOS_GPU_H
+#define LEONOS_GPU_MAX_DRAWS RELIEFOS_GPU_MAX_DRAWS
+#define LEONOS_GPU_MAX_HEIGHT RELIEFOS_GPU_MAX_HEIGHT
+#define LEONOS_GPU_MAX_VERTICES RELIEFOS_GPU_MAX_VERTICES
+#define LEONOS_GPU_MAX_WIDTH RELIEFOS_GPU_MAX_WIDTH
+#define LEONOS_IOCTL_GPU_CREATE RELIEFOS_IOCTL_GPU_CREATE
+#define LEONOS_IOCTL_GPU_DESTROY RELIEFOS_IOCTL_GPU_DESTROY
+#define LEONOS_IOCTL_GPU_DIAGNOSTICS RELIEFOS_IOCTL_GPU_DIAGNOSTICS
+#define LEONOS_IOCTL_GPU_INFO RELIEFOS_IOCTL_GPU_INFO
+#define LEONOS_IOCTL_GPU_RENDER RELIEFOS_IOCTL_GPU_RENDER
+#define LEONOS_UAPI_GPU_ABI_H RELIEFOS_UAPI_GPU_ABI_H
+#define leonos_gpu_ reliefos_gpu_
+#define leonos_gpu_context reliefos_gpu_context
+#define leonos_gpu_create reliefos_gpu_create
+#define leonos_gpu_destroy reliefos_gpu_destroy
+#define leonos_gpu_diagnostics reliefos_gpu_diagnostics
+#define leonos_gpu_draw reliefos_gpu_draw
+#define leonos_gpu_frame reliefos_gpu_frame
+#define leonos_gpu_info reliefos_gpu_info
+#define leonos_gpu_render reliefos_gpu_render
+#define leonos_gpu_vertex reliefos_gpu_vertex
+#define leonos_gui_present_window reliefos_gui_present_window
+#endif /* LEONOS_GPU_SDK_H */

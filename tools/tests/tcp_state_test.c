@@ -39,7 +39,7 @@ static void test_small_reads(struct net_socket *s)
         s->local_port, s->remote_port, s->local_seq, s->remote_seq, TCP_FLAG_ACK, 0, 0) == 0);
     assert(net_get_u16(sent_frame + 48) == 0);
     uint8_t data[NET_SOCKET_RX_CAP];
-    struct leonos_net_socket_io request = {.socket=s->handle, .buffer=data, .length=5};
+    struct reliefos_net_socket_io request = {.socket=s->handle, .buffer=data, .length=5};
     unsigned before = sent_count;
     assert(net_socket_recv(&request, 0) == 0 && request.transferred == 5);
     assert(sent_count == before); /* A TLS header must not reopen a five-byte window. */
@@ -87,7 +87,7 @@ static void test_window_edges(struct net_socket *s)
         s->local_port, s->remote_port, s->local_seq, s->remote_seq, TCP_FLAG_ACK, 0, 0) == 0);
     assert(net_get_u16(sent_frame + 48) == 0);
     uint8_t data[NET_TCP_MSS];
-    struct leonos_net_socket_io request = {.socket=s->handle, .buffer=data, .length=sizeof(data)};
+    struct reliefos_net_socket_io request = {.socket=s->handle, .buffer=data, .length=sizeof(data)};
     send_error = -1;
     assert(net_socket_recv(&request, 0) == 0 && request.transferred == sizeof(data));
     assert(net_socket_receive_window(s) == 0); /* Failed TX must not publish state. */
@@ -106,7 +106,7 @@ int main(void)
     now_ms = NET_SOCKET_CLOSE_HOLD_MS + 1;
     net_socket_gc();
     assert(net_socket_find(handle, 0, 1) == s);
-    s->state = LEONOS_NET_TCP_ESTABLISHED;
+    s->state = RELIEFOS_NET_TCP_ESTABLISHED;
     s->local_ip = 0x0a25000f; s->remote_ip = 0x0a250002;
     s->local_port = 51000; s->remote_port = 8000;
     s->remote_seq = 500; s->local_seq = 100;
@@ -124,19 +124,19 @@ int main(void)
     test_small_reads(s);
     test_window_edges(s);
     net_close_owner_sockets(7);
-    assert(s->state == LEONOS_NET_TCP_ESTABLISHED);
+    assert(s->state == RELIEFOS_NET_TCP_ESTABLISHED);
     net_socket_release_fd(handle);
     assert(!s->fd_owned);
     struct net_dhcp_offer lease = {.yiaddr=0x0a25000f, .subnet_mask=0xffffff00,
         .router_ip=0x0a250002, .dns_ip=0x0a250003, .server_ip=0x0a250002, .lease_seconds=10};
     net_apply_dhcp_offer(&lease);
-    struct leonos_net_config config;
+    struct reliefos_net_config config;
     now_ms += 3000;
     net_get_config(&config);
     assert(config.lease_seconds == 7 && config.dns_ip == lease.dns_ip);
     now_ms += 7000;
     net_get_config(&config);
-    assert(!config.local_ip && !config.dns_ip && config.source == LEONOS_NET_CONFIG_SOURCE_NONE);
+    assert(!config.local_ip && !config.dns_ip && config.source == RELIEFOS_NET_CONFIG_SOURCE_NONE);
     now_ms += NET_SOCKET_CLOSE_HOLD_MS + 1;
     net_socket_gc();
     assert(buffers == 0);

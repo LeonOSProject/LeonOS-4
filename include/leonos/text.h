@@ -1,56 +1,24 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/text.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_TEXT_H
 #define LEONOS_TEXT_H
+#include <reliefos/text.h>
 
-#include <stdint.h>
-
-#define LEONOS_TEXT_REPLACEMENT_CHAR 0xfffdu
-
-/* Encodings accepted by the portable text conversion helpers. */
-#define LEONOS_TEXT_ENCODING_UTF8 1u
-#define LEONOS_TEXT_ENCODING_UTF8_BOM 2u
-#define LEONOS_TEXT_ENCODING_UTF16LE 3u
-#define LEONOS_TEXT_ENCODING_UTF16BE 4u
-#define LEONOS_TEXT_ENCODING_GBK 5u
-#define LEONOS_TEXT_ENCODING_GB2312 6u
-
-#define LEONOS_TEXT_ENCODING_INVALID -1
-#define LEONOS_TEXT_ENCODING_NO_SPACE -2
-
-struct leonos_text_glyph {
-    uint32_t codepoint;
-    uint32_t byte_offset;
-    uint32_t byte_len;
-    uint32_t cell_width;
-    uint32_t pixel_width;
-};
-
-struct leonos_text_layout {
-    const char *text;
-    uint32_t byte_len;
-    uint32_t capacity;
-    uint32_t count;
-    uint32_t total_cells;
-    uint32_t total_px;
-    struct leonos_text_glyph *glyphs;
-};
-
-int leonos_text_layout_utf8(const char *text, uint32_t byte_len,
-                            struct leonos_text_glyph *glyphs,
-                            uint32_t capacity,
-                            struct leonos_text_layout *out_layout);
-
-/* Detect a text file's byte encoding. ASCII is reported as UTF-8. */
-int leonos_text_detect_encoding(const char *input, uint32_t input_len,
-                                uint32_t *out_encoding);
-
-/* Decode input into UTF-8, replacing malformed source sequences with U+FFFD. */
-int leonos_text_decode(const char *input, uint32_t input_len, uint32_t encoding,
-                       char *output, uint32_t output_capacity,
-                       uint32_t *out_len, uint32_t *out_replacements);
-
-/* Encode UTF-8 input, replacing characters unavailable in the target with '?'. */
-int leonos_text_encode(const char *input, uint32_t input_len, uint32_t encoding,
-                       char *output, uint32_t output_capacity,
-                       uint32_t *out_len, uint32_t *out_replacements);
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_TEXT_ENCODING_GB2312 RELIEFOS_TEXT_ENCODING_GB2312
+#define LEONOS_TEXT_ENCODING_GBK RELIEFOS_TEXT_ENCODING_GBK
+#define LEONOS_TEXT_ENCODING_INVALID RELIEFOS_TEXT_ENCODING_INVALID
+#define LEONOS_TEXT_ENCODING_NO_SPACE RELIEFOS_TEXT_ENCODING_NO_SPACE
+#define LEONOS_TEXT_ENCODING_UTF16BE RELIEFOS_TEXT_ENCODING_UTF16BE
+#define LEONOS_TEXT_ENCODING_UTF16LE RELIEFOS_TEXT_ENCODING_UTF16LE
+#define LEONOS_TEXT_ENCODING_UTF8 RELIEFOS_TEXT_ENCODING_UTF8
+#define LEONOS_TEXT_ENCODING_UTF8_BOM RELIEFOS_TEXT_ENCODING_UTF8_BOM
+#define LEONOS_TEXT_REPLACEMENT_CHAR RELIEFOS_TEXT_REPLACEMENT_CHAR
+#define leonos_text_decode reliefos_text_decode
+#define leonos_text_detect_encoding reliefos_text_detect_encoding
+#define leonos_text_encode reliefos_text_encode
+#define leonos_text_glyph reliefos_text_glyph
+#define leonos_text_layout reliefos_text_layout
+#define leonos_text_layout_utf8 reliefos_text_layout_utf8
+#endif /* LEONOS_TEXT_H */

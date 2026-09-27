@@ -1,5 +1,5 @@
-#ifndef LEONOS_MOTD_FORMAT_H
-#define LEONOS_MOTD_FORMAT_H
+#ifndef RELIEFOS_MOTD_FORMAT_H
+#define RELIEFOS_MOTD_FORMAT_H
 #include <stdio.h>
 struct motd_info {
     char system[128], kernel[256], timestamp[128], uptime[96];

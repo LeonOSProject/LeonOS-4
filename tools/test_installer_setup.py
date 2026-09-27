@@ -91,7 +91,7 @@ class InstallerSetupTests(unittest.TestCase):
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                '-DMBEDTLS_CONFIG_FILE="leonos_mbedtls_config.h"',
+                '-DMBEDTLS_CONFIG_FILE="reliefos_mbedtls_config.h"',
                 "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ithird_party/mbedtls/include",
                 "-idirafter", "userland/runtime/include", "tools/tests/installer_accounts_test.c",
                 "-Itools/tests/legacy_authd/include",
