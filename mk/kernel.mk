@@ -29,7 +29,7 @@ NTCLKS_DIR ?= $(LEONOS_SRC)/kernel/ntclks
 # the release guard to name both SHAs instead of tripping this parse error.
 # Goals that must keep working before any submodule exists are exempt, so a
 # fresh machine can still run `make doctor` / `make fetch` to set up.
-ntclks_init_exempt_goals := help doctor fetch
+ntclks_init_exempt_goals := help doctor fetch ntclks-fetch
 ntclks_init_exempt :=
 ifeq ($(MAKECMDGOALS),)
 ntclks_init_exempt := 1
@@ -40,7 +40,7 @@ ifeq ($(ntclks_init_exempt),)
 ifeq ($(wildcard $(NTCLKS_DIR)/Makefile)$(wildcard $(NTCLKS_DIR)/.git),)
 $(error ntclks adapter: kernel checkout not found: $(NTCLKS_DIR)/Makefile \
 (NTCLKS_DIR=$(NTCLKS_DIR)); run `git submodule update --init --recursive` and \
-`make -C kernel/ntclks fetch`, or point NTCLKS_DIR at an existing checkout)
+`make fetch`, or point NTCLKS_DIR at an existing checkout)
 endif
 endif
 # Sub-build output directory: the checkout writes everything under O.
@@ -106,7 +106,7 @@ $(NTCLKS_PUBLISHED) &: FORCE $(LEONOS_EMIT) | $(O)/kernel-export/manifest.txt
 	        'The kernel products are built by the ntclks kernel checkout (the' \
 	        'kernel/ntclks git submodule since phase 5). Initialize it with' \
 	        '`git submodule update --init --recursive` and run' \
-	        '`make -C kernel/ntclks fetch`, or point NTCLKS_DIR at an existing' \
+	        '`make fetch`, or point NTCLKS_DIR at an existing' \
 	        'checkout, e.g. NTCLKS_DIR=/path/to/ntclks or NTCLKS_DIR=.' >&2; \
 	    exit 1; \
 	fi; \
@@ -125,6 +125,28 @@ $(NTCLKS_PUBLISHED) &: FORCE $(LEONOS_EMIT) | $(O)/kernel-export/manifest.txt
 	    mkdir -p $(O_GENERATED)/$${rel%%/*}; \
 	    $(LEONOS_EMIT) --input $(NTCLKS_DEST)/$$name --output $(O_GENERATED)/$$rel; \
 	done
+
+# --- fetch delegation -------------------------------------------------------
+# `make fetch` also fetches the kernel checkout's locked dependencies. The
+# checkout's fetch is idempotent -- cached bytes are only verified -- so asking
+# on every `make fetch` is cheap. A missing checkout cannot be fetched into
+# existence here: keep the goal successful with a warning, so a fresh machine
+# can still run `make doctor` / `make fetch` before the submodule exists (see
+# ntclks_init_exempt_goals). NTCLKS_DIR pointing back at this repository would
+# recurse into `make -C . fetch`; skip instead.
+.PHONY: ntclks-fetch
+ntclks-fetch:
+	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0 ;; esac; \
+	if [ '$(realpath $(NTCLKS_DIR))' = '$(realpath $(LEONOS_SRC))' ]; then \
+	    echo 'ntclks adapter: NTCLKS_DIR is this repository; skipping the kernel fetch' >&2; \
+	    exit 0; \
+	fi; \
+	if [ ! -f '$(NTCLKS_DIR)/Makefile' ] && [ ! -e '$(NTCLKS_DIR)/.git' ]; then \
+	    echo 'ntclks adapter: kernel checkout not found: $(NTCLKS_DIR)/Makefile; skipping the kernel fetch' >&2; \
+	    echo 'Initialize it with `git submodule update --init --recursive`, or point NTCLKS_DIR at an existing checkout' >&2; \
+	    exit 0; \
+	fi; \
+	exec $(MAKE) -C '$(NTCLKS_DIR)' fetch
 
 # --- the parent-owned version header -----------------------------------------
 # build_info.h is not a kernel product: the parent generates it for its own

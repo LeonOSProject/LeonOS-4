@@ -21,7 +21,7 @@ leonos-check-lock: | $(LEONOS_O_MARKER) $(LEONOS_DEPS_TOOL)
 	$(call LEONOS_LOG,CHECK,$(LEONOS_LOCK))
 	$(Q)$(LEONOS_DEPS_TOOL) --lock $(LEONOS_LOCK) --check --root $(LEONOS_SRC)
 
-fetch: leonos-check-lock | $(LEONOS_CACHE)
+fetch: leonos-check-lock ntclks-fetch | $(LEONOS_CACHE)
 	$(call LEONOS_LOG,FETCH,$(LEONOS_CACHE))
 	$(Q)sh $(LEONOS_FETCH_SCRIPT) --deps $(LEONOS_DEPS_TOOL) --lock $(LEONOS_LOCK) \
 		--cache $(LEONOS_CACHE)

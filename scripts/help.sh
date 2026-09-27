@@ -9,7 +9,8 @@ LeonOS 4 build system (GNU Make + C host tools)
   make                 same as `make help`; never downloads or builds
   make help            this message
   make doctor          check host tools, target toolchain and third-party bits
-  make fetch           the only network stage: fetch and verify locked sources
+  make fetch           the only network stage: fetch and verify locked sources,
+                       parent and kernel checkout alike
 
   make defconfig       start $(O)/config/.config from configs/default.conf
   make olddefconfig    resolve new symbols non-interactively, keep user choices
