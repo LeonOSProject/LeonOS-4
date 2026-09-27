@@ -44,7 +44,7 @@ $(HEADER_EXPORT_MANIFEST): FORCE $(LEONOS_EMIT)
 	        'The exported headers come from the ntclks kernel checkout (the' \
 	        'kernel/ntclks git submodule since phase 5). Initialize it with' \
 	        '`git submodule update --init --recursive` and run' \
-	        '`make -C kernel/ntclks fetch`, or point NTCLKS_DIR at an existing' \
+	        '`make fetch`, or point NTCLKS_DIR at an existing' \
 	        'checkout, e.g. NTCLKS_DIR=/path/to/ntclks or NTCLKS_DIR=.' >&2; \
 	    exit 1; \
 	fi; \
