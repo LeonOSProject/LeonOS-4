@@ -15,9 +15,10 @@ for variant in disk live installer; do
     esac
     result=0
     timeout --kill-after=5 "${SMOKE_TIMEOUT:-90}" "$@" > "$logs/smoke-$variant.log" 2>&1 || result=$?
+    # Both kernel log prefixes are accepted: [reliefnt] is current, [ntclks] transitional.
     if { [ "$result" = 0 ] || [ "$result" = 124 ]; } &&
-        grep -F '[ntclks] boot complete:' "$logs/smoke-$variant.log" >/dev/null &&
-        grep -F '[ntclks] PID 1 path=' "$logs/smoke-$variant.log" >/dev/null; then
+        grep -E '\[(reliefnt|ntclks)\] boot complete:' "$logs/smoke-$variant.log" >/dev/null &&
+        grep -E '\[(reliefnt|ntclks)\] PID 1 path=' "$logs/smoke-$variant.log" >/dev/null; then
         printf 'ok - %s reached kernel boot and PID 1\n' "$variant"
     else
         printf 'FAIL - %s did not reach boot and PID 1; see %s/smoke-%s.log\n' "$variant" "$logs" "$variant" >&2

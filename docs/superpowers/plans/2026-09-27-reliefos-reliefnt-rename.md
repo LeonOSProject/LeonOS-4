@@ -64,8 +64,8 @@
 
 **文件：** 修改子仓 `README.md`、`NOTICE`、`Makefile`、`.github/workflows/build.yml`、`kernel/ntclks/version.c`、`kernel/ntclks/uts.c`；迁移子仓 `kernel/ntclks/`、`include/ntclks/`、`include/uapi/leonos/`；新增兼容头 `include/ntclks/` 与 `include/uapi/leonos/`；更新子仓构建/导出测试。
 
-- [ ] **步骤 1：先在子仓隔离环境跑原有 `make help`、`make test`、`make headers_install`，记录通过/失败和产品 manifest。** 子仓的真实未跟踪目录不清理；验证可以使用独立克隆与独立 `O`，不可把子仓当前状态假称干净。
-- [ ] **步骤 2：先写失败的 UAPI 兼容测试。** 测试同时包含 `<reliefos/system_abi.h>` 和 `<leonos/system_abi.h>`；用 `_Static_assert` 比较关键结构 `sizeof`/`offsetof`，比较 syscall/ioctl 常量；测试新 `<reliefnt/version.h>` 与旧 `<ntclks/version.h>` 同时可编译。
+- [x] **步骤 1：先在子仓隔离环境跑原有 `make help`、`make test`、`make headers_install`，记录通过/失败和产品 manifest。** 子仓的真实未跟踪目录不清理；验证可以使用独立克隆与独立 `O`，不可把子仓当前状态假称干净。
+- [x] **步骤 2：先写失败的 UAPI 兼容测试。** 测试同时包含 `<reliefos/system_abi.h>` 和 `<leonos/system_abi.h>`；用 `_Static_assert` 比较关键结构 `sizeof`/`offsetof`，比较 syscall/ioctl 常量；测试新 `<reliefnt/version.h>` 与旧 `<ntclks/version.h>` 同时可编译。
 
   ```c
   #include <stddef.h>
@@ -77,10 +77,10 @@
                  sizeof(struct leonos_system_info), "system info ABI changed");
   ```
 
-- [ ] **步骤 3：运行新测试确认失败。** 预期缺 `<reliefos/system_abi.h>` 或 `<reliefnt/version.h>`，而不是测试本身语法错误。
-- [ ] **步骤 4：迁移内核私有源与头目录、`NTCLKS_*` 私有宏、`ntclks_*` 私有函数和内部 include。** 更新 Make 源清单与所有引用；旧 `<ntclks/...>` 头仅转发到新头，不复制实现。对公开 UAPI 的旧结构/常量建立别名；不改数字值或字段布局。
-- [ ] **步骤 5：把子仓展示信息改为 ReliefNT，内核编译生成信息区分内核名与系统名。** 内核私有日志前缀改为 `[reliefnt]`；外部系统日志解析脚本和测试同步更新。`kernel.sys`、`loader.elf` 等产品清单不变。
-- [ ] **步骤 6：验证。** 在子仓执行 `make test`、`make -j8 all`、`make headers_install`；用 `find <O>/kernel-export/include -type f` 确认新旧 UAPI 均在，运行新兼容测试。检查 `git -C kernel/ntclks diff --check`。形成供主仓 gitlink 引用的子仓提交由用户授权的提交步骤完成；不得让主仓指向未提交对象。
+- [x] **步骤 3：运行新测试确认失败。** 预期缺 `<reliefos/system_abi.h>` 或 `<reliefnt/version.h>`，而不是测试本身语法错误。
+- [x] **步骤 4：迁移内核私有源与头目录、`NTCLKS_*` 私有宏、`ntclks_*` 私有函数和内部 include。** 更新 Make 源清单与所有引用；旧 `<ntclks/...>` 头仅转发到新头，不复制实现。对公开 UAPI 的旧结构/常量建立别名；不改数字值或字段布局。
+- [x] **步骤 5：把子仓展示信息改为 ReliefNT，内核编译生成信息区分内核名与系统名。** 内核私有日志前缀改为 `[reliefnt]`；外部系统日志解析脚本和测试同步更新。`kernel.sys`、`loader.elf` 等产品清单不变。
+- [x] **步骤 6：验证。** 在子仓执行 `make test`、`make -j8 all`、`make headers_install`；用 `find <O>/kernel-export/include -type f` 确认新旧 UAPI 均在，运行新兼容测试。检查 `git -C kernel/ntclks diff --check`。形成供主仓 gitlink 引用的子仓提交由用户授权的提交步骤完成；不得让主仓指向未提交对象。
 
 ### 任务 3：主仓内核适配器、头导出与 gitlink 迁移
 

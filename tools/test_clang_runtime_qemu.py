@@ -118,7 +118,8 @@ def guest(timeout, memory_mib=8192):
             if process.poll() is None:
                 iso_tools.qmp_quit(qmp, process)
     text = serial.read_text(errors="replace")
-    markers = ("[clang-probe]", "[ntclks] mmap", "[ntclks] ELF", "Error loading shared library",
+    markers = ("[clang-probe]", "[reliefnt] mmap", "[reliefnt] ELF",
+               "[ntclks] mmap", "[ntclks] ELF", "Error loading shared library",
                "Error relocating", "KERNEL PANIC")
     print("\n".join(line for line in text.splitlines() if any(m in line for m in markers)))
     if "[clang-probe] DONE failures=0" not in text:

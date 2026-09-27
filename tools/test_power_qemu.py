@@ -112,7 +112,8 @@ def desktop_power(probe, serial, process, action):
     else:
         assert event["data"]["reason"] == "guest-reset"
         deadline = time.monotonic() + 90
-        while serial.read_text(errors="replace").count("[ntclks] boot complete:") < 2:
+        while sum(serial.read_text(errors="replace").count(marker)
+                  for marker in ("[reliefnt] boot complete:", "[ntclks] boot complete:")) < 2:
             assert time.monotonic() < deadline, "Reset did not reach a second kernel boot"
             assert process.poll() is None
             time.sleep(0.2)
@@ -155,7 +156,8 @@ def complete_installer_power(probe, serial, process):
     assert "restart requested from completion page" in serial.read_text(errors="replace")
     wait_log(serial, "[oobe.elf] starting first-run", process, 90)
     text = serial.read_text(errors="replace")
-    assert text.count("[ntclks] boot complete:") >= 2
+    assert sum(text.count(marker)
+               for marker in ("[reliefnt] boot complete:", "[ntclks] boot complete:")) >= 2
     assert "fs=ext2 desktop=desktop.elf" in text
     time.sleep(8)
     probe.frame("installed-disk-rebooted")

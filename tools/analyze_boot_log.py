@@ -85,7 +85,7 @@ DIRECT_RULES = (
     ),
     Rule(
         "STORAGE-ROOT", "错误", "存储",
-        r"^\[ntclks\] no block-backed root filesystem available for userland$",
+        r"^\[(?:reliefnt|ntclks)\] no block-backed root filesystem available for userland$",
         "用户态没有可用的根文件系统",
         "内核无法找到可供用户态加载的块设备根文件系统。",
         "检查磁盘控制器、ext2 根分区、ESP/FAT32 启动分区、挂载策略和虚拟机磁盘连接。",
@@ -93,7 +93,7 @@ DIRECT_RULES = (
     ),
     Rule(
         "USERLAND-LOAD", "错误", "用户态启动",
-        r"^\[ntclks\] failed to load (?:init\.elf|desktop\.elf).*",
+        r"^\[(?:reliefnt|ntclks)\] failed to load (?:init\.elf|desktop\.elf).*",
         "关键用户态程序未能加载",
         "init.elf 或 desktop.elf 在创建任务时失败，桌面启动无法完成。",
         "先查看前后是否有 ELF 验证、动态解释器或文件查找错误；再检查镜像中对应程序是否完整。",
@@ -101,7 +101,7 @@ DIRECT_RULES = (
     ),
     Rule(
         "ELF-HEADER", "错误", "ELF 装载",
-        r"^\[ntclks\] ELF (?:main|interpreter) header (?:read|validation) failed$",
+        r"^\[(?:reliefnt|ntclks)\] ELF (?:main|interpreter) header (?:read|validation) failed$",
         "ELF 头部读取或验证失败",
         "程序或动态解释器不是当前 LeonOS 接受的完整 x86_64 ELF，或 ABI note、程序头和段约束未通过。",
         "用 readelf 检查 ELF 类型、PT_INTERP、ABI note 和段权限；确认镜像未截断且构建产物来自当前工具链。",
@@ -109,7 +109,7 @@ DIRECT_RULES = (
     ),
     Rule(
         "ELF-INTERPRETER", "错误", "动态链接",
-        r"^\[ntclks\] ELF interpreter lookup failed path=",
+        r"^\[(?:reliefnt|ntclks)\] ELF interpreter lookup failed path=",
         "动态 ELF 缺少解释器",
         "动态应用声明的 ELF 解释器无法从系统镜像读取。",
         "检查日志中的解释器路径；musl 镜像应包含 /lib/ld-musl-x86_64.so.1，并检查读取权限与完整性。",
@@ -117,7 +117,7 @@ DIRECT_RULES = (
     ),
     Rule(
         "ELF-ABI", "错误", "动态链接",
-        r"^\[ntclks\] ELF ABI mismatch main=",
+        r"^\[(?:reliefnt|ntclks)\] ELF ABI mismatch main=",
         "动态应用与解释器 ABI 主版本不匹配",
         "检测到旧私有 ABI 程序与解释器不匹配。",
         "使用当前 musl SDK 从源码重建应用，避免混用旧私有 ABI 输出。",
@@ -125,7 +125,7 @@ DIRECT_RULES = (
     ),
     Rule(
         "ELF-MAP", "错误", "ELF 装载",
-        r"^\[ntclks\] failed to (?:map executable|load .* into private address space|prepare argv/envp for) ",
+        r"^\[(?:reliefnt|ntclks)\] failed to (?:map executable|load .* into private address space|prepare argv/envp for) ",
         "用户程序映射到地址空间失败",
         "内核在 ELF 验证、段映射、私有地址空间或启动参数准备阶段失败。",
         "结合相邻的 ELF 细节日志检查段布局、VMA 容量、页权限、解释器和镜像文件内容。",
@@ -149,7 +149,7 @@ DIRECT_RULES = (
     ),
     Rule(
         "ASLR-WEAK-ENTROPY", "警告", "内存保护",
-        r"^\[ntclks\] ASLR active with weak entropy ",
+        r"^\[(?:reliefnt|ntclks)\] ASLR active with weak entropy ",
         "ASLR 正在使用弱熵源",
         "系统仍会随机化布局，但当前启动没有获得 RDRAND 硬件熵。",
         "在支持硬件熵的 CPU/虚拟机上启用 RDRAND，或检查启动时序和输入熵是否正常累积。",
@@ -157,7 +157,7 @@ DIRECT_RULES = (
     ),
     Rule(
         "POWER-ACPI", "警告", "电源管理",
-        r"^\[ntclks\] ACPI (?:RSDP|FADT|DSDT|_S5_|PM1 control block) unavailable$",
+        r"^\[(?:reliefnt|ntclks)\] ACPI (?:RSDP|FADT|DSDT|_S5_|PM1 control block) unavailable$",
         "ACPI 关机路径不可用",
         "固件没有提供完成 ACPI S5 关机所需的表或寄存器，关机可能只能停止 CPU。",
         "检查虚拟机 ACPI 选项、固件类型和硬件平台；在 VMware 中验证 ACPI 电源管理已启用。",
@@ -167,12 +167,12 @@ DIRECT_RULES = (
 
 BUGCHECK_LINE = re.compile(r"^\[bugcheck\] (.*)$")
 EXCEPTION_LINE = re.compile(
-    r"^\[ntclks\] exception vector=(?P<vector>\d+) error=(?P<error>0x[0-9a-fA-F]+) "
+    r"^\[(?:reliefnt|ntclks)\] exception vector=(?P<vector>\d+) error=(?P<error>0x[0-9a-fA-F]+) "
     r"rip=(?P<rip>0x[0-9a-fA-F]+).*"
 )
-BOOT_COMPLETE = re.compile(r"^\[ntclks\] boot complete:")
-TASK_EXIT = re.compile(r"^\[ntclks\] scheduler task exited pid=(?P<pid>\d+) name=(?P<name>.+) code=(?P<code>\d+)$")
-MAP_FAILURE = re.compile(r"^\[ntclks\] failed to map executable (?P<name>.+)$")
+BOOT_COMPLETE = re.compile(r"^\[(?:reliefnt|ntclks)\] boot complete:")
+TASK_EXIT = re.compile(r"^\[(?:reliefnt|ntclks)\] scheduler task exited pid=(?P<pid>\d+) name=(?P<name>.+) code=(?P<code>\d+)$")
+MAP_FAILURE = re.compile(r"^\[(?:reliefnt|ntclks)\] failed to map executable (?P<name>.+)$")
 COMPONENT = re.compile(r"^\[(?P<component>[^\]]+)\]")
 
 
@@ -358,14 +358,17 @@ def _self_test() -> int:
 
 [bugcheck] General Protection Fault
 [bugcheck] detail=Unhandled CPU exception
-""".splitlines()
-    analysis = analyze_lines(sample)
-    identifiers = {finding.identifier for finding in analysis.findings}
+"""
     expected = {"ELF-HEADER", "ELF-MAP", "TASK-EXIT-127", "CPU-EXCEPTION", "BUGCHECK"}
-    missing = expected - identifiers
-    if missing or analysis.status != "启动失败":
-        print(f"boot-log analyzer self-test failed: missing={sorted(missing)} status={analysis.status}", file=sys.stderr)
-        return 1
+    # Both kernel log prefixes must parse: [ntclks] is the pre-rename spelling.
+    for lines in (sample.splitlines(),
+                  sample.replace("[ntclks]", "[reliefnt]").splitlines()):
+        analysis = analyze_lines(lines)
+        identifiers = {finding.identifier for finding in analysis.findings}
+        missing = expected - identifiers
+        if missing or analysis.status != "启动失败":
+            print(f"boot-log analyzer self-test failed: missing={sorted(missing)} status={analysis.status}", file=sys.stderr)
+            return 1
     print("boot-log analyzer self-test passed")
     return 0
 
