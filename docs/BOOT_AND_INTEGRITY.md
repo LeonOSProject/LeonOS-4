@@ -50,7 +50,7 @@ corrupting the FAT filesystem.
 
 ## Build-time hashes
 
-`tools/build/loader-integrity.sh` calculates the SHA-256 hash of
+`kernel/ntclks/tools/build/loader-integrity.sh` calculates the SHA-256 hash of
 `$(O_GENERATED)/system/kernel.sys` and publishes
 `$(O_INCLUDE)/generated/loader_integrity.h`, which the loader objects include.
 `mk/boot.mk` declares that header as a prerequisite of every loader object, so a

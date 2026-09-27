@@ -3,10 +3,8 @@
 /out/
 # Shared verified downloads, intentionally retained by make distclean.
 /cache/
-# Retired build engine outputs retained locally after the Make migration.
+# Build scratch: test-harness work directories and run logs (tools/test_*.py).
 /build/
-/buildsystem/
-/obj/
 # Local configuration, CI summaries and interrupted dependency-test fixtures.
 /.config
 /.config.old
@@ -20,8 +18,6 @@ __pycache__/
 .kagent
 /dist/
 /tools/dist/
-/LeonOS4-Developer-SDK.zip
 .trae-html-share-packages/
-.zig_cache/
 # Reference Source Code
 /linux/
