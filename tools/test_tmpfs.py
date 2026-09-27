@@ -7,8 +7,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 out = ROOT / "build/tmpfs-host"
 out.mkdir(parents=True, exist_ok=True)
 subprocess.run(["clang", "-g", "-O1", "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
-                "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
-                "tools/tests/tmpfs_test.c", "kernel/ntclks/fs/tmpfs.c", "-o", str(out / "tmpfs-test")],
+                "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ikernel/reliefnt/kernel/reliefnt/include",
+                "tools/tests/tmpfs_test.c", "kernel/reliefnt/fs/tmpfs.c", "-o", str(out / "tmpfs-test")],
                cwd=ROOT, check=True)
 subprocess.run([str(out / "tmpfs-test")], cwd=ROOT, check=True)
 subprocess.run(["cc", "-O2", "-Wall", "-Wextra", "-DTMPFS_MMAP_STANDALONE",

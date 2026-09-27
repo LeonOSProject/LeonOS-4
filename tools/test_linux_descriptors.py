@@ -10,9 +10,9 @@ with tempfile.TemporaryDirectory(prefix="leonos-descriptors-") as directory:
     subprocess.run([
         "clang", "-std=c11", "-g", "-O1", "-ffunction-sections", "-fdata-sections",
         "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
-        "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include", "-Wl,--gc-sections",
-        "tools/tests/descriptor_table_test.c", "kernel/ntclks/kernel/ntclks/sched/sched.c",
-        "kernel/ntclks/kernel/ntclks/wait.c", "kernel/ntclks/kernel/ntclks/syscall_sysv_msg.c",
-        "kernel/ntclks/kernel/ntclks/syscall_sysv_sem.c", "kernel/ntclks/kernel/ntclks/syscall_locks.c", "-o", binary,
+        "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ikernel/reliefnt/kernel/reliefnt/include", "-Wl,--gc-sections",
+        "tools/tests/descriptor_table_test.c", "kernel/reliefnt/kernel/reliefnt/sched/sched.c",
+        "kernel/reliefnt/kernel/reliefnt/wait.c", "kernel/reliefnt/kernel/reliefnt/syscall_sysv_msg.c",
+        "kernel/reliefnt/kernel/reliefnt/syscall_sysv_sem.c", "kernel/reliefnt/kernel/reliefnt/syscall_locks.c", "-o", binary,
     ], cwd=ROOT, check=True)
     subprocess.run([binary], cwd=ROOT, check=True, timeout=20)

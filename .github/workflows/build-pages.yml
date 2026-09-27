@@ -75,8 +75,8 @@ jobs:
         run: |
           set -euo pipefail
           make fetch
-          # kernel/ntclks submodule cache (unifont); its cache/ is untracked
-          make -C kernel/ntclks fetch
+          # kernel/reliefnt submodule cache (unifont); its cache/ is untracked
+          make -C kernel/reliefnt fetch
           make defconfig
           make olddefconfig
 

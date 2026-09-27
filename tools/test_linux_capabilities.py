@@ -11,7 +11,7 @@ with tempfile.TemporaryDirectory(prefix="leonos-capabilities-") as directory:
         "cc", "-std=c11", "-O2", "-g", "-flto", "-fwhole-program",
         "-fsanitize=address,undefined", "-fno-sanitize-recover=all", "-fno-pie", "-no-pie",
         "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-        "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
+        "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ikernel/reliefnt/kernel/reliefnt/include",
         "tools/tests/capability_test.c", "-o", binary,
     ], cwd=ROOT, check=True)
     subprocess.run([binary], cwd=ROOT, check=True, timeout=30)

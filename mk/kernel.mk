@@ -1,8 +1,8 @@
-# Kernel products: adapter over the standalone ntclks kernel checkout.
+# Kernel products: adapter over the standalone reliefnt kernel checkout.
 #
 # Phase 3 of the kernel/userland separation: this repository no longer compiles
 # any kernel, driver or boot-loader source. The standalone checkout named by
-# NTCLKS_DIR owns those sources and builds kernel.sys, kernel.debug,
+# RELIEFNT_DIR owns those sources and builds kernel.sys, kernel.debug,
 # kerneldebug.sys, loader.elf and the five .drv files; this fragment drives that
 # build and publishes the results to the legacy locations the rest of the parent
 # build (rootfs, images, rpr) consumes. The parent consumes only the sub-build's
@@ -14,71 +14,71 @@
 # cheap. Publishing goes through leonos-emit, so an unchanged product never
 # moves mtime and never rebuilds its consumers.
 
-# The kernel checkout. Since phase 5 the default path is the kernel/ntclks
+# The kernel checkout. Since phase 5 the default path is the kernel/reliefnt
 # git submodule (github.com/LeonOSProject/NTCLKS); when it is not initialized
 # the adapter refuses with instructions instead of letting parse-time
 # inventories and config generation bury the cause in follow-on errors (see
 # the guard below and the recipe guards).
-NTCLKS_DIR ?= $(LEONOS_SRC)/kernel/ntclks
+RELIEFNT_DIR ?= $(if $(strip $(NTCLKS_DIR)),$(NTCLKS_DIR),$(LEONOS_SRC)/kernel/reliefnt)
 # A checkout that has not been initialized must fail once, clearly, naming
-# NTCLKS_DIR -- a non-recursive clone otherwise died in `find` noise and a
+# RELIEFNT_DIR -- a non-recursive clone otherwise died in `find` noise and a
 # missing-tool cascade long before the adapter's recipe guard could speak.
-# Initialized is judged the way tools/build/ntclks-release-guard.sh judges it
+# Initialized is judged the way tools/build/reliefnt-release-guard.sh judges it
 # (a .git marker): a checkout at some other published SHA is initialized but
 # may carry no root Makefile (history extract), and release flows must reach
 # the release guard to name both SHAs instead of tripping this parse error.
 # Goals that must keep working before any submodule exists are exempt, so a
 # fresh machine can still run `make doctor` / `make fetch` to set up.
-ntclks_init_exempt_goals := help doctor fetch ntclks-fetch
-ntclks_init_exempt :=
+reliefnt_init_exempt_goals := help doctor fetch reliefnt-fetch ntclks-fetch
+reliefnt_init_exempt :=
 ifeq ($(MAKECMDGOALS),)
-ntclks_init_exempt := 1
-else ifeq ($(words $(filter $(ntclks_init_exempt_goals),$(MAKECMDGOALS))),$(words $(MAKECMDGOALS)))
-ntclks_init_exempt := 1
+reliefnt_init_exempt := 1
+else ifeq ($(words $(filter $(reliefnt_init_exempt_goals),$(MAKECMDGOALS))),$(words $(MAKECMDGOALS)))
+reliefnt_init_exempt := 1
 endif
-ifeq ($(ntclks_init_exempt),)
-ifeq ($(wildcard $(NTCLKS_DIR)/Makefile)$(wildcard $(NTCLKS_DIR)/.git),)
-$(error ntclks adapter: kernel checkout not found: $(NTCLKS_DIR)/Makefile \
-(NTCLKS_DIR=$(NTCLKS_DIR)); run `git submodule update --init --recursive` and \
-`make fetch`, or point NTCLKS_DIR at an existing checkout)
+ifeq ($(reliefnt_init_exempt),)
+ifeq ($(wildcard $(RELIEFNT_DIR)/Makefile)$(wildcard $(RELIEFNT_DIR)/.git),)
+$(error reliefnt adapter: kernel checkout not found: $(RELIEFNT_DIR)/Makefile \
+(RELIEFNT_DIR=$(RELIEFNT_DIR); default submodule path: kernel/reliefnt); run `git submodule update --init --recursive` and \
+`make fetch`, or point RELIEFNT_DIR at an existing checkout)
 endif
 endif
 # Sub-build output directory: the checkout writes everything under O.
-NTCLKS_O ?= $(O)/ntclks
-# The sub-make changes directory to NTCLKS_DIR. Resolve paths in the parent
-# before passing them across that boundary, including a caller's NTCLKS_O
-# override; otherwise O=out writes into kernel/ntclks/out instead of ./out.
-NTCLKS_SUBBUILD_O := $(abspath $(NTCLKS_O))
+RELIEFNT_O ?= $(if $(strip $(NTCLKS_O)),$(NTCLKS_O),$(O)/reliefnt)
+# The sub-make changes directory to RELIEFNT_DIR. Resolve paths in the parent
+# before passing them across that boundary, including a caller's RELIEFNT_O
+# override; otherwise O=out writes into kernel/reliefnt/out instead of ./out.
+RELIEFNT_SUBBUILD_O := $(abspath $(RELIEFNT_O))
 # DESTDIR for the sub-make's `install`; the published products are copied out
 # of here.
-NTCLKS_DEST := $(O)/kernel-install
-NTCLKS_SUBBUILD_DEST := $(abspath $(NTCLKS_DEST))
+RELIEFNT_DEST := $(O)/kernel-install
+RELIEFNT_SUBBUILD_DEST := $(abspath $(RELIEFNT_DEST))
 
 # Legacy product locations (kept stable for mk/rootfs.mk, mk/images.mk,
 # mk/rpr.mk and mk/boot.mk).
 LEONOS_KERNEL_SYS := $(O_GENERATED)/system/kernel.sys
 LEONOS_KERNEL_DEBUG := $(O_GENERATED)/system/kernel.debug
-NTCLKS_LOADER_ELF := $(O_GENERATED)/boot/loader.elf
-NTCLKS_KERNELDEBUG_SYS := $(O_GENERATED)/system/kerneldebug.sys
-NTCLKS_DRIVER_NAMES := mouse serial e1000 ac97 es1371
-NTCLKS_DRIVER_OUTPUTS := $(addprefix $(O_GENERATED)/drivers/,$(addsuffix .drv,$(NTCLKS_DRIVER_NAMES)))
+RELIEFNT_LOADER_ELF := $(O_GENERATED)/boot/loader.elf
+RELIEFNT_KERNELDEBUG_SYS := $(O_GENERATED)/system/kerneldebug.sys
+RELIEFNT_DRIVER_NAMES := mouse serial e1000 ac97 es1371
+RELIEFNT_DRIVER_OUTPUTS := $(addprefix $(O_GENERATED)/drivers/,$(addsuffix .drv,$(RELIEFNT_DRIVER_NAMES)))
 
 # "legacy path below generated/:installed file name" per product; the sub-make's
-# install writes the nine products flat under $(NTCLKS_DEST).
-NTCLKS_PUBLISH_PAIRS := system/kernel.sys:kernel.sys system/kernel.debug:kernel.debug \
+# install writes the nine products flat under $(RELIEFNT_DEST).
+RELIEFNT_PUBLISH_PAIRS := system/kernel.sys:kernel.sys system/kernel.debug:kernel.debug \
 	system/kerneldebug.sys:kerneldebug.sys boot/loader.elf:loader.elf \
 	drivers/mouse.drv:mouse.drv drivers/serial.drv:serial.drv \
 	drivers/e1000.drv:e1000.drv drivers/ac97.drv:ac97.drv \
 	drivers/es1371.drv:es1371.drv
 
-NTCLKS_PUBLISHED := $(LEONOS_KERNEL_SYS) $(LEONOS_KERNEL_DEBUG) \
-	$(NTCLKS_KERNELDEBUG_SYS) $(NTCLKS_LOADER_ELF) $(NTCLKS_DRIVER_OUTPUTS)
+RELIEFNT_PUBLISHED := $(LEONOS_KERNEL_SYS) $(LEONOS_KERNEL_DEBUG) \
+	$(RELIEFNT_KERNELDEBUG_SYS) $(RELIEFNT_LOADER_ELF) $(RELIEFNT_DRIVER_OUTPUTS)
 
 # An explicit command-line tool override is part of the caller's intent and is
 # passed to the sub-make as well (the checkout accepts the same CC/CXX/AR/
 # RANLIB/LD/OBJCOPY/STRIP overrides). Everything else stays the checkout's own
 # toolchain choice; only ARCH, PROFILE and SOURCE_DATE_EPOCH are pinned here.
-NTCLKS_TOOL_PASSTHRU := $(strip $(foreach tool,CC CXX AR RANLIB LD OBJCOPY STRIP, \
+RELIEFNT_TOOL_PASSTHRU := $(strip $(foreach tool,CC CXX AR RANLIB LD OBJCOPY STRIP, \
 	$(if $(filter command line,$(origin $(tool))),$(tool)=$(strip $($(tool))))))
 
 # --- the delegation and publish rule -----------------------------------------
@@ -92,38 +92,50 @@ NTCLKS_TOOL_PASSTHRU := $(strip $(foreach tool,CC CXX AR RANLIB LD OBJCOPY STRIP
 # sub-build's output lock. The guard keeps `make -n` a promise of no output:
 # recipe lines that contain $(MAKE) run even under -n.
 #
-# Order-only on the exported-header manifest: mk/headers.mk drives the same
-# sub-build output directory for headers_install, and the checkout's build lock
-# refuses two concurrent makes on one O, so the (cheap) header delegation runs
-# first and the product delegation never overlaps it. Nothing else waits: the
-# userland build is gated on the header export, not on kernel.sys.
-$(NTCLKS_PUBLISHED) &: FORCE $(LEONOS_EMIT) | $(O)/kernel-export/manifest.txt
+# Keep header installation ahead of a kernel build when both use the same
+# sub-build O: the checkout's build lock rejects concurrent makes on one O.
+# A pure kernel-product build at an older pin can predate the current UAPI
+# whitelist, though. In that case the kernel itself can still build from its
+# own sources; userland/header goals continue to require the complete export.
+RELIEFNT_HEADER_EXPORT_LIST_FOR_KERNEL := $(if $(strip $(HEADER_EXPORT_LIST)),$(HEADER_EXPORT_LIST),$(LEONOS_SRC)/configs/header-export.list)
+RELIEFNT_HEADER_EXPORT_ENTRIES_FOR_KERNEL := $(shell sed -e 's/\#.*//' -e '/^[[:space:]]*$$/d' $(RELIEFNT_HEADER_EXPORT_LIST_FOR_KERNEL))
+RELIEFNT_HEADER_EXPORTS_COMPLETE := $(shell for entry in $(RELIEFNT_HEADER_EXPORT_ENTRIES_FOR_KERNEL); do test -f '$(RELIEFNT_DIR)/'$$entry || exit 1; done; printf yes)
+RELIEFNT_KERNEL_ONLY_GOALS := kernel all loader drivers
+RELIEFNT_NON_KERNEL_GOALS := $(filter-out $(RELIEFNT_KERNEL_ONLY_GOALS),$(MAKECMDGOALS))
+RELIEFNT_KERNEL_HEADER_ORDER_ONLY := | $(O)/kernel-export/manifest.txt
+ifeq ($(strip $(RELIEFNT_NON_KERNEL_GOALS)),)
+ifneq ($(RELIEFNT_HEADER_EXPORTS_COMPLETE),yes)
+RELIEFNT_KERNEL_HEADER_ORDER_ONLY :=
+endif
+endif
+
+$(RELIEFNT_PUBLISHED) &: FORCE $(LEONOS_EMIT) $(RELIEFNT_KERNEL_HEADER_ORDER_ONLY)
 	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0 ;; esac; \
-	if [ ! -f '$(NTCLKS_DIR)/Makefile' ] && [ ! -e '$(NTCLKS_DIR)/.git' ]; then \
+	if [ ! -f '$(RELIEFNT_DIR)/Makefile' ] && [ ! -e '$(RELIEFNT_DIR)/.git' ]; then \
 	    printf '%s\n' \
-	        'ntclks adapter: kernel checkout not found: $(NTCLKS_DIR)/Makefile' \
+	        'reliefnt adapter: kernel checkout not found: $(RELIEFNT_DIR)/Makefile' \
 	        '' \
-	        'The kernel products are built by the ntclks kernel checkout (the' \
-	        'kernel/ntclks git submodule since phase 5). Initialize it with' \
+	        'The kernel products are built by the reliefnt kernel checkout (the' \
+	        'kernel/reliefnt git submodule since phase 5). Initialize it with' \
 	        '`git submodule update --init --recursive` and run' \
-	        '`make fetch`, or point NTCLKS_DIR at an existing' \
-	        'checkout, e.g. NTCLKS_DIR=/path/to/ntclks or NTCLKS_DIR=.' >&2; \
+	        '`make fetch`, or point RELIEFNT_DIR at an existing' \
+	        'checkout, e.g. RELIEFNT_DIR=/path/to/reliefnt or RELIEFNT_DIR=.' >&2; \
 	    exit 1; \
 	fi; \
-	exec $(MAKE) -C '$(NTCLKS_DIR)' O='$(NTCLKS_SUBBUILD_O)' ARCH='$(ARCH)' \
+	exec $(MAKE) -C '$(RELIEFNT_DIR)' O='$(RELIEFNT_SUBBUILD_O)' ARCH='$(ARCH)' \
 	    PROFILE='$(PROFILE)' SOURCE_DATE_EPOCH='$(or $(SOURCE_DATE_EPOCH),0)' \
-	    $(NTCLKS_TOOL_PASSTHRU) all install DESTDIR='$(NTCLKS_SUBBUILD_DEST)'
+	    $(RELIEFNT_TOOL_PASSTHRU) all install DESTDIR='$(RELIEFNT_SUBBUILD_DEST)'
 	$(Q)set -eu; \
-	test -f $(NTCLKS_DEST)/manifest.txt || { \
-	    echo "ntclks adapter: $(NTCLKS_DEST)/manifest.txt missing after install" >&2; \
+	test -f $(RELIEFNT_DEST)/manifest.txt || { \
+	    echo "reliefnt adapter: $(RELIEFNT_DEST)/manifest.txt missing after install" >&2; \
 	    exit 1; }; \
-	for pair in $(NTCLKS_PUBLISH_PAIRS); do \
+	for pair in $(RELIEFNT_PUBLISH_PAIRS); do \
 	    rel=$${pair%%:*}; name=$${pair#*:}; \
-	    test -f $(NTCLKS_DEST)/$$name || { \
-	        echo "ntclks adapter: installed product $$name missing from $(NTCLKS_DEST)" >&2; \
+	    test -f $(RELIEFNT_DEST)/$$name || { \
+	        echo "reliefnt adapter: installed product $$name missing from $(RELIEFNT_DEST)" >&2; \
 	        exit 1; }; \
 	    mkdir -p $(O_GENERATED)/$${rel%%/*}; \
-	    $(LEONOS_EMIT) --input $(NTCLKS_DEST)/$$name --output $(O_GENERATED)/$$rel; \
+	    $(LEONOS_EMIT) --input $(RELIEFNT_DEST)/$$name --output $(O_GENERATED)/$$rel; \
 	done
 
 # --- fetch delegation -------------------------------------------------------
@@ -132,21 +144,22 @@ $(NTCLKS_PUBLISHED) &: FORCE $(LEONOS_EMIT) | $(O)/kernel-export/manifest.txt
 # on every `make fetch` is cheap. A missing checkout cannot be fetched into
 # existence here: keep the goal successful with a warning, so a fresh machine
 # can still run `make doctor` / `make fetch` before the submodule exists (see
-# ntclks_init_exempt_goals). NTCLKS_DIR pointing back at this repository would
+# reliefnt_init_exempt_goals). RELIEFNT_DIR pointing back at this repository would
 # recurse into `make -C . fetch`; skip instead.
-.PHONY: ntclks-fetch
-ntclks-fetch:
+.PHONY: reliefnt-fetch ntclks-fetch
+ntclks-fetch: reliefnt-fetch
+reliefnt-fetch:
 	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0 ;; esac; \
-	if [ '$(realpath $(NTCLKS_DIR))' = '$(realpath $(LEONOS_SRC))' ]; then \
-	    echo 'ntclks adapter: NTCLKS_DIR is this repository; skipping the kernel fetch' >&2; \
+	if [ '$(realpath $(RELIEFNT_DIR))' = '$(realpath $(LEONOS_SRC))' ]; then \
+	    echo 'reliefnt adapter: RELIEFNT_DIR is this repository; skipping the kernel fetch' >&2; \
 	    exit 0; \
 	fi; \
-	if [ ! -f '$(NTCLKS_DIR)/Makefile' ] && [ ! -e '$(NTCLKS_DIR)/.git' ]; then \
-	    echo 'ntclks adapter: kernel checkout not found: $(NTCLKS_DIR)/Makefile; skipping the kernel fetch' >&2; \
-	    echo 'Initialize it with `git submodule update --init --recursive`, or point NTCLKS_DIR at an existing checkout' >&2; \
+	if [ ! -f '$(RELIEFNT_DIR)/Makefile' ] && [ ! -e '$(RELIEFNT_DIR)/.git' ]; then \
+	    echo 'reliefnt adapter: kernel checkout not found: $(RELIEFNT_DIR)/Makefile; skipping the kernel fetch' >&2; \
+	    echo 'Initialize it with `git submodule update --init --recursive`, or point RELIEFNT_DIR at an existing checkout' >&2; \
 	    exit 0; \
 	fi; \
-	exec $(MAKE) -C '$(NTCLKS_DIR)' fetch
+	exec $(MAKE) -C '$(RELIEFNT_DIR)' fetch
 
 # --- the parent-owned version header -----------------------------------------
 # build_info.h is not a kernel product: the parent generates it for its own

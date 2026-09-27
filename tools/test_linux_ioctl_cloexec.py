@@ -5,7 +5,7 @@ Host stage (always runs, no virtual machine):
   * Linux UAPI header checks and dispatch-contract checks for the kernel
     source that answers ioctl(FIOCLEX/FIONCLEX),
   * the kernel descriptor-table unit test, built from the real
-    kernel/ntclks/kernel/ntclks/syscall.c with ASan/UBSan,
+    kernel/reliefnt/kernel/reliefnt/syscall.c with ASan/UBSan,
   * the raw-syscall probe built with the LeonOS musl SDK and executed on the
     host Linux kernel, which is the reference implementation of the ABI.
 
@@ -29,7 +29,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 LINUX_V612 = {
-    # kernel/ntclks/include/uapi/asm-generic/ioctls.h, Linux v6.12
+    # kernel/reliefnt/include/uapi/asm-generic/ioctls.h, Linux v6.12
     "FIOCLEX": 0x5451,
     "FIONCLEX": 0x5450,
 }
@@ -55,8 +55,8 @@ def run(command: list[str], **kwargs) -> subprocess.CompletedProcess:
 # --------------------------------------------------------------------------- #
 
 def test_linux_headers() -> None:
-    tty = read("kernel/ntclks/include/uapi/linux/tty.h")
-    fcntl = read("kernel/ntclks/include/uapi/linux/fcntl.h")
+    tty = read("kernel/reliefnt/include/uapi/linux/tty.h")
+    fcntl = read("kernel/reliefnt/include/uapi/linux/fcntl.h")
     assert macro(tty, "FIOCLEX") == LINUX_V612["FIOCLEX"], "FIOCLEX must match Linux v6.12"
     assert macro(tty, "FIONCLEX") == LINUX_V612["FIONCLEX"], "FIONCLEX must match Linux v6.12"
     assert macro(fcntl, "LINUX_FD_CLOEXEC") == 1
@@ -70,8 +70,8 @@ def test_linux_headers() -> None:
 
 
 def test_kernel_dispatch_contract() -> None:
-    syscall_c = read("kernel/ntclks/kernel/ntclks/syscall.c")
-    sched_h = read("kernel/ntclks/kernel/ntclks/include/ntclks/sched.h")
+    syscall_c = read("kernel/reliefnt/kernel/reliefnt/syscall.c")
+    sched_h = read("kernel/reliefnt/kernel/reliefnt/include/ntclks/sched.h")
     # The generic requests must be resolved before any category/device routing.
     dispatch = syscall_c.index("static int64_t syscall_dispatch_regs(uint64_t number")
     generic = syscall_c.index("syscall_ioctl_descriptor_flags(sched_current_task(), a0")
@@ -119,16 +119,16 @@ def test_kernel_descriptor_table(directory: Path) -> None:
     binary = directory / "ioctl-cloexec-table"
     sources = [
         "tools/tests/ioctl_cloexec_table_test.c",
-        "kernel/ntclks/kernel/ntclks/sched/sched.c",
-        "kernel/ntclks/kernel/ntclks/wait.c",
-        "kernel/ntclks/kernel/ntclks/syscall_sysv_msg.c",
-        "kernel/ntclks/kernel/ntclks/syscall_sysv_sem.c",
-        "kernel/ntclks/kernel/ntclks/syscall_locks.c",
+        "kernel/reliefnt/kernel/reliefnt/sched/sched.c",
+        "kernel/reliefnt/kernel/reliefnt/wait.c",
+        "kernel/reliefnt/kernel/reliefnt/syscall_sysv_msg.c",
+        "kernel/reliefnt/kernel/reliefnt/syscall_sysv_sem.c",
+        "kernel/reliefnt/kernel/reliefnt/syscall_locks.c",
     ]
     run([
         "clang", "-std=c11", "-g", "-O1", "-ffunction-sections", "-fdata-sections",
         "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
-        "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include", "-Wl,--gc-sections",
+        "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ikernel/reliefnt/kernel/reliefnt/include", "-Wl,--gc-sections",
         *sources, "-o", str(binary),
     ])
     result = subprocess.run([str(binary)], cwd=ROOT, check=True, timeout=60,

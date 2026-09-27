@@ -14,7 +14,7 @@ def prepare(source, output, text_only=False, compiler=None,
     probe = output / 'vt-probe'
     if compiler is None:
         compiler = ROOT / 'out/x86_64/release/sdk/leonos-musl-sdk/bin/leonos-musl-cc'
-    subprocess.run([str(compiler), '-D_GNU_SOURCE', '-static', '-Iinclude', '-Ikernel/ntclks/include/uapi',
+    subprocess.run([str(compiler), '-D_GNU_SOURCE', '-static', '-Iinclude', '-Ikernel/reliefnt/include/uapi',
                     probe_source, '-o', str(probe)], cwd=ROOT, check=True)
     disk = output / 'disk.raw'
     subprocess.run(['cp', '--reflink=auto', '--sparse=always', str(source), str(disk)], check=True)

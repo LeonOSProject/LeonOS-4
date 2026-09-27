@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "../../kernel/ntclks/kernel/ntclks/syscall.c"
-#include "../../kernel/ntclks/kernel/ntclks/input.c"
+#include "../../kernel/reliefnt/kernel/reliefnt/syscall.c"
+#include "../../kernel/reliefnt/kernel/reliefnt/input.c"
 
 static bool output_writable = true;
 bool user_range_ok(uint64_t address, uint64_t length)

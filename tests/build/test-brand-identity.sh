@@ -181,8 +181,6 @@ if [ -f "$allowlist" ]; then
     audit_repo main "$root"
     if [ -d "$root/kernel/reliefnt" ]; then
         audit_repo kernel "$root/kernel/reliefnt"
-    elif [ -d "$root/kernel/ntclks" ]; then
-        audit_repo kernel "$root/kernel/ntclks"
     fi
 else
     fail "missing $allowlist"

@@ -1,9 +1,9 @@
 #!/bin/sh
-# Contract tests for the ntclks submodule integration (separation phase 5):
+# Contract tests for the ReliefNT submodule integration (separation phase 5):
 #
 #   1. an uninitialized kernel checkout fails `make kernel` with the adapter's
-#      actionable error naming NTCLKS_DIR;
-#   2. a dirty kernel/ntclks submodule is allowed for development builds
+#      actionable error naming RELIEFNT_DIR and kernel/reliefnt;
+#   2. a dirty kernel/reliefnt submodule is allowed for development builds
 #      (`make kernel` still builds) but refuses the release target
 #      (`make rpr-pages` fails with the dirty message) -- design §8;
 #   3. a gitlink mismatch (submodule checked out at a different published SHA)
@@ -24,8 +24,8 @@ export LC_ALL
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 
-ntclks=${NTCLKS_DIR:-$repo_root/kernel/ntclks}
-gitlink_path=kernel/ntclks
+reliefnt=${RELIEFNT_DIR:-${NTCLKS_DIR:-$repo_root/kernel/reliefnt}}
+gitlink_path=kernel/reliefnt
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-submodule.XXXXXX") || exit 1
 failures=0
@@ -33,7 +33,7 @@ checks=0
 
 cleanup() {
     # Always leave the real submodule clean.
-    rm -f "$repo_root/kernel/ntclks/P5_CONTRACT_DIRTY_PROBE"
+    rm -f "$repo_root/kernel/reliefnt/P5_CONTRACT_DIRTY_PROBE"
     [ -n "${KEEP_WORK:-}" ] || rm -rf "$work"
 }
 trap cleanup EXIT INT TERM
@@ -48,23 +48,24 @@ fail() {
 
 printf '=== (1) an uninitialized kernel checkout fails with an actionable error ===\n'
 mkdir -p "$work/uninitialized"
-if make -s O="$work/out" NTCLKS_DIR="$work/uninitialized" kernel \
+if make -s O="$work/out" RELIEFNT_DIR="$work/uninitialized" kernel \
         >"$work/uninitialized.log" 2>&1; then
     fail "make kernel refuses an uninitialized kernel checkout" 'make exited 0'
 else
     pass "make kernel refuses an uninitialized kernel checkout"
 fi
-if grep -q 'NTCLKS_DIR' "$work/uninitialized.log"; then
-    pass "the uninitialized-checkout error names NTCLKS_DIR"
+if grep -q 'RELIEFNT_DIR' "$work/uninitialized.log" &&
+        grep -q 'kernel/reliefnt' "$work/uninitialized.log"; then
+    pass "the uninitialized-checkout error gives ReliefNT setup guidance"
 else
-    fail "the uninitialized-checkout error names NTCLKS_DIR" \
+    fail "the uninitialized-checkout error gives ReliefNT setup guidance" \
         "$(head -c 200 "$work/uninitialized.log")"
 fi
 
 printf '\n=== (2) a dirty submodule builds (dev) but refuses release ===\n'
-probe=$repo_root/kernel/ntclks/P5_CONTRACT_DIRTY_PROBE
+probe=$repo_root/kernel/reliefnt/P5_CONTRACT_DIRTY_PROBE
 : >"$probe"
-if [ -n "$(git -C "$repo_root/kernel/ntclks" status --porcelain)" ]; then
+if [ -n "$(git -C "$reliefnt" status --porcelain)" ]; then
     pass "the probe file dirties the submodule"
 else
     fail "the probe file dirties the submodule" 'git status --porcelain stayed empty'
@@ -87,11 +88,11 @@ else
         "$(head -c 200 "$work/dirty-rpr.log")"
 fi
 rm -f "$probe"
-if [ -z "$(git -C "$repo_root/kernel/ntclks" status --porcelain)" ]; then
+if [ -z "$(git -C "$reliefnt" status --porcelain)" ]; then
     pass "the submodule is clean again after restore"
 else
     fail "the submodule is clean again after restore" \
-        "$(git -C "$repo_root/kernel/ntclks" status --porcelain)"
+        "$(git -C "$reliefnt" status --porcelain)"
 fi
 
 printf '\n=== (3) a gitlink mismatch refuses release (scratch clone) ===\n'
@@ -110,8 +111,8 @@ fi
 # committed state the fixture needs, so only commit a real difference.
 git -C "$clone" rm -r -q --cached kernel >/dev/null 2>&1 || true
 rm -rf "$clone/kernel"
-pin=$(git -C "$repo_root/kernel/ntclks" rev-parse HEAD)
-other=$(git -C "$repo_root/kernel/ntclks" rev-parse HEAD~1 2>/dev/null || true)
+pin=$(git -C "$reliefnt" rev-parse HEAD)
+other=$(git -C "$reliefnt" rev-parse HEAD~1 2>/dev/null || true)
 git -C "$clone" -c user.name=fixture -c user.email=fixture@example.invalid \
     update-index --add --cacheinfo "160000,$pin,$gitlink_path" || exit 1
 if ! git -C "$clone" diff --cached --quiet; then
@@ -124,16 +125,17 @@ fi
 # in mk/kernel.mk is part of that wiring: it must not shadow the release
 # guard's dual-SHA refusal for an initialized checkout at another published
 # SHA.
-cp "$repo_root/tools/build/ntclks-release-guard.sh" "$clone/tools/build/" || exit 1
+cp "$repo_root/tools/build/reliefnt-release-guard.sh" "$clone/tools/build/" || exit 1
 cp "$repo_root/mk/rpr.mk" "$clone/mk/rpr.mk" || exit 1
 cp "$repo_root/mk/kernel.mk" "$clone/mk/kernel.mk" || exit 1
+cp "$repo_root/mk/headers.mk" "$clone/mk/headers.mk" || exit 1
 cp "$repo_root/Makefile" "$clone/Makefile" || exit 1
 if [ -z "${other:-}" ]; then
     printf 'skip - gitlink mismatch case: the kernel repository has no older\n'
     printf '       published SHA to check out under the fixture gitlink\n'
-elif git clone -q --no-checkout "$repo_root/kernel/ntclks" \
-        "$clone/kernel/ntclks" 2>"$work/sub-clone.log"; then
-    git -C "$clone/kernel/ntclks" checkout -q --detach "$other" 2>/dev/null
+elif git clone -q --no-checkout "$repo_root/kernel/reliefnt" \
+        "$clone/kernel/reliefnt" 2>"$work/sub-clone.log"; then
+    git -C "$clone/kernel/reliefnt" checkout -q --detach "$other" 2>/dev/null
     # The fixture's make needs the config chain: seed the two submodules it
     # parses/builds from the (already initialized) worktree checkouts.
     # git >= 2.38 blocks the file transport for submodules by default.
@@ -162,7 +164,7 @@ else
 fi
 
 printf '\n=== (4) old-SHA rollback: guard accepts a consistent older pin ===\n'
-if [ -n "${other:-}" ] && { [ -d "$clone/kernel/ntclks/.git" ] || [ -f "$clone/kernel/ntclks/.git" ]; }; then
+if [ -n "${other:-}" ] && { [ -d "$clone/kernel/reliefnt/.git" ] || [ -f "$clone/kernel/reliefnt/.git" ]; }; then
     # Roll the fixture's gitlink back to the older SHA so gitlink and checkout
     # agree again: the guard must NOT refuse this (rollback pinning works).
     git -C "$clone" -c user.name=fixture -c user.email=fixture@example.invalid \
@@ -171,8 +173,8 @@ if [ -n "${other:-}" ] && { [ -d "$clone/kernel/ntclks/.git" ] || [ -f "$clone/k
         git -C "$clone" -c user.name=fixture -c user.email=fixture@example.invalid \
             commit -q -m 'fixture: roll kernel gitlink back' || exit 1
     fi
-    if sh "$repo_root/tools/build/ntclks-release-guard.sh" "$clone" \
-            "$clone/kernel/ntclks" "$gitlink_path" >"$work/rollback.log" 2>&1; then
+    if sh "$repo_root/tools/build/reliefnt-release-guard.sh" "$clone" \
+            "$clone/kernel/reliefnt" "$gitlink_path" >"$work/rollback.log" 2>&1; then
         pass "a consistent older kernel pin passes the release guard"
     else
         fail "a consistent older kernel pin passes the release guard" \

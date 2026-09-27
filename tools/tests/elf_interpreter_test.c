@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "../../kernel/ntclks/kernel/exec/elf.c"
+#include "../../kernel/reliefnt/kernel/exec/elf.c"
 
 int main(void)
 {

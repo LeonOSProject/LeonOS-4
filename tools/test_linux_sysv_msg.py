@@ -9,8 +9,8 @@ with tempfile.TemporaryDirectory(prefix="leonos-sysv-msg-") as directory:
     output = str(Path(directory) / "sysv_msg")
     subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                     "-fno-sanitize-recover=all", "-ffunction-sections", "-fdata-sections",
-                    "-Wl,--gc-sections", "-fno-pie", "-no-pie", "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi",
-                    "-Ikernel/ntclks/kernel/ntclks/include", "tools/tests/sysv_msg_test.c", "-o", output],
+                    "-Wl,--gc-sections", "-fno-pie", "-no-pie", "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi",
+                    "-Ikernel/reliefnt/kernel/reliefnt/include", "tools/tests/sysv_msg_test.c", "-o", output],
                    cwd=root, check=True)
     subprocess.run([output], cwd=root, check=True, timeout=20)
     output = str(Path(directory) / "sysv_msg_abi")

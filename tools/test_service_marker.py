@@ -8,7 +8,7 @@ must agree - a drifted constant silently drops the SERVICE grant, a spread
 mark hands it to the wrong binary. This test pins the inventory:
 
 1. kernel defines: LEONOS_GID_WINDOW_SERVER/LEONOS_GID_SERVICE in
-   kernel/ntclks/kernel/exec/userland.c carry the pinned values;
+   kernel/reliefnt/kernel/exec/userland.c carry the pinned values;
 2. staging plan: tools/build/rootfs-stage.sh assigns gid 60001 to desktop.elf
    and 60002 to windowd.elf/imd.elf and nothing else;
 3. image build: tools/build/images.sh re-applies those gids after its blanket
@@ -30,7 +30,7 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-KERNEL_USERLAND = (ROOT / "kernel/ntclks/kernel/exec/userland.c")
+KERNEL_USERLAND = (ROOT / "kernel/reliefnt/kernel/exec/userland.c")
 ROOTFS_STAGE = ROOT / "tools/build/rootfs-stage.sh"
 IMAGES = ROOT / "tools/build/images.sh"
 GROUP_FILES = [ROOT / "system/rootfs/etc/group", ROOT / "system/test-accounts/group"]

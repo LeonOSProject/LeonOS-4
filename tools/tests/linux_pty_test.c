@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "../../kernel/ntclks/kernel/ntclks/pty.c"
+#include "../../kernel/reliefnt/kernel/reliefnt/pty.c"
 
 static struct task owner;
 static unsigned signals;

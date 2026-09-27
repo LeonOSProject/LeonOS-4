@@ -9,6 +9,6 @@ with tempfile.TemporaryDirectory(prefix="storage-write-batch-", dir=ROOT / "buil
     binary = Path(directory) / "batch"
     subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                     "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                    "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
+                    "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ikernel/reliefnt/kernel/reliefnt/include",
                     "tools/tests/storage_write_batch_test.c", "-o", binary], cwd=ROOT, check=True)
     subprocess.run([binary], check=True, timeout=30)

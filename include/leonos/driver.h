@@ -10,7 +10,7 @@
  * struct leonos_driver_module / leonos_driver_kernel_api and the per-device
  * ops/state structs) belongs to the kernel module domain and lives in the
  * kernel repository's own copy of this header
- * (kernel/ntclks/include/leonos/driver.h).
+ * (kernel/reliefnt/include/leonos/driver.h).
  */
 #include <stdint.h>
 #include <leonos/driver_abi.h>

@@ -86,8 +86,8 @@
 
 **文件：** 修改 `.gitmodules`、`mk/kernel.mk`、`mk/headers.mk`、`mk/rpr.mk`、`tools/build/ntclks-release-guard.sh`（改名为 `reliefnt-release-guard.sh`）、`configs/header-export.list`、`tests/build/test-{kernel-adapter,header-boundary,ntclks-fetch,submodule-contract,submodule-rollback-build}.sh`、`tools/test_header_export.py`。
 
-- [ ] **步骤 1：先把现有子仓 gitlink、子仓 HEAD 与用户未跟踪内容记入测试证据。** 不在真实工作区直接 `git mv kernel/ntclks kernel/reliefnt`；先用本地隔离克隆验证 gitlink 路径变更、旧路径消失、新路径初始化和用户目录不被触碰。
-- [ ] **步骤 2：先改/新增适配器契约测试为红灯。** 测试新 `RELIEFNT_DIR` / `RELIEFNT_O` 覆盖，旧 `NTCLKS_DIR` / `NTCLKS_O` 仍可传入；同传时新名优先；无子仓时报 `kernel/reliefnt` 引导信息；产品 manifest 仍是九件原名；release guard 拒绝脏子仓及 SHA 不匹配。
+- [x] **步骤 1：先把现有子仓 gitlink、子仓 HEAD 与用户未跟踪内容记入测试证据。** 不在真实工作区直接 `git mv kernel/ntclks kernel/reliefnt`；先用本地隔离克隆验证 gitlink 路径变更、旧路径消失、新路径初始化和用户目录不被触碰。
+- [x] **步骤 2：先改/新增适配器契约测试为红灯。** 测试新 `RELIEFNT_DIR` / `RELIEFNT_O` 覆盖，旧 `NTCLKS_DIR` / `NTCLKS_O` 仍可传入；同传时新名优先；无子仓时报 `kernel/reliefnt` 引导信息；产品 manifest 仍是九件原名；release guard 拒绝脏子仓及 SHA 不匹配。
 
   ```sh
   tmp=$(mktemp -d)
@@ -101,9 +101,11 @@
   grep -Fq "$PWD/kernel/reliefnt" "$tmp/old.log"
   ```
 
-- [ ] **步骤 3：更新 `mk/kernel.mk` 与 `mk/headers.mk` 的规范变量、错误文字、调用路径和导出白名单。** 旧环境变量仅为输入兼容，不再出现在新输出 manifest。对子仓 `headers_install` 同时导出 `reliefos/` 与兼容 `leonos/`。
-- [ ] **步骤 4：迁移 gitlink 路径。** 在隔离验证通过、真实子仓未跟踪内容得到保全且子仓提交可 fetch 后，更新 `.gitmodules` 的 path；新远端未存在则保留现有可用 URL。`git submodule sync` 和递归 clone 验证后再把路径更改带回真实分支。只 stage gitlink，不把子仓内部源码当主仓普通文件。
-- [ ] **步骤 5：运行定向测试。** `sh tests/build/test-kernel-adapter.sh`、`sh tests/build/test-header-boundary.sh`、`python3 tools/test_header_export.py` 和 `make kernel`。涉及写探针/克隆的子模块测试只在隔离干净克隆运行，随后核对 `git diff --check` 与 `git status --short`。
+- [x] **步骤 3：更新 `mk/kernel.mk` 与 `mk/headers.mk` 的规范变量、错误文字、调用路径和导出白名单。** 旧环境变量仅为输入兼容，不再出现在新输出 manifest。对子仓 `headers_install` 同时导出 `reliefos/` 与兼容 `leonos/`。
+- [x] **步骤 4：迁移 gitlink 路径。** 在隔离验证通过、真实子仓未跟踪内容得到保全且子仓提交可 fetch 后，更新 `.gitmodules` 的 path；新远端未存在则保留现有可用 URL。`git submodule sync` 和递归 clone 验证后再把路径更改带回真实分支。只 stage gitlink，不把子仓内部源码当主仓普通文件。
+- [x] **步骤 5：运行定向测试。** `sh tests/build/test-kernel-adapter.sh`、`sh tests/build/test-header-boundary.sh`、`python3 tools/test_header_export.py` 和 `make kernel`。涉及写探针/克隆的子模块测试只在隔离干净克隆运行，随后核对 `git diff --check` 与 `git status --short`。
+
+  > 完成证据（2026-09-28）：旧 SHA `5cc9621` 上先运行递归子模块初始化与 `make fetch`，隔离回滚构建产出九个原名内核产品；`rpr-pages` 在 gitlink 与 HEAD 不一致时拒绝发布，之后恢复到子仓提交 `296acc8611fabf76b2ae7bb1169396ce8c17735b` 且干净。隔离 `test-submodule-contract.sh` 11 项通过。主仓 `test-kernel-adapter.sh` 35 项、`test-header-boundary.sh` 5 项、`test_header_export.py`（82 个头）、`test-ntclks-fetch.sh` 12 项全部通过；主仓 `make kernel` 通过并安装九个原名产品。递归克隆已验证新路径 `kernel/reliefnt` 和嵌套 kconfig 子模块，`.gitmodules` 保留原 URL。头边界验证发现并修复了旧认证 UAPI 头的传递包含兼容；子仓修复提交为 `296acc8611fabf76b2ae7bb1169396ce8c17735b`。
 
 ### 任务 4：Kconfig、主机工具与构建命名
 

@@ -1,37 +1,37 @@
 #!/bin/sh
-# Release guard for the ntclks kernel submodule (design "Git 与发布流程"):
+# Release guard for the reliefnt kernel submodule (design "Git 与发布流程"):
 # release artifacts must come from a clean kernel checkout whose HEAD is
 # exactly the gitlink recorded in the parent's HEAD commit. Development
 # builds (`make kernel`, `make all`) are deliberately not gated: a dirty
 # submodule is allowed there.
 #
-# usage: ntclks-release-guard.sh <repo-root> <ntclks-checkout> <gitlink-path>
+# usage: reliefnt-release-guard.sh <repo-root> <reliefnt-checkout> <gitlink-path>
 #   repo-root      parent repository root (where `git ls-tree HEAD <path>` runs)
-#   ntclks-checkout the kernel checkout the build uses (NTCLKS_DIR)
+#   reliefnt-checkout the kernel checkout the build uses (RELIEFNT_DIR)
 #   gitlink-path   submodule path recorded in the parent index/HEAD
 set -u
 LC_ALL=C
 export LC_ALL
 
-repo_root=${1:?usage: ntclks-release-guard.sh <repo-root> <ntclks-checkout> <gitlink-path>}
-checkout=${2:?usage: ntclks-release-guard.sh <repo-root> <ntclks-checkout> <gitlink-path>}
-gitlink_path=${3:?usage: ntclks-release-guard.sh <repo-root> <ntclks-checkout> <gitlink-path>}
+repo_root=${1:?usage: reliefnt-release-guard.sh <repo-root> <reliefnt-checkout> <gitlink-path>}
+checkout=${2:?usage: reliefnt-release-guard.sh <repo-root> <reliefnt-checkout> <gitlink-path>}
+gitlink_path=${3:?usage: reliefnt-release-guard.sh <repo-root> <reliefnt-checkout> <gitlink-path>}
 
 note() {
-    printf 'ntclks release guard: %s\n' "$1" >&2
+    printf 'reliefnt release guard: %s\n' "$1" >&2
     shift
     for line in "$@"; do
         printf '       %s\n' "$line" >&2
     done
 }
 
-# 1. Uninitialized submodule: an uninitialized kernel/ntclks is an empty
+# 1. Uninitialized submodule: an uninitialized kernel/reliefnt is an empty
 # directory without its own .git (git -C would silently walk up into the
 # parent repository, so the .git marker is what we test).
 if [ ! -e "$repo_root/$gitlink_path/.git" ]; then
     note "$gitlink_path is not initialized (no .git in $repo_root/$gitlink_path)" \
         'release builds must come from the committed submodule:' \
-        'run: git submodule update --init --recursive && make -C kernel/ntclks fetch'
+        'run: git submodule update --init --recursive && make -C kernel/reliefnt fetch'
     exit 1
 fi
 
@@ -47,12 +47,12 @@ if [ -n "$dirty" ]; then
 fi
 
 # 3. The build's checkout must also be clean when it is not the submodule
-#    itself (NTCLKS_DIR pointed at an external kernel checkout).
+#    itself (RELIEFNT_DIR pointed at an external kernel checkout).
 if [ "$checkout" != "$repo_root/$gitlink_path" ]; then
     ext_dirty=$(git -C "$checkout" status --porcelain 2>/dev/null)
     if [ -n "$ext_dirty" ]; then
         count=$(printf '%s\n' "$ext_dirty" | wc -l)
-        note "NTCLKS_DIR checkout $checkout is dirty ($count entries); release builds require a clean kernel checkout" \
+        note "RELIEFNT_DIR checkout $checkout is dirty ($count entries); release builds require a clean kernel checkout" \
             "HEAD=$(git -C "$checkout" rev-parse HEAD 2>/dev/null || echo unknown)"
         exit 1
     fi

@@ -15,7 +15,7 @@ repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 
 # The kernel checkout under test (env-overridable, see tests/build/test-incremental.sh).
-ntclks=${NTCLKS_DIR:-$repo_root/kernel/ntclks}
+ntclks=${NTCLKS_DIR:-$repo_root/kernel/reliefnt}
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-jobs.XXXXXX") || exit 1
 failures=0
@@ -59,7 +59,7 @@ changed_between() {
 # The three invalidations are deliberately different action classes: one ordinary
 # source, one header with dozens of consumers, and the linker script, which must
 # relink without recompiling anything. They live in the kernel checkout.
-touch_targets="$ntclks/kernel/ntclks/futex.c $ntclks/kernel/ntclks/include/ntclks/types.h
+touch_targets="$ntclks/kernel/reliefnt/futex.c $ntclks/kernel/reliefnt/include/ntclks/types.h
 $ntclks/arch/x86_64/linker.ld"
 
 printf '=== A08: -j1 and -j8 from clean output directories ===\n'
@@ -119,7 +119,7 @@ printf '\n=== A08: the same invalidations at both job levels, three rounds ===\n
 # is stable. The cheap pair is also two different action classes: one object, and
 # a relink with no recompilation at all.
 heavy_targets=$touch_targets
-light_targets="$ntclks/kernel/ntclks/futex.c $ntclks/arch/x86_64/linker.ld"
+light_targets="$ntclks/kernel/reliefnt/futex.c $ntclks/arch/x86_64/linker.ld"
 for round in 1 2 3; do
     if [ "$round" = 1 ]; then
         round_targets=$heavy_targets

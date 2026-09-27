@@ -10,6 +10,6 @@ with tempfile.TemporaryDirectory(prefix="leonos-rlimit-") as directory:
         output = str(Path(directory) / test)
         subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                         "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                        "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
+                        "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ikernel/reliefnt/kernel/reliefnt/include",
                         f"tools/tests/{test}_test.c", "-o", output], cwd=root, check=True)
         subprocess.run([output], cwd=root, check=True, timeout=20)

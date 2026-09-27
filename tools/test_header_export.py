@@ -25,7 +25,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 WHITELIST = ROOT / "configs/header-export.list"
 
-PRIVATE_INCLUDE = re.compile(r'#\s*include\s*[<"](?:ntclks/|\.\./)')
+PRIVATE_INCLUDE = re.compile(r'#\s*include\s*[<"](?:reliefnt/|ntclks/|\.\./)')
 
 
 def whitelist_entries(path=WHITELIST):

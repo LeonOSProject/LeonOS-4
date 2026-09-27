@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "../../kernel/ntclks/kernel/ntclks/sched/sched.c"
+#include "../../kernel/reliefnt/kernel/reliefnt/sched/sched.c"
 
 static uint32_t fake_cpu;
 static uint64_t fake_time;
