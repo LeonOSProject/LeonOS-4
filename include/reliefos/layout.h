@@ -127,8 +127,9 @@
 #define RELIEFOS_PATH_KERNELDEBUG_MODULE RELIEFOS_LAYOUT_RELIEFOS_LIB "/kerneldebug.sys"
 
 /* Runtime view of the boot partition; the ESP itself normally mounts /boot. */
-#define RELIEFOS_PATH_BOOT_KERNEL "/boot/leonos/kernel.sys"
-#define RELIEFOS_PATH_BOOT_KERNELDEBUG_MARKER "/boot/leonos/state/kerneldebug.next"
-#define RELIEFOS_PATH_BOOT_DISPLAY_CONF "/boot/leonos/config/display.conf"
+#define RELIEFOS_PATH_BOOT_KERNEL "/boot/reliefos/kernel.sys"
+#define RELIEFOS_PATH_BOOT_KERNEL_LEGACY "/boot/leonos/kernel.sys"
+#define RELIEFOS_PATH_BOOT_KERNELDEBUG_MARKER "/boot/reliefos/state/kerneldebug.next"
+#define RELIEFOS_PATH_BOOT_DISPLAY_CONF "/boot/reliefos/config/display.conf"
 
 #endif /* RELIEFOS_LAYOUT_H */

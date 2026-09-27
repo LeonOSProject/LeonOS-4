@@ -822,7 +822,7 @@ static int block_create_entry(struct block_gpt_table *table, void *context)
             table->entries[free_index].first_lba = cursor;
             table->entries[free_index].last_lba = end;
             block_name_set(table->entries[free_index].name,
-                           request->name && request->name[0] ? request->name : "LeonOS Data");
+                           request->name && request->name[0] ? request->name : "ReliefOS Data");
             request->index = free_index;
             return 0;
         }
@@ -927,7 +927,7 @@ static int block_format_fat32(int fd, uint64_t sectors, const char *label)
     {
         struct block_fat32_bpb *bpb = (struct block_fat32_bpb *)(void *)sector;
         bpb->jump[0] = 0xeb; bpb->jump[1] = 0x58; bpb->jump[2] = 0x90;
-        memcpy(bpb->oem, "LEONOS4 ", 8);
+        memcpy(bpb->oem, "RELIEFOS", 8);
         bpb->bytes_per_sector = BLOCK_SECTOR_SIZE; bpb->sectors_per_cluster = spc;
         bpb->reserved_sector_count = reserved; bpb->fat_count = fat_count; bpb->media = 0xf8;
         bpb->sectors_per_track = 63; bpb->head_count = 255; bpb->total_sectors32 = sectors;
@@ -935,7 +935,7 @@ static int block_format_fat32(int fd, uint64_t sectors, const char *label)
         bpb->drive_number = 0x80; bpb->boot_signature = 0x29; bpb->volume_id = 0x4c454f34u;
         memset(bpb->volume_label, ' ', sizeof(bpb->volume_label));
         if (label) memcpy(bpb->volume_label, label, strlen(label) > 11 ? 11 : strlen(label));
-        else memcpy(bpb->volume_label, "LEONOS4    ", 11);
+        else memcpy(bpb->volume_label, "RELIEFOS   ", 11);
         memcpy(bpb->fs_type, "FAT32   ", 8); sector[510] = 0x55; sector[511] = 0xaa;
     }
     ret = block_io(fd, 0, sector, sizeof(sector), 1);
@@ -1005,7 +1005,7 @@ static int block_format_ext2(int fd, uint64_t sectors, const char *label)
     super.frags_per_group = EXT2_BLOCKS_PER_GROUP; super.inodes_per_group = EXT2_INODES_PER_GROUP;
     super.magic = EXT2_SUPER_MAGIC; super.state = 1; super.errors = 1; super.rev_level = 1;
     super.first_ino = 11; super.inode_size = 128; super.feature_incompat = 2;
-    memcpy(super.volume_name, label && label[0] ? label : "LEONOS4-ROOT", label && label[0] && strlen(label) < 16 ? strlen(label) : 12);
+    memcpy(super.volume_name, label && label[0] ? label : "RELIEFOS", label && label[0] && strlen(label) < 16 ? strlen(label) : 8);
     for (uint32_t group = 0; group < groups; ++group) {
         uint32_t start = group * EXT2_BLOCKS_PER_GROUP;
         memset(data, 0, sizeof(data));
@@ -1140,8 +1140,11 @@ static int block_format_exfat(int fd, uint64_t sectors, const char *label)
         if (ret < 0) return ret;
         offset += bytes;
     }
-    memset(scratch, 0, sizeof(scratch)); scratch[0] = 0x83; scratch[1] = 11;
-    for (uint32_t i = 0; i < 11; ++i) block_put16(scratch + 2u + i * 2u, (label && label[i]) ? label[i] : "LEONOS4ROOT"[i]);
+    const char *volume_label = label && label[0] ? label : "RELIEFOS";
+    uint32_t volume_label_length = (uint32_t)strlen(volume_label);
+    if (volume_label_length > 11u) volume_label_length = 11u;
+    memset(scratch, 0, sizeof(scratch)); scratch[0] = 0x83; scratch[1] = (uint8_t)volume_label_length;
+    for (uint32_t i = 0; i < volume_label_length; ++i) block_put16(scratch + 2u + i * 2u, (uint8_t)volume_label[i]);
     scratch[32] = 0x81; block_put32(scratch + 52, bitmap_cluster); block_put64(scratch + 56, bitmap_bytes);
     scratch[64] = 0x82; block_put32(scratch + 68, checksum); block_put32(scratch + 84, upcase_cluster); block_put64(scratch + 88, upcase_bytes);
     ret = block_io(fd, ((uint64_t)heap_offset + (uint64_t)(root_cluster - 2u) * spc) * 512u,

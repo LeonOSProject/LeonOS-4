@@ -24,12 +24,18 @@ rpr_url=$(sed -n 's/^RPR_BASE_URL=//p' "$config")
 case "$rpr_url" in https://*) ;; *) printf '%s\n' 'Invalid RPR URL: HTTPS is required' >&2; exit 1;; esac
 
 manifest=$(mktemp /tmp/leonos-kernel-release.XXXXXX) || exit 1
+esp=/boot
+boot=$esp/reliefos
+legacy_boot=$esp/leonos
 kernel_tmp=
 loader_tmp=
 kernel_backup=
 loader_backup=
-middle_backup=
 lock_dir=
+legacy_lock_dir=
+boot_dir_created=0
+had_kernel=0
+had_loader=0
 commit_started=0
 commit_done=0
 cleanup() {
@@ -40,18 +46,16 @@ cleanup() {
         # they agree on is compiled into both, so a rolled-back kernel has to
         # come back with the loader that was on disk before the swap.
         if [ -n "$kernel_backup" ] && [ -f "$kernel_backup" ]; then
-            rm -f -- /boot/leonos/kernel.sys
-            mv -- "$kernel_backup" /boot/leonos/kernel.sys || true
+            rm -f -- "$boot/kernel.sys"
+            mv -- "$kernel_backup" "$boot/kernel.sys" || true
+        elif [ "$had_kernel" -eq 0 ]; then
+            rm -f -- "$boot/kernel.sys"
         fi
         if [ -n "$loader_backup" ] && [ -f "$loader_backup" ]; then
-            rm -f -- /boot/loader.elf
-            mv -- "$loader_backup" /boot/loader.elf || true
-        fi
-        # A retired middle-layer payload comes back only with the rolled-back
-        # kernel, because that kernel was the one that required it.
-        if [ -n "$middle_backup" ] && [ -f "$middle_backup" ]; then
-            rm -f -- /boot/leonos/middlelayer.sys
-            mv -- "$middle_backup" /boot/leonos/middlelayer.sys || true
+            rm -f -- "$boot/loader.elf"
+            mv -- "$loader_backup" "$boot/loader.elf" || true
+        elif [ "$had_loader" -eq 0 ]; then
+            rm -f -- "$boot/loader.elf"
         fi
         sync || true
     fi
@@ -61,9 +65,12 @@ cleanup() {
     if [ "$commit_done" -eq 1 ]; then
         [ -z "$kernel_backup" ] || rm -f -- "$kernel_backup"
         [ -z "$loader_backup" ] || rm -f -- "$loader_backup"
-        [ -z "$middle_backup" ] || rm -f -- "$middle_backup"
     fi
     [ -z "$lock_dir" ] || rmdir -- "$lock_dir" 2>/dev/null || true
+    [ -z "$legacy_lock_dir" ] || rmdir -- "$legacy_lock_dir" 2>/dev/null || true
+    if [ "$boot_dir_created" -eq 1 ]; then
+        rmdir -- "$boot" 2>/dev/null || true
+    fi
     exit "$status"
 }
 trap cleanup EXIT
@@ -141,26 +148,41 @@ else
 fi
 [ "$check_only" -eq 0 ] || exit 0
 
-esp=/boot
-boot=$esp/leonos
-[ -d "$boot" ] && [ -f "$boot/kernel.sys" ] || {
-    printf 'Boot payload is unavailable under %s\n' "$boot" >&2
+if [ -L "$boot" ] || { [ -e "$boot" ] && [ ! -d "$boot" ]; }; then
+    printf 'Unsafe canonical boot directory: %s\n' "$boot" >&2
     exit 1
-}
-[ -f "$esp/loader.elf" ] || {
+fi
+if { [ ! -f "$boot/kernel.sys" ] || [ ! -f "$boot/loader.elf" ]; } &&
+    { [ ! -d "$legacy_boot" ] || [ ! -f "$legacy_boot/kernel.sys" ]; }; then
+    printf 'Boot payload is unavailable under %s and %s\n' "$boot" "$legacy_boot" >&2
+    exit 1
+fi
+if [ ! -f "$boot/loader.elf" ] && [ ! -f "$esp/loader.elf" ]; then
     printf 'Boot loader is unavailable under %s\n' "$esp" >&2
     exit 1
-}
-lock_dir=/run/leonos-kernel-update.lock
+fi
+if [ ! -d "$boot" ]; then
+    mkdir -- "$boot" || { printf 'Cannot create canonical boot directory: %s\n' "$boot" >&2; exit 1; }
+    boot_dir_created=1
+fi
+lock_dir=/run/reliefos-kernel-update.lock
 mkdir -- "$lock_dir" 2>/dev/null || {
     printf '%s\n' 'Another kernel update is already running' >&2
     lock_dir=
     exit 1
 }
+legacy_lock_dir=/run/leonos-kernel-update.lock
+mkdir -- "$legacy_lock_dir" 2>/dev/null || {
+    printf '%s\n' 'Another kernel update is already running' >&2
+    rmdir -- "$lock_dir" 2>/dev/null || true
+    lock_dir=
+    legacy_lock_dir=
+    exit 1
+}
 # Each download lands on the filesystem that owns the file it replaces, so the
 # commit step renames within one filesystem instead of copying across devices.
 kernel_tmp=$(mktemp "$boot/.kernel.sys.rpr.XXXXXX") || exit 1
-loader_tmp=$(mktemp "$esp/.loader.elf.rpr.XXXXXX") || exit 1
+loader_tmp=$(mktemp "$boot/.loader.elf.rpr.XXXXXX") || exit 1
 rprfetch "$rpr_url/kernel/$kernel_file" "$kernel_tmp" || exit 1
 rprfetch "$rpr_url/kernel/$loader_file" "$loader_tmp" || exit 1
 actual_kernel=$(sha256sum "$kernel_tmp" | awk '{print $1}')
@@ -170,22 +192,24 @@ actual_loader=$(sha256sum "$loader_tmp" | awk '{print $1}')
 chmod 0644 "$kernel_tmp" "$loader_tmp" || exit 1
 
 kernel_backup="$boot/.kernel.sys.rpr-backup.$$"
-loader_backup="$esp/.loader.elf.rpr-backup.$$"
-middle_backup="$boot/.middlelayer.sys.rpr-backup.$$"
-[ ! -e "$kernel_backup" ] && [ ! -e "$loader_backup" ] && [ ! -e "$middle_backup" ] || {
+loader_backup="$boot/.loader.elf.rpr-backup.$$"
+[ ! -e "$kernel_backup" ] && [ ! -e "$loader_backup" ] || {
     printf '%s\n' 'Kernel update backup path already exists' >&2
     exit 1
 }
 commit_started=1
-mv -- "$boot/kernel.sys" "$kernel_backup" || exit 1
-mv -- "$esp/loader.elf" "$loader_backup" || exit 1
+if [ -e "$boot/kernel.sys" ]; then
+    mv -- "$boot/kernel.sys" "$kernel_backup" || exit 1
+    had_kernel=1
+fi
+if [ -e "$boot/loader.elf" ]; then
+    mv -- "$boot/loader.elf" "$loader_backup" || exit 1
+    had_loader=1
+fi
 mv -- "$kernel_tmp" "$boot/kernel.sys" || exit 1
-mv -- "$loader_tmp" "$esp/loader.elf" || exit 1
+mv -- "$loader_tmp" "$boot/loader.elf" || exit 1
 kernel_tmp=
 loader_tmp=
-if [ -f "$boot/middlelayer.sys" ]; then
-    mv -- "$boot/middlelayer.sys" "$middle_backup" || exit 1
-fi
 sync || exit 1
 commit_done=1
 printf 'Installed kernel and loader %s (build %s); reboot to activate.\n' \

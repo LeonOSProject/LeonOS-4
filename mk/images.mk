@@ -38,10 +38,10 @@ $(eval $(call RELIEFOS_STANDALONE_STAGE,disk))
 INSTALLER_ROOT := $(O_STAGE)/installer
 INSTALLER_STAGE_STAMP := $(O_STAGE)/installer.complete
 INSTALLER_EXT2 := $(O_IMAGES)/installer-root.ext2
-DISK_RAW := $(O_IMAGES)/leonos4.raw
-DISK_VMDK := $(O_IMAGES)/leonos4.vmdk
-LIVE_ISO := $(O_IMAGES)/leonos4-live.iso
-INSTALLER_ISO := $(O_IMAGES)/leonos4-installer.iso
+DISK_RAW := $(O_IMAGES)/reliefos.raw
+DISK_VMDK := $(O_IMAGES)/reliefos.vmdk
+LIVE_ISO := $(O_IMAGES)/reliefos-live.iso
+INSTALLER_ISO := $(O_IMAGES)/reliefos-installer.iso
 $(LIVE_ISO) $(INSTALLER_ISO): $(BUILD_LOG_INPUTS)
 $(INSTALLER_STAGE_STAMP): $(USERLAND_DIR)/installer.elf
 $(ROOT_EXT2): $(O_STAGE)/live-root.complete $(RELIEFOS_EXT2_TIME) $(RELIEFOS_SRC)/tools/build/images.sh $(O_META)/images.sig
@@ -63,9 +63,9 @@ $(INSTALLER_EXT2): $(INSTALLER_STAGE_STAMP) $(RELIEFOS_EXT2_TIME) $(RELIEFOS_SRC
 $(DISK_RAW) $(DISK_VMDK) &: $(DISK_ROOT_EXT2) $(ESP_STAMP) $(RELIEFOS_SRC)/tools/build/disk.sh $(O_META)/images.sig
 	$(Q)IMAGE_MIN_MIB=$(or $(CONFIG_IMAGE_SIZE_MIB),1024) sh $(RELIEFOS_SRC)/tools/build/disk.sh $(ESP_STAGE) $(DISK_ROOT_EXT2) $(DISK_RAW) $(DISK_VMDK) $(SOURCE_DATE_EPOCH)
 $(LIVE_ISO): $(ROOT_EXT2) $(ESP_STAMP) $(RELIEFOS_SRC)/tools/build/iso.sh $(RELIEFOS_SRC)/boot/grub/live.cfg $(RELIEFOS_SRC)/boot/grub/installer_embedded.cfg $(O_META)/images.sig
-	$(Q)sh $(RELIEFOS_SRC)/tools/build/iso.sh $(RELIEFOS_SRC) $(GRUB_EFI_DIR) $(ESP_STAGE) $(ROOT_EXT2) $(RELIEFOS_SRC)/boot/grub/live.cfg $@ $(SOURCE_DATE_EPOCH) LEONOS4LIVE
+	$(Q)sh $(RELIEFOS_SRC)/tools/build/iso.sh $(RELIEFOS_SRC) $(GRUB_EFI_DIR) $(ESP_STAGE) $(ROOT_EXT2) $(RELIEFOS_SRC)/boot/grub/live.cfg $@ $(SOURCE_DATE_EPOCH) RELIEFOSLIVE
 $(INSTALLER_ISO): $(INSTALLER_EXT2) $(ESP_STAMP) $(RELIEFOS_SRC)/tools/build/iso.sh $(RELIEFOS_SRC)/boot/grub/installer.cfg $(RELIEFOS_SRC)/boot/grub/installer_embedded.cfg $(O_META)/images.sig
-	$(Q)sh $(RELIEFOS_SRC)/tools/build/iso.sh $(RELIEFOS_SRC) $(GRUB_EFI_DIR) $(ESP_STAGE) $(INSTALLER_EXT2) $(RELIEFOS_SRC)/boot/grub/installer.cfg $@ $(SOURCE_DATE_EPOCH) LEONOS4INST
+	$(Q)sh $(RELIEFOS_SRC)/tools/build/iso.sh $(RELIEFOS_SRC) $(GRUB_EFI_DIR) $(ESP_STAGE) $(INSTALLER_EXT2) $(RELIEFOS_SRC)/boot/grub/installer.cfg $@ $(SOURCE_DATE_EPOCH) RELIEFOSINST
 .PHONY: image-vmdk iso installer
 image-vmdk: $(DISK_RAW) $(DISK_VMDK)
 iso: $(LIVE_ISO)

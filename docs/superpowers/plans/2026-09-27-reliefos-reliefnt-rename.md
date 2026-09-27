@@ -189,7 +189,7 @@
 
 **文件：** 修改 `boot/grub/{grub,installer,live,installer_embedded}.cfg`、`boot/grub/theme/theme.txt`、`mk/images.mk`、`tools/build/{efi-stage,iso,disk,installer-stage,site}.sh`、`userland/apps/installer/{main.c,installer_setup.c}`、`userland/storage/leonos-{grub-installer,kernel-update}`、`tests/build/test-image-adapters.sh`、`tests/integration/test-kernel-update.sh`、`tools/test_installer_update_qemu.py`。
 
-- [ ] **步骤 1：先写启动布局与旧盘升级测试。** 新 ESP 中 `/reliefos/kernel.sys` 与 GRUB 的 `module2` 参数同路径；旧盘 `/leonos/kernel.sys` 保持可启动；新安装 ISO marker、下载页名称和 installer 检测保持一致。模拟升级发布中断，确认旧 GRUB 项/载荷仍在。
+- [x] **步骤 1：先写启动布局与旧盘升级测试。** 新 ESP 中 `/reliefos/kernel.sys` 与 GRUB 的 `module2` 参数同路径；旧盘 `/leonos/kernel.sys` 保持可启动；新安装 ISO marker、下载页名称和 installer 检测保持一致。模拟升级发布中断，确认旧 GRUB 项/载荷仍在。
 
   ```sh
   grep -q 'module2 /reliefos/kernel.sys' boot/grub/installer.cfg
@@ -197,10 +197,12 @@
   test -s out/x86_64/release/images/reliefos-installer.iso
   ```
 
-- [ ] **步骤 2：确认测试红灯。** 当前 GRUB 与镜像规则仍用旧路径/产物名，失败应明确指向这些约定。
-- [ ] **步骤 3：同时切 `efi-stage.sh`、GRUB 三种入口、Installer staging、disk/ISO 目标和安装器/更新器。** 保留 `EFI/BOOT/BOOTX64.EFI`、`kernel.sys`、`loader.elf`；新旧载荷成套验证后才发布新 GRUB 配置。升级模式先读旧布局，写新布局并保留回滚入口。
-- [ ] **步骤 4：检查卷标长度与工具限制。** FAT 卷标不能直接使用超限的 `RELIEFOS4ESP`；为 ESP 采用 `RELIEFOS`（8 字符），GPT 分区名采用 `RELIEFOS_ESP` / `RELIEFOS_ROOT`，并更新测试断言。已发布分区 UUID 保持不变。
-- [ ] **步骤 5：验证 `sh tests/build/test-image-adapters.sh`、`sh tests/integration/test-kernel-update.sh`、`make image-vmdk iso installer`。** 以 `mtools`/ISO 清单逐项检查载荷与 GRUB 路径；QEMU 新安装和旧盘升级在任务 11 执行；检查 `git diff --check`。
+- [x] **步骤 2：确认测试红灯。** 当前 GRUB 与镜像规则仍用旧路径/产物名，失败应明确指向这些约定。
+- [x] **步骤 3：同时切 `efi-stage.sh`、GRUB 三种入口、Installer staging、disk/ISO 目标和安装器/更新器。** 保留 `EFI/BOOT/BOOTX64.EFI`、`kernel.sys`、`loader.elf`；新旧载荷成套验证后才发布新 GRUB 配置。升级模式先读旧布局，写新布局并保留回滚入口。
+- [x] **步骤 4：检查卷标长度与工具限制。** FAT 卷标不能直接使用超限的 `RELIEFOS4ESP`；为 ESP 采用 `RELIEFOS`（8 字符），GPT 分区名采用 `RELIEFOS_ESP` / `RELIEFOS_ROOT`，并更新测试断言。已发布分区 UUID 保持不变。
+- [x] **步骤 5：验证 `sh tests/build/test-image-adapters.sh`、`sh tests/integration/test-kernel-update.sh`、`make image-vmdk iso installer`。** 以 `mtools`/ISO 清单逐项检查载荷与 GRUB 路径；QEMU 新安装和旧盘升级在任务 11 执行；检查 `git diff --check`。
+
+> 执行记录（2026-09-28）：先运行新增的 ESP/旧盘升级断言，基线在 canonical `/reliefos` 路径、模块标签、marker、输出名与分区身份上按预期红灯；更新器旧布局 fixture 也因 canonical 更新目录缺失失败。实现后 `sh tests/build/test-image-adapters.sh`、`sh tests/integration/test-kernel-update.sh`、`sh tests/build/test-installer-stage.sh`、`sh tests/build/test-pages.sh` 和 `python3 tools/test_live_iso.py` 全绿。中断注入确认 GRUB 资源复制失败时旧 `grub.cfg`、root `/loader.elf` 与 `/leonos/kernel.sys` 保留；成功时 canonical kernel/loader 成对发布并在最后替换 GRUB 配置。内核子仓在全新临时 `O` 目录执行 `make -C kernel/reliefnt O=<temp> test headers_install all` 成功；主仓 `make image-vmdk iso installer` 成功，生成 `out/x86_64/release/images/reliefos.raw`、`reliefos.vmdk`、`reliefos-live.iso`、`reliefos-installer.iso`。mtools 读取 raw ESP 和两张 ISO 的 EFI FAT 载荷：新旧 kernel/loader 成对字节一致，canonical/legacy GRUB 路径、双 marker 和 installer root 模块存在。`sfdisk --json` 确认 GPT 名为 `RELIEFOS_ESP` / `RELIEFOS_ROOT`，ESP/root UUID 保持 `41A3EE19-BA85-47A0-9705-A5C128374021` / `5C13543B-732C-4F81-8652-621124484420`；`xorriso -pvd_info` 卷标为 `RELIEFOSLIVE` / `RELIEFOSINST`。`tools/leonos_layout.py` 和 `tools/make_image.py` 仅作测试所需的 canonical rootfs contract/ESP 路径适配。QEMU 新安装及旧盘升级回滚留在任务 11；`git diff --check` 通过。
 
 ### 任务 8：APK 包名、仓库、SDK 包和签名链
 

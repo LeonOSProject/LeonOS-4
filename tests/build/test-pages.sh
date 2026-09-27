@@ -19,7 +19,7 @@ build="$tmp/build_info.h"
 printf '#define RELIEFOS_KERNEL_VERSION "4.9.1"\n' > "$build"
 head -c 8192 /dev/zero > "$tmp/kernel.sys"
 head -c 4096 /dev/zero > "$tmp/loader.elf"
-head -c 123456 /dev/zero > "$tmp/leonos4-installer.iso"
+head -c 123456 /dev/zero > "$tmp/reliefos-installer.iso"
 
 # The kernel side of the release metadata: an install manifest whose per-artifact
 # hashes match these exact bytes, and the kernel's build-version file.
@@ -58,7 +58,7 @@ sh "$src/tools/build/rpr-pages.sh" "$tmp/repository" "$tmp/apps" \
     "$tmp/kernel.sys" "$tmp/loader.elf" "$manifest" "$version_src" \
     "$tmp/fake-bin/apk" "$tmp/key" "$tmp/rpr-pages" \
     || { echo 'rpr-pages.sh failed' >&2; exit 1; }
-sh "$src/tools/build/site.sh" "$tmp/rpr-pages" "$tmp/leonos4-installer.iso" \
+sh "$src/tools/build/site.sh" "$tmp/rpr-pages" "$tmp/reliefos-installer.iso" \
     "$build" "$src/resources/pages/css/leonos.css" "$tmp/pages" \
     || { echo 'site.sh failed' >&2; exit 1; }
 

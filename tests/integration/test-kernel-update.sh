@@ -19,9 +19,11 @@ pass() { printf 'ok   - %s\n' "$1"; }
 fail() { printf 'fail - %s\n' "$1"; fails=$((fails + 1)); }
 
 # ------------------------------------------------------------------ fixtures
-old_kernel='OLD-KERNEL-SYS-PAYLOAD'
+old_kernel='OLD-CANONICAL-KERNEL-SYS-PAYLOAD'
+legacy_kernel='OLD-LEGACY-KERNEL-SYS-PAYLOAD'
 new_kernel='NEW-KERNEL-SYS-PAYLOAD'
 old_loader='OLD-LOADER-ELF-PAYLOAD'
+old_reliefos_loader='OLD-CANONICAL-LOADER-ELF-PAYLOAD'
 new_loader='NEW-LOADER-ELF-PAYLOAD'
 stale_middle='STALE-MIDDLELAYER-SYS-PAYLOAD'
 hash() { printf '%s' "$1" | sha256sum | awk '{print $1}'; }
@@ -38,13 +40,18 @@ manifest() { # manifest FORMAT IMAGE RELEASE KERNEL_HASH LOADER_HASH
 setup_tree() { # setup_tree TREE SYNC_FAIL(0/1)
     tree=$1
     rm -rf "$tree"
-    mkdir -p "$tree/boot/leonos" "$tree/etc/leonos" "$tree/run" "$tree/tmp" \
+    mkdir -p "$tree/boot/reliefos" "$tree/boot/leonos" "$tree/boot/grub" \
+        "$tree/boot/EFI/BOOT" "$tree/etc/reliefos" "$tree/run" "$tree/tmp" \
         "$tree/serve" "$tree/usr/bin" "$tree/usr/sbin" "$tree/bin" "$tree/lib" \
         "$tree/lib64" "$tree/sbin"
-    printf '%s' "$old_kernel" >"$tree/boot/leonos/kernel.sys"
+    printf '%s' "$old_kernel" >"$tree/boot/reliefos/kernel.sys"
+    printf '%s' "$old_reliefos_loader" >"$tree/boot/reliefos/loader.elf"
+    printf '%s' "$legacy_kernel" >"$tree/boot/leonos/kernel.sys"
     printf '%s' "$old_loader" >"$tree/boot/loader.elf"
     printf '%s' "$stale_middle" >"$tree/boot/leonos/middlelayer.sys"
-    printf 'RPR_BASE_URL=https://rpr.test.invalid\n' >"$tree/etc/leonos/rpr.conf"
+    printf 'menuentry "LeonOS 4 rollback" { module2 /leonos/kernel.sys leonos-kernel; }\n' >"$tree/boot/grub/grub.cfg"
+    printf 'legacy-efi-payload\n' >"$tree/boot/EFI/BOOT/BOOTX64.EFI"
+    printf 'RPR_BASE_URL=https://rpr.test.invalid\n' >"$tree/etc/reliefos/rpr.conf"
     chmod 1777 "$tree/tmp"
     # Mocks live in /usr/sbin, which is first in the script's fixed PATH.
     cat >"$tree/usr/sbin/rprfetch" <<'EOF'
@@ -100,9 +107,13 @@ run_update() { # run_update TREE [args...] -> status in $status, log in $work/la
 }
 
 assert_untouched() { # assert_untouched TREE LABEL
-    if [ "$(cat "$1/boot/leonos/kernel.sys")" = "$old_kernel" ] &&
+    if [ "$(cat "$1/boot/reliefos/kernel.sys")" = "$old_kernel" ] &&
+        [ "$(cat "$1/boot/reliefos/loader.elf")" = "$old_reliefos_loader" ] &&
+        [ "$(cat "$1/boot/leonos/kernel.sys")" = "$legacy_kernel" ] &&
         [ "$(cat "$1/boot/loader.elf")" = "$old_loader" ] &&
-        [ "$(cat "$1/boot/leonos/middlelayer.sys")" = "$stale_middle" ]; then
+        [ "$(cat "$1/boot/leonos/middlelayer.sys")" = "$stale_middle" ] &&
+        grep -q 'LeonOS 4 rollback' "$1/boot/grub/grub.cfg" &&
+        [ "$(cat "$1/boot/EFI/BOOT/BOOTX64.EFI")" = 'legacy-efi-payload' ]; then
         pass "$2: boot payload untouched"
     else
         fail "$2: boot payload was modified"
@@ -123,21 +134,23 @@ manifest "$serve/release.txt" 2 1.0.1 1.0.1 "$new_kernel_hash" "$new_loader_hash
 printf '%s' "$new_kernel" >"$serve/kernel.sys"
 printf '%s' "$new_loader" >"$serve/loader.elf"
 run_update "$tree"
-if [ "$status" = 0 ] && [ "$(cat "$tree/boot/leonos/kernel.sys")" = "$new_kernel" ] &&
-    [ "$(cat "$tree/boot/loader.elf")" = "$new_loader" ]; then
-    pass "update success: newer release swaps kernel.sys and loader.elf together"
+if [ "$status" = 0 ] && [ "$(cat "$tree/boot/reliefos/kernel.sys")" = "$new_kernel" ] &&
+    [ "$(cat "$tree/boot/reliefos/loader.elf")" = "$new_loader" ] &&
+    [ "$(cat "$tree/boot/leonos/kernel.sys")" = "$legacy_kernel" ] &&
+    [ "$(cat "$tree/boot/loader.elf")" = "$old_loader" ]; then
+    pass "update success: newer release swaps canonical kernel.sys and loader.elf together"
 else
-    fail "update success: expected exit 0 and both payloads replaced (status=$status)"
+    fail "update success: expected canonical payload pair replaced and legacy kernel retained (status=$status)"
 fi
 if grep -q 'Installed kernel and loader 1.0.1 (build 1.0.1)' "$work/last.log"; then
     pass "update success: reports the installed release"
 else
     fail "update success: missing install report"
 fi
-if [ -e "$tree/boot/leonos/middlelayer.sys" ]; then
-    fail "update success: stale middlelayer.sys not retired"
+if [ "$(cat "$tree/boot/leonos/middlelayer.sys")" = "$stale_middle" ]; then
+    pass "update success: legacy rollback directory and middlelayer remain intact"
 else
-    pass "update success: stale middlelayer.sys retired with the commit"
+    fail "update success: legacy rollback directory or middlelayer changed"
 fi
 if find "$tree/boot" -name '*.rpr*' | grep -q .; then
     fail "update success: commit left temporary/backup files behind"
@@ -227,8 +240,8 @@ else
 fi
 assert_untouched "$tree" "version disagreement"
 
-# 8. failure inside the commit window -> the previous kernel, loader and
-#    retired payload are rolled back (fault injection: sync refuses)
+# 8. failure inside the commit window -> canonical kernel and loader roll back;
+#    legacy kernel, GRUB rollback entry and EFI payload stay available.
 tree=$work/tree-rollback
 setup_tree "$tree" 1
 manifest "$serve/release.txt" 2 1.0.1 1.0.1 "$new_kernel_hash" "$new_loader_hash"
@@ -241,6 +254,25 @@ else
     fail "commit failure: expected a non-zero exit (status=$status)"
 fi
 assert_untouched "$tree" "commit failure rollback"
+
+# 9. a legacy-only installation can receive the canonical layout without
+#    replacing the old boot entry or payload.
+tree=$work/tree-legacy-layout
+setup_tree "$tree" 0
+rm -rf "$tree/boot/reliefos"
+manifest "$serve/release.txt" 2 1.0.1 1.0.1 "$new_kernel_hash" "$new_loader_hash"
+printf '%s' "$new_kernel" >"$serve/kernel.sys"
+printf '%s' "$new_loader" >"$serve/loader.elf"
+run_update "$tree"
+if [ "$status" = 0 ] && [ "$(cat "$tree/boot/reliefos/kernel.sys")" = "$new_kernel" ] &&
+    [ "$(cat "$tree/boot/reliefos/loader.elf")" = "$new_loader" ] &&
+    [ "$(cat "$tree/boot/leonos/kernel.sys")" = "$legacy_kernel" ] &&
+    [ "$(cat "$tree/boot/loader.elf")" = "$old_loader" ] &&
+    grep -q 'LeonOS 4 rollback' "$tree/boot/grub/grub.cfg"; then
+    pass "legacy layout migration: writes canonical payload and retains legacy GRUB entry and kernel"
+else
+    fail "legacy layout migration: canonical payload missing or legacy rollback changed (status=$status)"
+fi
 
 printf '\n'
 if [ "$fails" = 0 ]; then

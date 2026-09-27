@@ -199,6 +199,7 @@ def make_root_tree(staging: Path, destination: Path, language: str) -> None:
     shutil.copytree(staging, destination, symlinks=True, dirs_exist_ok=True)
     shutil.rmtree(destination / "EFI", ignore_errors=True)
     shutil.rmtree(destination / "grub", ignore_errors=True)
+    shutil.rmtree(destination / "reliefos", ignore_errors=True)
     shutil.rmtree(destination / "leonos", ignore_errors=True)
     (destination / "loader.elf").unlink(missing_ok=True)
     layout_directories(destination)

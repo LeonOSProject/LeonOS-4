@@ -21,7 +21,7 @@ fail=
 report() { printf 'verify-pages: %s\n' "$1" >&2; fail="yes"; }
 
 # --- expected files ---------------------------------------------------------
-for f in index.html download/index.html download/leonos4-installer.iso download/SHA256SUMS \
+for f in index.html download/index.html download/reliefos-installer.iso download/SHA256SUMS \
          css/leonos.css .nojekyll \
          rpr/index.html rpr/packages/index.html rpr/kernel/index.html \
          rpr/apk/index.html \
@@ -83,7 +83,7 @@ if [ -f "$site/rpr/apk/SHA256SUMS" ]; then
 fi
 
 # --- ISO hash consistency ---------------------------------------------------
-if [ -f "$site/download/SHA256SUMS" ] && [ -s "$site/download/leonos4-installer.iso" ]; then
+if [ -f "$site/download/SHA256SUMS" ] && [ -s "$site/download/reliefos-installer.iso" ]; then
     ( cd "$site/download" && sha256sum -c SHA256SUMS >/dev/null 2>&1 ) \
         || report "installer ISO does not match download/SHA256SUMS"
 fi

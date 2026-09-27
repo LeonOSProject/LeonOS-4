@@ -10,7 +10,7 @@
 #
 #   arguments:
 #     rpr_pages  $(O)/rpr-pages   fully generated RPR tree (apk/, kernel/, ...)
-#     iso        .../images/leonos4-installer.iso
+#     iso        .../images/reliefos-installer.iso
 #     build      build_info.h (for the release version)
 #     css        resources/pages/css/leonos.css
 #     output     $(O)/pages       the assembled site root

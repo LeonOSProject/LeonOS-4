@@ -21,7 +21,8 @@ class LiveRootTests(unittest.TestCase):
                 "EFI/BOOT/BOOTX64.EFI": b"boot",
                 "grub/grub.cfg": b"set root=(hd0,gpt1)",
                 "loader.elf": b"loader",
-                "leonos/kernel.sys": b"kernel",
+                "reliefos/loader.elf": b"loader",
+                "reliefos/kernel.sys": b"kernel",
                 "usr/lib/leonos/apps/desktop/desktop.elf": b"desktop",
                 "usr/lib/leonos/apps/terminal/terminal.elf": b"terminal",
                 "bin/busybox": b"shell",
@@ -49,6 +50,7 @@ class LiveRootTests(unittest.TestCase):
             self.assertEqual((output / "usr/share/terminfo/x/xterm").read_bytes(), b"terminfo")
             self.assertTrue((output / "usr/lib/leonos/apps/terminal/terminal.elf").is_file())
             self.assertFalse((output / "EFI").exists())
+            self.assertFalse((output / "reliefos").exists())
             self.assertFalse((output / "leonos").exists())
             self.assertEqual((output / "opt/python/bin/python3.14").read_bytes(), b"static Python executable")
             self.assertEqual((output / "opt/python/lib/python3.14/encodings/__init__.py").read_bytes(), b"encodings")
@@ -81,11 +83,12 @@ class LiveRootTests(unittest.TestCase):
     def test_grub_loads_the_root_from_cd_not_the_first_hard_disk(self):
         config = (ROOT / "boot/grub/live.cfg").read_text()
         self.assertNotIn("(hd", config)
+        self.assertIn("search --no-floppy --file /reliefos-installer-iso.marker --set=root", config)
         self.assertIn("search --no-floppy --file /leonos-installer-iso.marker --set=root", config)
         self.assertIn("mode=live", config)
         self.assertNotIn("startup=", config)
-        self.assertIn("module2 /install/root.fat leonos-installer-root", config)
-        self.assertIn("module2 /leonos/kernel.sys leonos-kernel", config)
+        self.assertIn("module2 /install/root.fat reliefos-installer-root", config)
+        self.assertIn("module2 /reliefos/kernel.sys reliefos-kernel", config)
 
 
 if __name__ == "__main__":

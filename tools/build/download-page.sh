@@ -4,7 +4,7 @@
 # The page is a static build artifact: the ISO hash, size and version are
 # computed here from the file that will actually be published, so what the page
 # shows can never disagree with the downloadable file (plan §28, §46.B). The
-# ISO download link is a bare relative "leonos4-installer.iso", so it works at
+# ISO download link is a bare relative "reliefos-installer.iso", so it works at
 # whatever base path Pages serves the site from (plan §25).
 set -eu
 [ "$#" = 3 ] || exit 2
@@ -12,6 +12,10 @@ iso=$1 build=$2 output=$3
 # output is the site root; the download page lives in <output>/download.
 site=$output
 [ -s "$iso" ] || { echo "missing installer ISO $iso" >&2; exit 1; }
+[ "${iso##*/}" = reliefos-installer.iso ] || {
+    echo "installer ISO must be named reliefos-installer.iso: $iso" >&2
+    exit 1
+}
 version=$(sed -n 's/^#define RELIEFOS_KERNEL_VERSION "\([0-9.]*\)"$/\1/p' "$build")
 printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo 'invalid release version' >&2; exit 1; }
 # shellcheck source=/dev/null
@@ -26,7 +30,7 @@ printf '%s  %s\n' "$iso_hash" "$name" > "$site/download/SHA256SUMS"
 
 {
     site_page_begin "$(site_css_href 1)" "$(site_home_href 1)" \
-        "LeonOS 4 Download" "LeonOS 4 Download"
+        "ReliefOS Download" "ReliefOS Download"
     printf '<p class="subtitle">Latest release &middot; version %s &middot; x86_64</p>\n' \
         "$(printf '%s' "$version" | site_html_escape)"
     cat <<HTML

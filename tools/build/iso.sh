@@ -16,12 +16,14 @@ grub-mkstandalone -d "$modules" -O x86_64-efi -o "$work/efi/EFI/BOOT/BOOTX64.EFI
 cp "$work/efi/EFI/BOOT/BOOTX64.EFI" "$work/tree/EFI/BOOT/BOOTX64.EFI"
 cp "$root" "$work/tree/install/root.fat"
 cp "$config" "$work/tree/grub/grub.cfg"
-printf 'LeonOS installer ISO volume\n' > "$work/tree/leonos-installer-iso.marker"
+printf 'ReliefOS installer ISO volume\n' > "$work/tree/reliefos-installer-iso.marker"
+# Old embedded GRUB releases still locate the installer media by this marker.
+printf 'ReliefOS installer ISO volume\n' > "$work/tree/leonos-installer-iso.marker"
 find "$work/efi" "$work/tree" -exec touch -h -d "@$epoch" {} +
 size=$(( ($(stat -c %s "$work/efi/EFI/BOOT/BOOTX64.EFI") + 1048575) / 1048576 + 8 ))
 [ "$size" -ge 16 ] || size=16
 truncate -s "${size}M" "$work/tree/boot/efiboot.img"
-mkfs.fat --invariant -F 16 -n LEONOSINST "$work/tree/boot/efiboot.img"
+mkfs.fat --invariant -F 16 -n RELIEFOS "$work/tree/boot/efiboot.img"
 mcopy -s -m -i "$work/tree/boot/efiboot.img" "$work/efi/EFI" ::/
 touch -d "@$epoch" "$work/tree/boot/efiboot.img"
 leonos_log ISO "$output"

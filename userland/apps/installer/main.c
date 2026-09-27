@@ -78,7 +78,8 @@
 #define TARGET_OPT INSTALL_ROOT_MOUNT "/opt"
 #define TARGET_RUN_RELIEFOS INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_RUN_RELIEFOS
 #define TARGET_BOOT INSTALL_ROOT_MOUNT "/boot"
-#define TARGET_ESP_KERNEL TARGET_BOOT "/leonos/kernel.sys"
+#define TARGET_ESP_KERNEL TARGET_BOOT "/reliefos/kernel.sys"
+#define TARGET_ESP_KERNEL_LEGACY TARGET_BOOT "/leonos/kernel.sys"
 /* The installer must be able to change language before it has a writable
  * target system.  Do not make rendering depend on persisting locale.conf on
  * the installation medium. */
@@ -946,7 +947,7 @@ static int installer_target_partitions(const char *disk_path, int fresh,
         ret = reliefos_block_gpt_initialize(disk_path, 1);
         if (ret < 0) return ret;
         ret = reliefos_block_gpt_create(disk_path, RELIEFOS_BLOCK_FILESYSTEM_FAT32,
-                                      128, "LeonOS 4 ESP", &esp);
+                                      128, "RELIEFOS_ESP", &esp);
         if (ret < 0) return ret;
         ret = reliefos_block_gpt_set_type(disk_path, esp, RELIEFOS_BLOCK_GPT_ESP);
         if (ret < 0) return ret;
@@ -957,7 +958,7 @@ static int installer_target_partitions(const char *disk_path, int fresh,
          * slop after the ESP. */
         if (root_mib > 256u) root_mib -= 131u; else root_mib = 64u;
         ret = reliefos_block_gpt_create(disk_path, RELIEFOS_BLOCK_FILESYSTEM_EXT2,
-                                      root_mib, "LEONOS4_ROOT", &root);
+                                      root_mib, "RELIEFOS_ROOT", &root);
         if (ret < 0) return ret;
         ret = reliefos_block_gpt_set_type(disk_path, root, RELIEFOS_BLOCK_GPT_LINUX);
         if (ret < 0) return ret;
@@ -966,10 +967,10 @@ static int installer_target_partitions(const char *disk_path, int fresh,
         if (ret < 0) return ret;
         ret = reliefos_block_partition_path(disk_path, root, root_path, root_cap);
         if (ret < 0) return ret;
-        ret = reliefos_block_format(esp_path, RELIEFOS_BLOCK_FILESYSTEM_FAT32, NULL);
+        ret = reliefos_block_format(esp_path, RELIEFOS_BLOCK_FILESYSTEM_FAT32, "RELIEFOS");
         if (ret < 0) return ret;
         *root_filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXT2;
-        ret = reliefos_block_format(root_path, RELIEFOS_BLOCK_FILESYSTEM_EXT2, NULL);
+        ret = reliefos_block_format(root_path, RELIEFOS_BLOCK_FILESYSTEM_EXT2, "RELIEFOS");
         if (!ret) ret = reliefos_block_partition_uuid(disk_path, root, installer_root_uuid);
         if (!ret) ret = reliefos_block_partition_uuid(disk_path, esp, installer_esp_uuid);
         return ret;
@@ -2358,8 +2359,9 @@ static int check_update_target_required(void)
             return -2;
         }
     }
-    if (path_has_type(TARGET_ESP_KERNEL, RELIEFOS_FS_TYPE_FILE) < 0) {
-        set_status(T("Existing LeonOS 4 boot partition was not detected"), TARGET_ESP_KERNEL);
+    if (path_has_type(TARGET_ESP_KERNEL, RELIEFOS_FS_TYPE_FILE) < 0 &&
+        path_has_type(TARGET_ESP_KERNEL_LEGACY, RELIEFOS_FS_TYPE_FILE) < 0) {
+        set_status(T("Existing ReliefOS boot partition was not detected"), TARGET_ESP_KERNEL);
         return -2;
     }
     return 0;
@@ -2380,6 +2382,7 @@ static int check_update_payload_required(void)
         INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_LICENSES,
         INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_ETC_SSL_CERTS,
         INSTALL_ESP_PAYLOAD "/grub",
+        INSTALL_ESP_PAYLOAD "/reliefos",
         INSTALL_ESP_PAYLOAD "/leonos",
         INSTALL_ESP_PAYLOAD "/EFI",
     };
@@ -2389,6 +2392,12 @@ static int check_update_payload_required(void)
         INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_LIB "/libc.so",
         INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_LIB "/libmimalloc.so.3",
         INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_LIB "/libleonos.so.2",
+        INSTALL_ESP_PAYLOAD "/reliefos/kernel.sys",
+        INSTALL_ESP_PAYLOAD "/reliefos/loader.elf",
+        INSTALL_ESP_PAYLOAD "/leonos/kernel.sys",
+        INSTALL_ESP_PAYLOAD "/loader.elf",
+        INSTALL_ESP_PAYLOAD "/grub/grub.cfg",
+        INSTALL_ESP_PAYLOAD "/EFI/BOOT/BOOTX64.EFI",
     };
     for (uint32_t i = 0; i < sizeof(required_dirs) / sizeof(required_dirs[0]); ++i) {
         int ret = path_has_type(required_dirs[i], RELIEFOS_FS_TYPE_DIR);
@@ -2893,8 +2902,9 @@ static int ensure_runtime_layout_dirs(void)
 /* Copy new payload paths over an existing tree without deleting unrelated
  * target entries.  System files are refreshed; user-created commands and
  * packages survive. */
-static int overlay_dir_recursive(const char *src, const char *dst,
-                                 int window_id, struct reliefos_ui_surface *ui)
+static int overlay_dir_recursive_filtered(const char *src, const char *dst,
+                                          int window_id, struct reliefos_ui_surface *ui,
+                                          const char *skip_source)
 {
     struct reliefos_dir_entry *entries = NULL;
     uint32_t count = 0;
@@ -2921,6 +2931,7 @@ static int overlay_dir_recursive(const char *src, const char *dst,
             free(entries);
             return -1;
         }
+        if (skip_source && !strcmp(src_child, skip_source)) continue;
         if (strcmp(src_child, INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_APPS) == 0) {
             /* Packages have their own system/optional selection below. */
             continue;
@@ -2950,7 +2961,8 @@ static int overlay_dir_recursive(const char *src, const char *dst,
             if (!publish) continue; /* preserve the unchecked app's existing entry */
         }
         if (entries[i].type == RELIEFOS_FS_TYPE_DIR) {
-            ret = overlay_dir_recursive(src_child, dst_child, window_id, ui);
+            ret = overlay_dir_recursive_filtered(src_child, dst_child, window_id, ui,
+                                                 skip_source);
         } else if (entries[i].type == RELIEFOS_FS_TYPE_FILE) {
             int child_type = path_type_nofollow(dst_child);
             if (child_type >= 0 && child_type != RELIEFOS_FS_TYPE_FILE &&
@@ -2981,6 +2993,12 @@ static int overlay_dir_recursive(const char *src, const char *dst,
     }
     free(entries);
     return 0;
+}
+
+static int overlay_dir_recursive(const char *src, const char *dst,
+                                 int window_id, struct reliefos_ui_surface *ui)
+{
+    return overlay_dir_recursive_filtered(src, dst, window_id, ui, NULL);
 }
 
 /* Copy defaults only when the destination does not already exist.  Used for
@@ -3259,10 +3277,7 @@ static void perform_install(int window_id, struct reliefos_ui_surface *ui)
 
 static void perform_update(int window_id, struct reliefos_ui_surface *ui)
 {
-    static const char *const boot_dirs[] = {"leonos", "grub", "EFI"};
-    static const char *const boot_files[] = {
-        "loader.elf",
-    };
+    static const char *const boot_dirs[] = {"reliefos", "grub", "EFI"};
     int ret;
     if (selected_disk < 0 || (uint32_t)selected_disk >= disk_count) {
         return;
@@ -3325,14 +3340,6 @@ static void perform_update(int window_id, struct reliefos_ui_surface *ui)
             return;
         }
     }
-    for (uint32_t i = 0; i < sizeof(boot_files) / sizeof(boot_files[0]); ++i) {
-        char src[RELIEFOS_FS_PATH_LEN];
-        if (path_join(src, sizeof(src), INSTALL_ESP_PAYLOAD, boot_files[i]) < 0 ||
-            add_file_copy_work(src) < 0) {
-            finish_install(window_id, ui, -1, T("Payload scan failed"));
-            return;
-        }
-    }
     show_progress(window_id, ui, 35, T("Upgrading signed LeonOS packages"),
                   T("Checking dependencies and preserving local configuration"));
     ret = sync_system_payload(window_id, ui);
@@ -3350,14 +3357,20 @@ static void perform_update(int window_id, struct reliefos_ui_surface *ui)
             finish_install(window_id, ui, -ENAMETOOLONG, T("Boot update failed"));
             return;
         }
-        ret = overlay_dir_recursive(src, dst, window_id, ui);
+        ret = !strcmp(boot_dirs[i], "grub")
+            ? overlay_dir_recursive_filtered(src, dst, window_id, ui,
+                                             INSTALL_ESP_PAYLOAD "/grub/grub.cfg")
+            : overlay_dir_recursive(src, dst, window_id, ui);
         if (ret < 0) {
             finish_install(window_id, ui, ret, T("Boot update failed"));
             return;
         }
     }
-    ret = copy_file_path(INSTALL_ESP_PAYLOAD "/loader.elf",
-                         INSTALL_ESP_MOUNT "/loader.elf", window_id, ui);
+    /* Publish the new boot menu only after its kernel, loader and EFI image
+     * are present. The config's legacy entry keeps the untouched old payload
+     * under /leonos available if a subsequent boot fails. */
+    ret = copy_file_path(INSTALL_ESP_PAYLOAD "/grub/grub.cfg",
+                         INSTALL_ESP_MOUNT "/grub/grub.cfg", window_id, ui);
     if (ret < 0) {
         finish_install(window_id, ui, ret, T("Boot update failed"));
         return;

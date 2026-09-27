@@ -43,7 +43,8 @@ def package_versions(database):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--disk", type=Path, required=True, help="Read-only input; only its copy is updated")
-    parser.add_argument("--iso", type=Path, default=ROOT / "build/images/leonos4-installer.iso")
+    parser.add_argument("--iso", type=Path,
+                        default=ROOT / "out/x86_64/release/images/reliefos-installer.iso")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--timeout", type=float, default=2400)
     parser.add_argument("--preserve-package", action="append", default=[])
