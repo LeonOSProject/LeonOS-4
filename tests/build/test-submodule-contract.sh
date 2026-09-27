@@ -12,10 +12,11 @@
 #   4. old-SHA rollback: a scratch clone whose gitlink consistently pins an
 #      older published kernel SHA passes the release guard. Since 3430c76 the
 #      pinned pair (HEAD / HEAD~1) are two complete kernel snapshots, so cases
-#      3-4 exercise a real dual-SHA pin; a full rollback-BUILD at the older
-#      pin is still outside this contract test (the fixture clone has no fetch
-#      cache; boot-time kernel update rollback is covered by the §5.8 guest
-#      tests instead).
+#      3-4 exercise a real dual-SHA pin. The matching rollback-BUILD (kernel
+#      product set from an older pin, in the real worktree) lives in
+#      tests/build/test-submodule-rollback-build.sh; this contract test never
+#      builds (its fixture clone has no fetch cache). Boot-time kernel update
+#      rollback is covered by the §5.8 guest tests instead.
 set -u
 LC_ALL=C
 export LC_ALL
@@ -177,17 +178,15 @@ if [ -n "${other:-}" ] && { [ -d "$clone/kernel/ntclks/.git" ] || [ -f "$clone/k
         fail "a consistent older kernel pin passes the release guard" \
             "$(head -c 300 "$work/rollback.log")"
     fi
-    printf 'skip - full old-SHA rollback build (documented): the older published\n'
-    printf '       kernel commits are history extracts without a root Makefile or\n'
-    printf '       third_party (git ls-tree shows no Makefile), so only %s is a\n' \
-        "${pin}"
-    printf '       buildable snapshot; a rollback BUILD at an older SHA is\n'
-    printf '       untestable today. The guard/rollback pinning path is covered\n'
-    printf '       by the check above.\n'
+    printf 'note - the full old-SHA rollback BUILD runs in\n'
+    printf '       tests/build/test-submodule-rollback-build.sh against the real\n'
+    printf '       worktree (this fixture clone has no fetch cache to build\n'
+    printf '       with). The guard/rollback pinning path is covered by the\n'
+    printf '       check above.\n'
 else
     printf 'skip - old-SHA rollback case: the kernel repository has no older\n'
-    printf '       published SHA to pin, and the full rollback build is\n'
-    printf '       untestable today (see the notes above)\n'
+    printf '       published SHA to pin here; with one, the pinning check above\n'
+    printf '       and tests/build/test-submodule-rollback-build.sh cover it\n'
 fi
 
 printf '\n%d checks, %d failures\n' "$checks" "$failures"
