@@ -69,8 +69,8 @@ def prepare(package_cache=None, guest_proxy=None, testing_only=False):
                 script = Path(directory) / f"{label}-{kind}.sh"
                 script.write_text(f"#!/bin/sh\necho {marker} > /tmp/apk-{marker}\n")
                 scripts.append((kind, script))
-            package = make_package(apk, key, payload, repo / f"leonos-apk-probe-{version}.apk",
-                                   "leonos-apk-probe", version, ["leonos-busybox"],
+            package = make_package(apk, key, payload, repo / f"reliefos-apk-probe-{version}.apk",
+                                   "reliefos-apk-probe", version, ["reliefos-busybox"],
                                    scripts=scripts, triggers=["/usr/share/apk-probe"])
             run([apk, "mkndx", "--keys-dir", stage / "etc/apk/keys", "--sign-key", key,
                  "--output", repo / "packages.adb", package])

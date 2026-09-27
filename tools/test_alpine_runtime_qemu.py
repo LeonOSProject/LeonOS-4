@@ -16,7 +16,7 @@ from make_ext2_root import write_ext2_root
 import test_apk_qemu as guest_runner
 
 WORK = ROOT / "build/alpine-runtime"
-PACKAGES = ["gcc", "leonos-musl-dev", "make", "nano", "jq", "openssl", "curl"]
+PACKAGES = ["gcc", "reliefos-musl-dev", "make", "nano", "jq", "openssl", "curl"]
 
 
 def prepare(refresh=False):

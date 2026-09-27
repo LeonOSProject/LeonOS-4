@@ -50,8 +50,8 @@ chmod 600 "$tmp/key"
 
 # Two package sources so the generated list has >1 row.
 mkdir -p "$tmp/repository" "$tmp/apps"
-printf aaa > "$tmp/repository/leonos-musl-4.9.1-r5.apk"
-printf bb  > "$tmp/apps/leonos-helloworld-4.9.1-r5.apk"
+printf aaa > "$tmp/repository/reliefos-musl-4.9.1-r5.apk"
+printf bb  > "$tmp/apps/reliefos-helloworld-4.9.1-r5.apk"
 
 # 1. Build the RPR subtree, then assemble the full Pages tree.
 sh "$src/tools/build/rpr-pages.sh" "$tmp/repository" "$tmp/apps" \
@@ -70,7 +70,7 @@ else
 fi
 
 # 3. Every machine-interface file survived the move under /rpr/.
-for f in rpr/apk/packages.adb rpr/apk/repository.json rpr/apk/leonos-rpr.rsa.pub \
+for f in rpr/apk/packages.adb rpr/apk/repository.json rpr/apk/reliefos-rpr.rsa.pub rpr/apk/leonos-rpr.rsa.pub \
          rpr/apk/SHA256SUMS rpr/kernel/release.txt rpr/kernel/release.json \
          rpr/kernel/kernel.sys rpr/kernel/loader.elf rpr/kernel/SHA256SUMS \
          rpr/manifest.json rpr/health.txt; do

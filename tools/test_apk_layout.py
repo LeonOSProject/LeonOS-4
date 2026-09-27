@@ -93,7 +93,7 @@ class ApkSeedTests(unittest.TestCase):
         lines = (SEED / "etc/apk/protected_paths.d/leonos.list").read_text().splitlines()
         rules = {line for line in lines if line and not line.startswith("#")}
         self.assertTrue({"!etc/passwd", "!etc/shadow", "!etc/pam.d", "!etc/sudoers",
-                         "!etc/leonos", "!etc/os-release", "!etc/fstab"} <= rules)
+                         "!etc/leonos", "!etc/reliefos", "!etc/os-release", "!etc/fstab"} <= rules)
         self.assertTrue(all(re.fullmatch(r"!etc/[a-zA-Z0-9_/.-]+", rule) for rule in rules))
 
 
@@ -132,11 +132,11 @@ def check_images():
                 ROOT / "system/certs/cacert.pem").read_bytes()
             database = debugfs(image, f"cat /{prefix}lib/apk/db/installed")
             world = debugfs(image, f"cat /{prefix}etc/apk/world")
-            assert b"P:leonos-apk-tools\n" in database and b"P:leonos-fastfetch\n" in database
-            assert b"leonos-fastfetch\n" in world
-            assert b"P:leonos-musl-dev\n" in database and b"leonos-musl-dev\n" in world
+            assert b"P:reliefos-apk-tools\n" in database and b"P:reliefos-fastfetch\n" in database
+            assert b"reliefos-fastfetch\n" in world
+            assert b"P:reliefos-musl-dev\n" in database and b"reliefos-musl-dev\n" in world
             repositories = debugfs(image, f"cat /{prefix}etc/apk/repositories")
-            assert repositories == (b"ndx /usr/share/leonos/apk/repository/packages.adb\n" +
+            assert repositories == (b"ndx /usr/share/reliefos/apk/repository/packages.adb\n" +
                                     (SEED / "etc/apk/repositories").read_bytes())
             assert debugfs(image, f"cat /{prefix}usr/include/stdio.h") == (
                 ROOT / "build/musl/sysroot/include/stdio.h").read_bytes()
@@ -144,7 +144,7 @@ def check_images():
                 ROOT / "build/musl/sysroot/lib/crt1.o").read_bytes()
             assert hashlib.sha256(debugfs(image, f"cat /{prefix}sbin/apk")).hexdigest() == (
                 "5118a57ae7c07e13268a754f78aa9c7d39a0bed708bb11c101d78e2a884cee5d")
-            assert debugfs(image, f"cat /{prefix}usr/share/leonos/apk/repository/packages.adb")
+            assert debugfs(image, f"cat /{prefix}usr/share/reliefos/apk/repository/packages.adb")
             for name in ("usr/lib/leonos/apps/desktop/desktop.elf", "usr/lib/leonos/libleonos.so.2",
                          "sbin/apk", "usr/bin/vim", "usr/bin/sudo", "lib/ld-musl-x86_64.so.1"):
                 entry = package_files["/" + name]

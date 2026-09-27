@@ -27,8 +27,8 @@ import test_linux_ioctl_cloexec as iso_tools
 
 WORK = ROOT / "build/clang-runtime"
 # clang provides the compiler, gcc provides crtbeginS.o and the bfd linker that
-# its driver invokes, and leonos-musl-dev provides the headers and libc.a.
-PACKAGES = ["clang", "gcc", "leonos-musl-dev"]
+# its driver invokes, and reliefos-musl-dev provides the headers and libc.a.
+PACKAGES = ["clang", "gcc", "reliefos-musl-dev"]
 
 
 def layout():

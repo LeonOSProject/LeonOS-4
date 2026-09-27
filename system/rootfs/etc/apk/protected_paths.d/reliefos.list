@@ -1,6 +1,5 @@
-# These rules extend apk's built-in +etc/, @etc/init.d and !etc/apk.
-# Keep local identity, authentication and boot configuration as .apk-new.
-# This is configuration-file handling, not a sandbox for package scripts.
+# Canonical ReliefOS local configuration, plus paths kept for old installations.
+# The legacy filename and !etc/leonos rule remain available to existing clients.
 !etc/leonos
 !etc/reliefos
 !etc/os-release

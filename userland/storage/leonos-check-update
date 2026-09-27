@@ -9,8 +9,8 @@ export PATH
 }
 [ "$#" -eq 0 ] || { printf '%s\n' 'Usage: leonos-check-update' >&2; exit 2; }
 
-printf '%s\n' 'Checking LeonOS kernel release...'
-leonos-kernel-update --check
+printf '%s\n' 'Checking ReliefNT kernel release...'
+reliefos-kernel-update --check
 
 printf '%s\n' 'Refreshing APK indexes...'
 apk update
@@ -18,10 +18,10 @@ printf '%s\n' 'Checking installed LeonOS APKs...'
 versions=$(mktemp /tmp/leonos-apk-versions.XXXXXX)
 trap 'rm -f -- "$versions"' EXIT HUP INT TERM
 apk version -l '<' >"$versions"
-outdated=$(awk '$1 ~ /^leonos-/ { print }' "$versions")
+outdated=$(awk '$1 ~ /^(leonos|reliefos)-/ { print }' "$versions")
 if [ -n "$outdated" ]; then
     printf '%s\n' "$outdated"
-    printf '%s\n' 'LeonOS APK updates are available. Run: apk upgrade'
+    printf '%s\n' 'ReliefOS APK updates are available. Run: apk upgrade'
 else
-    printf '%s\n' 'Installed LeonOS APKs are current.'
+    printf '%s\n' 'Installed ReliefOS APKs are current.'
 fi

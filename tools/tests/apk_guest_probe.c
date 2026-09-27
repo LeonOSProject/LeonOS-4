@@ -143,7 +143,7 @@ int main(void)
     command("HyFetch help", 1, "/usr/bin/hyfetch", "--help", NULL);
     check(contains("/tmp/apk-command.log", "Usage:"), "HyFetch help output");
     command("custom Fastfetch retained", 1, APK, "info", "--who-owns", "/usr/bin/fastfetch", NULL);
-    check(contains("/tmp/apk-command.log", "leonos-fastfetch-"), "custom Fastfetch still owns executable");
+    check(contains("/tmp/apk-command.log", "reliefos-fastfetch-"), "custom Fastfetch still owns executable");
     command("remove HyFetch", 1, "/sbin/apk", "--no-network", "del", "hyfetch", NULL);
     check(!contains("/etc/shells", "/bin/bash\n"), "Bash pre-deinstall removed shell");
     printf("[apk-probe] DONE failures=%u\n", failures);
@@ -155,11 +155,11 @@ int main(void)
 #endif
     command("version", 1, APK, "--version", NULL);
     command("file owner", 1, APK, "info", "--who-owns", "/usr/bin/fastfetch", NULL);
-    check(contains("/tmp/apk-command.log", "leonos-fastfetch-"), "real Fastfetch owner");
+    check(contains("/tmp/apk-command.log", "reliefos-fastfetch-"), "real Fastfetch owner");
     command("local signed index", 1, APK, "--repository",
             "/usr/share/leonos/apk/repository/packages.adb", "update", NULL);
     command("signed install with scripts", 1, APK, "--repository", FIXTURE "/v1/packages.adb",
-            "add", "leonos-apk-probe", NULL);
+            "add", "reliefos-apk-probe", NULL);
     check(contains("/usr/share/apk-probe/value", "version one"), "extracted payload");
     check(contains("/tmp/apk-post-install", "post-install"), "post-install script ran");
     check(contains("/tmp/apk-trigger", "trigger"), "trigger script ran");
@@ -170,11 +170,11 @@ int main(void)
     check(fd >= 0 && write(fd, "administrator\n", 14) == 14, "edit configuration");
     if (fd >= 0) close(fd);
     command("signed upgrade", 1, APK, "--repository", FIXTURE "/v2/packages.adb",
-            "upgrade", "leonos-apk-probe", NULL);
+            "upgrade", "reliefos-apk-probe", NULL);
     check(contains("/usr/share/apk-probe/value", "version two"), "upgraded payload");
     check(contains("/etc/apk-probe.conf", "administrator") &&
           contains("/etc/apk-probe.conf.apk-new", "new default"), "preserved edited configuration");
-    command("remove", 1, APK, "del", "leonos-apk-probe", NULL);
+    command("remove", 1, APK, "del", "reliefos-apk-probe", NULL);
     check(access("/usr/share/apk-probe/value", F_OK) < 0, "removed owned file");
     command("Fastfetch conflict", 0, APK, "--repository", FIXTURE "/conflict/packages.adb",
             "add", "fastfetch", NULL);

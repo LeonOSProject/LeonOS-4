@@ -27,7 +27,7 @@ for f in index.html download/index.html download/reliefos-installer.iso download
          rpr/apk/index.html \
          rpr/manifest.json rpr/health.txt \
          rpr/css/leonos.css \
-         rpr/apk/packages.adb rpr/apk/repository.json rpr/apk/leonos-rpr.rsa.pub rpr/apk/SHA256SUMS \
+         rpr/apk/packages.adb rpr/apk/repository.json rpr/apk/reliefos-rpr.rsa.pub rpr/apk/leonos-rpr.rsa.pub rpr/apk/SHA256SUMS \
          rpr/kernel/kernel.sys rpr/kernel/loader.elf \
          rpr/kernel/release.txt rpr/kernel/release.json rpr/kernel/SHA256SUMS; do
     [ -e "$site/$f" ] || report "missing $f"
@@ -67,14 +67,14 @@ fi
 if [ -f "$site/rpr/apk/repository.json" ]; then
     awk -F '"' '
         $0 ~ /"packages"/ { inlist=1 }
-        inlist { for (i=1;i<=NF;i++) if ($i ~ /^leonos-.*\.apk$/) print $i }
+        inlist { for (i=1;i<=NF;i++) if ($i ~ /^reliefos-.*\.apk$/) print $i }
     ' "$site/rpr/apk/repository.json" | while IFS= read -r pkg; do
         [ -n "$pkg" ] || continue
         [ -f "$site/rpr/apk/$pkg" ] || report "repository.json references missing APK $pkg"
     done
 fi
 if [ -f "$site/rpr/apk/SHA256SUMS" ]; then
-    for apk in "$site"/rpr/apk/leonos-*.apk; do
+    for apk in "$site"/rpr/apk/reliefos-*.apk; do
         [ -f "$apk" ] || continue
         name=${apk##*/}
         awk -v n="$name" '$2==n {found=1} END{exit !found}' "$site/rpr/apk/SHA256SUMS" \

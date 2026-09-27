@@ -162,15 +162,12 @@ static int load_rules(struct state *state, const char *policy_path, json_value *
     }
     {
         static const struct { const char *group; const char *path; } tool_paths[] = {
-            {"leonos-apk-tools", "sbin/apk"},
-            {"leonos-apk-tools", "usr/lib/leonos/leonos-apk-update"},
-            {"leonos-apk-tools", "usr/share/licenses/apk-tools"},
-            {"leonos-fastfetch", "usr/bin/fastfetch"}, {"leonos-fastfetch", "usr/share/licenses/fastfetch"},
-            {"leonos-fastfetch", "etc/fastfetch"}, {"leonos-fastfetch", "usr/share/fastfetch/leonos-ascii.txt"},
-            {"leonos-fastfetch", "etc/skel/.config/hyfetch.json"},
-            {"leonos-apps", "usr/share/licenses/pleditor"},
+            {"reliefos-fastfetch", "usr/bin/fastfetch"}, {"reliefos-fastfetch", "usr/share/licenses/fastfetch"},
+            {"reliefos-fastfetch", "etc/fastfetch"}, {"reliefos-fastfetch", "usr/share/fastfetch/leonos-ascii.txt"},
+            {"reliefos-fastfetch", "etc/skel/.config/hyfetch.json"},
+            {"reliefos-apps", "usr/share/licenses/pleditor"},
             {"busybox", "bin/busybox"}, {"busybox", "bin/sh"}, {"busybox", "usr/share/licenses/busybox"},
-            {"leonos-apps", "opt/cmd"}, {"leonos-apps", "usr/bin/cmd"}, {"leonos-apps", "usr/share/licenses/cmd"},
+            {"reliefos-apps", "opt/cmd"}, {"reliefos-apps", "usr/bin/cmd"}, {"reliefos-apps", "usr/share/licenses/cmd"},
             {"ncurses", "usr/share/terminfo"}, {"ncurses", "etc/terminfo"},
             {"ncurses", "usr/share/licenses/ncurses"}, {"sl", "usr/bin/sl"}, {"sl", "usr/share/licenses/sl"}
         };
@@ -212,7 +209,7 @@ static int load_rules(struct state *state, const char *policy_path, json_value *
 static const char *classify(const struct state *state, const char *path)
 {
     size_t i, best = 0u;
-    const char *group = "leonos-base";
+    const char *group = "reliefos-base";
     for (i = 0; i < state->rule_count; i++) {
         size_t n = strlen(state->rules[i].path);
         int boundary = strncmp(path, state->rules[i].path, n) == 0 &&
@@ -272,7 +269,7 @@ static int append_entry(struct state *state, const char *relative, const struct 
     const char *target)
 {
     const char *type = S_ISDIR(info->st_mode) ? "dir" : S_ISLNK(info->st_mode) ? "symlink" : "file";
-    const char *group = S_ISDIR(info->st_mode) ? "leonos-base" : classify(state, relative);
+    const char *group = S_ISDIR(info->st_mode) ? "reliefos-base" : classify(state, relative);
     char *resolved = NULL;
     size_t length = strlen(group) + strlen(type) + strlen(relative) + strlen(target) + 32u;
     char *line;
@@ -280,7 +277,7 @@ static int append_entry(struct state *state, const char *relative, const struct 
     if (S_ISLNK(info->st_mode)) {
         resolved = guest_link_target(relative, target);
         if (resolved == NULL) return fail("out of memory");
-        if (strcmp(classify(state, resolved), "leonos-base") != 0)
+        if (strcmp(classify(state, resolved), "reliefos-base") != 0)
             group = classify(state, resolved);
     }
     if (state->force_group != NULL) group = state->force_group;

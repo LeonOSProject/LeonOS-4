@@ -42,17 +42,17 @@ for app in helloworld doom oschinpt; do
         cp "$src/third_party/rime-pinyin-simp/pinyin_simp.dict.yaml" "$src/third_party/rime-pinyin-simp/LICENSE" "$src/third_party/rime-pinyin-simp/ATTRIBUTION.txt" "$root/"
         cp "$src/userland/apps/oschinpt/settings.ini" "$root/"
         cp "$index" "$root/oscp.idx"
-        manifest oschinpt 'LeonOS 4 Chinese Input' 'Input methods' oschinpt.elf '' 0 oschinpt
+        manifest oschinpt 'ReliefOS Chinese Input' 'Input methods' oschinpt.elf '' 0 oschinpt
         printf 'input_method=1\n' >> "$root/manifest.ini"
         ln -s ../lib/reliefos/apps/oschinpt/oschinpt.elf "$payload/usr/bin/oschinpt"
         ;;
     esac
     find "$payload" -exec touch -h -d "@$epoch" {} +
-    package_file="$work/repository/leonos-$app-$package_version.apk"
-    set -- mkpkg --files "$payload" --output "$package_file" --info "name:leonos-$app" \
-      --info "version:$package_version" --info arch:x86_64 --info "origin:leonos-$app" \
-      --info "description:LeonOS application $app" --info license:LicenseRef-See-Bundled-Notices \
-      --info 'depends:leonos-apps leonos-musl' --sign-key "$key"
+    package_file="$work/repository/reliefos-$app-$package_version.apk"
+    set -- mkpkg --files "$payload" --output "$package_file" --info "name:reliefos-$app" \
+      --info "version:$package_version" --info arch:x86_64 --info "origin:reliefos-$app" \
+      --info "description:ReliefOS application $app" --info license:LicenseRef-See-Bundled-Notices \
+      --info 'depends:reliefos-apps reliefos-musl' --info "replaces:leonos-$app" --sign-key "$key"
     if [ "$app" = oschinpt ]; then
         set -- "$@" --script "post-install:$src/tools/oschinpt-apk-post-install" \
           --script "post-upgrade:$src/tools/oschinpt-apk-post-install" \

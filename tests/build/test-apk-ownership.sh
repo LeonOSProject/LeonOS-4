@@ -5,6 +5,18 @@ src=${1:-$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)}
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 
+python3 - "$src/configs/apk-ownership.json" <<'PY'
+import json, sys
+policy = json.load(open(sys.argv[1], encoding="utf-8"))
+groups = policy["groups"]
+required = {"reliefos-nls", "reliefos-apps", "reliefos-fastfetch",
+            "reliefos-mimalloc", "reliefos-musl-dev", "reliefos-apk-tools", "reliefos-base"}
+missing = sorted(required - groups.keys())
+legacy = sorted(name for name in groups if name.startswith("leonos-"))
+if missing or legacy or policy.get("current_distributor") != "reliefos-build":
+    raise SystemExit(f"APK ownership identity is not migrated: missing={missing}, legacy={legacy}, distributor={policy.get('current_distributor')}")
+PY
+
 cc -std=c11 -Wall -Wextra -Wpedantic -Werror -Wformat=2 -Wshadow \
   -Wstrict-prototypes -Wmissing-prototypes -I"$src" \
   "$src/tools/host/apk/reliefos-apk-own.c" \
@@ -20,24 +32,24 @@ printf legacy-library >"$tmp/root/usr/lib/leonos/libleonos.so.2"
 printf library >"$tmp/root/usr/lib/reliefos/libreliefos.so.2"
 cat >"$tmp/policy.json" <<'EOF'
 {"version":1,"apk_registration":"not-installed","groups":{
- "tools":{"destination":"leonos","components":[],"paths":["usr/bin/tool"]},
- "apps":{"destination":"leonos","components":["demo"],"paths":["usr/lib/leonos","usr/lib/reliefos"]},
- "leonos-base":{"destination":"leonos","components":[]}
+ "reliefos-tools":{"destination":"reliefos","components":[],"paths":["usr/bin/tool"]},
+ "reliefos-apps":{"destination":"reliefos","components":["demo"],"paths":["usr/lib/leonos","usr/lib/reliefos"]},
+ "reliefos-base":{"destination":"reliefos","components":[]}
 }}
 EOF
 
 "$tmp/reliefos-apk-own" --policy "$tmp/policy.json" --root "$tmp/root" --output "$tmp/list"
-awk -F '\t' '$1=="apps" && $2=="file" && $3=="0644" && $4=="usr/lib/reliefos/apps/demo/demo.elf" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
-awk -F '\t' '$1=="apps" && $2=="file" && $4=="usr/lib/reliefos/libreliefos.so.2" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
-awk -F '\t' '$1=="apps" && $2=="file" && $4=="usr/lib/leonos/libleonos.so.2" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
-awk -F '\t' '$1=="tools" && $2=="file" && $3=="0755" && $4=="usr/bin/tool" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
-awk -F '\t' '$1=="tools" && $2=="symlink" && $3=="0777" && $4=="usr/bin/tool-link" && $5=="tool" { ok=1 } END { exit !ok }' "$tmp/list"
+awk -F '\t' '$1=="reliefos-apps" && $2=="file" && $3=="0644" && $4=="usr/lib/reliefos/apps/demo/demo.elf" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
+awk -F '\t' '$1=="reliefos-apps" && $2=="file" && $4=="usr/lib/reliefos/libreliefos.so.2" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
+awk -F '\t' '$1=="reliefos-apps" && $2=="file" && $4=="usr/lib/leonos/libleonos.so.2" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
+awk -F '\t' '$1=="reliefos-tools" && $2=="file" && $3=="0755" && $4=="usr/bin/tool" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
+awk -F '\t' '$1=="reliefos-tools" && $2=="symlink" && $3=="0777" && $4=="usr/bin/tool-link" && $5=="tool" { ok=1 } END { exit !ok }' "$tmp/list"
 
 # Ambiguous policy claims must fail before any package is built.
 cat >"$tmp/bad.json" <<'EOF'
 {"version":1,"apk_registration":"not-installed","groups":{
- "one":{"destination":"leonos","components":[],"paths":["usr/bin/tool"]},
- "two":{"destination":"leonos","components":[],"paths":["usr/bin/tool"]}
+ "one":{"destination":"reliefos","components":[],"paths":["usr/bin/tool"]},
+ "two":{"destination":"reliefos","components":[],"paths":["usr/bin/tool"]}
 }}
 EOF
 if "$tmp/reliefos-apk-own" --policy "$tmp/bad.json" --root "$tmp/root" --output "$tmp/bad-list" 2>"$tmp/error"; then

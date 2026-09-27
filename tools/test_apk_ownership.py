@@ -32,7 +32,7 @@ class OwnershipTests(unittest.TestCase):
             (root / "host-link").symlink_to(outside, target_is_directory=True)
             before = {item["path"]: item for item in inventory(root, self.rules)}
             self.assertEqual(before["/usr/bin/sh"]["group"], "busybox")
-            self.assertEqual(before["/usr/bin/fastfetch"]["group"], "leonos-fastfetch")
+            self.assertEqual(before["/usr/bin/fastfetch"]["group"], "reliefos-fastfetch")
             self.assertEqual(before["/usr/bin/fastfetch"]["mode"], "0755")
             self.assertEqual(before["/bin/busybox"]["sha256"],
                              hashlib.sha256(b"upstream fixture").hexdigest())
@@ -62,7 +62,7 @@ class OwnershipTests(unittest.TestCase):
 
     def test_policy_is_not_a_fake_database(self):
         self.assertEqual(self.policy["apk_registration"], "not-installed")
-        self.assertEqual(self.policy["groups"]["leonos-fastfetch"]["future_apk_conflicts"], ["fastfetch"])
+        self.assertEqual(self.policy["groups"]["reliefos-fastfetch"]["future_apk_conflicts"], ["fastfetch"])
         self.assertFalse((ROOT / "system/rootfs/lib/apk/db/installed").exists())
 
 

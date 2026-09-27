@@ -208,10 +208,12 @@
 
 **文件：** 修改 `configs/apk-ownership.json`、`mk/{apk,rpr,sdk}.mk`、`tools/build/{apk-stage,rpr-apps,rpr-config,verify-pages}.sh`、`userland/storage/leonos-{apk-update,check-update,rpr-apkcheck,rpr-ping}`、`tests/build/test-{apk-ownership,rpr-packages,sdk-stage}.sh`、`tests/integration/test-apk-upgrade.sh`。
 
-- [ ] **步骤 1：先在隔离 root fixture 安装旧 `leonos-*` 包，写升级测试断言：新 `reliefos-*` 包真实接管文件，旧包数据库状态一致，现有配置不丢，签名校验仍启用。** 用当前 `configs/apk-ownership.json` 的 `forbidden_shortcuts` 列表作为反作弊检查。
-- [ ] **步骤 2：运行测试确认新包缺失。** `apk` 的真实数据库与依赖解算必须参与，不用自写假的 installed database。
-- [ ] **步骤 3：迁移所有权组、包名、依赖、`provides/replaces` 的真实升级关系、命令入口和 SDK 包名。** 过渡包只在确实必要时保留，并明确版本排序；不得靠假 `provides`、关闭签名/TLS 或强制覆盖绕过冲突。旧 RPR 公钥的信任处理要在新的仓库配置中明确。
-- [ ] **步骤 4：验证 `sh tests/build/test-apk-ownership.sh`、`sh tests/build/test-rpr-packages.sh`、`sh tests/integration/test-apk-upgrade.sh`、`make apk-repo rpr-pages sdk`。** 对 APKINFO/数据库/签名/清单逐项检查，核对新 SDK 归档名和内容，运行 `git diff --check`。
+- [x] **步骤 1：先在隔离 root fixture 安装旧 `leonos-*` 包，写升级测试断言：新 `reliefos-*` 包真实接管文件，旧包数据库状态一致，现有配置不丢，签名校验仍启用。** 用当前 `configs/apk-ownership.json` 的 `forbidden_shortcuts` 列表作为反作弊检查。
+- [x] **步骤 2：运行测试确认新包缺失。** `apk` 的真实数据库与依赖解算必须参与，不用自写假的 installed database。
+- [x] **步骤 3：迁移所有权组、包名、依赖、`provides/replaces` 的真实升级关系、命令入口和 SDK 包名。** 过渡包只在确实必要时保留，并明确版本排序；不得靠假 `provides`、关闭签名/TLS 或强制覆盖绕过冲突。旧 RPR 公钥的信任处理要在新的仓库配置中明确。
+- [x] **步骤 4：验证 `sh tests/build/test-apk-ownership.sh`、`sh tests/build/test-rpr-packages.sh`、`sh tests/integration/test-apk-upgrade.sh`、`make apk-repo rpr-pages sdk`。** 对 APKINFO/数据库/签名/清单逐项检查，核对新 SDK 归档名和内容，运行 `git diff --check`。
+
+> 执行记录（2026-09-28）：隔离旧系统用 APK 3.0.8 的真实 installed DB 和包事务；`sh tests/integration/test-apk-upgrade.sh out/x86_64/release /tmp/reliefos-task8-legacy.3FKHNq/old-managed` 通过。更新器先 `apk fetch` 验证索引和全部 17 个 ReliefOS 包，再运行升级；无签名索引与可信索引下损坏的包体都在事务开始前被拒绝，world、installed DB 和旧公钥逐字节不变。签名仓库成功把旧 `leonos-*` 包替换成新 `reliefos-*` 包，数据库记录真实 `r:leonos-*`，canonical runtime 库归属正确，外部包及 `/etc/leonos`、`/etc/reliefos` 配置保留。`sh tests/build/test-apk-ownership.sh`、`python3 tools/test_apk_ownership.py`、`sh tests/build/test-nls-stage.sh`、`sh tests/build/test-rpr-packages.sh`、`sh tests/build/test-pages.sh`、`python3 tools/test_apk_layout.py`（4 项）和 `sh tests/build/test-sdk-stage.sh` 均通过。完整 `make apk-repo rpr-pages sdk` 在本地隔离发布 checkout 通过 `reliefnt-release-guard` 后成功；隔离 checkout 使用子仓现有 76834e55 commit 和原仓缓存，原仓未跟踪的用户目录保持不动。主 APK manifest 列出 18 个本地包，installed DB 中 18 个均为 `reliefos-*`，旧包名只作为实际 `replaces` 目标；canonical/legacy 主仓签名公钥与 RPR 公钥分别字节相同。RPR 发布目录 `sha256sum -c SHA256SUMS` 全项通过；APK 3.0.8 在干净 cache 的 root fixture 信任 RPR 公钥并读取 34 个签名包。SDK 归档 `out/x86_64/release/packages/reliefos-musl-sdk.tar.gz` 已生成，`tar -tzf` 列出 477 项，根目录和交叉编译入口均为 ReliefOS 名称。`git diff --check` 通过；`.gitmodules` URL 未变。
 
 ### 任务 9：系统可见品牌、翻译、帮助与图形资产
 

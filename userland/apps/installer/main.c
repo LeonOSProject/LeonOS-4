@@ -3152,7 +3152,7 @@ static int sync_application_packages(int window_id, struct reliefos_ui_surface *
 static int sync_system_payload(int window_id, struct reliefos_ui_surface *ui)
 {
     pid_t child;
-    char *const argv[] = {"sh", "/usr/lib/reliefos/leonos-apk-update", INSTALL_ROOT_MOUNT,
+    char *const argv[] = {"sh", "/usr/lib/reliefos/reliefos-apk-update", INSTALL_ROOT_MOUNT,
                          INSTALL_ROOT_PAYLOAD "/usr/share/reliefos/apk/repository", NULL};
     char *const envp[] = {"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL=C", "HOME=/root", NULL};
     int ret = posix_spawn(&child, "/bin/sh", NULL, NULL, argv, envp);

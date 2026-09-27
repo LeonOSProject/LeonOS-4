@@ -13,9 +13,9 @@ plan=$work/plan
 # Plan columns: kind, source, guest path, mode, component, overlay policy and
 # the optional guest gid (decimal, default 0; see reliefos-stage read_plan).
 record() { printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "$5" "$6" "${7:-0}" >> "$plan"; }
-file() { record f "$1" "/$2" "${3:-0644}" "${4:-leonos-base}" "${5:-unique}" "${6:-0}"; }
+file() { record f "$1" "/$2" "${3:-0644}" "${4:-reliefos-base}" "${5:-unique}" "${6:-0}"; }
 tree() { record t "$1" "/$2" 0755 "$3" "${4:-unique}"; }
-link() { record l "$2" "/$1" 0777 "${3:-leonos-base}" "${4:-unique}"; }
+link() { record l "$2" "/$1" 0777 "${3:-reliefos-base}" "${4:-unique}"; }
 enabled() { awk -F '\t' -v id="$1" '$1==id && $4==1 {found=1} END {exit !found}' "$metadata"; }
 # Independent upstream installations never share a destination during builds.
 for package in libmd libbsd util-linux sudo shadow e2fsprogs dosfstools exfatprogs; do
@@ -53,16 +53,16 @@ done
 file "$out/pam/root/sbin/unix_chkpwd" sbin/unix_chkpwd 4755 authentication override
 file "$out/sysroot/musl/lib/libc.so" lib/ld-musl-x86_64.so.1 0755 musl
 file "$out/sysroot/musl/lib/libc.so" lib/libc.so 0755 musl
-file "$out/sysroot/musl/lib/libmimalloc.so.3" lib/libmimalloc.so.3 0755 leonos-mimalloc
-file "$out/system/lib/libreliefos.so.2" usr/lib/reliefos/libreliefos.so.2 0755 leonos-apps
-file "$out/system/lib/libleonos.so.2" usr/lib/leonos/libleonos.so.2 0755 leonos-apps
+file "$out/sysroot/musl/lib/libmimalloc.so.3" lib/libmimalloc.so.3 0755 reliefos-mimalloc
+file "$out/system/lib/libreliefos.so.2" usr/lib/reliefos/libreliefos.so.2 0755 reliefos-apps
+file "$out/system/lib/libleonos.so.2" usr/lib/leonos/libleonos.so.2 0755 reliefos-apps
 for package in musl mimalloc; do tree "$out/sysroot/musl/share/licenses/$package" "usr/share/licenses/$package" "$package"; done
 printf '/lib:/usr/local/lib:/usr/lib:/usr/lib/reliefos:/usr/lib/leonos\n' > "$work/data/ld.path"
 file "$work/data/ld.path" etc/ld-musl-x86_64.path 0644 musl
 file "$out/generated/system/kerneldebug.sys" usr/lib/reliefos/kerneldebug.sys 0755
 for driver in "$out/generated/drivers"/*.drv; do file "$driver" "usr/lib/reliefos/drivers/${driver##*/}" 0755; done
-file "$out/userland/motd.elf" usr/lib/reliefos/motd-status 0755 leonos-base
-file "$out/userland/dynlinkerror.elf" usr/lib/reliefos/apps/dynlinkerror/dynlinkerror.elf 0755 leonos-apps
+file "$out/userland/motd.elf" usr/lib/reliefos/motd-status 0755 reliefos-base
+file "$out/userland/dynlinkerror.elf" usr/lib/reliefos/apps/dynlinkerror/dynlinkerror.elf 0755 reliefos-apps
 # awk reads TSV without collapsing empty label/extension fields. No data is
 # interpreted as a command; only validated component IDs are used in paths.
 awk -F '\t' -v dir="$work/manifests" -v src="$src" '
@@ -135,7 +135,10 @@ for spec in 'busybox third_party/busybox/LICENSE' 'cmd third_party/cmd/LICENSE' 
     set -- $spec
     if enabled "$1"; then file "$src/$2" "usr/share/licenses/$1/${2##*/}" 0644 "$1" override; fi
 done
-for name in leonos-rpr-apkcheck leonos-rpr-ping leonos-kernel-update leonos-check-update leonos-grub-installer; do file "$src/userland/storage/$name" "usr/sbin/$name" 0755; done
+for name in leonos-rpr-apkcheck leonos-rpr-ping leonos-kernel-update leonos-check-update leonos-grub-installer; do file "$src/userland/storage/$name" "usr/sbin/$name" 0755 reliefos-apps; done
+for spec in 'reliefos-rpr-apkcheck leonos-rpr-apkcheck' 'reliefos-rpr-ping leonos-rpr-ping' 'reliefos-kernel-update leonos-kernel-update' 'reliefos-check-update leonos-check-update'; do
+    set -- $spec; link "usr/sbin/$1" "$2" reliefos-apps
+done
 sh "$src/tools/build/rpr-config.sh" "$config" > "$work/data/rpr.conf"
 file "$work/data/rpr.conf" etc/reliefos/rpr.conf
 file "$config" etc/reliefos/leonos.conf
@@ -151,9 +154,9 @@ case $locale_name in *[!A-Za-z0-9._@-]*|'') echo 'rootfs-stage: invalid locale n
 printf 'LANG=%s\nMUSL_LOCPATH=/usr/share/musl/locales\n' "$locale_name" > "$work/data/locale.conf"
 file "$work/data/locale.conf" etc/reliefos/locale.conf 0644 product-policy override
 for loc in $(cat "$src/configs/nls/LINGUAS"); do
-    file "$out/generated/nls/$loc/LC_MESSAGES/leonos.mo" "usr/share/locale/$loc/LC_MESSAGES/leonos.mo" 0644 leonos-nls
+    file "$out/generated/nls/$loc/LC_MESSAGES/leonos.mo" "usr/share/locale/$loc/LC_MESSAGES/leonos.mo" 0644 reliefos-nls
     if [ -f "$out/generated/musl-locales/$loc.UTF-8" ]; then
-        file "$out/generated/musl-locales/$loc.UTF-8" "usr/share/musl/locales/$loc.UTF-8" 0644 leonos-nls
+        file "$out/generated/musl-locales/$loc.UTF-8" "usr/share/musl/locales/$loc.UTF-8" 0644 reliefos-nls
     fi
 done
 for source in "$src/system/docs"/*.hlp; do file "$source" "usr/share/doc/reliefos/${source##*/}"; done

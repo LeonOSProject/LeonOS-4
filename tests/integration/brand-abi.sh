@@ -4,7 +4,7 @@ set -eu
 root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd -P)
 default_sdk="$root/out/x86_64/release/sdk/reliefos-musl-sdk"
 if [ ! -x "$default_sdk/bin/reliefos-musl-cc" ]; then
-    default_sdk="$root/out/x86_64/release/sdk/leonos-musl-sdk"
+    default_sdk="$root/out/x86_64/release/sdk/reliefos-musl-sdk"
 fi
 sdk=${SDK_ROOT:-$default_sdk}
 driver="$sdk/bin/reliefos-musl-cc"

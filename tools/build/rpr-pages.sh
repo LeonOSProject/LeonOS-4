@@ -1,10 +1,9 @@
 #!/bin/sh
 # Assemble a local Pages tree only. Publication is a separate user/CI action.
 #
-# The RPR machine interface (apk/, kernel/, manifest.json, health.txt,
-# release.txt/release.json, SHA256SUMS, leonos-rpr.rsa.pub, packages.adb and the
-# APK files) is byte-for-byte preserved: apk update/add/upgrade read only those
-# paths, so nothing here may change them (plan §13, §37). On top of that fixed
+# The RPR machine interface keeps its existing URLs and health token. The
+# ReliefOS public-key filename is canonical while the old key path remains an
+# identical trust alias for clients already configured with it. On top of that
 # interface this script now also emits a small human-readable static site
 # (index.html plus /packages/ and its per-package pages). Every page is plain
 # HTML with a single shared stylesheet and no JavaScript (plan §12, §22).
@@ -58,17 +57,18 @@ work=$(CDPATH= cd -- "$work" && pwd -P)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 mkdir -p "$work/site/apk" "$work/site/kernel" "$work/site/packages" "$work/site/css"
 
-# --- machine interface: unchanged ------------------------------------------
-openssl pkey -in "$key" -pubout -out "$work/site/apk/leonos-rpr.rsa.pub" 2>/dev/null
-chmod 644 "$work/site/apk/leonos-rpr.rsa.pub"
-for source in "$repository"/leonos-*.apk "$apps"/leonos-*.apk; do
+# --- machine interface: compatible paths, canonical package identities -----
+openssl pkey -in "$key" -pubout -out "$work/site/apk/reliefos-rpr.rsa.pub" 2>/dev/null
+cp "$work/site/apk/reliefos-rpr.rsa.pub" "$work/site/apk/leonos-rpr.rsa.pub"
+chmod 644 "$work/site/apk/reliefos-rpr.rsa.pub" "$work/site/apk/leonos-rpr.rsa.pub"
+for source in "$repository"/reliefos-*.apk "$apps"/reliefos-*.apk; do
     [ -f "$source" ] || { echo "missing RPR package $source" >&2; exit 1; }
     name=${source##*/}
     case $name in *[!a-zA-Z0-9._+-]*) echo 'unsafe RPR filename' >&2; exit 1 ;; esac
     # apk resolves a package from its metadata as name-version.apk. A
     # versionless archive indexes successfully but every normal client then
     # requests a URL that does not exist.
-    printf '%s\n' "$name" | grep -Eq '^leonos-.+-[0-9][A-Za-z0-9._+-]*\.apk$' || {
+    printf '%s\n' "$name" | grep -Eq '^reliefos-.+-[0-9][A-Za-z0-9._+-]*\.apk$' || {
         echo "RPR package filename is missing its version: $name" >&2
         exit 1
     }
@@ -76,9 +76,9 @@ for source in "$repository"/leonos-*.apk "$apps"/leonos-*.apk; do
     cp "$source" "$work/site/apk/$name"
 done
 "$apk" mkndx --keys-dir "$work/site/apk" --sign-key "$key" --output "$work/site/apk/packages.adb" "$work/site/apk"/*.apk
-(cd "$work/site/apk" && sha256sum ./*.apk leonos-rpr.rsa.pub packages.adb | sed 's|  ./|  |' | LC_ALL=C sort -k2 > SHA256SUMS)
+(cd "$work/site/apk" && sha256sum ./*.apk leonos-rpr.rsa.pub reliefos-rpr.rsa.pub packages.adb | sed 's|  ./|  |' | LC_ALL=C sort -k2 > SHA256SUMS)
 {
-    printf '{"architecture":"x86_64","index":"packages.adb","public_key":"leonos-rpr.rsa.pub","schema":1,"packages":['
+    printf '{"architecture":"x86_64","index":"packages.adb","public_key":"reliefos-rpr.rsa.pub","legacy_public_key":"leonos-rpr.rsa.pub","schema":1,"packages":['
     comma=
     for file in "$work/site/apk"/*.apk; do printf '%s"%s"' "$comma" "${file##*/}"; comma=,; done
     printf ']}\n'
@@ -136,7 +136,8 @@ edit; these are protocol files.</p>
 <ul>
 <li><a href="apk/packages.adb">apk/packages.adb</a> (signed index)</li>
 <li><a href="apk/repository.json">apk/repository.json</a></li>
-<li><a href="apk/leonos-rpr.rsa.pub">apk/leonos-rpr.rsa.pub</a></li>
+<li><a href="apk/reliefos-rpr.rsa.pub">apk/reliefos-rpr.rsa.pub</a></li>
+<li><a href="apk/leonos-rpr.rsa.pub">apk/leonos-rpr.rsa.pub</a> (legacy alias)</li>
 <li><a href="kernel/release.json">kernel/release.json</a></li>
 <li><a href="kernel/release.txt">kernel/release.txt</a></li>
 <li><a href="manifest.json">manifest.json</a></li>
@@ -158,7 +159,7 @@ HTML
 the APK repository root referenced by <code>/etc/apk/repositories</code>.</p>
 <ul>
 HTML
-    for file in "$work/site/apk"/*.apk "$work/site/apk"/packages.adb "$work/site/apk"/leonos-rpr.rsa.pub "$work/site/apk"/repository.json "$work/site/apk"/SHA256SUMS; do
+    for file in "$work/site/apk"/*.apk "$work/site/apk"/packages.adb "$work/site/apk"/reliefos-rpr.rsa.pub "$work/site/apk"/leonos-rpr.rsa.pub "$work/site/apk"/repository.json "$work/site/apk"/SHA256SUMS; do
         [ -f "$file" ] || continue
         printf '<li><a href="%s">%s</a></li>\n' "${file##*/}" "$(printf '%s' "${file##*/}" | site_html_escape)"
     done
@@ -183,11 +184,11 @@ HTML
 <caption>APK packages published in this release</caption>
 <tr><th>Package</th><th>Version</th><th>Architecture</th><th>Size</th></tr>
 HTML
-    for file in "$work/site/apk"/leonos-*.apk; do
+    for file in "$work/site/apk"/reliefos-*.apk; do
         [ -f "$file" ] || continue
         fname=${file##*/}
-        base=${fname%.apk}                 # leonos-<name>-<version>-r<epoch>
-        stem=${base%%-[0-9]*}              # leonos-<name>: up to the first -<digit>
+        base=${fname%.apk}                 # reliefos-<name>-<version>-r<epoch>
+        stem=${base%%-[0-9]*}              # reliefos-<name>: up to the first -<digit>
         ver=${base#"$stem"-}               # <version>-r<epoch>
         size=$(stat -c %s "$file")
         esc_name=$(printf '%s' "$stem" | site_html_escape)
@@ -205,7 +206,7 @@ HTML
 # Per-package information pages: data is parsed from the validated APK filename
 # plus real file size and the recorded SHA256SUMS hash, so it can never drift
 # from what is actually published (plan §17, §21).
-for file in "$work/site/apk"/leonos-*.apk; do
+for file in "$work/site/apk"/reliefos-*.apk; do
     [ -f "$file" ] || continue
     fname=${file##*/}
     base=${fname%.apk}

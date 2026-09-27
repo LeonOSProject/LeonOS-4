@@ -27,7 +27,7 @@ LICENSE_URLS = (
     "https://raw.githubusercontent.com/alpinelinux/apk-tools/v3.0.8/LICENSE",
     "https://gitlab.alpinelinux.org/alpine/apk-tools/-/raw/v3.0.8/LICENSE",
 )
-REPOSITORY = "usr/share/leonos/apk/repository"
+REPOSITORY = "usr/share/reliefos/apk/repository"
 EXTERNAL = {"EFI", "grub", "leonos", "loader.elf", "install"}
 _USER_NAMESPACE_AVAILABLE = None
 
@@ -187,12 +187,12 @@ def signing_key(path=None):
     return path
 
 
-def make_package(apk, key, payload, output, name, version, depends, provides=(), scripts=(), triggers=()):
+def make_package(apk, key, payload, output, name, version, depends, provides=(), scripts=(), triggers=(), replaces=()):
     payload.mkdir(parents=True, exist_ok=True)
     args = ["mkpkg", "--files", payload, "--output", output,
             "--info", f"name:{name}", "--info", f"version:{version}",
             "--info", "arch:x86_64", "--info", f"origin:{name}",
-            "--info", f"description:LeonOS build payload {name}",
+            "--info", f"description:ReliefOS build payload {name}",
             "--info", "license:LicenseRef-See-Bundled-Notices"]
     if key:
         args += ["--sign-key", key]
@@ -200,6 +200,8 @@ def make_package(apk, key, payload, output, name, version, depends, provides=(),
         args += ["--info", "depends:" + " ".join(sorted(depends))]
     if provides:
         args += ["--info", "provides:" + " ".join(sorted(provides))]
+    if replaces:
+        args += ["--info", "replaces:" + " ".join(sorted(replaces))]
     for kind, script in scripts:
         args += ["--script", f"{kind}:{script}"]
     for trigger in triggers:
@@ -217,7 +219,7 @@ def copy_entry(source, destination):
 
 
 def package_name(group):
-    return group if group.startswith("leonos-") or group in ("ca-certificates-bundle",) else "leonos-" + group
+    return group if group.startswith("reliefos-") or group in ("ca-certificates-bundle",) else "reliefos-" + group
 
 
 def musl_development_payload(tree, destination):
@@ -238,7 +240,7 @@ def musl_development_payload(tree, destination):
             continue
         shutil.copy2(sysroot / "lib" / filename, libdir / filename)
     (libdir / "libc.so").symlink_to("../../lib/ld-musl-x86_64.so.1")
-    notices = destination / "usr/share/licenses/leonos-musl-dev"
+    notices = destination / "usr/share/licenses/reliefos-musl-dev"
     notices.mkdir(parents=True)
     shutil.copy2(ROOT / "third_party/musl/COPYRIGHT", notices / "COPYRIGHT")
     shutil.copy2(ROOT / "userland/musl-dev/stack_chk_fail_local.c", notices / "stack_chk_fail_local.c")
@@ -323,22 +325,28 @@ def build_distribution(source, output, work, apk, key):
             "recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/blob/3.24-stable/main/apk-tools/APKBUILD",
             "license": "GPL-2.0-only", "modified": False,
         }, indent=2) + "\n")
-        updater = tree / "usr/lib/leonos/leonos-apk-update"
+        updater = tree / "usr/lib/reliefos/reliefos-apk-update"
         updater.parent.mkdir(parents=True, exist_ok=True)
         updater.unlink(missing_ok=True)
         shutil.copyfile(ROOT / "userland/storage/leonos-apk-update", updater)
         updater.chmod(0o755)
-        policy_file = tree / "usr/share/leonos/apk-ownership.json"
+        (tree / "usr/lib/reliefos/leonos-apk-update").symlink_to("reliefos-apk-update")
+        (tree / "usr/lib/leonos").mkdir(parents=True, exist_ok=True)
+        (tree / "usr/lib/leonos/leonos-apk-update").symlink_to("../reliefos/reliefos-apk-update")
+        policy_file = tree / "usr/share/reliefos/apk-ownership.json"
         policy_file.parent.mkdir(parents=True, exist_ok=True)
         policy_file.unlink(missing_ok=True)
         installed_policy = dict(policy, apk_registration="installed-by-upstream-apk",
-                                current_distributor="leonos-apk")
+                                current_distributor="reliefos-apk")
         policy_file.write_text(json.dumps(installed_policy, indent=2) + "\n")
         public = scratch / "public.pem"
         run(["openssl", "pkey", "-in", key, "-pubout", "-out", public], stderr=subprocess.DEVNULL)
-        public_name = "leonos-" + digest(public)[:16] + ".rsa.pub"
+        public_name = "reliefos-" + digest(public)[:16] + ".rsa.pub"
+        legacy_public_name = "leonos-" + digest(public)[:16] + ".rsa.pub"
         (tree / "etc/apk/keys" / public_name).unlink(missing_ok=True)
+        (tree / "etc/apk/keys" / legacy_public_name).unlink(missing_ok=True)
         shutil.copyfile(public, tree / "etc/apk/keys" / public_name)
+        shutil.copyfile(public, tree / "etc/apk/keys" / legacy_public_name)
         repositories = tree / "etc/apk/repositories"
         repositories.unlink(missing_ok=True)
         repositories.write_text("ndx /" + REPOSITORY + "/packages.adb\n" +
@@ -346,6 +354,8 @@ def build_distribution(source, output, work, apk, key):
         protected = tree / "etc/apk/protected_paths.d/leonos.list"
         protected.unlink(missing_ok=True)
         shutil.copyfile(ROOT / "system/rootfs/etc/apk/protected_paths.d/leonos.list", protected)
+        shutil.copyfile(ROOT / "system/rootfs/etc/apk/protected_paths.d/reliefos.list",
+                        tree / "etc/apk/protected_paths.d/reliefos.list")
         # This is a real filename for the actual musl loader, not a fake version provider.
         loader = tree / "lib/ld-musl-x86_64.so.1"
         if loader.is_file():
@@ -353,9 +363,11 @@ def build_distribution(source, output, work, apk, key):
             if not alias.exists() and not alias.is_symlink():
                 alias.symlink_to("ld-musl-x86_64.so.1")
             rules["lib/libc.musl-x86_64.so.1"] = "musl"
-        rules["sbin/apk"] = "leonos-apk-tools"
-        rules["usr/lib/leonos/leonos-apk-update"] = "leonos-apk-tools"
-        rules["usr/share/licenses/apk-tools"] = "leonos-apk-tools"
+        rules["sbin/apk"] = "reliefos-apk-tools"
+        rules["usr/lib/leonos/leonos-apk-update"] = "reliefos-apk-tools"
+        rules["usr/lib/reliefos/leonos-apk-update"] = "reliefos-apk-tools"
+        rules["usr/lib/reliefos/reliefos-apk-update"] = "reliefos-apk-tools"
+        rules["usr/share/licenses/apk-tools"] = "reliefos-apk-tools"
         source_record = tree / "usr/share/licenses/leonos-openrc/SOURCE.json"
         source_record.parent.mkdir(parents=True, exist_ok=True)
         source_record.write_text(json.dumps(upstream_manifest, indent=2) + "\n")
@@ -363,7 +375,7 @@ def build_distribution(source, output, work, apk, key):
         development_entries = []
         if loader.is_file():
             musl_development_payload(tree, development)
-            development_entries = inventory(development, {"usr": "leonos-musl-dev"})
+            development_entries = inventory(development, {"usr": "reliefos-musl-dev"})
         # Installer roots are packaged again. Generated SDK files must retain
         # their own package, including libc.so's symlink to the runtime loader.
         development_paths = {entry["path"] for entry in development_entries}
@@ -375,7 +387,7 @@ def build_distribution(source, output, work, apk, key):
         provides, needed = defaultdict(set), defaultdict(set)
         providers = {}
         for name, files in groups.items():
-            payload_root = development if name == "leonos-musl-dev" else tree
+            payload_root = development if name == "reliefos-musl-dev" else tree
             for entry in files:
                 path = payload_root / entry["path"].lstrip("/")
                 if entry["path"] == "/bin/sh" and path.is_file() and path.stat().st_mode & 0o111:
@@ -396,17 +408,17 @@ def build_distribution(source, output, work, apk, key):
                     providers[soname] = name
                     provides[name].add("so:" + soname + "=0")
         if loader.is_file():
-            providers["libc.musl-x86_64.so.1"] = "leonos-musl"
-            provides["leonos-musl"].add("so:libc.musl-x86_64.so.1=1")
+            providers["libc.musl-x86_64.so.1"] = "reliefos-musl"
+            provides["reliefos-musl"].add("so:libc.musl-x86_64.so.1=1")
         # BusyBox's actual ifup/ifdown implementation is the ifupdown provider.
         applets = set(subprocess.check_output([tree / "bin/busybox", "--list"], text=True).splitlines())
         if not {"init", "ifup", "ifdown", "udhcpc", "ntpd"} <= applets:
             raise ValueError("BusyBox is missing required init/network applets")
-        provides["leonos-busybox"].add("ifupdown-any")
+        provides["reliefos-busybox"].add("ifupdown-any")
         dependencies = defaultdict(set)
-        dependencies["leonos-apk-tools"].add("leonos-busybox")
+        dependencies["reliefos-apk-tools"].add("reliefos-busybox")
         if "ca-certificates-bundle" in groups:
-            dependencies["leonos-trust"].add("ca-certificates-bundle")
+            dependencies["reliefos-trust"].add("ca-certificates-bundle")
         for name, requirements in needed.items():
             for requirement in requirements:
                 owner = providers.get(requirement)
@@ -414,14 +426,14 @@ def build_distribution(source, output, work, apk, key):
                     raise ValueError(f"unresolved real ELF dependency: {name}: {requirement}")
                 if owner != name:
                     dependencies[name].add(owner)
-        if "leonos-fastfetch" in groups:
-            dependencies["leonos-fastfetch"].add("!fastfetch")
+        if "reliefos-fastfetch" in groups:
+            dependencies["reliefos-fastfetch"].add("!fastfetch")
         # Base is a real package of all distribution files not assigned to another
         # producer. No records are synthesized in apk's installed database.
         version = f"0.{time.time_ns()}-r0"
-        if "leonos-musl-dev" in groups:
-            dependencies["leonos-musl-dev"].add("leonos-musl=" + version)
-            provides["leonos-musl-dev"].update(("musl-dev", "libc-dev"))
+        if "reliefos-musl-dev" in groups:
+            dependencies["reliefos-musl-dev"].add("reliefos-musl=" + version)
+            provides["reliefos-musl-dev"].update(("musl-dev", "libc-dev"))
         repository = work / "repository"
         if repository.exists():
             shutil.rmtree(repository)
@@ -432,9 +444,9 @@ def build_distribution(source, output, work, apk, key):
             shutil.copy2(archive, destination)
             packages.append(destination)
         for name, files in sorted(groups.items()):
-            payload_root = development if name == "leonos-musl-dev" else tree
+            payload_root = development if name == "reliefos-musl-dev" else tree
             payload = scratch / name
-            if name == "leonos-base":
+            if name == "reliefos-base":
                 for parent, dirs, _ in os.walk(tree, followlinks=False):
                     for basename in dirs:
                         original = Path(parent) / basename
@@ -454,12 +466,13 @@ def build_distribution(source, output, work, apk, key):
                     if original.is_dir():
                         parent.chmod(original.stat().st_mode & 0o7777)
             scripts, triggers = [], []
-            if name == "leonos-busybox":
+            if name == "reliefos-busybox":
                 script = ROOT / "userland/storage/busybox-binutils-links"
                 scripts = [(kind, script) for kind in ("post-install", "post-upgrade", "trigger")]
                 triggers = ["/usr/bin"]
+            replaces = ("leonos-" + name.removeprefix("reliefos-"),)
             packages.append(make_package(apk, key, payload, repository / f"{name}-{version}.apk",
-                                         name, version, dependencies[name], provides[name], scripts, triggers))
+                                         name, version, dependencies[name], provides[name], scripts, triggers, replaces))
         keys_dir = tree / "etc/apk/keys"
         keys_dir.mkdir(parents=True, exist_ok=True)
         # Fixture roots and small package roots may omit Alpine's trust store;
@@ -475,6 +488,7 @@ def build_distribution(source, output, work, apk, key):
         layout_directories(managed)
         shutil.copytree(ROOT / "system/rootfs/etc/apk/keys", managed / "etc/apk/keys", dirs_exist_ok=True)
         shutil.copyfile(public, managed / "etc/apk/keys" / public_name)
+        shutil.copyfile(public, managed / "etc/apk/keys" / legacy_public_name)
         _run_apk(apk, ["--root", managed, "--arch", "x86_64", "--initdb",
                        "--repositories-file", "/dev/null", "--repository", repository / "packages.adb",
                        "add", *sorted(groups), *[entry["name"] + "=" + entry["version"] for entry in upstream_manifest["packages"]]], usermode=True)
@@ -487,7 +501,7 @@ def build_distribution(source, output, work, apk, key):
             elif path.exists():
                 copy_entry(path, managed / name)
         manifest = {"version": version, "packages": sorted(groups) + [entry["name"] for entry in upstream_manifest["packages"]], "upstream": upstream_manifest, "optional_packages": [],
-                    "signing_public_key": public_name, "files": entries,
+                    "signing_public_key": public_name, "legacy_signing_public_key": legacy_public_name, "files": entries,
                     "database": "created-by-upstream-apk", "source": URL,
                     "bootstrap_sha256": BINARY_SHA256}
         (work / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")

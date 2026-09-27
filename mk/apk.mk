@@ -29,6 +29,7 @@ $(APK_MANAGED_ROOT)/.apk-complete $(APK_REPOSITORY)/packages.adb $(APK_MANIFEST)
 	$(RELIEFOS_SRC)/userland/storage/leonos-apk-update \
 	$(RELIEFOS_SRC)/userland/storage/busybox-binutils-links \
 	$(RELIEFOS_SRC)/system/rootfs/etc/apk/protected_paths.d/leonos.list \
+	$(RELIEFOS_SRC)/system/rootfs/etc/apk/protected_paths.d/reliefos.list \
 	$(O_META)/apk-stage.sig
 	$(Q)mkdir -p $(O_LOGS) $(O_PACKAGES)
 	$(Q)SOURCE_DATE_EPOCH='$(SOURCE_DATE_EPOCH)' APK_MUSL_SYSROOT='$(abspath $(MUSL_SYSROOT))' sh $(RELIEFOS_SRC)/tools/build/run-logged.sh $(O_LOGS)/apk-stage.log sh $(APK_STAGE_SCRIPT) \

@@ -29,7 +29,7 @@ def main():
     parser.add_argument("--label", default="current")
     parser.add_argument("--package", default="gcc")
     parser.add_argument("--timeout", type=int, default=180)
-    parser.add_argument("--install", action="store_true", help="download/install gcc, leonos-musl-dev and make, then compile/run stdio")
+    parser.add_argument("--install", action="store_true", help="download/install gcc, reliefos-musl-dev and make, then compile/run stdio")
     args = parser.parse_args()
     # Bind privileged HTTPS only in an isolated network namespace owned by us.
     import fcntl
