@@ -55,7 +55,7 @@ static int net_control(struct reliefos_net_control *control)
  * Verify it against the current interface; it is not a source of kernel state. */
 static void net_merge_dhcp_lease(struct reliefos_net_config *config)
 {
-    int fd = open("/run/leonos/dhcp-lease", O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    int fd = open("/run/reliefos/dhcp-lease", O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
     if (fd < 0) return;
     struct stat st;
     if (fstat(fd, &st) || !S_ISREG(st.st_mode) || st.st_uid || (st.st_mode & 022)) {
@@ -140,7 +140,7 @@ int reliefos_net_set_dns_policy(uint32_t mode, uint32_t custom_dns_ip,
     if (ret) { unlink(temporary); return -1; }
     pid_t child = fork();
     if (child < 0) return -1;
-    if (!child) { execl("/usr/lib/leonos/publish-resolver", "publish-resolver", (char *)NULL); _exit(127); }
+    if (!child) { execl("/usr/lib/reliefos/publish-resolver", "publish-resolver", (char *)NULL); _exit(127); }
     int status;
     while (waitpid(child, &status, 0) < 0) if (errno != EINTR) return -1;
     if (!WIFEXITED(status) || WEXITSTATUS(status)) { errno = EIO; return -1; }
@@ -155,7 +155,7 @@ int reliefos_net_dhcp_renew(uint32_t timeout_ms, struct reliefos_net_dhcp *resul
 {
     if (!result) { errno = EINVAL; return -1; }
     *result = (struct reliefos_net_dhcp){.timeout_ms = timeout_ms, .status = RELIEFOS_NET_STATUS_DHCP_FAILED};
-    if (reliefos_openrc_run("leonos-dhcp", "restart")) { errno = EIO; return -1; }
+    if (reliefos_openrc_run("reliefos-dhcp", "restart")) { errno = EIO; return -1; }
     struct timespec started, now;
     if (clock_gettime(CLOCK_MONOTONIC, &started)) return -1;
     uint64_t budget = timeout_ms ? timeout_ms : 3000;

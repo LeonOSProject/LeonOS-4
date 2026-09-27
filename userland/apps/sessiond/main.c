@@ -1,7 +1,7 @@
 #include <signal.h>
 #include <sys/wait.h>
 /* sessiond, LeonOS business protocol: startup approval and session launch policy
- * over /run/leonos/session.sock. */
+ * over /run/reliefos/session.sock. */
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
@@ -198,9 +198,9 @@ static int sessiond_launch_current(void)
     struct reliefos_user_info user;
     if (reliefos_session_current(&user) < 0) return -1;
     struct stat identity;
-    if (lstat("/run/leonos/session-user", &identity) < 0 || identity.st_uid || !S_ISREG(identity.st_mode)) return -1;
+    if (lstat("/run/reliefos/session-user", &identity) < 0 || identity.st_uid || !S_ISREG(identity.st_mode)) return -1;
     char marker[128];
-    snprintf(marker, sizeof(marker), "/run/leonos/startup-%llu-%llu", 
+    snprintf(marker, sizeof(marker), "/run/reliefos/startup-%llu-%llu",
              (unsigned long long)identity.st_dev, (unsigned long long)identity.st_ino);
     int once = open(marker, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
     if (once < 0) return errno == EEXIST ? 0 : -1;
@@ -220,10 +220,10 @@ static int sessiond_launch_current(void)
         if (!child) {
             /* A logout/login race must never execute another user's entry. */
             struct stat current;
-            if (lstat("/run/leonos/session-user", &current) < 0 ||
+            if (lstat("/run/reliefos/session-user", &current) < 0 ||
                 current.st_ino != identity.st_ino || current.st_dev != identity.st_dev ||
                 reliefos_session_apply() < 0 || getuid() != db.entries[i].uid ||
-                lstat("/run/leonos/session-user", &current) < 0 ||
+                lstat("/run/reliefos/session-user", &current) < 0 ||
                 current.st_ino != identity.st_ino || current.st_dev != identity.st_dev ||
                 syscall(SYS_close_range, 3u, ~0u, 0u) < 0) _exit(126);
             execv(argv[0], argv);

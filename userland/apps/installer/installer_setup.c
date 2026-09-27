@@ -117,7 +117,7 @@ int installer_setup_write(const struct installer_setup *setup, const char *targe
         if (prepare_home(target, &records[i]) < 0) goto out;
     if (reliefos_account_seed(target, setup->username, setup->password,
                             setup->root_password) < 0) goto out;
-    snprintf(path, sizeof(path), "%s/etc/leonos/installed", target);
+    snprintf(path, sizeof(path), "%s/etc/reliefos/installed", target);
     FILE *file = fopen(path, "w");
     if (!file) goto out;
     int failed = fputs("installed=1\n", file) == EOF;

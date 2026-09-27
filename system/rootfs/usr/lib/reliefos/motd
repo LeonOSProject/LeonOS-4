@@ -13,4 +13,4 @@ if [ -n "$motd_home" ] && [ -e "$motd_home/.hushlogin" ]; then
     exit 0
 fi
 
-exec /usr/lib/leonos/motd-status
+exec /usr/lib/reliefos/motd-status

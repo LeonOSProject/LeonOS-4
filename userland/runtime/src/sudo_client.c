@@ -13,7 +13,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-#define ASKPASS "/usr/lib/leonos/apps/sudod/sudod.elf"
+#define ASKPASS "/usr/lib/reliefos/apps/sudod/sudod.elf"
 #define RESULT_MAGIC 0x524f4453u
 struct fileop_result {
     uint32_t magic;

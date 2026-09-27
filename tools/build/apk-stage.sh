@@ -34,7 +34,7 @@ cp -a "$raw"/. "$tree"/
 # Media-only payloads are copied back after the transaction and never claimed
 # by an installed package. Runtime state is always created by apk itself.
 for name in EFI grub leonos loader.elf install; do rm -rf "$tree/$name"; done
-for name in lib/apk/db var/cache/apk usr/share/leonos/apk/repository; do
+for name in lib/apk/db var/cache/apk usr/share/reliefos/apk/repository; do
     [ ! -L "$tree/$name" ] || { echo "invalid package-state symlink: $name" >&2; exit 1; }
     rm -rf "$tree/$name"
 done
@@ -101,15 +101,15 @@ mkdir -p "$tree/usr/share/licenses/apk-tools" "$tree/usr/share/licenses/leonos-o
 } > "$tree/usr/share/licenses/apk-tools/SOURCE.json"
 cp "$src/configs/dependencies.lock.json" "$tree/usr/share/licenses/leonos-openrc/SOURCE.json"
 
-mkdir -p "$tree/sbin" "$tree/usr/lib/leonos" "$tree/usr/share/leonos" \
+mkdir -p "$tree/sbin" "$tree/usr/lib/reliefos" "$tree/usr/share/reliefos" \
     "$tree/etc/apk/keys" "$tree/etc/apk/protected_paths.d"
 cp "$apk" "$tree/sbin/apk"
 chmod 755 "$tree/sbin/apk"
 mkdir -p "$tree/usr/share/licenses/apk-tools"
 cp "$src/resources/licenses/apk-tools-LICENSE" "$tree/usr/share/licenses/apk-tools/LICENSE"
-cp "$src/userland/storage/leonos-apk-update" "$tree/usr/lib/leonos/leonos-apk-update"
-chmod 755 "$tree/usr/lib/leonos/leonos-apk-update"
-cp "$policy" "$tree/usr/share/leonos/apk-ownership.json"
+cp "$src/userland/storage/leonos-apk-update" "$tree/usr/lib/reliefos/leonos-apk-update"
+chmod 755 "$tree/usr/lib/reliefos/leonos-apk-update"
+cp "$policy" "$tree/usr/share/reliefos/apk-ownership.json"
 cp -a "$src/system/rootfs/etc/apk/keys"/. "$tree/etc/apk/keys"/
 cp "$src/system/rootfs/etc/apk/protected_paths.d/leonos.list" \
     "$tree/etc/apk/protected_paths.d/leonos.list"
@@ -135,7 +135,7 @@ if [ -n "${SOURCE_DATE_EPOCH:-}" ]; then
     find "$tree" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
 fi
 
-"$own" --policy "$policy" --root "$tree" --output "$scratch/ownership.tsv" --installed-policy "$tree/usr/share/leonos/apk-ownership.json" --elf-list "$scratch/elf.tsv"
+"$own" --policy "$policy" --root "$tree" --output "$scratch/ownership.tsv" --installed-policy "$tree/usr/share/reliefos/apk-ownership.json" --elf-list "$scratch/elf.tsv"
 if [ -d "$development" ]; then
     "$own" --policy "$policy" --root "$development" --group leonos-musl-dev --output "$scratch/development.tsv"
     awk -F '\t' -v OFS='\t' 'FNR==NR {if($2!="dir") paths[$4]=1;next} $4 in paths {$1="leonos-musl-dev"} {print}' \
@@ -279,8 +279,8 @@ set -- --root "$managed" --arch x86_64 --initdb --repositories-file /dev/null \
 while IFS= read -r group; do set -- "$@" "$(package_name "$group")"; done <"$scratch/groups"
 while IFS= read -r request; do set -- "$@" "$request"; done <"$scratch/upstream-requests"
 run_apk "$@"
-mkdir -p "$managed/usr/share/leonos/apk"
-cp -a "$repository" "$managed/usr/share/leonos/apk/repository"
+mkdir -p "$managed/usr/share/reliefos/apk"
+cp -a "$repository" "$managed/usr/share/reliefos/apk/repository"
 for name in EFI grub leonos loader.elf install; do [ ! -e "$raw/$name" ] || cp -a "$raw/$name" "$managed/$name"; done
 
 mkdir -p "$work/repository.new"

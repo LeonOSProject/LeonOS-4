@@ -1,0 +1,14 @@
+#!/sbin/openrc-run
+# The kernel mounts the root, proc/sys/dev and clears /run before PID 1.
+description="ReliefOS runtime directories"
+depend() { before "*"; }
+start() {
+    /usr/lib/reliefos/reliefos-migrate / || return 1
+    checkpath --directory --mode 0755 /run/reliefos /var/lib/reliefos /var/cache/reliefos /etc/reliefos /usr/lib/reliefos /run/lock /var/log || return 1
+    checkpath --directory --mode 1777 /tmp /var/tmp || return 1
+    # Hostname load moved out of the kernel (A16); keep the default
+    # "leonos" when /etc/hostname is absent or rejected, like the old
+    # kernel loader did. Never fail the service over the hostname.
+    test -f /etc/hostname && hostname -F /etc/hostname
+    test -r /proc/self/status && test -d /sys && test -c /dev/console
+}

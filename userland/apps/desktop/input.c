@@ -514,7 +514,7 @@ void maybe_launch_login(void)
     /* Live and installer media have no installed identity. Once installed,
      * keep the screen locked even if account lookup or PAM initialization fails. */
     struct stat installed;
-    if (lstat("/etc/leonos/installed", &installed) < 0 && errno == ENOENT) return;
+    if (lstat("/etc/reliefos/installed", &installed) < 0 && errno == ENOENT) return;
     status = (struct reliefos_auth_status){0};
     (void)reliefos_auth_status(&status);
     login_lock_active = 1;

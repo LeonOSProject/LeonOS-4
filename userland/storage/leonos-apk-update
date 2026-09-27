@@ -114,7 +114,7 @@ if [ "$status" -ne 0 ]; then
     fi
 fi
 # Publish the offline repository only after the package transaction succeeded.
-destination=$target/usr/share/leonos/apk/repository
+destination=$target/usr/share/reliefos/apk/repository
 /bin/busybox mkdir -p "$destination"
 for package in "$repository"/*.apk; do
     /bin/busybox cp "$package" "$destination/$(/bin/busybox basename "$package").new"

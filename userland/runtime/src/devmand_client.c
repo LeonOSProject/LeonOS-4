@@ -1,4 +1,4 @@
-/* devmand client: device/driver management over /run/leonos/devman.sock. */
+/* devmand client: device/driver management over /run/reliefos/devman.sock. */
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #endif

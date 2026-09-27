@@ -1,5 +1,5 @@
 /* sessiond client: startup requests and launch policy over
- * /run/leonos/session.sock. Exports the old leonos_startup_* API. */
+ * /run/reliefos/session.sock. Exports the old leonos_startup_* API. */
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #endif

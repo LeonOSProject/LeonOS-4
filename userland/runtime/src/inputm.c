@@ -1,6 +1,6 @@
 /* Text-input service client. The public text_input_* / leonos_inputm_* entry
  * points are unchanged; transport moved from /dev/input-method ioctls to the
- * imd daemon over /run/leonos/input-method.sock. */
+ * imd daemon over /run/reliefos/input-method.sock. */
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #endif

@@ -33,15 +33,15 @@ ext2)
         # unmarked (component disabled); tools/test_service_marker.py pins the
         # marked set against the plan/manifest and system/*/etc/group.
         for base in "" /install/root; do
-            for role in /usr/lib/leonos/apps/desktop/desktop.elf:60001 \
-                        /usr/lib/leonos/apps/windowd/windowd.elf:60002 \
-                        /usr/lib/leonos/apps/imd/imd.elf:60002; do
+            for role in /usr/lib/reliefos/apps/desktop/desktop.elf:60001 \
+                        /usr/lib/reliefos/apps/windowd/windowd.elf:60002 \
+                        /usr/lib/reliefos/apps/imd/imd.elf:60002; do
                 [ -e "$1$base${role%:*}" ] || continue
                 chown -h "0:${role##*:}" "$1$base${role%:*}"
             done
         done
-        if [ -f "$1/etc/leonos/test-image" ]; then
-            test "$(cat "$1/etc/leonos/test-image")" = leonos-standalone-test-v1
+        if [ -f "$1/etc/reliefos/test-image" ]; then
+            test "$(cat "$1/etc/reliefos/test-image")" = leonos-standalone-test-v1
             test ! -L "$1/home/test"
             find "$1/home/test" -exec chown -h 1000:1000 {} +
         fi

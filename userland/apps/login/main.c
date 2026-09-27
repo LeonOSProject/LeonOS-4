@@ -192,7 +192,7 @@ static int tty_login_main(void)
 
 static int installer_shell_main(void)
 {
-    if (geteuid() != 0 || access("/etc/leonos/installer-runtime", F_OK) < 0) {
+    if (geteuid() != 0 || access("/etc/reliefos/installer-runtime", F_OK) < 0) {
         errno = EPERM;
         perror("Start installer shell");
         return 1;
@@ -211,7 +211,7 @@ static int graphical_session_main(void)
         perror("Activate graphical terminal");
         return 1;
     }
-    execl("/usr/lib/leonos/apps/desktop/desktop.elf", "desktop.elf", (char *)0);
+    execl("/usr/lib/reliefos/apps/desktop/desktop.elf", "desktop.elf", (char *)0);
     perror("Start desktop session");
     (void)ioctl(STDIN_FILENO, KDSETMODE, KD_TEXT);
     return 1;

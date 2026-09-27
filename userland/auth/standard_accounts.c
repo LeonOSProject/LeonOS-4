@@ -46,7 +46,7 @@ int reliefos_account_info(const struct passwd *account, struct reliefos_user_inf
 int reliefos_account_legacy_check(const char *target)
 {
     char *path = NULL;
-    if (asprintf(&path, "%s/var/lib/leonos/accounts.db", target) < 0) return -1;
+    if (asprintf(&path, "%s/var/lib/reliefos/accounts.db", target) < 0) return -1;
     int old = open(path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
     free(path); path = NULL;
     if (old >= 0) {
@@ -56,7 +56,7 @@ int reliefos_account_legacy_check(const char *target)
         if (result < 0) { errno = error; return -1; }
         if (!S_ISREG(st.st_mode) || st.st_size) { errno = ENOTSUP; return -1; }
     } else if (errno != ENOENT) return -1;
-    if (asprintf(&path, "%s/var/lib/leonos/users.db", target) < 0) return -1;
+    if (asprintf(&path, "%s/var/lib/reliefos/users.db", target) < 0) return -1;
     int fd = open(path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
     free(path);
     if (fd < 0) return errno == ENOENT ? 0 : -1;

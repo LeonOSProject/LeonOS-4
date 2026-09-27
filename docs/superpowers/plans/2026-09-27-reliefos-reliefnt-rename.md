@@ -166,7 +166,7 @@
 
 **文件：** 新增 `include/reliefos/layout.h`、`system/rootfs/usr/lib/reliefos/reliefos-migrate`；修改 `include/leonos/layout.h`、`tools/host/manifest/leonos-layout.c`、`tools/build/{rootfs-stage,standalone-root,installer-stage}.sh`、`configs/apk-ownership.json`、`system/rootfs/etc/leonos/`、`system/rootfs/etc/init.d/leonos-*`、`system/rootfs/etc/runlevels/*/leonos-*`、`userland/runtime/src/` 和使用旧路径的 `userland/apps/`；增加 `tests/build/test-reliefos-migration.sh`。
 
-- [ ] **步骤 1：先写迁移 fixture。** 建立旧 `/etc/leonos/display.conf`、旧 `/var/lib/leonos/users.db` 和一个已存在的新配置；运行迁移后要求旧数据保留、缺失的新文件得到拷贝、已有新文件原样不动、再运行一次结果相同；模拟不可写目标时要求非零返回与明确日志。
+- [x] **步骤 1：先写迁移 fixture。** 建立旧 `/etc/leonos/display.conf`、旧 `/var/lib/leonos/users.db` 和一个已存在的新配置；运行迁移后要求旧数据保留、缺失的新文件得到拷贝、已有新文件原样不动、再运行一次结果相同；模拟不可写目标时要求非零返回与明确日志。
 
   ```sh
   fixture=$(mktemp -d)
@@ -179,9 +179,11 @@
   grep -qx 'theme=win95' "$fixture/etc/leonos/display.conf"
   ```
 
-- [ ] **步骤 2：运行 fixture 确认缺迁移器失败。** 再实现有边界的复制/校验/日志逻辑；迁移只针对明确列出的配置与数据文件，遇到冲突记录而不覆盖。注意短读短写、权限、目录所有者及重复执行。
-- [ ] **步骤 3：切换布局常量和 staging。** 新系统只把新目录作为规范写入；旧目录提供兼容读取/入口。更新服务文件名、runlevel 链接、脚本调用及 `pam.d` 名；同一服务只能启动一次，安装器/普通系统两个 root 都要检查。
-- [ ] **步骤 4：验证 `sh tests/build/test-rootfs-stage.sh`、`sh tests/build/test-installer-stage.sh`、`sh tests/build/test-reliefos-migration.sh`、相关 OpenRC Python 回归与 `make rootfs`。** 检查 stage manifest 的新旧路径及文件所有权；旧数据库完整性用哈希比对；检查 `git diff --check`。
+- [x] **步骤 2：运行 fixture 确认缺迁移器失败。** 再实现有边界的复制/校验/日志逻辑；迁移只针对明确列出的配置与数据文件，遇到冲突记录而不覆盖。注意短读短写、权限、目录所有者及重复执行。
+- [x] **步骤 3：切换布局常量和 staging。** 新系统只把新目录作为规范写入；旧目录提供兼容读取/入口。更新服务文件名、runlevel 链接、脚本调用及 `pam.d` 名；同一服务只能启动一次，安装器/普通系统两个 root 都要检查。
+- [x] **步骤 4：验证 `sh tests/build/test-rootfs-stage.sh`、`sh tests/build/test-installer-stage.sh`、`sh tests/build/test-reliefos-migration.sh`、相关 OpenRC Python 回归与 `make rootfs`。** 检查 stage manifest 的新旧路径及文件所有权；旧数据库完整性用哈希比对；检查 `git diff --check`。
+
+> 执行记录（2026-09-28）：迁移 fixture 先因迁移器缺失按预期红灯；实现只迁移显式列出的配置和持久数据文件，复制后逐字节比对、保留模式/uid/gid、原子无覆盖发布，目标已存在时记录并保留。`sh tests/build/test-reliefos-migration.sh` 通过，覆盖冲突配置不覆盖、users.db 哈希/内容完整、权限所有者一致、重复执行、不可写目标非零退出与日志。`make rootfs` 成功；manifest 确认 `/etc/reliefos`、`/run/reliefos`、`/var/lib/reliefos` 为 root:root，持久目录为 0750，迁移器为 root:root 0755，旧 `/usr/lib/leonos/libleonos.so.2` 兼容库仍随镜像装配。rootfs stage、installer stage、APK ownership、OpenRC shutdown（3 tests）和 resolver（1 test）fixture 全绿，`git diff --check` 全绿；普通系统构建 rootfs 的 canonical runlevel 链接各出现一次，installer stage fixture 通过。`test-brand-identity.sh` 的旧名审计通过；剩余 7 条 os-release/GRUB/镜像目标名断言属于任务 7/9，1,121 条 `migration` 分类命中留待任务 11 复审。`.gitmodules` 中 `https://github.com/LeonOSProject/NTCLKS.git` 未改动。
 
 ### 任务 7：启动介质、安装器与内核更新回滚
 

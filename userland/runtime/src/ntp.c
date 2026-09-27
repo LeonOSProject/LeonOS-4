@@ -14,7 +14,7 @@
  * A restarted process alone is not evidence of a selected NTP peer. */
 static int ntp_notification(void)
 {
-    int fd = open("/run/leonos/ntp-state", O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    int fd = open("/run/reliefos/ntp-state", O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
     if (fd < 0) return 0;
     struct stat st;
     if (fstat(fd, &st) || !S_ISREG(st.st_mode) || st.st_uid || (st.st_mode & 022)) {
@@ -42,7 +42,7 @@ int reliefos_time_ntp_sync(uint32_t timeout_ms, struct reliefos_time_sync *resul
     memset(result, 0, sizeof(*result));
     result->timeout_ms = timeout_ms;
     result->status = RELIEFOS_NET_STATUS_NTP_TIMEOUT;
-    if (reliefos_openrc_run("leonos-ntp", "restart")) { errno = EIO; return -1; }
+    if (reliefos_openrc_run("reliefos-ntp", "restart")) { errno = EIO; return -1; }
     struct timespec started, now;
     if (clock_gettime(CLOCK_MONOTONIC, &started)) return -1;
     uint64_t budget = timeout_ms ? timeout_ms : 15000;

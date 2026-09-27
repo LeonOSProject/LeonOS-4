@@ -117,12 +117,12 @@ void desktop_run(void)
      * targets as desktop children before the login session starts. */
     desktop_autospawn_from_cmdline();
     maybe_launch_login();
-    if (access("/etc/leonos/installer-runtime", F_OK) == 0) {
+    if (access("/etc/reliefos/installer-runtime", F_OK) == 0) {
         char *argv[] = {"installer", "--graphical", NULL};
         (void)reliefos_launch_argv(argv);
     }
 
-    int profile = access("/etc/leonos/desktop-profile", F_OK) == 0;
+    int profile = access("/etc/reliefos/desktop-profile", F_OK) == 0;
     unsigned long profile_start = reliefos_uptime_ms();
     unsigned long profile_frames = 0, profile_paint_ms = 0, profile_inputm_ms = 0;
     unsigned long last_log = 0;

@@ -1,7 +1,7 @@
 /* windowd: userspace window registry and input-routing daemon.
  * SO_PEERCRED is the connection trust boundary.
  *
- * Apps open /run/leonos/windowd.sock through libwind and exchange window
+ * Apps open /run/reliefos/windowd.sock through libwind and exchange window
  * metadata/events over AF_UNIX; pixel buffers are /dev/shm0 segments passed
  * with SCM_RIGHTS. Desktop remains the shell renderer and connects with the
  * policy handshake below. */

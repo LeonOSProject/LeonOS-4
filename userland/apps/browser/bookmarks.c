@@ -29,8 +29,8 @@ static void bookmark_store_location(char *dst, uint32_t cap)
     } else {
         (void)mkdir("/var", 0755);
         (void)mkdir("/var/lib", 0755);
-        (void)mkdir("/var/lib/leonos", 0750);
-        bookmark_append_path(dir, sizeof(dir), "/var/lib/leonos",
+        (void)mkdir("/var/lib/reliefos", 0750);
+        bookmark_append_path(dir, sizeof(dir), "/var/lib/reliefos",
                              BROWSER_BOOKMARK_STORE_DIR);
         (void)mkdir(dir, 0700);
     }

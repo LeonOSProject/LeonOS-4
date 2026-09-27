@@ -19,17 +19,17 @@
  *
  * ReliefOS-owned files live below explicitly named subdirectories:
  *
- *     /etc/leonos                 persistent configuration
- *     /var/lib/leonos             persistent mutable state
- *     /var/cache/leonos           cache data
- *     /run/leonos                 volatile per-boot IPC and session state
- *     /usr/lib/leonos             private libraries and loader payload
- *     /usr/lib/leonos/apps        application packages (manifest + ELF)
- *     /usr/lib/leonos/drivers     Ring-0 driver modules
- *     /usr/lib/leonos/tests       diagnostic guest probes
- *     /usr/share/leonos           desktop resources
- *     /usr/share/fonts/leonos     ReliefOS UI fonts
- *     /usr/share/doc/leonos       bundled help and vendor notices
+ *     /etc/reliefos                 persistent configuration
+ *     /var/lib/reliefos             persistent mutable state
+ *     /var/cache/reliefos           cache data
+ *     /run/reliefos                 volatile per-boot IPC and session state
+ *     /usr/lib/reliefos             private libraries and loader payload
+ *     /usr/lib/reliefos/apps        application packages (manifest + ELF)
+ *     /usr/lib/reliefos/drivers     Ring-0 driver modules
+ *     /usr/lib/reliefos/tests       diagnostic guest probes
+ *     /usr/share/reliefos           desktop resources
+ *     /usr/share/fonts/reliefos     ReliefOS UI fonts
+ *     /usr/share/doc/reliefos       bundled help and vendor notices
  *
  * tools/reliefos_layout.py is the build-side mirror of this header.  Keep the
  * two files synchronized and do not add competing path literal tables.
@@ -45,21 +45,21 @@
 #define RELIEFOS_LAYOUT_USR_SBIN "/usr/sbin"
 #define RELIEFOS_LAYOUT_USR_LIB "/usr/lib"
 #define RELIEFOS_LAYOUT_USR_SHARE "/usr/share"
-#define RELIEFOS_LAYOUT_ETC_RELIEFOS "/etc/leonos"
+#define RELIEFOS_LAYOUT_ETC_RELIEFOS "/etc/reliefos"
 #define RELIEFOS_LAYOUT_ETC_SSL_CERTS "/etc/ssl/certs"
-#define RELIEFOS_LAYOUT_VAR_LIB_RELIEFOS "/var/lib/leonos"
-#define RELIEFOS_LAYOUT_VAR_CACHE_RELIEFOS "/var/cache/leonos"
+#define RELIEFOS_LAYOUT_VAR_LIB_RELIEFOS "/var/lib/reliefos"
+#define RELIEFOS_LAYOUT_VAR_CACHE_RELIEFOS "/var/cache/reliefos"
 #define RELIEFOS_LAYOUT_VAR_LOG "/var/log"
 #define RELIEFOS_LAYOUT_VAR_TMP "/var/tmp"
-#define RELIEFOS_LAYOUT_RUN_RELIEFOS "/run/leonos"
-#define RELIEFOS_LAYOUT_RELIEFOS_LIB "/usr/lib/leonos"
-#define RELIEFOS_LAYOUT_RELIEFOS_APPS "/usr/lib/leonos/apps"
-#define RELIEFOS_LAYOUT_RELIEFOS_DRIVERS "/usr/lib/leonos/drivers"
-#define RELIEFOS_LAYOUT_RELIEFOS_TESTS "/usr/lib/leonos/tests"
-#define RELIEFOS_LAYOUT_RELIEFOS_SHARE "/usr/share/leonos"
-#define RELIEFOS_LAYOUT_RELIEFOS_RESOURCES "/usr/share/leonos/resources"
-#define RELIEFOS_LAYOUT_RELIEFOS_FONTS "/usr/share/fonts/leonos"
-#define RELIEFOS_LAYOUT_RELIEFOS_DOC "/usr/share/doc/leonos"
+#define RELIEFOS_LAYOUT_RUN_RELIEFOS "/run/reliefos"
+#define RELIEFOS_LAYOUT_RELIEFOS_LIB "/usr/lib/reliefos"
+#define RELIEFOS_LAYOUT_RELIEFOS_APPS "/usr/lib/reliefos/apps"
+#define RELIEFOS_LAYOUT_RELIEFOS_DRIVERS "/usr/lib/reliefos/drivers"
+#define RELIEFOS_LAYOUT_RELIEFOS_TESTS "/usr/lib/reliefos/tests"
+#define RELIEFOS_LAYOUT_RELIEFOS_SHARE "/usr/share/reliefos"
+#define RELIEFOS_LAYOUT_RELIEFOS_RESOURCES "/usr/share/reliefos/resources"
+#define RELIEFOS_LAYOUT_RELIEFOS_FONTS "/usr/share/fonts/reliefos"
+#define RELIEFOS_LAYOUT_RELIEFOS_DOC "/usr/share/doc/reliefos"
 #define RELIEFOS_LAYOUT_LICENSES "/usr/share/licenses"
 #define RELIEFOS_LAYOUT_MISC "/usr/share/misc"
 #define RELIEFOS_LAYOUT_TERMINFO "/usr/share/terminfo"

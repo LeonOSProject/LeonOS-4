@@ -2312,7 +2312,7 @@ static int check_update_target_required(void)
     /* Updates accept only the current non-usr-merge root. Old images need
      * a fresh installation; never mutate them in an attempted migration. */
     static const char *const required_dirs[] = {
-        "/etc/leonos", "/var/lib/leonos", "/bin", "/sbin", "/lib",
+        "/etc/reliefos", "/var/lib/reliefos", "/bin", "/sbin", "/lib",
         "/usr", "/usr/bin", "/usr/sbin", "/usr/lib",
         RELIEFOS_LAYOUT_RELIEFOS_APPS, RELIEFOS_LAYOUT_RELIEFOS_DRIVERS,
     };
@@ -3134,8 +3134,8 @@ static int sync_application_packages(int window_id, struct reliefos_ui_surface *
 static int sync_system_payload(int window_id, struct reliefos_ui_surface *ui)
 {
     pid_t child;
-    char *const argv[] = {"sh", "/usr/lib/leonos/leonos-apk-update", INSTALL_ROOT_MOUNT,
-                         INSTALL_ROOT_PAYLOAD "/usr/share/leonos/apk/repository", NULL};
+    char *const argv[] = {"sh", "/usr/lib/reliefos/leonos-apk-update", INSTALL_ROOT_MOUNT,
+                         INSTALL_ROOT_PAYLOAD "/usr/share/reliefos/apk/repository", NULL};
     char *const envp[] = {"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL=C", "HOME=/root", NULL};
     int ret = posix_spawn(&child, "/bin/sh", NULL, NULL, argv, envp);
     if (ret) return -ret;

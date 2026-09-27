@@ -3,7 +3,7 @@
 
 /* Versioned ReliefOS text-input service SDK.
  *
- * Consumers talk to the imd daemon over /run/leonos/input-method.sock through
+ * Consumers talk to the imd daemon over /run/reliefos/input-method.sock through
  * this library; the pre-migration /dev/input-method device and fd 3 channel
  * are gone. Wire structures are the versioned ReliefOS input-method protocol.
  */

@@ -230,7 +230,7 @@ int reliefos_spawn_argv(const char *path, char *const argv[])
         if (launch_session && getuid() == 0 &&
             strcmp(path, RELIEFOS_LAYOUT_RELIEFOS_APPS "/login/login.elf")) {
             struct stat installed;
-            int present = lstat("/etc/leonos/installed", &installed);
+            int present = lstat("/etc/reliefos/installed", &installed);
             if ((present < 0 && errno != ENOENT) ||
                 (present == 0 && reliefos_session_apply() < 0)) _exit(126);
         }

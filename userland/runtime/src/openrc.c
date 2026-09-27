@@ -10,7 +10,7 @@
 int reliefos_openrc_run(const char *service, const char *action)
 {
     if (!service || !action || strchr(service, '/') || strlen(service) > 63) { errno = EINVAL; return -1; }
-    char *args[] = {"/usr/lib/leonos/apps/rcctl/rcctl.elf", (char *)service, (char *)action, NULL};
+    char *args[] = {"/usr/lib/reliefos/apps/rcctl/rcctl.elf", (char *)service, (char *)action, NULL};
     uint32_t child;
     int status;
     if (geteuid() && strcmp(action, "status")) {

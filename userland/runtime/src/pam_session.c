@@ -19,8 +19,8 @@
 #include "../../auth/account_store.h"
 #include "../../auth/standard_accounts.h"
 
-#define SESSION "/run/leonos/session-user"
-#define STATE "/run/leonos/session-state"
+#define SESSION "/run/reliefos/session-user"
+#define STATE "/run/reliefos/session-state"
 struct session_state {
     uint32_t version, uid, mask, resources;
     uint32_t gid, group_count;
@@ -81,7 +81,7 @@ int reliefos_session_current(struct reliefos_user_info *user)
 
 static int session_mutex(void)
 {
-    int fd = open("/run/leonos/.session-lock", O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0600);
+    int fd = open("/run/reliefos/.session-lock", O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0600);
     if (fd < 0) return -1;
     struct stat st;
     if (fstat(fd, &st) < 0 || st.st_uid || !S_ISREG(st.st_mode) || st.st_mode & 0077) {
@@ -170,7 +170,7 @@ failed:
 
 static int publish(pam_handle_t *pam, const struct reliefos_user_info *user)
 {
-    char temporary[] = "/run/leonos/.session-state.XXXXXX";
+    char temporary[] = "/run/reliefos/.session-state.XXXXXX";
     int fd = mkstemp(temporary);
     if (fd < 0) return -1;
     struct session_state state = {.version = 2, .uid = user->uid};
@@ -203,7 +203,7 @@ static int publish(pam_handle_t *pam, const struct reliefos_user_info *user)
     }
     uint32_t end = 0;
     if (full_io(fd, &end, sizeof(end), 1) < 0 || fsync(fd) < 0 || rename(temporary, STATE) < 0) goto out;
-    char identity[] = "/run/leonos/.session-user.XXXXXX";
+    char identity[] = "/run/reliefos/.session-user.XXXXXX";
     int marker = mkstemp(identity);
     if (marker < 0) goto out;
     char *text = NULL;
@@ -326,8 +326,8 @@ int reliefos_pam_login(const char *name, char *password, struct reliefos_user_in
     pam_handle_t *pam = NULL;
     int cred = 0, session = 0;
     const char *stage = "start";
-    int code = pam_start("leonos-gui", name, &conv, &pam);
-    if (code == PAM_SUCCESS) code = pam_set_item(pam, PAM_TTY, "leonos-gui");
+    int code = pam_start("reliefos-gui", name, &conv, &pam);
+    if (code == PAM_SUCCESS) code = pam_set_item(pam, PAM_TTY, "reliefos-gui");
     if (code == PAM_SUCCESS) { stage = "authenticate"; code = pam_authenticate(pam, PAM_DISALLOW_NULL_AUTHTOK); }
     if (code == PAM_SUCCESS) { fprintf(stderr, "[pam-login] authentication accepted\n"); stage = "account"; code = pam_acct_mgmt(pam, 0); }
     if (code == PAM_NEW_AUTHTOK_REQD) {

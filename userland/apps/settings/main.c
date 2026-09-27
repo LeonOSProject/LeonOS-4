@@ -538,8 +538,8 @@ static void load_services_config(void)
     char cfg[SETTINGS_SERVICES_CONFIG_MAX];
     uint32_t len = 0;
     uint32_t pos = 0;
-    service_rows[1].enabled = reliefos_openrc_enabled("leonos-dhcp") == 1;
-    service_rows[4].enabled = reliefos_openrc_enabled("leonos-ntp") == 1;
+    service_rows[1].enabled = reliefos_openrc_enabled("reliefos-dhcp") == 1;
+    service_rows[4].enabled = reliefos_openrc_enabled("reliefos-ntp") == 1;
     int fd = open(SETTINGS_SERVICES_PATH, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return;
@@ -585,7 +585,7 @@ static void refresh_ntp_runtime_state(void)
 {
     if (settings_rc_child || settings_rc_save) return;
     settings_rc_kind = 1;
-    settings_rc_child = reliefos_openrc_spawn("leonos-ntp", "status");
+    settings_rc_child = reliefos_openrc_spawn("reliefos-ntp", "status");
     if (settings_rc_child < 0) {
         settings_rc_child = 0;
         copy_text(ntp_runtime_state, sizeof(ntp_runtime_state), "failed");
@@ -660,7 +660,7 @@ static int poll_settings_openrc(void)
             load_services_config();
         } else if (settings_rc_kind == 2) {
             settings_rc_kind = 3;
-            settings_rc_child = reliefos_openrc_spawn("leonos-ntp", settings_rc_ntp ? "enable" : "disable");
+            settings_rc_child = reliefos_openrc_spawn("reliefos-ntp", settings_rc_ntp ? "enable" : "disable");
         } else {
             settings_rc_kind = settings_rc_save = 0;
             write_services_preferences();
@@ -668,7 +668,7 @@ static int poll_settings_openrc(void)
     }
     if (!settings_rc_child && settings_rc_save && settings_rc_kind == 0) {
         settings_rc_kind = 2;
-        settings_rc_child = reliefos_openrc_spawn("leonos-dhcp", settings_rc_dhcp ? "enable" : "disable");
+        settings_rc_child = reliefos_openrc_spawn("reliefos-dhcp", settings_rc_dhcp ? "enable" : "disable");
     }
     if (settings_rc_child < 0) {
         settings_rc_child = settings_rc_kind = settings_rc_save = 0;
@@ -1778,7 +1778,7 @@ static void reset_password_dialog(uint32_t uid)
 {
     struct passwd *account = getpwuid(uid);
     if (!account) return;
-    char *args[] = {"/usr/lib/leonos/apps/terminal/terminal.elf", "-e",
+    char *args[] = {"/usr/lib/reliefos/apps/terminal/terminal.elf", "-e",
                      "/usr/bin/passwd", account->pw_name, NULL};
     if (reliefos_spawn_argv(args[0], args) < 0)
         copy_text(status_text, sizeof(status_text), T("Could not start passwd"));

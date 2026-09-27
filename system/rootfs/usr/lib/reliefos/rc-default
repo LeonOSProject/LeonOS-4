@@ -1,5 +1,5 @@
 #!/bin/sh
-if test -f /etc/leonos/installer-runtime; then
+if test -f /etc/reliefos/installer-runtime; then
     exec /sbin/openrc installer
 fi
 exec /sbin/openrc default

@@ -349,7 +349,7 @@ static void renew_dhcp(void)
 {
     if (dhcp_child) return;
     if (geteuid() != 0) {
-        char *args[] = {"/usr/lib/leonos/apps/netctl/netctl.elf", "--renew-dhcp", NULL};
+        char *args[] = {"/usr/lib/reliefos/apps/netctl/netctl.elf", "--renew-dhcp", NULL};
         if (reliefos_sudo_run(NULL, NULL, args, &dhcp_child) < 0) {
             set_status_ret(T("Authorization failed"), -1);
             return;

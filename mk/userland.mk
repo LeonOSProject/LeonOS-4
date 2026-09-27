@@ -31,7 +31,7 @@ USERLAND_DOOM_EXCLUDE := doomgeneric_allegro.c doomgeneric_emscripten.c doomgene
 USERLAND_DOOM_SOURCES := $(filter-out $(addprefix third_party/doomgeneric/doomgeneric/,$(USERLAND_DOOM_EXCLUDE)),$(patsubst $(RELIEFOS_SRC)/%,%,$(wildcard $(RELIEFOS_SRC)/third_party/doomgeneric/doomgeneric/*.c)))
 userland_sources = $(sort $(patsubst $(RELIEFOS_SRC)/%,%,$(wildcard $(RELIEFOS_SRC)/userland/apps/$(1)/*.c $(RELIEFOS_SRC)/userland/apps/$(1)/*.S)) $(if $(filter doom,$(1)),$(USERLAND_DOOM_SOURCES)))
 USERLAND_CRT := $(MUSL_SYSROOT)/lib/Scrt1.o $(MUSL_SYSROOT)/lib/crti.o $(MUSL_SYSROOT)/lib/crtn.o
-USERLAND_LINK_FLAGS := $(RELIEFOS_LINK_POLICY_FLAGS) --gc-sections -z max-page-size=0x1000 -pie --hash-style=both --dynamic-linker /lib/ld-musl-x86_64.so.1 -rpath /usr/lib/leonos:/lib:/usr/lib
+USERLAND_LINK_FLAGS := $(RELIEFOS_LINK_POLICY_FLAGS) --gc-sections -z max-page-size=0x1000 -pie --hash-style=both --dynamic-linker /lib/ld-musl-x86_64.so.1 -rpath /usr/lib/reliefos:/lib:/usr/lib
 
 # Arguments: logical name, source app, output, autoconf, runtime.
 # Source membership is in the link signature, so removing a source relinks.

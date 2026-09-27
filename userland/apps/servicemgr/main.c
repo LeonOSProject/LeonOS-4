@@ -41,11 +41,11 @@ static char status_text[180] = "Ready";
 static unsigned long last_state_refresh_ms;
 
 static struct service_row service_rows[SERVICEMGR_ROWS] = {
-    {"leonos-desktop", N_("Desktop"), N_("OpenRC graphical session"), 1, 0, "unknown", "", 0},
-    {"leonos-dhcp", N_("DHCP"), N_("BusyBox udhcpc"), 1, 0, "unknown", "", 0},
-    {"leonos-session", N_("User startup"), N_("Session IPC"), 1, 0, "unknown", "", 0},
-    {"leonos-device", N_("Devices"), N_("LeonOS device protocol"), 1, 0, "unknown", "", 0},
-    {"leonos-ntp", N_("Time sync"), N_("BusyBox ntpd"), 1, 0, "unknown", "", 0},
+    {"reliefos-desktop", N_("Desktop"), N_("OpenRC graphical session"), 1, 0, "unknown", "", 0},
+    {"reliefos-dhcp", N_("DHCP"), N_("BusyBox udhcpc"), 1, 0, "unknown", "", 0},
+    {"reliefos-session", N_("User startup"), N_("Session IPC"), 1, 0, "unknown", "", 0},
+    {"reliefos-device", N_("Devices"), N_("ReliefOS device protocol"), 1, 0, "unknown", "", 0},
+    {"reliefos-ntp", N_("Time sync"), N_("BusyBox ntpd"), 1, 0, "unknown", "", 0},
 };
 
 static void copy_text(char *dst, uint32_t cap, const char *src)

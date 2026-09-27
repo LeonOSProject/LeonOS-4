@@ -12,7 +12,7 @@ export PATH
     exit 2
 }
 
-config=/etc/leonos/rpr.conf
+config=/etc/reliefos/rpr.conf
 [ -r "$config" ] || { printf 'Missing RPR configuration: %s\n' "$config" >&2; exit 1; }
 rpr_url=$(sed -n 's/^RPR_BASE_URL=//p' "$config")
 key_name=$(sed -n 's/^RPR_PUBLIC_KEY=//p' "$config")

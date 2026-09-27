@@ -23,7 +23,7 @@ flags="--target=x86_64-linux-musl ${UPSTREAM_CFLAGS:--O2} -std=gnu11 -ffreestand
 compile() { "$cc" $flags "$@"; }
 shared() { name=$1; shift; "$ld" ${UPSTREAM_LDFLAGS-} -shared --no-undefined --hash-style=both -z max-page-size=0x1000 -soname "$name" -o "$output/$name.tmp" "$@" -L "$musl/lib" -l:libmimalloc.so.3 "$runtime" -lc; mv "$output/$name.tmp" "$output/$name"; }
 staticlib() { name=$1; shift; rm -f "$output/$name.tmp"; "$ar" rcs "$output/$name.tmp" "$@"; mv "$output/$name.tmp" "$output/$name"; }
-executable() { "$ld" ${UPSTREAM_LDFLAGS-} --gc-sections -z max-page-size=0x1000 -pie --hash-style=both --dynamic-linker /lib/ld-musl-x86_64.so.1 -rpath /usr/lib/leonos:/lib:/usr/lib -o "$output/$pkg.elf.tmp" "$musl/lib/Scrt1.o" "$musl/lib/crti.o" "$@" -L "$musl/lib" -l:libmimalloc.so.3 --start-group "$runtime" -lc --end-group "$musl/lib/crtn.o"; mv "$output/$pkg.elf.tmp" "$output/$pkg.elf"; }
+executable() { "$ld" ${UPSTREAM_LDFLAGS-} --gc-sections -z max-page-size=0x1000 -pie --hash-style=both --dynamic-linker /lib/ld-musl-x86_64.so.1 -rpath /usr/lib/reliefos:/lib:/usr/lib -o "$output/$pkg.elf.tmp" "$musl/lib/Scrt1.o" "$musl/lib/crti.o" "$@" -L "$musl/lib" -l:libmimalloc.so.3 --start-group "$runtime" -lc --end-group "$musl/lib/crtn.o"; mv "$output/$pkg.elf.tmp" "$output/$pkg.elf"; }
 staticexe() { "$ld" ${UPSTREAM_LDFLAGS-} --gc-sections -z max-page-size=0x1000 -static --image-base=0x4000000 -o "$output/$pkg.elf.tmp" "$musl/lib/crt1.o" "$musl/lib/crti.o" "$@" "$musl/lib/mimalloc.o" --start-group "$archive" "$musl/lib/libc.a" --end-group "$musl/lib/crtn.o"; mv "$output/$pkg.elf.tmp" "$output/$pkg.elf"; }
 case $pkg in
 cmd)

@@ -3,7 +3,7 @@
 
 /* Versioned device/driver-management service SDK.
  *
- * All requests go to devmand over /run/leonos/devman.sock; /dev/hwinfo,
+ * All requests go to devmand over /run/reliefos/devman.sock; /dev/hwinfo,
  * /dev/driverctl and fd 3 are gone.
  */
 #include <reliefos/device.h>
