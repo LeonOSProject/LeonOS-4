@@ -8,10 +8,11 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 
-def prepare(source, output, text_only=False):
+def prepare(source, output, text_only=False, compiler=None):
     output.mkdir(parents=True, exist_ok=False)
     probe = output / 'vt-probe'
-    compiler = ROOT / 'out/x86_64/release/sdk/leonos-musl-sdk/bin/leonos-musl-cc'
+    if compiler is None:
+        compiler = ROOT / 'out/x86_64/release/sdk/leonos-musl-sdk/bin/leonos-musl-cc'
     subprocess.run([str(compiler), '-D_GNU_SOURCE', '-static', '-Iinclude', '-Ikernel/ntclks/include/uapi',
                     'tools/tests/vt_guest_test.c', '-o', str(probe)], cwd=ROOT, check=True)
     disk = output / 'disk.raw'
@@ -42,5 +43,8 @@ if __name__ == '__main__':
     parser.add_argument('--image', type=Path, default=ROOT / 'out/x86_64/release/images/leonos4.raw')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--text-only', action='store_true')
+    parser.add_argument('--compiler', type=Path, default=None,
+                        help='leonos-musl-cc to build the probe with '
+                             '(default: out/x86_64/release/sdk/leonos-musl-sdk/bin/leonos-musl-cc)')
     args = parser.parse_args()
-    print(prepare(args.image, args.output, args.text_only))
+    print(prepare(args.image, args.output, args.text_only, args.compiler))
