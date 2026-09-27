@@ -1,3 +1,0 @@
-include pyproject.toml
-exclude README.md
-global-exclude *.py[cod]
