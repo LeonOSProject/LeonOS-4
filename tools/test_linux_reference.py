@@ -61,7 +61,7 @@ def main():
         run([*make, "olddefconfig"], stdout=log, stderr=subprocess.STDOUT)
         run([*make, f"-j{args.jobs}", "bzImage", "headers_install", f"INSTALL_HDR_PATH={output / 'headers'}"],
             stdout=log, stderr=subprocess.STDOUT)
-    compiler = sdk / "bin/leonos-musl-cc"
+    compiler = sdk / "bin/reliefos-musl-cc"
     run([compiler, "-static", "-O2", *([f'-DREFERENCE_CASE="{args.case}"'] if args.case else []),
          ROOT / "tools/tests/linux_reference_init.c", "-o", output / "reference-init"])
     if args.probe_binary:

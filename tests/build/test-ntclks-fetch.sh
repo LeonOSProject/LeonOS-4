@@ -20,8 +20,8 @@ export LC_ALL
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 
-deps=${LEONOS_DEPS:?set by mk/tests.mk}
-lock=${LEONOS_LOCK:-configs/dependencies.lock.json}
+deps=${RELIEFOS_DEPS:-${LEONOS_DEPS:?set by mk/tests.mk}}
+lock=${RELIEFOS_LOCK:-${LEONOS_LOCK:-configs/dependencies.lock.json}}
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-fetch-delegate.XXXXXX") || exit 1
 failures=0

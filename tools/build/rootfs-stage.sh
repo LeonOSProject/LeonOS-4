@@ -11,7 +11,7 @@ mkdir "$work/root" "$work/data" "$work/manifests"
 plan=$work/plan
 : > "$plan"
 # Plan columns: kind, source, guest path, mode, component, overlay policy and
-# the optional guest gid (decimal, default 0; see leonos-stage read_plan).
+# the optional guest gid (decimal, default 0; see reliefos-stage read_plan).
 record() { printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "$5" "$6" "${7:-0}" >> "$plan"; }
 file() { record f "$1" "/$2" "${3:-0644}" "${4:-leonos-base}" "${5:-unique}" "${6:-0}"; }
 tree() { record t "$1" "/$2" 0755 "$3" "${4:-unique}"; }

@@ -89,7 +89,8 @@ static char *resource_dir(const char *compiler)
 
 int main(int argc, char **argv)
 {
-    const char *compiler = getenv("LEONOS_CC");
+    const char *compiler = getenv("RELIEFOS_CC");
+    if (!compiler || !*compiler) compiler = getenv("LEONOS_CC");
     if (!compiler || !*compiler) compiler = "clang";
     char **args = calloc((size_t)argc + 48, sizeof(*args));
     if (!args) { perror("SDK driver"); return 126; }
@@ -122,7 +123,7 @@ int main(int argc, char **argv)
         args[n++] = "-fuse-ld=lld"; args[n++] = "-nostdlib"; args[n++] = "-nostdinc";
         args[n++] = "-isystem"; args[n++] = paths[0];
         args[n++] = "-isystem"; args[n++] = paths[7];
-        args[n++] = "-D_GNU_SOURCE"; args[n++] = "-DLEONOS_USE_MUSL";
+        args[n++] = "-D_GNU_SOURCE"; args[n++] = "-DRELIEFOS_USE_MUSL";
         args[n++] = "-mno-avx"; args[n++] = "-mno-avx2";
         if (!only && !shared) {
             args[n++] = static_link ? paths[1] : paths[2]; args[n++] = paths[3];
@@ -149,7 +150,7 @@ int main(int argc, char **argv)
     execvp(compiler, args);
     result = errno == ENOENT ? 127 : 126;
 failure:
-    perror("leonos-musl-cc");
+    perror("reliefos-musl-cc");
     free(args); free(sdk); free(resource);
     for (unsigned i = 0; i < 9; ++i) free(paths[i]);
     return result;

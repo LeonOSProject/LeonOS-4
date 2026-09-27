@@ -35,7 +35,7 @@ static int fail(const char *format, ...) __attribute__((format(printf, 1, 2)));
 
 static void usage(void)
 {
-    fputs("usage: leonos-apk-own --policy FILE --root DIR --output FILE\n", stderr);
+    fputs("usage: reliefos-apk-own --policy FILE --root DIR --output FILE\n", stderr);
 }
 
 static int fail(const char *format, ...)

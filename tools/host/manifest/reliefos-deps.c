@@ -11,10 +11,10 @@
  * the downloader can name the dependency it could not satisfy.
  *
  * Usage:
- *   leonos-deps --lock PATH [--root DIR] --check
- *   leonos-deps --lock PATH --list
- *   leonos-deps --lock PATH --id ID --print FIELD
- *   leonos-deps --lock PATH --fetch-list
+ *   reliefos-deps --lock PATH [--root DIR] --check
+ *   reliefos-deps --lock PATH --list
+ *   reliefos-deps --lock PATH --id ID --print FIELD
+ *   reliefos-deps --lock PATH --fetch-list
  *
  * Exit status: 0 success, 1 usage, I/O or syntax failure, 2 the lock file's
  * content is invalid. The two are separated so `make doctor` can tell a broken
@@ -52,7 +52,7 @@ static int report(const char *format, ...)
 
 static void usage(void)
 {
-    fputs("usage: leonos-deps --lock PATH [--root DIR]"
+    fputs("usage: reliefos-deps --lock PATH [--root DIR]"
         " (--check | --list | --fetch-list | --id ID --print FIELD)\n", stderr);
 }
 

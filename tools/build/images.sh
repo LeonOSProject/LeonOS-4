@@ -47,8 +47,9 @@ ext2)
         fi
         mke2fs -q -t ext2 -F -b 4096 -I 128 -O none,filetype,sparse_super,large_file -m 0 -E root_owner=0:0,hash_seed="$4" -U "$4" -N "$3" -d "$1" "$2"
     ' sh "$work/root" "$work/root.ext2" "$inodes" "$uuid"
-    : "${LEONOS_EXT2_TIME:?ext2 timestamp tool required}"
-    "$LEONOS_EXT2_TIME" "$work/root.ext2" "$epoch"
+    reliefos_ext2_time=${RELIEFOS_EXT2_TIME:-${LEONOS_EXT2_TIME:-}}
+    : "${reliefos_ext2_time:?ext2 timestamp tool required}"
+    "$reliefos_ext2_time" "$work/root.ext2" "$epoch"
     e2fsck -f -n "$work/root.ext2"
     mv "$work/root.ext2" "$output"
     ;;

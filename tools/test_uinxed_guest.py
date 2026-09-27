@@ -88,7 +88,7 @@ def main():
             f'if (!result) result = system({json.dumps(upload)});\n'
             'printf("[apk-probe] DONE failures=%d status=%d\\n", result != 0, result);\n'
             'return result != 0;\n}\n', encoding="ascii")
-        compiler = ROOT / "build/musl/sdk/bin/leonos-musl-cc"
+        compiler = ROOT / "build/musl/sdk/bin/reliefos-musl-cc"
         for input_file, output in ((probe, work / "probe.elf"),
                 (ROOT / "tools/tests/pselect_runtime_probe.c", work / "pselect-probe")):
             subprocess.run([str(compiler), "-static", "-O2", str(input_file), "-o", str(output)], check=True)

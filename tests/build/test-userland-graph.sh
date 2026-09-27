@@ -33,8 +33,8 @@ printf 'extra-one\n' >"$tmp/src/userland/apps/one/extra.c"
 printf 'main-two\n' >"$tmp/src/userland/apps/two/main.c"
 touch "$tmp/out/config/.config" "$tmp/out/config/autoconf.h" "$tmp/runtime.so" "$tmp/png.h" "$tmp/musl.stamp"
 for f in Scrt1.o crti.o crtn.o libc.so libmimalloc.so.3; do touch "$tmp/musl/lib/$f"; done
-touch "$tmp/out/host/obj/tools/host/manifest/leonos-components.c.o"
-cc -std=c11 -I"$root" "$root/tools/host/manifest/leonos-components.c" "$root/tools/host/common/buffer.c" "$root/tools/host/common/io.c" -o "$tmp/out/host/bin/leonos-components"
+touch "$tmp/out/host/obj/tools/host/manifest/reliefos-components.c.o"
+cc -std=c11 -I"$root" "$root/tools/host/manifest/reliefos-components.c" "$root/tools/host/common/buffer.c" "$root/tools/host/common/io.c" -o "$tmp/out/host/bin/reliefos-components"
 cat >"$tmp/compiler" <<'DATA'
 #!/bin/sh
 set -eu
@@ -58,14 +58,14 @@ DATA
 chmod +x "$tmp/compiler" "$tmp/linker"
 cat >"$tmp/Makefile" <<'DATA'
 .DEFAULT_GOAL := userland
-LEONOS_SRC := $(FIXTURE)/src
+RELIEFOS_SRC := $(FIXTURE)/src
 O := $(FIXTURE)/out
 O_CONFIG := $(O)/config
 O_OBJ := $(O)/obj
 O_META := $(O)/meta
 O_HOST := $(O)/host
-LEONOS_HOST_BIN := $(O_HOST)/bin
-LEONOS_CONFIG_FILE := $(O_CONFIG)/.config
+RELIEFOS_HOST_BIN := $(O_HOST)/bin
+RELIEFOS_CONFIG_FILE := $(O_CONFIG)/.config
 AUTOCONF_H := $(O_CONFIG)/autoconf.h
 AUTOCONF_INSTALLER_H := $(AUTOCONF_H)
 TARGET_CC := $(FIXTURE)/compiler
@@ -80,8 +80,8 @@ PNG_CONFIG := $(FIXTURE)/png.h
 Q := @
 .PHONY: FORCE
 FORCE:
-define LEONOS_SIGNATURE_RULE
-$(file >$(O_META)/$(1).candidate,$(LEONOS_SIG_$(1)))
+define RELIEFOS_SIGNATURE_RULE
+$(file >$(O_META)/$(1).candidate,$(RELIEFOS_SIG_$(1)))
 $(O_META)/$(1).sig: FORCE
 	@cmp -s $$@ $(O_META)/$(1).candidate || cp $(O_META)/$(1).candidate $$@
 endef
@@ -103,7 +103,7 @@ test "$(cat "$two")" = main-two
 rm "$one"
 run app-one
 test "$(cat "$one")" = main-one
-printf 'CONFIG_LEON_COMPONENT_ONE_BUILD=n\n' >"$tmp/out/config/.config"
+printf 'CONFIG_RELIEFOS_COMPONENT_ONE_BUILD=n\n' >"$tmp/out/config/.config"
 printf 'upstream tool\n' >"$tmp/out/userland/cmd.elf"
 run userland-prune
 test ! -e "$one"

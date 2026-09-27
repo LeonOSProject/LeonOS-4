@@ -34,7 +34,7 @@ static void die(const char *format, ...) __attribute__((format(printf, 1, 2)));
 static void die(const char *format, ...) {
     va_list ap;
     va_start(ap, format);
-    fputs("leonos-stage: ", stderr);
+    fputs("reliefos-stage: ", stderr);
     vfprintf(stderr, format, ap);
     fputc('\n', stderr);
     va_end(ap);
@@ -400,7 +400,7 @@ int main(int argc, char **argv) {
     if (argc == 4 && !strcmp(argv[1], "--check"))
         return verify(argv[2], argv[3]);
     if (argc != 4) {
-        fprintf(stderr, "usage: leonos-stage PLAN EMPTY_ROOT MANIFEST\n");
+        fprintf(stderr, "usage: reliefos-stage PLAN EMPTY_ROOT MANIFEST\n");
         return 2;
     }
     read_plan(argv[1]);

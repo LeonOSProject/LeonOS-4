@@ -40,7 +40,7 @@ class GpuAbiTests(unittest.TestCase):
             subprocess.run([executable], cwd=ROOT, check=True, timeout=30)
 
     def test_gears_backend(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-gears-source-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="reliefos-gears-source-") as tmp:
             upstream = ROOT / "third_party/portablegl/examples/classic/gears.c"
             source = upstream.read_text()
             marker = "#define PORTABLEGL_IMPLEMENTATION"

@@ -103,7 +103,7 @@ static int examine(const char *path, const struct stat *st, int type,
 
 int main(int argc, char **argv)
 {
-    if (argc != 2) { fprintf(stderr, "usage: leonos-dedup ROOT\n"); return 2; }
+    if (argc != 2) { fprintf(stderr, "usage: reliefos-dedup ROOT\n"); return 2; }
     char *root = realpath(argv[1], NULL);
     if (!root) { perror(argv[1]); return 1; }
     struct stat st;

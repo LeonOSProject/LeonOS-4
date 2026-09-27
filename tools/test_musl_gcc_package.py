@@ -14,7 +14,7 @@ def verify(root: Path) -> None:
     assert manifest["archive_sha256"] == ARCHIVE_SHA256
     for name, expected in manifest["upstream_files"].items():
         assert digest(root / name) == expected, name
-    launcher = root / "opt/dyne/bin/leonos-musl-cc"
+    launcher = root / "opt/dyne/bin/reliefos-musl-cc"
     assert launcher.is_file(), launcher
     with tempfile.TemporaryDirectory(prefix="leonos-gcc-package-") as directory:
         work = Path(directory)

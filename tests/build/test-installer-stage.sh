@@ -4,7 +4,7 @@ set -eu
 src=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd -P)
 w=$(mktemp -d)
 trap 'rm -rf "$w"' EXIT HUP INT TERM
-${HOSTCC:-cc} -std=c11 -O2 -Wall -Wextra -Werror "$src/tools/host/manifest/leonos-dedup.c" -o "$w/dedup"
+${HOSTCC:-cc} -std=c11 -O2 -Wall -Wextra -Werror "$src/tools/host/manifest/reliefos-dedup.c" -o "$w/dedup"
 export INSTALLER_DEDUP_TOOL="$w/dedup"
 mkdir -p "$w/src/tools/build" "$w/src/docs" "$w/out/userland" "$w/out/userland-installer" "$w/out/userland-installer-policy" "$w/out/installer/lib" "$w/raw/usr/lib/leonos/apps/desktop" "$w/raw/usr/lib/leonos/apps/settings" "$w/raw/usr/lib/leonos" "$w/raw/usr/bin" "$w/esp"
 printf 'guide\n' > "$w/src/docs/ADVANCED_INSTALL.txt"

@@ -4,7 +4,7 @@ RUNTIME_SO := $(RUNTIME_DIR)/libleonos.so.2
 RUNTIME_ARCHIVE := $(O)/musl/lib/libleonos.a
 RUNTIME_INSTALLER_SO := $(O)/installer/lib/libleonos.so.2
 RUNTIME_INSTALLER_ARCHIVE := $(O)/musl/lib/libleonos-installer.a
-GBK_TABLE := $(O_INCLUDE)/generated/leonos_gbk_table.h
+GBK_TABLE := $(O_INCLUDE)/generated/reliefos_gbk_table.h
 PNG_CONFIG := $(O_INCLUDE)/libpng/pnglibconf.h
 
 RUNTIME_MBEDTLS_NAMES := aes asn1parse asn1write base64 bignum cipher cipher_wrap \
@@ -14,58 +14,58 @@ RUNTIME_MBEDTLS_NAMES := aes asn1parse asn1write base64 bignum cipher cipher_wra
 RUNTIME_ZLIB_NAMES := adler32 compress crc32 deflate infback inffast inflate inftrees trees uncompr zutil
 RUNTIME_PNG_NAMES := png pngerror pngget pngmem pngpread pngread pngrio pngrtran pngrutil \
  pngset pngtrans pngwio pngwrite pngwtran pngwutil
-RUNTIME_SOURCES := $(sort $(patsubst $(LEONOS_SRC)/%,%,$(wildcard \
- $(LEONOS_SRC)/userland/runtime/src/*.c $(LEONOS_SRC)/userland/runtime/src/*.S \
- $(LEONOS_SRC)/userland/auth/*.c)) \
+RUNTIME_SOURCES := $(sort $(patsubst $(RELIEFOS_SRC)/%,%,$(wildcard \
+ $(RELIEFOS_SRC)/userland/runtime/src/*.c $(RELIEFOS_SRC)/userland/runtime/src/*.S \
+ $(RELIEFOS_SRC)/userland/auth/*.c)) \
  $(addprefix third_party/mbedtls/library/,$(addsuffix .c,$(RUNTIME_MBEDTLS_NAMES))) \
  $(addprefix third_party/zlib/,$(addsuffix .c,$(RUNTIME_ZLIB_NAMES))) \
  $(addprefix third_party/libpng/,$(addsuffix .c,$(RUNTIME_PNG_NAMES))))
 RUNTIME_OBJECTS := $(addprefix $(O_OBJ)/runtime/,$(addsuffix .o,$(RUNTIME_SOURCES)))
 RUNTIME_INSTALLER_OBJECTS := $(addprefix $(O_OBJ)/installer-runtime/,$(addsuffix .o,$(RUNTIME_SOURCES)))
-RUNTIME_FLAGS := --target=$(TRIPLE_USER) $(LEONOS_OPTIMIZATION_FLAGS) -std=c11 \
+RUNTIME_FLAGS := --target=$(TRIPLE_USER) $(RELIEFOS_OPTIMIZATION_FLAGS) -std=c11 \
  -ffreestanding -fno-stack-protector -fPIC -ffunction-sections -fdata-sections \
- -Wall -Wextra -DLEONOS_USE_MUSL -D_GNU_SOURCE -mno-avx -mno-avx2 \
+ -Wall -Wextra -DRELIEFOS_USE_MUSL -D_GNU_SOURCE -mno-avx -mno-avx2 \
  -I$(HEADER_EXPORT_INCLUDE) -I$(PAM_ROOT)/usr/include -I$(AUTH_ROOT)/usr/include -I$(MUSL_SYSROOT)/include \
- -I$(LEONOS_SRC)/userland/runtime/include \
- -I$(O_INCLUDE) -I$(LEONOS_SRC)/include -I$(LEONOS_SRC)/third_party/mbedtls/include \
- -I$(LEONOS_SRC)/third_party/zlib -I$(LEONOS_SRC)/third_party/libpng \
- -I$(O_INCLUDE)/libpng -DMBEDTLS_CONFIG_FILE='"leonos_mbedtls_config.h"' \
- -ffile-prefix-map=$(LEONOS_SRC)=. -ffile-prefix-map=$(O)=out
+ -I$(RELIEFOS_SRC)/userland/runtime/include \
+ -I$(O_INCLUDE) -I$(RELIEFOS_SRC)/include -I$(RELIEFOS_SRC)/third_party/mbedtls/include \
+ -I$(RELIEFOS_SRC)/third_party/zlib -I$(RELIEFOS_SRC)/third_party/libpng \
+ -I$(O_INCLUDE)/libpng -DMBEDTLS_CONFIG_FILE='"reliefos_mbedtls_config.h"' \
+ -ffile-prefix-map=$(RELIEFOS_SRC)=. -ffile-prefix-map=$(O)=out
 RUNTIME_CFLAGS ?=
 RUNTIME_AUTH_LIBS := $(PAM_LIB) $(AUTH_ROOT)/lib/libcrypt.so.2
 RUNTIME_HEADERS := $(PAM_HEADER) $(AUTH_ROOT)/usr/include/crypt.h
 # Resolve the archive from the selected compiler, not from an unrelated LLVM install.
-RUNTIME_BUILTINS := $(if $(LEONOS_PASSIVE),,$(shell $(TARGET_CC) --target=$(TRIPLE_USER) --rtlib=compiler-rt -print-libgcc-file-name 2>/dev/null))
+RUNTIME_BUILTINS := $(if $(RELIEFOS_PASSIVE),,$(shell $(TARGET_CC) --target=$(TRIPLE_USER) --rtlib=compiler-rt -print-libgcc-file-name 2>/dev/null))
 
-LEONOS_SIG_runtime-cc := cc=$(TARGET_CC)|identity=$(shell $(TARGET_CC) --version 2>/dev/null | head -n1)|flags=$(RUNTIME_FLAGS) $(RUNTIME_CFLAGS)
-LEONOS_SIG_runtime-link := ld=$(TARGET_LD)|identity=$(shell $(TARGET_LD) --version 2>/dev/null | head -n1)|ar=$(TARGET_AR)|builtins=$(RUNTIME_BUILTINS)|sources=$(RUNTIME_SOURCES)
-$(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,runtime-cc)))
-$(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,runtime-link)))
+RELIEFOS_SIG_runtime-cc := cc=$(TARGET_CC)|identity=$(shell $(TARGET_CC) --version 2>/dev/null | head -n1)|flags=$(RUNTIME_FLAGS) $(RUNTIME_CFLAGS)
+RELIEFOS_SIG_runtime-link := ld=$(TARGET_LD)|identity=$(shell $(TARGET_LD) --version 2>/dev/null | head -n1)|ar=$(TARGET_AR)|builtins=$(RUNTIME_BUILTINS)|sources=$(RUNTIME_SOURCES)
+$(if $(RELIEFOS_PASSIVE),,$(eval $(call RELIEFOS_SIGNATURE_RULE,runtime-cc)))
+$(if $(RELIEFOS_PASSIVE),,$(eval $(call RELIEFOS_SIGNATURE_RULE,runtime-link)))
 
-$(GBK_TABLE): $(LEONOS_GBK_TOOL) $(LEONOS_SRC)/third_party/litehtml/src/encodings.cpp
+$(GBK_TABLE): $(RELIEFOS_GBK_TOOL) $(RELIEFOS_SRC)/third_party/litehtml/src/encodings.cpp
 	$(Q)mkdir -p $(dir $@)
-	$(Q)$(LEONOS_GBK_TOOL) $(LEONOS_SRC)/third_party/litehtml/src/encodings.cpp $@
+	$(Q)$(RELIEFOS_GBK_TOOL) $(RELIEFOS_SRC)/third_party/litehtml/src/encodings.cpp $@
 
-$(PNG_CONFIG): $(LEONOS_SRC)/third_party/libpng/scripts/pnglibconf.h.prebuilt $(LEONOS_SRC)/tools/build/png-config.sh $(LEONOS_EMIT)
+$(PNG_CONFIG): $(RELIEFOS_SRC)/third_party/libpng/scripts/pnglibconf.h.prebuilt $(RELIEFOS_SRC)/tools/build/png-config.sh $(RELIEFOS_EMIT)
 	$(Q)mkdir -p $(dir $@)
-	$(Q)sh $(LEONOS_SRC)/tools/build/png-config.sh $< $@ $(LEONOS_EMIT)
+	$(Q)sh $(RELIEFOS_SRC)/tools/build/png-config.sh $< $@ $(RELIEFOS_EMIT)
 
-define LEONOS_RUNTIME_COMPILE
-$(O_OBJ)/$(1)/%.c.o: $(LEONOS_SRC)/%.c $(2) $(GBK_TABLE) $(PNG_CONFIG) $(MUSL_STAMP) $(RUNTIME_HEADERS) $(HEADER_EXPORT_MANIFEST) $(O_META)/runtime-cc.sig
+define RELIEFOS_RUNTIME_COMPILE
+$(O_OBJ)/$(1)/%.c.o: $(RELIEFOS_SRC)/%.c $(2) $(GBK_TABLE) $(PNG_CONFIG) $(MUSL_STAMP) $(RUNTIME_HEADERS) $(HEADER_EXPORT_MANIFEST) $(O_META)/runtime-cc.sig
 	$$(Q)mkdir -p $$(dir $$@)
-	$$(call LEONOS_LOG,CC,$$<)
+	$$(call RELIEFOS_LOG,CC,$$<)
 	$$(Q)$$(TARGET_CC) $$(RUNTIME_FLAGS) $$(RUNTIME_CFLAGS) -include $(2) \
 	 $$(if $$(findstring /zlib/,$$<),-DZ_SOLO -include stddef.h) \
-	 $$(if $$(findstring /libpng/,$$<),-DLEONOS_LIBPNG_FIXED_POINT=3) \
+	 $$(if $$(findstring /libpng/,$$<),-DRELIEFOS_LIBPNG_FIXED_POINT=3) \
 	 -MMD -MP -MF $$@.d -MT $$@ -c $$< -o $$@.tmp
 	$$(Q)mv $$@.tmp $$@
-$(O_OBJ)/$(1)/%.S.o: $(LEONOS_SRC)/%.S $(2) $(HEADER_EXPORT_MANIFEST) $(O_META)/runtime-cc.sig
+$(O_OBJ)/$(1)/%.S.o: $(RELIEFOS_SRC)/%.S $(2) $(HEADER_EXPORT_MANIFEST) $(O_META)/runtime-cc.sig
 	$$(Q)mkdir -p $$(dir $$@)
 	$$(Q)$$(TARGET_CC) --target=$$(TRIPLE_USER) -fPIC -I$$(HEADER_EXPORT_INCLUDE) -MMD -MP -MF $$@.d -MT $$@ -c $$< -o $$@.tmp
 	$$(Q)mv $$@.tmp $$@
 endef
-$(eval $(call LEONOS_RUNTIME_COMPILE,runtime,$(AUTOCONF_H)))
-$(eval $(call LEONOS_RUNTIME_COMPILE,installer-runtime,$(AUTOCONF_INSTALLER_H)))
+$(eval $(call RELIEFOS_RUNTIME_COMPILE,runtime,$(AUTOCONF_H)))
+$(eval $(call RELIEFOS_RUNTIME_COMPILE,installer-runtime,$(AUTOCONF_INSTALLER_H)))
 
 $(RUNTIME_SO) $(RUNTIME_INSTALLER_SO): $(RUNTIME_BUILTINS)
 

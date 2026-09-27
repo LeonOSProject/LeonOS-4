@@ -1,5 +1,5 @@
 /*
- * leonos-config - turn a Kconfig .config into the derived build inputs.
+ * reliefos-config - turn a Kconfig .config into the derived build inputs.
  *
  * Kconfig stays the authority on what a symbol means; this tool carries no
  * second copy of the defaults. It only re-expresses the resolved .config as C
@@ -28,7 +28,7 @@
 #include "tools/host/common/buffer.h"
 #include "tools/host/common/io.h"
 
-#define TOOL_NAME "leonos-config"
+#define TOOL_NAME "reliefos-config"
 #define KEY_PREFIX "CONFIG_"
 #define KEY_PREFIX_SIZE 7u
 #define NOT_SET_TEXT " is not set"
@@ -126,7 +126,7 @@ static void usage(void)
         "  --make-include PATH          Make include with KCONFIG_<symbol> variables\n"
         "  --guard NAME                 include guard for --out-header\n"
         "  --installer-guard NAME       include guard for --out-installer-header\n"
-        "  --require-license SYMBOL     symbol driving LEONOS_LICENSE_REQUIRE\n"
+        "  --require-license SYMBOL     symbol driving RELIEFOS_LICENSE_REQUIRE\n"
         "  --installer-require-license SYMBOL\n"
         "                               symbol driving the installer's licence gate\n"
         "  --help                       show this message\n"
@@ -140,8 +140,8 @@ static int parse_options(int argc, char **argv, struct options *options)
     int index;
 
     memset(options, 0, sizeof(*options));
-    options->guard = "LEONOS4_AUTOCONF_H";
-    options->installer_guard = "LEONOS4_AUTOCONF_INSTALLER_H";
+    options->guard = "RELIEFOS_AUTOCONF_H";
+    options->installer_guard = "RELIEFOS_AUTOCONF_INSTALLER_H";
 
     for (index = 1; index < argc; index++) {
         char *argument = argv[index];
@@ -559,7 +559,7 @@ static int render_header(struct byte_buffer *out, const char *guard,
         }
     }
     licence = find_symbol(symbols, count, require_license);
-    if (appendf(out, "\n#define LEONOS_LICENSE_REQUIRE %d\n\n#endif /* %s */\n",
+    if (appendf(out, "\n#define RELIEFOS_LICENSE_REQUIRE %d\n\n#endif /* %s */\n",
             (licence != NULL && strcmp(licence->value, "y") == 0) ? 1 : 0, guard) != 0) {
         return -1;
     }

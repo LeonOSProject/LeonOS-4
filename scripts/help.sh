@@ -4,7 +4,7 @@
 set -u
 
 cat <<'HELP'
-LeonOS 4 build system (GNU Make + C host tools)
+ReliefOS build system (GNU Make + C host tools)
 
   make                 same as `make help`; never downloads or builds
   make help            this message
@@ -15,12 +15,14 @@ LeonOS 4 build system (GNU Make + C host tools)
   make defconfig       start $(O)/config/.config from configs/default.conf
   make olddefconfig    resolve new symbols non-interactively, keep user choices
   make menuconfig      edit the configuration of the selected output directory
+  make migrate-config  explicitly rename old component symbols in O/config/.config
+  make regen-component-kconfig  regenerate Kconfig.components from components.toml
 
   make tools           build this project's C host tools (HOSTCC only)
   make kernel          freestanding kernel image and debug symbols
   make userland        ring-3 programs and libraries
   make runtime         normal/installer shared and static runtime libraries
-  make leonos-pam      Linux-PAM and LeonOS password-policy module
+  make reliefos-pam    Linux-PAM and ReliefOS password-policy module
   make musl-sdk        relocatable musl SDK subset and tar.gz archive
   make sdk             alias of musl-sdk (built from build output)
   make rootfs          staged root filesystem
@@ -49,6 +51,7 @@ LeonOS 4 build system (GNU Make + C host tools)
 
   make clean           remove built products in $(O), keep configuration
   make distclean       also remove configuration in $(O); keeps the download cache
+  leonos-pam remains an accepted alias for reliefos-pam
 
 Variables
   ARCH=x86_64          only x86_64 is supported today; anything else is an error
@@ -61,7 +64,11 @@ Variables
   CC/CXX/AR/LD/OBJCOPY/STRIP=  explicit target tool override (command line only)
   HOSTCC=              host compiler for the C helpers; independent of CC
   SOURCE_DATE_EPOCH=N  pin generated timestamps for reproducible output
-  LEONOS_BUILD_OWNER   internal lock token; nested makes inherit it, and setting
+  RELIEFOS_CACHE=      shared download cache override
+  RELIEFOS_LOCK=       dependency lock override
+  RELIEFOS_*_TOOL=     host helper executable overrides
+  old LEONOS_* inputs remain accepted; a supplied RELIEFOS_* value takes priority
+  RELIEFOS_BUILD_OWNER   internal lock token; nested makes inherit it, and setting
                        it by hand is the only way to skip the lock deliberately
 
 Environment values of ARCH, PROFILE, O and the target tools are ignored so an

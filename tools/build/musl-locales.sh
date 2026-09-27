@@ -9,7 +9,7 @@ archive=$2
 work=$3
 out=$4
 lock="$src/configs/dependencies.lock.json"
-expected=$("$src/out/host/bin/leonos-deps" --lock "$lock" --id musl-locales --print sha256)
+expected=$("$src/out/host/bin/reliefos-deps" --lock "$lock" --id musl-locales --print sha256)
 actual=$(sha256sum "$archive" | cut -d' ' -f1)
 [ "$actual" = "$expected" ] || { echo "musl-locales: checksum mismatch" >&2; exit 1; }
 rm -rf "$work"

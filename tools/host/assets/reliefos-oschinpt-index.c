@@ -24,7 +24,7 @@ static void le32(unsigned char *p, uint32_t v) {
 }
 int main(int argc, char **argv) {
     if (argc != 3) {
-        fprintf(stderr, "usage: leonos-oschinpt-index DICTIONARY OUTPUT\n");
+        fprintf(stderr, "usage: reliefos-oschinpt-index DICTIONARY OUTPUT\n");
         return 2;
     }
     struct byte_buffer in = {0}, out = {0};

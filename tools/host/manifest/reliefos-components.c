@@ -280,7 +280,7 @@ static void config(const char *path) {
                       &components[i].api};
       for (size_t flag = 0; flag < 5; ++flag) {
         char key[160];
-        int n = snprintf(key, sizeof key, "CONFIG_LEON_COMPONENT_%s_%s",
+        int n = snprintf(key, sizeof key, "CONFIG_RELIEFOS_COMPONENT_%s_%s",
                          components[i].symbol, suffixes[flag]);
         if (n < 0 || (size_t)n >= sizeof key)
           fail("config key overflow");
@@ -369,7 +369,7 @@ int main(int argc, char **argv) {
   struct byte_buffer in = {0}, out = {0};
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "--help")) {
-      puts("leonos-components --input components.toml --config .config "
+      puts("reliefos-components --input components.toml --config .config "
            "--output components.mk");
       return 0;
     }
@@ -401,9 +401,9 @@ int main(int argc, char **argv) {
   if (selection)
     selection_json(selection);
   const char *names[] = {
-      "LEONOS_COMPONENTS_ENABLED := ", "LEONOS_COMPONENTS_DISABLED := ",
-      "LEONOS_COMPONENT_APPS := ", "LEONOS_COMPONENTS_SDK := ",
-      "LEONOS_DISABLED_APPS := "};
+      "RELIEFOS_COMPONENTS_ENABLED := ", "RELIEFOS_COMPONENTS_DISABLED := ",
+      "RELIEFOS_COMPONENT_APPS := ", "RELIEFOS_COMPONENTS_SDK := ",
+      "RELIEFOS_DISABLED_APPS := "};
   for (size_t mode = 0; mode < 5; mode++) {
     append(&out, names[mode]);
     for (size_t i = 0; i < count; i++)

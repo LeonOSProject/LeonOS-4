@@ -19,8 +19,8 @@ cp "$runtime" "$tmp/lib/libleonos.so.2"
 cp "$archive" "$tmp/lib/libleonos.a"
 : "${RUNTIME_BUILTINS:?target compiler-rt archive required}"
 cp "$RUNTIME_BUILTINS" "$tmp/lib/libclang_rt.builtins.a"
-cp "$driver" "$tmp/bin/leonos-musl-cc"
-chmod 0755 "$tmp/bin/leonos-musl-cc"
+cp "$driver" "$tmp/bin/reliefos-musl-cc"
+chmod 0755 "$tmp/bin/reliefos-musl-cc"
 cp "$src/third_party/zlib/zlib.h" "$src/third_party/zlib/zconf.h" \
     "$src/third_party/libpng/png.h" "$src/third_party/libpng/pngconf.h" "$tmp/include/"
 # Caller adds the generated libpng configuration via this script's environment.

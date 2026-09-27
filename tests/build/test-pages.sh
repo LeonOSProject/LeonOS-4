@@ -16,7 +16,7 @@ ok()   { printf 'ok - %s\n' "$1"; }
 bad()  { printf 'FAIL - %s\n' "$1"; fail=1; }
 
 build="$tmp/build_info.h"
-printf '#define LEONOS_KERNEL_VERSION "4.9.1"\n' > "$build"
+printf '#define RELIEFOS_KERNEL_VERSION "4.9.1"\n' > "$build"
 head -c 8192 /dev/zero > "$tmp/kernel.sys"
 head -c 4096 /dev/zero > "$tmp/loader.elf"
 head -c 123456 /dev/zero > "$tmp/leonos4-installer.iso"

@@ -12,7 +12,7 @@ iso=$1 build=$2 output=$3
 # output is the site root; the download page lives in <output>/download.
 site=$output
 [ -s "$iso" ] || { echo "missing installer ISO $iso" >&2; exit 1; }
-version=$(sed -n 's/^#define LEONOS_KERNEL_VERSION "\([0-9.]*\)"$/\1/p' "$build")
+version=$(sed -n 's/^#define RELIEFOS_KERNEL_VERSION "\([0-9.]*\)"$/\1/p' "$build")
 printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo 'invalid release version' >&2; exit 1; }
 # shellcheck source=/dev/null
 . "$(dirname "$0")/site-common.sh"

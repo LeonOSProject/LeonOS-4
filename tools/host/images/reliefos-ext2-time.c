@@ -9,7 +9,7 @@
 
 int main(int argc, char **argv) {
     if (argc != 3) {
-        fprintf(stderr, "usage: leonos-ext2-time IMAGE EPOCH\n");
+        fprintf(stderr, "usage: reliefos-ext2-time IMAGE EPOCH\n");
         return 2;
     }
     char *end;

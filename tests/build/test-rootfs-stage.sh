@@ -4,7 +4,7 @@ src=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 work=$(mktemp -d)
 trap 'chmod -R u+w "$work"; rm -rf "$work"' EXIT HUP INT TERM
 ${HOSTCC:-cc} -std=c11 -Wall -Wextra -Werror -Wpedantic -I"$src" \
- "$src/tools/host/manifest/leonos-stage.c" "$src/tools/host/common/io.c" "$src/tools/host/common/buffer.c" "$src/tools/host/manifest/json.c" -o "$work/stage"
+ "$src/tools/host/manifest/reliefos-stage.c" "$src/tools/host/common/io.c" "$src/tools/host/common/buffer.c" "$src/tools/host/manifest/json.c" -o "$work/stage"
 mkdir "$work/input" "$work/root"
 printf 'payload\n' > "$work/input/file with spaces"
 ln -s 'file with spaces' "$work/input/alias"

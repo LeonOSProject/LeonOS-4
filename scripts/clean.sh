@@ -36,15 +36,25 @@ if [ -n "$src" ]; then
     [ "$resolved" != "$source_root" ] || refuse 'resolved O is the source root'
 fi
 target=$resolved
-[ ! -L "$target/.leonos-out" ] || refuse 'ownership marker is a symlink'
-marker="$target/.leonos-out"
-if [ ! -f "$marker" ]; then
-    refuse "no ownership marker at $marker (not a build output directory created by this Makefile)"
-fi
-if ! grep -q '^leonos4-build-out version=1 ' "$marker"; then
-    refuse "ownership marker in $target is not a LeonOS build output marker"
-fi
-marker_root=$(sed -n 's/^leonos4-build-out version=1 root=//p' "$marker" | head -n1)
+marker_root=''
+marker_found=0
+for marker_name in .reliefos-out .leonos-out; do
+    marker="$target/$marker_name"
+    [ ! -L "$marker" ] || refuse "ownership marker $marker_name is a symlink"
+    if [ -e "$marker" ]; then
+        [ -f "$marker" ] || refuse "ownership marker $marker_name is not a regular file"
+        this_root=$(sed -n \
+            -e 's/^reliefos-build-out version=1 root=//p' \
+            -e 's/^leonos4-build-out version=1 root=//p' "$marker" | head -n1)
+        [ -n "$this_root" ] || refuse "ownership marker in $target is not a recognised build output marker"
+        if [ -n "$marker_root" ] && [ "$marker_root" != "$this_root" ]; then
+            refuse 'ownership markers name different source roots'
+        fi
+        marker_root=$this_root
+        marker_found=1
+    fi
+done
+[ "$marker_found" = 1 ] || refuse "no ownership marker in $target (not a build output directory created by this Makefile)"
 if [ -n "$src" ] && [ -n "$marker_root" ] && [ "$marker_root" != "$src" ]; then
     refuse "output directory belongs to a different source root ($marker_root)"
 fi
@@ -53,7 +63,7 @@ fi
 # delete, and this is what makes `clean` auditable.
 # third-party holds upstream build directories this configuration owns (see mk/third-party.mk).
 # ntclks is the kernel checkout's own sub-build output directory (mk/kernel.mk).
-products="userland userland-installer userland-installer-policy upstream rootfs resources rpr-apps rpr-pages obj generated host include auth pam system musl installer sdk sysroot stage packages images logs meta third-party kernel-export kernel-install ntclks"
+products="userland userland-installer userland-installer-policy upstream rootfs resources rpr-apps rpr-pages obj generated host include auth pam system musl installer sdk sysroot stage packages images logs meta third-party kernel-export kernel-install reliefnt ntclks"
 if [ "$keep" = 0 ]; then
     products="$products config"
 fi
@@ -65,8 +75,12 @@ for entry in $products; do
         rm -rf -- "$resolved/$entry" || exit 1
     fi
 done
-if [ "$keep" = 0 ] && [ -e "$resolved/.leonos-out" ]; then
-    printf '  remove .leonos-out\n'
-    rm -f -- "$resolved/.leonos-out"
+if [ "$keep" = 0 ]; then
+    for marker_name in .reliefos-out .leonos-out; do
+        if [ -e "$resolved/$marker_name" ]; then
+            printf '  remove %s\n' "$marker_name"
+            rm -f -- "$resolved/$marker_name"
+        fi
+    done
 fi
 printf 'clean: the shared download cache under cache/downloads was not touched\n'

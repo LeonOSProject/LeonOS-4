@@ -375,13 +375,13 @@ def locate_compiler():
     candidates = []
     if os.environ.get("PRIVNEG_CC"):
         candidates.append(Path(os.environ["PRIVNEG_CC"]))
-    candidates.append(ROOT / "out/x86_64/release/sdk/leonos-musl-sdk/bin/leonos-musl-cc")
-    candidates.append(Path("/home/leon/build/ntclks-sep/p4-out/sdk/leonos-musl-sdk/bin/leonos-musl-cc"))
-    candidates.append(Path("/home/leon/build/ntclks-sep/p4-out/host/bin/leonos-musl-cc"))
+    candidates.append(ROOT / "out/x86_64/release/sdk/leonos-musl-sdk/bin/reliefos-musl-cc")
+    candidates.append(Path("/home/leon/build/ntclks-sep/p4-out/sdk/leonos-musl-sdk/bin/reliefos-musl-cc"))
+    candidates.append(Path("/home/leon/build/ntclks-sep/p4-out/host/bin/reliefos-musl-cc"))
     for candidate in candidates:
         if candidate.is_file():
             return candidate
-    raise SystemExit(f"no leonos-musl-cc found; tried: {candidates}")
+    raise SystemExit(f"no reliefos-musl-cc found; tried: {candidates}")
 
 
 def build_probe(output):

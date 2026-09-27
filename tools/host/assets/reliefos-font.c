@@ -17,7 +17,7 @@ struct font {
   size_t count;
 };
 static void fail(const char *why) {
-  fprintf(stderr, "leonos-font: %s\n", why);
+  fprintf(stderr, "reliefos-font: %s\n", why);
   exit(1);
 }
 static unsigned u16(const unsigned char *p) {
@@ -268,7 +268,7 @@ static void replace_ascii(struct font *f, const struct byte_buffer *psf) {
 }
 int main(int argc, char **argv) {
   if (argc != 5) {
-    fprintf(stderr, "usage: leonos-font SOURCE PSF METRO WIN95\n");
+    fprintf(stderr, "usage: reliefos-font SOURCE PSF METRO WIN95\n");
     return 2;
   }
   struct byte_buffer source = {0}, psf = {0};

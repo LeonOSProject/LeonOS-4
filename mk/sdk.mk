@@ -1,25 +1,25 @@
 # Relocatable musl SDK subset (the developer kit assembled from build output).
 MUSL_SDK := $(O)/sdk/leonos-musl-sdk
 MUSL_SDK_ARCHIVE := $(O_PACKAGES)/leonos-musl-sdk.tar.gz
-SDK_EPOCH := $(or $(SOURCE_DATE_EPOCH),$(shell git -C $(LEONOS_SRC) show -s --format=%ct HEAD))
-SDK_INPUT_HEADERS := $(shell find $(RELIEFNT_DIR)/include/uapi $(LEONOS_SRC)/include/leonos $(LEONOS_SRC)/userland/runtime/include/leonos -type f -name '*.h' | LC_ALL=C sort)
-LEONOS_SIG_sdk := epoch=$(SDK_EPOCH)|headers=$(SDK_INPUT_HEADERS)|driver=$(LEONOS_SDK_DRIVER)
-$(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,sdk)))
+SDK_EPOCH := $(or $(SOURCE_DATE_EPOCH),$(shell git -C $(RELIEFOS_SRC) show -s --format=%ct HEAD))
+SDK_INPUT_HEADERS := $(shell find $(RELIEFNT_DIR)/include/uapi $(RELIEFOS_SRC)/include/leonos $(RELIEFOS_SRC)/userland/runtime/include/leonos -type f -name '*.h' | LC_ALL=C sort)
+RELIEFOS_SIG_sdk := epoch=$(SDK_EPOCH)|headers=$(SDK_INPUT_HEADERS)|driver=$(RELIEFOS_SDK_DRIVER)
+$(if $(RELIEFOS_PASSIVE),,$(eval $(call RELIEFOS_SIGNATURE_RULE,sdk)))
 
-$(COMPONENT_SELECTION): $(O_CONFIG)/components.mk $(LEONOS_CONFIG_FILE) $(LEONOS_SRC)/configs/components.toml $(LEONOS_COMPONENT_TOOL)
+$(COMPONENT_SELECTION): $(O_CONFIG)/components.mk $(RELIEFOS_CONFIG_FILE) $(RELIEFOS_SRC)/configs/components.toml $(RELIEFOS_COMPONENT_TOOL)
 	$(Q)set -eu; mkdir -p $(dir $@)
-	$(Q)set -eu; $(O_HOST)/bin/leonos-components --input $(LEONOS_SRC)/configs/components.toml \
-	 --config $(LEONOS_CONFIG_FILE) --output $(O_CONFIG)/components.mk --selection $@
+	$(Q)set -eu; $(O_HOST)/bin/reliefos-components --input $(RELIEFOS_SRC)/configs/components.toml \
+	 --config $(RELIEFOS_CONFIG_FILE) --output $(O_CONFIG)/components.mk --selection $@
 
-MUSL_SDK_REQUIRED := $(MUSL_SDK)/bin/leonos-musl-cc $(MUSL_SDK)/include/stdio.h \
+MUSL_SDK_REQUIRED := $(MUSL_SDK)/bin/reliefos-musl-cc $(MUSL_SDK)/include/stdio.h \
  $(MUSL_SDK)/include/pnglibconf.h $(MUSL_SDK)/lib/crt1.o $(MUSL_SDK)/lib/crti.o \
  $(MUSL_SDK)/lib/crtn.o $(MUSL_SDK)/lib/libc.a $(MUSL_SDK)/lib/libc.so \
  $(MUSL_SDK)/lib/libleonos.so.2 $(MUSL_SDK)/lib/libleonos.a
 $(MUSL_SDK_REQUIRED) &: $(RUNTIME_SO) $(RUNTIME_ARCHIVE) $(RUNTIME_BUILTINS) \
- $(MUSL_STAMP) $(LEONOS_MUSL_ARTIFACTS) $(PAM_STAMP) $(AUTH_STAMP) $(SDK_INPUT_HEADERS) \
+ $(MUSL_STAMP) $(RELIEFOS_MUSL_ARTIFACTS) $(PAM_STAMP) $(AUTH_STAMP) $(SDK_INPUT_HEADERS) \
  $(HEADER_EXPORT_MANIFEST) \
- $(PNG_CONFIG) $(LEONOS_SDK_DRIVER) $(O_META)/sdk.sig $(LEONOS_SRC)/tools/build/musl-sdk.sh
-	$(Q)set -eu; RUNTIME_BUILTINS=$(RUNTIME_BUILTINS) PNG_CONFIG=$(PNG_CONFIG) sh $(LEONOS_SRC)/tools/build/musl-sdk.sh $(LEONOS_SRC) $(MUSL_SYSROOT) $(RUNTIME_SO) $(RUNTIME_ARCHIVE) $(PAM_ROOT) $(AUTH_ROOT) $(LEONOS_SDK_DRIVER) $(MUSL_SDK) $(SDK_EPOCH) $(HEADER_EXPORT_INCLUDE)
+ $(PNG_CONFIG) $(RELIEFOS_SDK_DRIVER) $(O_META)/sdk.sig $(RELIEFOS_SRC)/tools/build/musl-sdk.sh
+	$(Q)set -eu; RUNTIME_BUILTINS=$(RUNTIME_BUILTINS) PNG_CONFIG=$(PNG_CONFIG) sh $(RELIEFOS_SRC)/tools/build/musl-sdk.sh $(RELIEFOS_SRC) $(MUSL_SYSROOT) $(RUNTIME_SO) $(RUNTIME_ARCHIVE) $(PAM_ROOT) $(AUTH_ROOT) $(RELIEFOS_SDK_DRIVER) $(MUSL_SDK) $(SDK_EPOCH) $(HEADER_EXPORT_INCLUDE)
 	$(Q)set -eu; for product in $(MUSL_SDK_REQUIRED); do test -f "$$product" || exit 1; touch "$$product"; done
 	$(Q)set -eu; find $(MUSL_SDK) -mindepth 1 ! -type d -printf '%P\n' | LC_ALL=C sort >$(MUSL_SDK).files
 
@@ -39,9 +39,9 @@ sdk: $(MUSL_SDK_ARCHIVE)
 
 # Every staged member participates in recovery, including non-primary headers,
 # documentation and symlinks. Presence signatures are stable on intact trees.
-define LEONOS_SDK_PRESENCE
-$(O_META)/$(1)-present.sig: FORCE $(LEONOS_SRC)/tools/build/upstream-verify.sh
-	$$(Q)sh $(LEONOS_SRC)/tools/build/upstream-verify.sh $(2) $(2).files $$@
+define RELIEFOS_SDK_PRESENCE
+$(O_META)/$(1)-present.sig: FORCE $(RELIEFOS_SRC)/tools/build/upstream-verify.sh
+	$$(Q)sh $(RELIEFOS_SRC)/tools/build/upstream-verify.sh $(2) $(2).files $$@
 $(3): $(O_META)/$(1)-present.sig
 endef
-$(eval $(call LEONOS_SDK_PRESENCE,musl-sdk,$(MUSL_SDK),$(MUSL_SDK_REQUIRED)))
+$(eval $(call RELIEFOS_SDK_PRESENCE,musl-sdk,$(MUSL_SDK),$(MUSL_SDK_REQUIRED)))

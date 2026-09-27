@@ -23,7 +23,7 @@ for app in helloworld doom doomlauncher oschinpt; do
     printf '%s\n' "$app" > "$tmp/out/userland/$app.elf"
 done
 cat > "$tmp/build_info.h" <<'EOF'
-#define LEONOS_KERNEL_VERSION "4.7.1"
+#define RELIEFOS_KERNEL_VERSION "4.7.1"
 EOF
 printf 'key\n' > "$tmp/key"
 chmod 600 "$tmp/key"

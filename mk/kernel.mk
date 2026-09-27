@@ -11,7 +11,7 @@
 # The sub-build is asked on every invocation. A stamp keyed on a git SHA would
 # miss local edits in the checkout, so incrementality is the sub-make's own
 # decision (its signatures and depfiles); when it has nothing to do the ask is
-# cheap. Publishing goes through leonos-emit, so an unchanged product never
+# cheap. Publishing goes through reliefos-emit, so an unchanged product never
 # moves mtime and never rebuilds its consumers.
 
 # The kernel checkout. Since phase 5 the default path is the kernel/reliefnt
@@ -19,7 +19,7 @@
 # the adapter refuses with instructions instead of letting parse-time
 # inventories and config generation bury the cause in follow-on errors (see
 # the guard below and the recipe guards).
-RELIEFNT_DIR ?= $(if $(strip $(NTCLKS_DIR)),$(NTCLKS_DIR),$(LEONOS_SRC)/kernel/reliefnt)
+RELIEFNT_DIR ?= $(if $(strip $(NTCLKS_DIR)),$(NTCLKS_DIR),$(RELIEFOS_SRC)/kernel/reliefnt)
 # A checkout that has not been initialized must fail once, clearly, naming
 # RELIEFNT_DIR -- a non-recursive clone otherwise died in `find` noise and a
 # missing-tool cascade long before the adapter's recipe guard could speak.
@@ -56,8 +56,8 @@ RELIEFNT_SUBBUILD_DEST := $(abspath $(RELIEFNT_DEST))
 
 # Legacy product locations (kept stable for mk/rootfs.mk, mk/images.mk,
 # mk/rpr.mk and mk/boot.mk).
-LEONOS_KERNEL_SYS := $(O_GENERATED)/system/kernel.sys
-LEONOS_KERNEL_DEBUG := $(O_GENERATED)/system/kernel.debug
+RELIEFOS_KERNEL_SYS := $(O_GENERATED)/system/kernel.sys
+RELIEFOS_KERNEL_DEBUG := $(O_GENERATED)/system/kernel.debug
 RELIEFNT_LOADER_ELF := $(O_GENERATED)/boot/loader.elf
 RELIEFNT_KERNELDEBUG_SYS := $(O_GENERATED)/system/kerneldebug.sys
 RELIEFNT_DRIVER_NAMES := mouse serial e1000 ac97 es1371
@@ -71,7 +71,7 @@ RELIEFNT_PUBLISH_PAIRS := system/kernel.sys:kernel.sys system/kernel.debug:kerne
 	drivers/e1000.drv:e1000.drv drivers/ac97.drv:ac97.drv \
 	drivers/es1371.drv:es1371.drv
 
-RELIEFNT_PUBLISHED := $(LEONOS_KERNEL_SYS) $(LEONOS_KERNEL_DEBUG) \
+RELIEFNT_PUBLISHED := $(RELIEFOS_KERNEL_SYS) $(RELIEFOS_KERNEL_DEBUG) \
 	$(RELIEFNT_KERNELDEBUG_SYS) $(RELIEFNT_LOADER_ELF) $(RELIEFNT_DRIVER_OUTPUTS)
 
 # An explicit command-line tool override is part of the caller's intent and is
@@ -97,7 +97,7 @@ RELIEFNT_TOOL_PASSTHRU := $(strip $(foreach tool,CC CXX AR RANLIB LD OBJCOPY STR
 # A pure kernel-product build at an older pin can predate the current UAPI
 # whitelist, though. In that case the kernel itself can still build from its
 # own sources; userland/header goals continue to require the complete export.
-RELIEFNT_HEADER_EXPORT_LIST_FOR_KERNEL := $(if $(strip $(HEADER_EXPORT_LIST)),$(HEADER_EXPORT_LIST),$(LEONOS_SRC)/configs/header-export.list)
+RELIEFNT_HEADER_EXPORT_LIST_FOR_KERNEL := $(if $(strip $(HEADER_EXPORT_LIST)),$(HEADER_EXPORT_LIST),$(RELIEFOS_SRC)/configs/header-export.list)
 RELIEFNT_HEADER_EXPORT_ENTRIES_FOR_KERNEL := $(shell sed -e 's/\#.*//' -e '/^[[:space:]]*$$/d' $(RELIEFNT_HEADER_EXPORT_LIST_FOR_KERNEL))
 RELIEFNT_HEADER_EXPORTS_COMPLETE := $(shell for entry in $(RELIEFNT_HEADER_EXPORT_ENTRIES_FOR_KERNEL); do test -f '$(RELIEFNT_DIR)/'$$entry || exit 1; done; printf yes)
 RELIEFNT_KERNEL_ONLY_GOALS := kernel all loader drivers
@@ -109,7 +109,7 @@ RELIEFNT_KERNEL_HEADER_ORDER_ONLY :=
 endif
 endif
 
-$(RELIEFNT_PUBLISHED) &: FORCE $(LEONOS_EMIT) $(RELIEFNT_KERNEL_HEADER_ORDER_ONLY)
+$(RELIEFNT_PUBLISHED) &: FORCE $(RELIEFOS_EMIT) $(RELIEFNT_KERNEL_HEADER_ORDER_ONLY)
 	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0 ;; esac; \
 	if [ ! -f '$(RELIEFNT_DIR)/Makefile' ] && [ ! -e '$(RELIEFNT_DIR)/.git' ]; then \
 	    printf '%s\n' \
@@ -135,7 +135,7 @@ $(RELIEFNT_PUBLISHED) &: FORCE $(LEONOS_EMIT) $(RELIEFNT_KERNEL_HEADER_ORDER_ONL
 	        echo "reliefnt adapter: installed product $$name missing from $(RELIEFNT_DEST)" >&2; \
 	        exit 1; }; \
 	    mkdir -p $(O_GENERATED)/$${rel%%/*}; \
-	    $(LEONOS_EMIT) --input $(RELIEFNT_DEST)/$$name --output $(O_GENERATED)/$$rel; \
+	    $(RELIEFOS_EMIT) --input $(RELIEFNT_DEST)/$$name --output $(O_GENERATED)/$$rel; \
 	done
 
 # --- fetch delegation -------------------------------------------------------
@@ -150,7 +150,7 @@ $(RELIEFNT_PUBLISHED) &: FORCE $(LEONOS_EMIT) $(RELIEFNT_KERNEL_HEADER_ORDER_ONL
 ntclks-fetch: reliefnt-fetch
 reliefnt-fetch:
 	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0 ;; esac; \
-	if [ '$(realpath $(RELIEFNT_DIR))' = '$(realpath $(LEONOS_SRC))' ]; then \
+	if [ '$(realpath $(RELIEFNT_DIR))' = '$(realpath $(RELIEFOS_SRC))' ]; then \
 	    echo 'reliefnt adapter: RELIEFNT_DIR is this repository; skipping the kernel fetch' >&2; \
 	    exit 0; \
 	fi; \
@@ -166,14 +166,14 @@ reliefnt-fetch:
 # version consumers (mk/rpr.mk's app packages, mk/site.mk, `make build-info`).
 # The kernel checkout generates its own copy inside its O.
 BUILD_INFO_HEADER := $(O_INCLUDE)/generated/build_info.h
-LEONOS_SOURCE_ID := $(shell git -C $(LEONOS_SRC) rev-parse --short HEAD 2>/dev/null || echo unknown)
-LEONOS_SIG_version := source=$(LEONOS_SOURCE_ID)|epoch=$(SOURCE_DATE_EPOCH)
-$(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,version)))
+RELIEFOS_SOURCE_ID := $(shell git -C $(RELIEFOS_SRC) rev-parse --short HEAD 2>/dev/null || echo unknown)
+RELIEFOS_SIG_version := source=$(RELIEFOS_SOURCE_ID)|epoch=$(SOURCE_DATE_EPOCH)
+$(if $(RELIEFOS_PASSIVE),,$(eval $(call RELIEFOS_SIGNATURE_RULE,version)))
 
-$(BUILD_INFO_HEADER): $(LEONOS_SRC)/configs/build-version $(LEONOS_VERSION_TOOL) $(O_META)/version.sig \
+$(BUILD_INFO_HEADER): $(RELIEFOS_SRC)/configs/build-version $(RELIEFOS_VERSION_TOOL) $(O_META)/version.sig \
 	| $(O_INCLUDE)/generated
-	$(call LEONOS_LOG,GEN,$@)
-	$(Q)$(LEONOS_VERSION_TOOL) --version-file $< \
-        --source-id '$(LEONOS_SOURCE_ID)' \
-	    --epoch '$(or $(SOURCE_DATE_EPOCH),$(shell git -C $(LEONOS_SRC) show -s --format=%ct HEAD 2>/dev/null || echo 0))' \
+	$(call RELIEFOS_LOG,GEN,$@)
+	$(Q)$(RELIEFOS_VERSION_TOOL) --version-file $< \
+        --source-id '$(RELIEFOS_SOURCE_ID)' \
+	    --epoch '$(or $(SOURCE_DATE_EPOCH),$(shell git -C $(RELIEFOS_SRC) show -s --format=%ct HEAD 2>/dev/null || echo 0))' \
 	    --output $@

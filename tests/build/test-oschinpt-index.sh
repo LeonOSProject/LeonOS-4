@@ -2,7 +2,7 @@
 set -eu
 src=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 w=$(mktemp -d); trap 'rm -rf "$w"' EXIT HUP INT TERM
-${HOSTCC:-cc} -std=c11 -O2 -Wall -Wextra -Werror -I"$src" "$src/tools/host/assets/leonos-oschinpt-index.c" "$src/tools/host/common/io.c" "$src/tools/host/common/buffer.c" -o "$w/index"
+${HOSTCC:-cc} -std=c11 -O2 -Wall -Wextra -Werror -I"$src" "$src/tools/host/assets/reliefos-oschinpt-index.c" "$src/tools/host/common/io.c" "$src/tools/host/common/buffer.c" -o "$w/index"
 printf 'a\tba\n# ignore\nb\tba\nc\taa\n' > "$w/dict"
 "$w/index" "$w/dict" "$w/out"
 # OSCI, version 1, two records, 24 dictionary bytes; aa before ba.

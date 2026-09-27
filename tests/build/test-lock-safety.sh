@@ -42,4 +42,51 @@ touch "$w/real/output/obj/keep"
 ln -s "$w/real" "$w/alias"
 if O="$w/alias/output" SRC="$repo" sh "$repo/scripts/clean.sh" >/dev/null 2>&1; then echo 'FAIL: clean accepted symlink parent'; fail=1; else echo 'ok: clean rejected symlink parent'; fi
 [ -f "$w/real/output/obj/keep" ] || fail=1
+
+mkdir -p "$w/new-marker/obj"
+printf 'reliefos-build-out version=1 root=%s\n' "$repo" > "$w/new-marker/.reliefos-out"
+touch "$w/new-marker/obj/keep"
+O="$w/new-marker" SRC="$repo" sh "$repo/scripts/clean.sh" >/dev/null
+[ ! -e "$w/new-marker/obj/keep" ] || { echo 'FAIL: new marker was not cleaned'; fail=1; }
+echo 'ok: clean accepts ReliefOS ownership marker'
+
+mkdir -p "$w/unknown/obj"
+printf 'unknown-build-out version=1 root=%s\n' "$repo" > "$w/unknown/.reliefos-out"
+touch "$w/unknown/obj/keep"
+if O="$w/unknown" SRC="$repo" sh "$repo/scripts/clean.sh" >/dev/null 2>&1; then
+    echo 'FAIL: clean accepted an unknown ownership marker'
+    fail=1
+else
+    echo 'ok: clean rejected an unknown ownership marker'
+fi
+[ -f "$w/unknown/obj/keep" ] || fail=1
+
+mkdir -p "$w/symlink-marker/obj"
+printf 'reliefos-build-out version=1 root=%s\n' "$repo" > "$w/marker-real"
+ln -s "$w/marker-real" "$w/symlink-marker/.reliefos-out"
+touch "$w/symlink-marker/obj/keep"
+if O="$w/symlink-marker" SRC="$repo" sh "$repo/scripts/clean.sh" >/dev/null 2>&1; then
+    echo 'FAIL: clean accepted a symlink ownership marker'
+    fail=1
+else
+    echo 'ok: clean rejected a symlink ownership marker'
+fi
+[ -f "$w/symlink-marker/obj/keep" ] || fail=1
+
+mkdir -p "$w/distclean/config"
+printf 'leonos4-build-out version=1 root=%s\n' "$repo" > "$w/distclean/.leonos-out"
+printf 'reliefos-build-out version=1 root=%s\n' "$repo" > "$w/distclean/.reliefos-out"
+printf 'CONFIG_OLD=y\n' > "$w/distclean/config/.config"
+O="$w/distclean" SRC="$repo" KEEP_CONFIG=0 sh "$repo/scripts/clean.sh" >/dev/null
+[ ! -e "$w/distclean/.leonos-out" ]
+[ ! -e "$w/distclean/.reliefos-out" ]
+[ ! -e "$w/distclean/config" ]
+echo 'ok: distclean removes both ownership markers and the config directory'
+
+if O="$repo" SRC="$repo" sh "$repo/scripts/clean.sh" >/dev/null 2>&1; then
+    echo 'FAIL: clean accepted the source root'
+    fail=1
+else
+    echo 'ok: clean rejected the source root'
+fi
 exit "$fail"

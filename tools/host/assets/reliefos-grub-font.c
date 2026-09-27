@@ -4,7 +4,7 @@
 #include <stdlib.h>
 int main(int argc, char **argv) {
   if (argc != 3) {
-    fprintf(stderr, "usage: leonos-grub-font PSF OUTPUT\n");
+    fprintf(stderr, "usage: reliefos-grub-font PSF OUTPUT\n");
     return 2;
   }
   struct byte_buffer input = {0};

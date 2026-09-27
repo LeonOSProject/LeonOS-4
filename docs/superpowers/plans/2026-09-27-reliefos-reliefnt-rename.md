@@ -109,9 +109,9 @@
 
 ### 任务 4：Kconfig、主机工具与构建命名
 
-**文件：** 新增 `tools/build/reliefos-config-migrate.sh`；修改 `Makefile`、`Kconfig`、`configs/components.toml`、`configs/default.conf`、`configs/profiles/default.conf`、`tools/host/manifest/leonos-components.c`、`tools/host/config/leonos-config.c`、`mk/{host,config,tests}.mk` 及所有引用这些路径的 `mk/*.mk`；重生成 `Kconfig.components`；更新 `tests/build/test-{components,components-metadata,config-first-build,config-groups,incremental}.sh`。
+**文件：** 新增 `tools/build/reliefos-config-migrate.sh`；修改 `Makefile`、`Kconfig`、`configs/components.toml`、`configs/default.conf`、`configs/profiles/default.conf`、`tools/host/manifest/reliefos-components.c`、`tools/host/config/reliefos-config.c`、`mk/{host,config,tests}.mk` 及所有引用这些路径的 `mk/*.mk`；重生成 `Kconfig.components`；更新 `tests/build/test-{components,components-metadata,config-first-build,config-groups,incremental}.sh`。
 
-- [ ] **步骤 1：先写旧 `.config` 导入 fixture 与新配置生成测试。** 同一个组件旧 `CONFIG_LEON_COMPONENT_APP_HELLO_BUILD=y` 应转换为 `CONFIG_RELIEFOS_COMPONENT_APP_HELLO_BUILD=y`；新配置中不得生成双份互相冲突的选择。已存在的 `O/config/.config` 仅在显式迁移命令下改写，并保留备份。
+- [x] **步骤 1：先写旧 `.config` 导入 fixture 与新配置生成测试。** 同一个组件旧 `CONFIG_LEON_COMPONENT_APP_HELLO_BUILD=y` 应转换为 `CONFIG_RELIEFOS_COMPONENT_APP_HELLO_BUILD=y`；新配置中不得生成双份互相冲突的选择。已存在的 `O/config/.config` 仅在显式迁移命令下改写，并保留备份。
 
   ```sh
   tmp=$(mktemp -d)
@@ -121,10 +121,12 @@
   grep -qx 'CONFIG_RELIEFOS_COMPONENT_APP_HELLO_BUILD=y' "$tmp/new.config"
   ```
 
-- [ ] **步骤 2：确认 fixture 红灯。** 预期缺迁移脚本或新 Kconfig 符号；保持旧配置 fixture 只读。
-- [ ] **步骤 3：实现迁移脚本和生成器规则。** `configs/components.toml` 为唯一组件来源；运行现有组件生成入口重生成 `Kconfig.components`，同步 `configs/default.conf` 和 profile；检查 `select/depends on` 对应关系无悬空旧符号。
-- [ ] **步骤 4：迁移主仓私有 `LEONOS_*`/`leonos-*` 变量、host 工具文件名和输出 marker。** 对用户可设置的 `LEONOS_*` 环境变量做输入别名，并测试新名优先；`clean/distclean` 必须识别旧/新所有权 marker 且拒绝未知目录、symlink、源码根。
+- [x] **步骤 2：确认 fixture 红灯。** 预期缺迁移脚本或新 Kconfig 符号；保持旧配置 fixture 只读。
+- [x] **步骤 3：实现迁移脚本和生成器规则。** `configs/components.toml` 为唯一组件来源；运行现有组件生成入口重生成 `Kconfig.components`，同步 `configs/default.conf` 和 profile；检查 `select/depends on` 对应关系无悬空旧符号。
+- [x] **步骤 4：迁移主仓私有 `LEONOS_*`/`leonos-*` 变量、host 工具文件名和输出 marker。** 对用户可设置的 `LEONOS_*` 环境变量做输入别名，并测试新名优先；`clean/distclean` 必须识别旧/新所有权 marker 且拒绝未知目录、symlink、源码根。
 - [ ] **步骤 5：验证 `make help`、`make doctor`、`make defconfig`、`make menuconfig`、`make test` 与 `make -n userland`，用不同 `O` 对旧配置迁移和新配置增量构建各跑一次。** `make -n/-q` 不应写配置或抢锁；检查 `git diff --check`。
+
+> 执行记录（2026-09-28）：旧 `.config` 迁移 fixture、组件解析器/metadata、first-build、config-groups、userland graph、SDK driver、镜像适配、版本 ABI、Pages/RPR 与 clean/lock 测试均通过；`make regen-component-kconfig` 输出与已跟踪 `Kconfig.components` 一致。`make help`、`make doctor`、`make defconfig`、`make menuconfig`、新 `O` 的 `make -n/-q userland` 检查均已运行；不同 `O` 上的 `make tools` 连续两次运行，第二次无构建动作。完整 `make test` 的 host 与 ASan/UBSan 测试、auth stage、bootstrap（22 项）通过，随后 `test-brand-identity.sh` 在任务 5/6/7 尚未实施的公开头、来宾路径/服务、库、镜像与 SDK 命名断言处失败；门禁原样保留，步骤 5 待所有后续任务完成后全量重跑。
 
 ### 任务 5：公开 API、运行库与 SDK 的源码/二进制兼容
 

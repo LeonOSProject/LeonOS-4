@@ -31,7 +31,7 @@ def main():
     for name in COMMANDS:
         link = stage / "usr/bin" / name
         link.unlink(missing_ok=True)
-        link.symlink_to("../../opt/dyne/bin/leonos-musl-cc")
+        link.symlink_to("../../opt/dyne/bin/reliefos-musl-cc")
     tests = stage / "usr/lib/leonos/tests"
     tests.mkdir(parents=True, exist_ok=True)
     shutil.copy2(args.runner, tests / "gcc-probe.elf")

@@ -5,8 +5,8 @@
  * buffer_reserve() succeeds. buffer_destroy() releases it. A failed reserve
  * leaves the previous contents and capacity untouched and usable.
  */
-#ifndef LEONOS_HOST_COMMON_BUFFER_H
-#define LEONOS_HOST_COMMON_BUFFER_H
+#ifndef RELIEFOS_HOST_COMMON_BUFFER_H
+#define RELIEFOS_HOST_COMMON_BUFFER_H
 
 #include <stddef.h>
 
@@ -33,4 +33,4 @@ int buffer_reserve(struct byte_buffer *buf, size_t required);
  */
 void buffer_destroy(struct byte_buffer *buf);
 
-#endif /* LEONOS_HOST_COMMON_BUFFER_H */
+#endif /* RELIEFOS_HOST_COMMON_BUFFER_H */

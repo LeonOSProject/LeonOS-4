@@ -3,7 +3,7 @@ set -eu
 src=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 w=$(mktemp -d); trap 'rm -rf "$w"' EXIT HUP INT TERM
 ${HOSTCC:-cc} -std=c11 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wformat=2 \
-    -Wstrict-prototypes -Wmissing-prototypes "$src/tools/host/nls/leonos-nls-extract.c" -o "$w/extract"
+    -Wstrict-prototypes -Wmissing-prototypes "$src/tools/host/nls/reliefos-nls-extract.c" -o "$w/extract"
 cat > "$w/source.c" <<'EOF'
 #define T(en, zh) old(en, zh)
 /* T("comment", "ignored") */

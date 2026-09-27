@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
   int status = 1;
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "--help")) {
-      puts("leonos-gears --input gears.c --output gears-upstream.c");
+      puts("reliefos-gears --input gears.c --output gears-upstream.c");
       return 0;
     }
     if (i + 1 == argc)

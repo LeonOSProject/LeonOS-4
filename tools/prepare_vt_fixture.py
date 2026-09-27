@@ -13,7 +13,7 @@ def prepare(source, output, text_only=False, compiler=None,
     output.mkdir(parents=True, exist_ok=False)
     probe = output / 'vt-probe'
     if compiler is None:
-        compiler = ROOT / 'out/x86_64/release/sdk/leonos-musl-sdk/bin/leonos-musl-cc'
+        compiler = ROOT / 'out/x86_64/release/sdk/leonos-musl-sdk/bin/reliefos-musl-cc'
     subprocess.run([str(compiler), '-D_GNU_SOURCE', '-static', '-Iinclude', '-Ikernel/reliefnt/include/uapi',
                     probe_source, '-o', str(probe)], cwd=ROOT, check=True)
     disk = output / 'disk.raw'
@@ -45,8 +45,8 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--text-only', action='store_true')
     parser.add_argument('--compiler', type=Path, default=None,
-                        help='leonos-musl-cc to build the probe with '
-                             '(default: out/x86_64/release/sdk/leonos-musl-sdk/bin/leonos-musl-cc)')
+                        help='reliefos-musl-cc to build the probe with '
+                             '(default: out/x86_64/release/sdk/leonos-musl-sdk/bin/reliefos-musl-cc)')
     parser.add_argument('--probe-source', default='tools/tests/vt_guest_test.c',
                         help='guest probe C source to install as /tmp/vt-probe')
     args = parser.parse_args()

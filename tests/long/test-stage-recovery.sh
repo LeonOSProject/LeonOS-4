@@ -21,7 +21,7 @@ after=$(stat -c '%y' "$w/out/auth/.leonos-auth.json")
 test "$before" = "$after"
 # Upstream install preserves header timestamps. A newer producing dependency
 # must settle after one rebuild instead of invalidating a grouped output forever.
-touch "$w/out/host/bin/leonos-deps"
+touch "$w/out/host/bin/reliefos-deps"
 make -s -C "$root" O="$w/out" leonos-auth >>"$w/build.log" 2>&1
 before=$(stat -c '%y' "$w/out/auth/.leonos-auth.json")
 make -s -C "$root" O="$w/out" leonos-auth >>"$w/build.log" 2>&1

@@ -26,7 +26,7 @@ def fixture(path, dynamic):
 
 def main():
     WORK.mkdir(parents=True, exist_ok=True)
-    compiler = ROOT / "build/musl/sdk/bin/leonos-musl-cc"
+    compiler = ROOT / "build/musl/sdk/bin/reliefos-musl-cc"
     source = ROOT / "tools/tests/chroot_runtime_probe.c"
     for name, flags in (("static", ["-static"]), ("dynamic", ["-Wl,--as-needed"])):
         subprocess.run([str(compiler), "-O2", *flags, str(source), "-o", str(WORK / name)], check=True)

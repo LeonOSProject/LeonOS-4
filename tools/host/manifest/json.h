@@ -12,8 +12,8 @@
  * allocation hangs off it, so json_free() is the single release point. A failed
  * parse leaves the root safe to free.
  */
-#ifndef LEONOS_HOST_MANIFEST_JSON_H
-#define LEONOS_HOST_MANIFEST_JSON_H
+#ifndef RELIEFOS_HOST_MANIFEST_JSON_H
+#define RELIEFOS_HOST_MANIFEST_JSON_H
 
 #include <stddef.h>
 
@@ -90,4 +90,4 @@ const char *json_text(const json_value *value);
  */
 int json_int(const json_value *value, long *out);
 
-#endif /* LEONOS_HOST_MANIFEST_JSON_H */
+#endif /* RELIEFOS_HOST_MANIFEST_JSON_H */

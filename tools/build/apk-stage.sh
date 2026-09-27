@@ -40,7 +40,7 @@ for name in lib/apk/db var/cache/apk usr/share/leonos/apk/repository; do
 done
 rm -f "$tree/etc/apk/world" "$tree/var/log/apk.log"
 rm -f "$tree/.apk-complete" "$tree/.complete"
-sh "$src/tools/build/apk-layout.sh" "$tree" "${APK_LAYOUT_TOOL:-$(dirname "$own")/leonos-layout}"
+sh "$src/tools/build/apk-layout.sh" "$tree" "${APK_LAYOUT_TOOL:-$(dirname "$own")/reliefos-layout}"
 
 # The development headers must describe this exact runtime, not an independently
 # downloaded musl. Keep libxcrypt's header/archive in their existing package.

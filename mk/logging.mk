@@ -1,19 +1,19 @@
 # Central build-log formatting for GNU Make recipes.
 #
-# LEONOS_LOG is for a standalone recipe line and follows V=1 through Q.
-# LEONOS_LOG_SHELL is for a command embedded in a shell loop or compound
+# RELIEFOS_LOG is for a standalone recipe line and follows V=1 through Q.
+# RELIEFOS_LOG_SHELL is for a command embedded in a shell loop or compound
 # recipe, where Make's leading @ must not become part of the shell command.
 
-LEONOS_LOG_FORMAT := '  %-8s %s\n'
-LEONOS_LOG_COMMAND = printf $(LEONOS_LOG_FORMAT)
-LEONOS_SHELL_LOG := $(LEONOS_SRC)/scripts/logging.sh
+RELIEFOS_LOG_FORMAT := '  %-8s %s\n'
+RELIEFOS_LOG_COMMAND = printf $(RELIEFOS_LOG_FORMAT)
+RELIEFOS_SHELL_LOG := $(RELIEFOS_SRC)/scripts/logging.sh
 
-# $(call LEONOS_LOG,label,message)
-define LEONOS_LOG
-$(Q)$(LEONOS_LOG_COMMAND) "$(1)" "$(2)"
+# $(call RELIEFOS_LOG,label,message)
+define RELIEFOS_LOG
+$(Q)$(RELIEFOS_LOG_COMMAND) "$(1)" "$(2)"
 endef
 
-# $(call LEONOS_LOG_SHELL,label,message)
-define LEONOS_LOG_SHELL
-$(LEONOS_LOG_COMMAND) "$(1)" "$(2)"
+# $(call RELIEFOS_LOG_SHELL,label,message)
+define RELIEFOS_LOG_SHELL
+$(RELIEFOS_LOG_COMMAND) "$(1)" "$(2)"
 endef

@@ -142,7 +142,7 @@ def test_kernel_descriptor_table(directory: Path) -> None:
 # --------------------------------------------------------------------------- #
 
 def sdk_compiler() -> Path:
-    compiler = ROOT / "out/x86_64/release/sdk/leonos-musl-sdk/bin/leonos-musl-cc"
+    compiler = ROOT / "out/x86_64/release/sdk/leonos-musl-sdk/bin/reliefos-musl-cc"
     if not compiler.is_file():
         raise SystemExit("missing SDK; run: make -j8 sdk")
     return compiler

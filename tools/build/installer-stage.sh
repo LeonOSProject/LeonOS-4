@@ -53,7 +53,7 @@ mkdir -p "$work/runtime/install"
 leonos_log STAGE 'installer payload and ESP'
 mv "$work/installed" "$work/runtime/install/root"
 cp -a "$esp" "$work/runtime/install/esp"
-"${INSTALLER_DEDUP_TOOL:-$out/host/bin/leonos-dedup}" "$work/runtime"
+"${INSTALLER_DEDUP_TOOL:-$out/host/bin/reliefos-dedup}" "$work/runtime"
 find "$work/runtime" -exec touch -h -d "@$epoch" {} +
 if [ -d "$output.previous" ] && [ ! -e "$output" ]; then mv "$output.previous" "$output"; fi
 rm -rf "$output.previous"

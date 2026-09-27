@@ -4,7 +4,7 @@ set -eu
 [ "$#" = 8 ] || exit 2
 src=$1 out=$2 build=$3 index=$4 apk=$5 key=$6 output=$7 epoch=$8
 export SOURCE_DATE_EPOCH=$epoch
-version=$(sed -n 's/^#define LEONOS_KERNEL_VERSION "\([0-9.]*\)"$/\1/p' "$build")
+version=$(sed -n 's/^#define RELIEFOS_KERNEL_VERSION "\([0-9.]*\)"$/\1/p' "$build")
 printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo 'invalid release version' >&2; exit 1; }
 case $epoch in ''|*[!0-9]*) echo 'invalid package epoch' >&2; exit 1;; esac
 # APK revisions retain chronological ordering against previously published

@@ -19,7 +19,7 @@ check_tool() {
     fi
 }
 
-printf 'LeonOS build doctor\n'
+printf 'ReliefOS build doctor\n'
 printf 'source root\t%s\n' "${SRC:-.}"
 printf 'output dir\t%s\n' "${O:-unset}"
 printf 'arch\t\t%s\nprofile\t%s\n' "${ARCH:-unset}" "${PROFILE:-unset}"
@@ -156,7 +156,7 @@ elif [ -n "$deps_tool" ] && [ -x "$deps_tool" ] && [ -n "$lock" ]; then
     fi
     # A `for` loop, not a pipeline: a piped `while` runs in a subshell, and a
     # MISSING submodule there would print without failing doctor. Ids are
-    # validated by leonos-deps to contain no whitespace.
+    # validated by reliefos-deps to contain no whitespace.
     for dependency in $("$deps_tool" --lock "$lock" --list 2>/dev/null); do
         directory=$("$deps_tool" --lock "$lock" --id "$dependency" --print directory 2>/dev/null) || continue
         kind=$("$deps_tool" --lock "$lock" --id "$dependency" --print kind 2>/dev/null) || continue

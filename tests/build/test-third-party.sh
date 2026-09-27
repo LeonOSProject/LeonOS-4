@@ -11,8 +11,8 @@ set -u
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 
-deps=${LEONOS_DEPS:?set by mk/tests.mk}
-lock=${LEONOS_LOCK:?set by mk/tests.mk}
+deps=${RELIEFOS_DEPS:-${LEONOS_DEPS:?set by mk/tests.mk}}
+lock=${RELIEFOS_LOCK:-${LEONOS_LOCK:?set by mk/tests.mk}}
 fetch=./tools/build/fetch.sh
 
 failures=0

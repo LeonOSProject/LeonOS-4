@@ -201,13 +201,13 @@ else
     fail 'no-op build emits no compile, link, image or generate action'
     printf '%s\n' "$second" | sed 's/^/       | /'
     # Name the trigger instead of leaving an undiagnosable flake: the version
-    # chain is build_info.h <- {configs/build-version, leonos-version,
+    # chain is build_info.h <- {configs/build-version, reliefos-version,
     # version.sig} and a churn here is one of those reading as newer.
     printf '       | version.sig: %s\n' \
         "$(cat "$reliefnt_o/meta/version.sig" 2>/dev/null || echo missing)"
     for suspect in "$reliefnt_o/include/generated/build_info.h" \
                    "$reliefnt_o/meta/version.sig" \
-                   "$reliefnt_o/host/bin/leonos-version" \
+                   "$reliefnt_o/host/bin/reliefos-version" \
                    "$reliefnt/configs/build-version"; do
         printf '       | %s\n' "$(stat -c 'mtime=%Y size=%s' "$suspect" 2>/dev/null \
             | sed "s|^|$suspect |")"
@@ -398,7 +398,7 @@ printf '\n=== A05: compile flags, tool identity and profile isolation ===\n'
 # drivers share, so the comparison stays inside the kernel object set).
 advance_clock
 snapshot >"$work/flags-before"
-build KERNEL_CFLAGS=-DLEONOS_SIG_PROBE >/dev/null
+build KERNEL_CFLAGS=-DRELIEFOS_SIG_PROBE >/dev/null
 snapshot >"$work/flags-after"
 find "$reliefnt_o/obj/kernel" -name '*.c.o' | LC_ALL=C sort >"$work/all-c"
 find "$reliefnt_o/obj/kernel" -name '*.S.o' | LC_ALL=C sort >"$work/all-asm"

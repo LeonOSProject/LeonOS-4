@@ -1,4 +1,4 @@
-menu "LeonOS 4"
+menu "ReliefOS"
 
 menu "Build"
 
@@ -20,7 +20,7 @@ config INSTALLER_INSTALLED_REQUIRE_LICENSE
     default y
 
 config RPR_BASE_URL
-    string "LeonOS remote package repository URL"
+    string "ReliefOS remote package repository URL"
     default "https://leonosproject.github.io/LeonOS-4/rpr"
     help
       HTTPS base URL of the RPR directory inside the GitHub Pages site. The

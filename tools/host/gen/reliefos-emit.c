@@ -1,5 +1,5 @@
 /*
- * leonos-emit - publish a file only when its content would actually change.
+ * reliefos-emit - publish a file only when its content would actually change.
  *
  * GNU Make needs "rebuild this target only if the text differs" for the command
  * signatures in plan section 6.2 and for the source manifests in section 6.1.
@@ -22,7 +22,7 @@
 #include "tools/host/common/buffer.h"
 #include "tools/host/common/io.h"
 
-#define TOOL_NAME "leonos-emit"
+#define TOOL_NAME "reliefos-emit"
 
 struct options {
     const char *input;
