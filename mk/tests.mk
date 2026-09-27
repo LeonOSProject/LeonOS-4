@@ -13,6 +13,8 @@ LEONOS_HOST_TEST_BINS += $(O_HOST)/tests/test_locale_conf
 LEONOS_HOST_TEST_SANITISED += $(O_HOST)/tests-sanitised/test_locale_conf
 
 # Shell contract tests. test-bootstrap.sh is the public entry-point surface.
+# test-brand-identity.sh is the ReliefOS/ReliefNT rename gate (plan task 1) and
+# is picked up by this wildcard on purpose: every test-build run audits names.
 LEONOS_BUILD_TESTS := $(sort $(wildcard $(LEONOS_SRC)/tests/build/test-*.sh))
 # Suites that are too long to run on every change but must not be forgotten:
 # repeated -j1/-j8 comparisons and, later, guest boots. Plan section 13 forbids
