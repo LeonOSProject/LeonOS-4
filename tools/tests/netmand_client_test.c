@@ -7,7 +7,7 @@
 #include <fcntl.h>
 int lease_test_open(const char *path, int flags, ...);
 #define open lease_test_open
-#include "../../userland/libc/src/netsock.c"
+#include "../../userland/runtime/src/netsock.c"
 #undef open
 static const char *lease_test_path;
 int lease_test_open(const char *path, int flags, ...)

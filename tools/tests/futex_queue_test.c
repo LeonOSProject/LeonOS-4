@@ -5,7 +5,7 @@
 #include <ntclks/paging.h>
 #undef NTCLKS_KERNEL_DIRECT_MAP_BASE
 #define NTCLKS_KERNEL_DIRECT_MAP_BASE 0
-#include "../../kernel/ntclks/futex.c"
+#include "../../kernel/ntclks/kernel/ntclks/futex.c"
 
 static struct task tasks_test[4], *current;
 static uint64_t ticks = 100;

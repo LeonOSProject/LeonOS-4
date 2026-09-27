@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <mntent.h>
-#include "../../drivers/bootstrap/storage/storage_internal.h"
+#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_internal.h"
 static void exfat_cache_invalidate(void) {}
-#include "../../drivers/bootstrap/storage/storage_state.c"
+#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_state.c"
 static unsigned locked;
 void kernel_execution_lock_irqsave(uint64_t *flags) { assert(!locked); locked = 1; *flags = 17; }
 void kernel_execution_unlock_irqrestore(uint64_t flags) { assert(locked && flags == 17); locked = 0; }
@@ -14,7 +14,7 @@ static void storage_format_u32(char *out, uint32_t cap, const char *prefix, uint
     if (part < 0) snprintf(out, cap, "%s%u", prefix, n);
     else snprintf(out, cap, "%s%up%u", prefix, n, part + 1);
 }
-#include "../../drivers/bootstrap/storage/storage_mounts.c"
+#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_mounts.c"
 static int duplicate, io_error;
 int storage_disk_partition_uuid(uint32_t disk, uint32_t part, char uuid[37])
 {
@@ -23,7 +23,7 @@ int storage_disk_partition_uuid(uint32_t disk, uint32_t part, char uuid[37])
     strcpy(uuid, "12345678-1234-5678-90ab-112233445566");
     return 0;
 }
-#include "../../drivers/bootstrap/storage/storage_devlinks.c"
+#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_devlinks.c"
 int main(void)
 {
     g_devfs_enabled = 1;

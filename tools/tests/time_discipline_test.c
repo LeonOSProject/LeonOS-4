@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
-#include "../../kernel/ntclks/time_discipline.c"
+#include "../../kernel/ntclks/kernel/ntclks/time_discipline.c"
 int main(void)
 {
     struct linux_timespec now={.tv_sec=1000};

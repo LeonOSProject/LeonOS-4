@@ -1,23 +1,12 @@
 #ifndef LEONOS_AUTH_H
 #define LEONOS_AUTH_H
 
-#include <leonos/auth_user.h>
-
-#define LEONOS_AUTH_ROLE_NONE 0U
-#define LEONOS_AUTH_ROLE_USER 1U
-#define LEONOS_AUTH_ROLE_ADMIN 2U
-
-#define LEONOS_AUTH_USER_DISABLED 0x00000001U
-
-#define LEONOS_AUTH_UPDATE_ROLE 0x00000001U
-#define LEONOS_AUTH_UPDATE_FLAGS 0x00000002U
-
-struct leonos_auth_status {
-    uint32_t user_count;
-    uint32_t has_admin;
-    uint32_t reserved0;
-    uint32_t reserved1;
-};
+/*
+ * Userland authentication client API. The wire types and constants moved to
+ * the kernel UAPI (<leonos/auth_abi.h>); this header re-exports them so
+ * existing `#include <leonos/auth.h>` callers keep working.
+ */
+#include <leonos/auth_abi.h>
 
 /* Between 1 and 32 UTF-8 characters, with no whitespace. */
 int leonos_auth_password_valid(const char *password, uint32_t capacity);

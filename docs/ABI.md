@@ -47,7 +47,7 @@ LeonOS keeps Linux-compatible syscall numbers for the current user ABI:
 - Device and system extensions: `ioctl`
 
 Standard libc wrappers come from `third_party/musl`. LeonOS extensions live in
-`userland/libc`. Canonical kernel wire definitions are in `include/uapi`; the
+`userland/runtime`. Canonical kernel wire definitions are in `kernel/ntclks/include/uapi`; the
 complete per-call status is in `LINUX_ABI_SYSCALLS_2026-09-07.csv`. `mmap`
 supports anonymous private mappings and private file mappings; `munmap`
 supports whole or partial unmapping.
@@ -148,7 +148,7 @@ loader accepts only PIC-free kernel sections and the `NONE`, `64`, `32`,
 undefined symbols, W+X sections, and unknown sections are rejected.
 
 The module receives the fixed `leonos_kernel_debug_api` table declared in
-`kernel/ntclks/include/ntclks/kernel_debug.h`. It provides ostui output/input,
+`kernel/ntclks/kernel/ntclks/include/ntclks/kernel_debug.h`. It provides ostui output/input,
 TSC timing, controlled syscall/ioctl benchmark callbacks, and explicit
 continue, reboot, and shutdown operations. A valid module owns the diagnostic
 session; the kernel's minimal menu is only a recovery path for a missing or
@@ -181,7 +181,7 @@ for both Metro and Win95; each theme keeps its own palette and persisted
 for compatibility.
 
 Appearance state travels over the windowd AF_UNIX protocol, not ioctls:
-clients call the libc helpers in `userland/libc/src/wind.c`, which exchange
+clients call the libc helpers in `userland/runtime/src/wind.c`, which exchange
 `LEONOS_WIN_MSG_APPEARANCE_STATE` and `LEONOS_WIN_MSG_APPEARANCE_REQUEST`
 messages with the window server. Logged-in user tasks may submit an
 appearance request; the window server polls and publishes the updated state
@@ -193,7 +193,7 @@ scheme in `y`, and the Win95 color scheme in `dx`.
 ## Authentication ABI
 
 Multi-user state is exposed through `include/leonos/auth.h` and libc wrappers
-in `userland/libc/src/auth_accounts.c`, which read the standard
+in `userland/runtime/src/auth_accounts.c`, which read the standard
 `/etc/passwd` and `/etc/shadow` files via `getpwuid`/musl (rooted at the
 target install tree for offline tools).
 
@@ -211,7 +211,7 @@ the private auth ioctl family was removed. The legacy
 
 Task snapshots now include `uid`, `role`, `session_id`, and `username`.
 Children inherit identity and current directory from the parent task.
-File access decisions are made in the kernel: `kernel/ntclks/permissions.c`
+File access decisions are made in the kernel: `kernel/ntclks/fs/permissions.c`
 compares a task's filesystem UID/GID and role against the permission value the
 storage layer reports for the path. Protected service work is gated by kernel
 task flags (`TASK_FLAG_SERVICE`, `TASK_FLAG_WINDOW_SERVER`) and by
@@ -224,10 +224,10 @@ RPC envelope and is not published.
 POSIX permissions reach userland through the Linux ABI only: `stat`, `chmod`,
 `chown` and their `*at` variants. `struct leonos_fs_acl` and the
 `leonos_fs_acl_*` helpers in `include/leonos/fs.h` are a libc-level convenience
-API implemented on top of those same calls (see `userland/libc/src/libc.c`);
+API implemented on top of those same calls (see `userland/runtime/src/libc.c`);
 they are not ioctls and the kernel exposes no ACL ioctl. On FAT32 and exFAT the
 kernel stores the resulting mode, owner and group in the hidden `LEONACL.SYS`
-sidecar owned by `drivers/bootstrap/storage/storage_sidecar.c`; on ext2 it uses
+sidecar owned by `kernel/ntclks/drivers/bootstrap/storage/storage_sidecar.c`; on ext2 it uses
 the native inode fields. See
 [KERNEL_USERSPACE_BOUNDARIES.md](KERNEL_USERSPACE_BOUNDARIES.md).
 
@@ -263,14 +263,14 @@ layout it does not understand.
 Kernel code owns hardware probing, interrupts, page tables, physical memory,
 scheduling, user pointer validation, storage block I/O, exFAT/FAT32/ext2
 mutation, path resolution and the final DAC decision. The storage layer in
-`drivers/bootstrap/storage/` owns on-disk metadata, including `LEONACL.SYS`.
+`kernel/ntclks/drivers/bootstrap/storage/` owns on-disk metadata, including `LEONACL.SYS`.
 The full ownership map is in
 [KERNEL_USERSPACE_BOUNDARIES.md](KERNEL_USERSPACE_BOUNDARIES.md).
 
 ## Path resolution
 
 Path normalization lives in the kernel: `fs_permissions_resolve()` and
-`fs_permissions_resolve_flags()` in `kernel/ntclks/permissions.c` combine the
+`fs_permissions_resolve_flags()` in `kernel/ntclks/fs/permissions.c` combine the
 task's current directory with the input, walk components and symlinks, and check
 directory search permission on the way. Whether the final symlink is followed is
 decided by the syscall the caller made (for example `O_NOFOLLOW`); more than 40
@@ -282,13 +282,13 @@ resolution service.
 `userland/apps/device-agent` is the producer: it reads `/dev` through
 `leonos_readdir()`, classifies each node into `struct leonos_device_info`
 (display, input, storage, audio, serial, network, system), and answers clients
-over the devmand IPC that `userland/libc/src/devmand_client.c` wraps as
+over the devmand IPC that `userland/runtime/src/devmand_client.c` wraps as
 `leonos_device_list()`. Driver records come from `/proc/leonos-drivers`.
 
 ## Machine Identity ABI
 
 `leonos_machine_identity()` (`include/leonos/system.h`, implemented in
-`userland/libc/src/procsys.c`) fills `struct leonos_machine_identity` from
+`userland/runtime/src/procsys.c`) fills `struct leonos_machine_identity` from
 procfs: it reads the SMBIOS system UUID exported at
 `/sys/class/dmi/id/product_uuid` and marks
 `LEONOS_MACHINE_IDENTITY_FLAG_PLATFORM_UUID` when a valid 36-character UUID
@@ -305,10 +305,10 @@ Sockets use the standard Linux socket syscalls: the kernel dispatches
 `socket`, `connect`, `accept`/`accept4`, `bind`, `listen`, `send`/`recv`,
 `sendto`/`recvfrom`, `sendmsg`/`recvmsg`, `shutdown`, and option queries to
 the AF_UNIX and AF_INET backends (`syscall_socket_dispatch` in
-`kernel/ntclks/syscall.c`). `include/leonos/net.h` keeps a versioned
+`kernel/ntclks/kernel/ntclks/syscall.c`). `include/leonos/net.h` keeps a versioned
 compatibility surface — `leonos_net_config()`, `leonos_net_dhcp_renew()`,
 DNS, ping, TCP helpers — but its libc implementations in
-`userland/libc/src/netsock.c` are ordinary socket-fd clients:
+`userland/runtime/src/netsock.c` are ordinary socket-fd clients:
 `leonos_socket_tcp()` is `socket(AF_INET, SOCK_STREAM, 0)` and the
 read-only queries issue `LEONOS_NET_CONTROL_IOCTL` on an `AF_INET` datagram
 fd; there are no `LEONOS_IOCTL_NET_*` request codes.

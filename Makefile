@@ -34,7 +34,7 @@ endif
 V ?= 0
 CPUS ?=
 MEMORY ?=
-SOURCE_DATE_EPOCH ?= $(shell git -C $(LEONOS_SRC) show -s --format=%ct HEAD)
+SOURCE_DATE_EPOCH ?= $(shell git -C $(LEONOS_SRC) show -s --format=%ct HEAD 2>/dev/null || echo 0)
 TOOLCHAIN ?= $(LEONOS_SRC)/configs/toolchains/llvm-x86_64.mk
 
 O := $(patsubst %/,%,$(O))
@@ -151,6 +151,7 @@ include $(LEONOS_SRC)/mk/host.mk
 include $(LEONOS_SRC)/mk/toolchain.mk
 include $(LEONOS_SRC)/mk/config.mk
 include $(LEONOS_SRC)/mk/kernel.mk
+include $(LEONOS_SRC)/mk/headers.mk
 include $(LEONOS_SRC)/mk/boot.mk
 include $(LEONOS_SRC)/mk/third-party.mk
 include $(LEONOS_SRC)/mk/pam.mk
@@ -173,7 +174,7 @@ include $(LEONOS_SRC)/mk/tests.mk
 # Source inventories are inputs, never implicit host executable targets.
 .SUFFIXES:
 
-.PHONY: help doctor fetch defconfig olddefconfig menuconfig tools \
+.PHONY: help doctor fetch defconfig olddefconfig menuconfig tools headers_install \
 	kernel userland runtime sdk rootfs apk-repo image-vmdk iso installer all \
 	pages site download-page \
 	run run-iso run-installer test test-tools test-build test-long test-smoke \
@@ -224,7 +225,9 @@ all: kernel userland runtime sdk apk-repo image-vmdk iso installer
 
 .PHONY: image-iso release config-sync build-info test-all
 image-iso: iso
-release: all pages
+# `release` is gated by the ntclks release guard (mk/rpr.mk): release builds
+# must come from a clean kernel/ntclks submodule at the committed gitlink.
+release: ntclks-release-guard all pages
 config-sync: $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(LEONOS_COMPONENT_MK)
 build-info: $(BUILD_INFO_HEADER)
 test-all: test test-long test-legacy test-smoke

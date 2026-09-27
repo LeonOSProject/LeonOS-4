@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <stdarg.h>
-#include "../../userland/libc/src/blockdev.c"
+#include "../../userland/runtime/src/blockdev.c"
 
 static int fail_open, fail_ioctl, fail_seek, fail_io;
 int open(const char *path, int flags, ...)

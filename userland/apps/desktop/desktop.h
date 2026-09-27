@@ -567,5 +567,7 @@ void handle_mouse(uint32_t x, uint32_t y, uint8_t buttons);
 void handle_mouse_wheel(uint32_t x, uint32_t y, int32_t wheel, uint8_t buttons);
 void init_desktop(void);
 void desktop_run(void);
+/* autospawn.c: one-shot autospawn=<name> targets from /proc/cmdline (M5). */
+void desktop_autospawn_from_cmdline(void);
 
 #endif

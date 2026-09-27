@@ -84,7 +84,7 @@ OPT_PYTHON = "opt/python"
 OPT_TCC = "opt/tcc"
 
 # One directory/mode/link table for all images, the installer and early boot.
-ROOTFS_CONTRACT = Path(__file__).resolve().parents[1] / "include/uapi/leonos/rootfs.h"
+ROOTFS_CONTRACT = Path(__file__).resolve().parents[1] / "kernel/ntclks/include/uapi/leonos/rootfs.h"
 _contract = ROOTFS_CONTRACT.read_text(encoding="ascii")
 ROOT_DIRECTORIES = {path.lstrip("/"): int(mode, 8) for path, mode in
                     re.findall(r'X\("(/[^"\n]+)", (0[0-7]+)\)', _contract)}

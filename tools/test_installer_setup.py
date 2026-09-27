@@ -20,8 +20,8 @@ class InstallerSetupTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=gnu11", "-O1", "-g", "-fsanitize=address,undefined",
                 "-fno-omit-frame-pointer", "-ffunction-sections", "-fdata-sections",
-                "-Wl,--gc-sections", "-Iinclude", "-Iinclude/uapi",
-                "-idirafter", "userland/libc/include",
+                "-Wl,--gc-sections", "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi",
+                "-idirafter", "userland/runtime/include",
                 "tools/tests/installer_hyfetch_config_test.c", "-o", str(executable),
             ], cwd=ROOT, check=True)
             root = work / "root"
@@ -64,7 +64,7 @@ class InstallerSetupTests(unittest.TestCase):
                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
                 "-Wl,--wrap=read,--wrap=write,--wrap=tcgetattr,--wrap=tcsetattr",
-                "-Iinclude", "-Iinclude/uapi", "-idirafter", "userland/libc/include",
+                "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-idirafter", "userland/runtime/include",
                 "tools/tests/installer_tty_input_test.c", "-o", str(executable),
             ], cwd=ROOT, check=True)
             subprocess.run([str(executable)], check=True, timeout=10)
@@ -77,10 +77,10 @@ class InstallerSetupTests(unittest.TestCase):
                 "cc", "-std=gnu11", "-O1", "-g",
                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-Iinclude", "-Iinclude/uapi",
-                "-idirafter", "userland/libc/include", "tools/tests/installer_setup_validation_test.c",
+                "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi",
+                "-idirafter", "userland/runtime/include", "tools/tests/installer_setup_validation_test.c",
                 "userland/apps/installer/installer_setup.c", "userland/auth/standard_accounts.c",
-                "userland/libc/src/auth_password.c", "-o", str(executable),
+                "userland/runtime/src/auth_password.c", "-o", str(executable),
             ], cwd=ROOT, check=True)
             subprocess.run([str(executable)], check=True, timeout=30)
 
@@ -92,10 +92,10 @@ class InstallerSetupTests(unittest.TestCase):
                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
                 '-DMBEDTLS_CONFIG_FILE="leonos_mbedtls_config.h"',
-                "-Iinclude", "-Iinclude/uapi", "-Ithird_party/mbedtls/include",
-                "-idirafter", "userland/libc/include", "tools/tests/installer_accounts_test.c",
+                "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ithird_party/mbedtls/include",
+                "-idirafter", "userland/runtime/include", "tools/tests/installer_accounts_test.c",
                 "-Itools/tests/legacy_authd/include",
-                "tools/tests/legacy_authd/accounts.c", "userland/libc/src/auth_password.c",
+                "tools/tests/legacy_authd/accounts.c", "userland/runtime/src/auth_password.c",
                 *CRYPTO, "-o", str(executable),
             ], cwd=ROOT, check=True)
             salt = bytes(range(16))

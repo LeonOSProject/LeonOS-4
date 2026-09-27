@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <setjmp.h>
 #include <stdio.h>
-#include "../../kernel/ntclks/syscall_process.c"
+#include "../../kernel/ntclks/kernel/ntclks/syscall_process.c"
 
 static struct task caller;
 static struct task *current = &caller;

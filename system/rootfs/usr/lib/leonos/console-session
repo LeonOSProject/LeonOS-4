@@ -6,8 +6,10 @@ case "$1" in
 esac
 
 if test "$1" = tty1; then
+    # The kernel keeps only the /proc/cmdline mechanism; the installer UI
+    # selection is decided here from the exact boot command line token.
     if test -f /etc/leonos/installer-runtime &&
-       test "$LEONOS_INSTALLER_SESSION" = tui; then
+       grep -qE '(^| )installer-session=tui( |$)' /proc/cmdline; then
         export HOME=/root
         cd "$HOME" || exit 1
         exec /usr/lib/leonos/apps/login/login.elf --installer-shell

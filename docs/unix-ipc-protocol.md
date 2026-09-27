@@ -81,7 +81,7 @@ password change, and elevation run through the PAM stack: `login.elf` calls
 sudoers/PAM policy (the `sudod.elf` askpass helper supports the legacy
 `leonos_sudo_*` libc API), and `pam_leonos_password` is the LeonOS-specific
 verifier module. The `leonos_auth_*` libc wrappers in
-`userland/libc/src/auth_accounts.c` read the passwd database directly with
+`userland/runtime/src/auth_accounts.c` read the passwd database directly with
 `getpwuid`-style calls; mutating operations run the standard tools as root
 or require the caller's own uid.
 
@@ -126,7 +126,7 @@ served through a private ioctl.
 ## Networking (no socket service)
 
 There is no netmand daemon. Read-only network status queries use the kernel's
-`LEONOS_NET_CONTROL_IOCTL` (`include/uapi/leonos/net_control.h`) on an
+`LEONOS_NET_CONTROL_IOCTL` (`kernel/ntclks/include/uapi/leonos/net_control.h`) on an
 `AF_INET` socket fd, credential-checked in the kernel. Configuration changes
 are lifecycle operations of the OpenRC services `leonos-dhcp` (udhcpc, hook
 publishes `/run/leonos/dhcp-lease`) and `leonos-ntp` (hook publishes

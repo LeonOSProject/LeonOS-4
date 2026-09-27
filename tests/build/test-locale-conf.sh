@@ -6,8 +6,8 @@ src=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 for f in tools/build/rootfs-stage.sh tools/build/standalone-root.sh; do
     grep -q 'LANG=' "$src/$f" || { printf 'FAIL - %s writes no LANG\n' "$f"; exit 1; }
 done
-grep -q 'env_apply_locale' "$src/userland/libc/src/environment.c"
-grep -q 'LEONOS_PATH_LOCALE_CONF' "$src/userland/libc/src/environment.c"
+grep -q 'env_apply_locale' "$src/userland/runtime/src/environment.c"
+grep -q 'LEONOS_PATH_LOCALE_CONF' "$src/userland/runtime/src/environment.c"
 grep -q 'config VMDK_DEFAULT_LANG' "$src/Kconfig"
 if grep -q 'VMDK_DEFAULT_LANGUAGE' "$src/Kconfig"; then
     printf 'FAIL - old choice symbol still declared\n'

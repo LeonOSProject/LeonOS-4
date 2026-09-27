@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "../../drivers/bootstrap/console.c"
+#include "../../kernel/ntclks/drivers/bootstrap/console.c"
 
 static uint32_t pixels[80 * 48];
 static const struct framebuffer display = {

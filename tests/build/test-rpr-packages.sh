@@ -67,15 +67,18 @@ printf package > "$tmp/pages-apps/leonos-broken.apk"
 printf leonos-broken.apk > "$tmp/pages-apps/packages.list"
 printf kernel > "$tmp/kernel.sys"
 printf loader > "$tmp/loader.elf"
-cat > "$tmp/pages-build.h" <<'EOF'
-#define LEONOS_KERNEL_VERSION "4.7.1"
-EOF
+kernel_hash=$(sha256sum "$tmp/kernel.sys" | cut -d' ' -f1)
+loader_hash=$(sha256sum "$tmp/loader.elf" | cut -d' ' -f1)
+mkdir -p "$tmp/pages-kernel"
+printf 'format_version: 1\narch: x86_64\nartifacts:\n  %s  kernel.sys\n  %s  loader.elf\n' \
+    "$kernel_hash" "$loader_hash" > "$tmp/pages-kernel/manifest.txt"
+printf 'kernel_name=ntclks\nrelease_version=4.7.1\n' > "$tmp/pages-version"
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
     -out "$tmp/pages-key" 2>/dev/null
 chmod 600 "$tmp/pages-key"
 if sh "$src/tools/build/rpr-pages.sh" "$tmp/pages-repository" "$tmp/pages-apps" \
-    "$tmp/kernel.sys" "$tmp/loader.elf" "$tmp/pages-build.h" \
-    "$tmp/fake-bin/apk" "$tmp/pages-key" "$tmp/pages-output" \
+    "$tmp/kernel.sys" "$tmp/loader.elf" "$tmp/pages-kernel/manifest.txt" \
+    "$tmp/pages-version" "$tmp/fake-bin/apk" "$tmp/pages-key" "$tmp/pages-output" \
     2>"$tmp/pages-error"; then
     echo 'versionless RPR package was accepted' >&2
     exit 1

@@ -20,7 +20,7 @@ static int shm_open_for_test(const char *path, int flags, ...)
 #define main windowd_main
 #include "../../userland/apps/windowd/main.c"
 #undef main
-#include "../../userland/libc/src/wind.c"
+#include "../../userland/runtime/src/wind.c"
 #undef open
 
 void leonos_ui_present_for_pixels(const uint32_t *pixels, uint32_t id)

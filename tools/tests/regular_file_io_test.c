@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../kernel/ntclks/syscall_file_io.c"
+#include "../../kernel/ntclks/kernel/ntclks/syscall_file_io.c"
 
 static unsigned char disk[1048576], data[1048576];
 static uint64_t disk_size = sizeof(disk), error_offset = UINT64_MAX;

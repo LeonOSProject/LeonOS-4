@@ -113,6 +113,9 @@ void desktop_run(void)
     init_desktop();
     desktop_inputm_load_config();
     puts("[desktop.elf] Ring-3 desktop uses shadow framebuffer blit");
+    /* The window server is up: run the boot-requested test/debug autospawn
+     * targets as desktop children before the login session starts. */
+    desktop_autospawn_from_cmdline();
     maybe_launch_login();
     if (access("/etc/leonos/installer-runtime", F_OK) == 0) {
         char *argv[] = {"installer", "--graphical", NULL};

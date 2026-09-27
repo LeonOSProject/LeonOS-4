@@ -2,12 +2,12 @@
 
 ## Layout
 
-All driver source code lives in the repository-root `drivers/` directory.
+All driver source code lives in the kernel submodule under `kernel/ntclks/drivers/`.
 
-- `drivers/bootstrap`: console, framebuffer, VGA, EFI filesystem, storage, and
+- `kernel/ntclks/drivers/bootstrap`: console, framebuffer, VGA, EFI filesystem, storage, and
   USB UHCI/HID implementations that are linked into `kernel.sys`.
-- `drivers/mouse`, `drivers/serial`, `drivers/e1000`, `drivers/ac97`, and
-  `drivers/es1371`: loadable driver implementations built as `mouse.drv`,
+- `kernel/ntclks/drivers/mouse`, `kernel/ntclks/drivers/serial`, `kernel/ntclks/drivers/e1000`, `kernel/ntclks/drivers/ac97`, and
+  `kernel/ntclks/drivers/es1371`: loadable driver implementations built as `mouse.drv`,
   `serial.drv`, `e1000.drv`, `ac97.drv`, and `es1371.drv` (see `DRIVER_NAMES`
   in `mk/boot.mk`).
 

@@ -15,7 +15,7 @@ class ConsoleBootPolicyTests(unittest.TestCase):
             binary = str(Path(tmp) / "console")
             subprocess.run(["clang", "-std=c11", "-g", "-O1",
                             "-ffunction-sections", "-fdata-sections", "-fsanitize=address,undefined",
-                            "-Iinclude", "-Iinclude/uapi", "-Ikernel/ntclks/include",
+                            "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
                             "-Wl,--gc-sections", "tools/tests/vt_console_test.c", "-o", binary],
                            cwd=ROOT, check=True)
             subprocess.run([binary], check=True, timeout=10)

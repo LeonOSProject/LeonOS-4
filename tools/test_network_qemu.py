@@ -191,10 +191,10 @@ def main():
     if not args.reuse:
         compiler = ROOT / "build/musl-gcc/root/opt/dyne/gcc-musl/bin/x86_64-linux-musl-gcc"
         probe = work / "network.elf"
-        subprocess.run([str(compiler), "-static", "-O2", "-Wall", "-D_GNU_SOURCE", "-Iinclude", "-Iinclude/uapi",
+        subprocess.run([str(compiler), "-static", "-O2", "-Wall", "-D_GNU_SOURCE", "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi",
                         "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                        "-idirafter", "userland/libc/include", "tools/tests/network_guest_test.c",
-                        "userland/libc/src/ntp.c", "userland/libc/src/netsock.c", "userland/libc/src/unix_ipc.c",
+                        "-idirafter", "userland/runtime/include", "tools/tests/network_guest_test.c",
+                        "userland/runtime/src/ntp.c", "userland/runtime/src/netsock.c", "userland/runtime/src/unix_ipc.c",
                         "-Lbuild/musl/lib", "-Wl,--start-group", "-l:libleonos.a",
                         "-Wl,--end-group", "-o", str(probe)], check=True)
         subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "9000",

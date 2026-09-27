@@ -102,7 +102,7 @@ msgstr ""
 msgid " while pinging "
 msgstr ""
 
-#: userland/libc/src/ui.c:1767
+#: userland/runtime/src/ui.c:1767
 msgid "(none)"
 msgstr ""
 
@@ -270,7 +270,7 @@ msgstr ""
 msgid "All are selected by default."
 msgstr ""
 
-#: userland/libc/src/ui.c:715
+#: userland/runtime/src/ui.c:715
 msgid "All files (*.*)"
 msgstr ""
 
@@ -298,7 +298,7 @@ msgstr ""
 msgid "Alpine packages and local configuration are retained. Boot files are updated after the package transaction succeeds."
 msgstr ""
 
-#: userland/libc/src/ui.c:1779
+#: userland/runtime/src/ui.c:1779
 msgid "Always use this app"
 msgstr ""
 
@@ -634,11 +634,11 @@ msgstr ""
 msgid "Choose UI Style"
 msgstr ""
 
-#: userland/libc/src/ui.c:1759
+#: userland/runtime/src/ui.c:1759
 msgid "Choose a default program for this file type:"
 msgstr ""
 
-#: userland/libc/src/ui.c:1760
+#: userland/runtime/src/ui.c:1760
 msgid "Choose a program to open this file:"
 msgstr ""
 
@@ -1138,7 +1138,7 @@ msgstr ""
 msgid "Default wallpaper restored"
 msgstr ""
 
-#: userland/libc/src/ui.c:1770
+#: userland/runtime/src/ui.c:1770
 msgid "Default:"
 msgstr ""
 
@@ -1494,7 +1494,7 @@ msgstr ""
 msgid "End Task failed"
 msgstr ""
 
-#: userland/libc/src/ui.c:1012
+#: userland/runtime/src/ui.c:1012
 msgid "Enter a file name in "
 msgstr ""
 
@@ -1534,7 +1534,7 @@ msgstr ""
 msgid "Extension"
 msgstr ""
 
-#: userland/libc/src/ui.c:1765
+#: userland/runtime/src/ui.c:1765
 msgid "Extension:"
 msgstr ""
 
@@ -1598,11 +1598,11 @@ msgstr ""
 msgid "File loaded, truncated"
 msgstr ""
 
-#: userland/libc/src/ui.c:1121
+#: userland/runtime/src/ui.c:1121
 msgid "File name:"
 msgstr ""
 
-#: userland/libc/src/ui.c:1004
+#: userland/runtime/src/ui.c:1004
 msgid "File not found "
 msgstr ""
 
@@ -1614,19 +1614,19 @@ msgstr ""
 msgid "File system:"
 msgstr ""
 
-#: userland/libc/src/ui.c:1017
+#: userland/runtime/src/ui.c:1017
 msgid "File type must match "
 msgstr ""
 
-#: userland/libc/src/ui.c:1762
+#: userland/runtime/src/ui.c:1762
 msgid "File:"
 msgstr ""
 
-#: userland/libc/src/ui.c:1128
+#: userland/runtime/src/ui.c:1128
 msgid "Files of type:"
 msgstr ""
 
-#: userland/libc/src/ui.c:1094
+#: userland/runtime/src/ui.c:1094
 msgid "Files:"
 msgstr ""
 
@@ -2286,7 +2286,7 @@ msgstr ""
 msgid "Logo unavailable"
 msgstr ""
 
-#: userland/libc/src/ui.c:1076
+#: userland/runtime/src/ui.c:1076
 msgid "Look in:"
 msgstr ""
 
@@ -2782,7 +2782,7 @@ msgstr ""
 msgid "Open With..."
 msgstr ""
 
-#: userland/libc/src/ui.c:991
+#: userland/runtime/src/ui.c:991
 msgid "Open dir failed "
 msgstr ""
 
@@ -2810,7 +2810,7 @@ msgstr ""
 msgid "OpenRC graphical session"
 msgstr ""
 
-#: userland/libc/src/ui.c:998
+#: userland/runtime/src/ui.c:998
 msgid "Opened "
 msgstr ""
 
@@ -2850,7 +2850,7 @@ msgstr ""
 msgid "Other Users"
 msgstr ""
 
-#: userland/libc/src/ui.c:1031
+#: userland/runtime/src/ui.c:1031
 msgid "Overwrite canceled for "
 msgstr ""
 
@@ -3130,7 +3130,7 @@ msgstr ""
 msgid "Programs to replace"
 msgstr ""
 
-#: userland/libc/src/ui.c:1783
+#: userland/runtime/src/ui.c:1783
 msgid "Programs:"
 msgstr ""
 
@@ -3190,7 +3190,7 @@ msgstr ""
 msgid "Ready "
 msgstr ""
 
-#: userland/libc/src/ui.c:1254
+#: userland/runtime/src/ui.c:1254
 msgid "Ready in "
 msgstr ""
 
@@ -3570,7 +3570,7 @@ msgstr ""
 msgid "Select a file"
 msgstr ""
 
-#: userland/libc/src/ui.c:979
+#: userland/runtime/src/ui.c:979
 msgid "Select a file in "
 msgstr ""
 
@@ -3630,7 +3630,7 @@ msgstr ""
 msgid "Selection changed; operation cancelled"
 msgstr ""
 
-#: userland/libc/src/ui.c:1122
+#: userland/runtime/src/ui.c:1122
 msgid "Selection:"
 msgstr ""
 
@@ -3682,7 +3682,7 @@ msgstr ""
 msgid "Session IPC"
 msgstr ""
 
-#: userland/libc/src/ui.c:1819
+#: userland/runtime/src/ui.c:1819
 msgid "Set Default"
 msgstr ""
 
@@ -4198,7 +4198,7 @@ msgstr ""
 msgid "This document has no body."
 msgstr ""
 
-#: userland/libc/src/ui.c:1028
+#: userland/runtime/src/ui.c:1028
 msgid "This file already exists. Replace it?"
 msgstr ""
 
@@ -4414,7 +4414,7 @@ msgstr ""
 msgid "Update completed successfully"
 msgstr ""
 
-#: userland/libc/src/ui.c:1776
+#: userland/runtime/src/ui.c:1776
 msgid "Update default program"
 msgstr ""
 

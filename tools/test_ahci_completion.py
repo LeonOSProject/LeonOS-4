@@ -8,6 +8,6 @@ with tempfile.TemporaryDirectory(prefix="leonos-ahci-") as directory:
     executable = Path(directory) / "ahci-completion"
     subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                     "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                    "-Iinclude", "-Iinclude/uapi", "-Ikernel/ntclks/include",
+                    "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
                     "tools/tests/ahci_completion_test.c", "-o", executable], cwd=ROOT, check=True)
     subprocess.run([executable], check=True, timeout=10)

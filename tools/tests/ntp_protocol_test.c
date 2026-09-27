@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
-#include "../../userland/libc/src/ntp_protocol.h"
+#include "../../userland/runtime/src/ntp_protocol.h"
 int main(void)
 {
     unsigned char request[48] = {0}, response[48] = {0};

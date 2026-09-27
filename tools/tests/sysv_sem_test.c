@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#if !__has_include("../../kernel/ntclks/syscall_sysv_sem.c")
+#if !__has_include("../../kernel/ntclks/kernel/ntclks/syscall_sysv_sem.c")
 int main(void) { fputs("FAIL: SysV semaphore implementation is missing\n", stderr); return 1; }
 #else
-#include "../../kernel/ntclks/syscall_sysv_sem.c"
+#include "../../kernel/ntclks/kernel/ntclks/syscall_sysv_sem.c"
 
 static struct task tasks[4], *current;
 static unsigned allocations;

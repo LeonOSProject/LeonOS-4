@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <sys/stat.h>
-#include "../../userland/libc/src/blockdev.c"
+#include "../../userland/runtime/src/blockdev.c"
 /* Back the real sector reader with a regular temporary disk image. */
 int ioctl(int fd, unsigned long command, ...)
 {

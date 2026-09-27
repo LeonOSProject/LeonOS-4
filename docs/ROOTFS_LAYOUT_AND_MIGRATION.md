@@ -7,7 +7,7 @@ usr-merge 链接。按维护者决定，不支持从旧目录布局自动迁移�
 ## 布局来源与实现真源
 
 目录基线为 [Alpine baselayout 3.7.2 的 APKBUILD](https://gitlab.alpinelinux.org/alpine/aports/-/blob/master/main/alpine-baselayout/APKBUILD)。
-共享目录、模式和符号链接表在 `include/uapi/leonos/rootfs.h`：C 安装器直接展开，
+共享目录、模式和符号链接表在 `kernel/ntclks/include/uapi/leonos/rootfs.h`：C 安装器直接展开，
 `tools/leonos_layout.py` 读取同一张表。应用路径常量在 `include/leonos/layout.h`
 及 SDK 镜像头文件中。修改目录清单应修改共享表，不能在各镜像脚本另写列表。
 

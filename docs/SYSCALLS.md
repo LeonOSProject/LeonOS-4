@@ -30,7 +30,7 @@ cell widths determine aligned 3/2/1-column layouts and wrapping.
 
 musl enters the kernel with the native `syscall` instruction. The LeonOS
 extension assembly helpers in
-`userland/libc/src/syscall.S` translate C call arguments into the syscall ABI:
+`userland/runtime/src/syscall.S` translate C call arguments into the syscall ABI:
 
 - `rax`: syscall number.
 - `rdi`, `rsi`, `rdx`, `r10`, `r8`, `r9`: arguments 0 through 5.
@@ -44,12 +44,12 @@ Return values follow the kernel convention:
 
 The public userland numbers and wrappers are in:
 
-- `userland/libc/include/leonos/syscall.h`
-- `userland/libc/src/libc.c`
+- `userland/runtime/include/leonos/syscall.h`
+- `userland/runtime/src/libc.c`
 
 The kernel-side numbers and errno constants are in:
 
-- `kernel/ntclks/include/ntclks/syscall.h`
+- `kernel/ntclks/kernel/ntclks/include/ntclks/syscall.h`
 
 ## Implemented Syscall Table
 
@@ -335,7 +335,7 @@ task and inherited by child applications. Logout clears the session identity and
 kills ordinary user tasks in the session, then desktop returns to `login.elf`.
 
 The kernel makes every file, task-kill, user-management, and installer-storage
-decision itself in `kernel/ntclks/permissions.c`, against the permissions the
+decision itself in `kernel/ntclks/fs/permissions.c`, against the permissions the
 storage layer reports: the `LEONACL.SYS` sidecar on exFAT and FAT32, native
 inode fields on ext2 and tmpfs, and fixed modes for PTY and device nodes. The
 mapping is:

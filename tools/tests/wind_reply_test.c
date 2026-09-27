@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <sys/un.h>
 
-#include "../../userland/libc/src/wind.c"
+#include "../../userland/runtime/src/wind.c"
 
 static unsigned frame_index;
 static int flood_mode;

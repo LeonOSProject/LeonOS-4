@@ -2,7 +2,7 @@
  * Host unit test for the Linux ioctl close-on-exec descriptor flags.
  *
  * The test compiles and links the real kernel translation unit
- * (kernel/ntclks/syscall.c) so it exercises the actual descriptor helpers,
+ * (kernel/ntclks/kernel/ntclks/syscall.c) so it exercises the actual descriptor helpers,
  * descriptor tables and error paths rather than a re-implementation.  It is
  * the host-side half of the ioctl(FIOCLEX/FIONCLEX) regression; the guest half
  * is tools/tests/linux_ioctl_cloexec_test.c, which runs the same Linux ABI on
@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../kernel/ntclks/syscall.c"
+#include "../../kernel/ntclks/kernel/ntclks/syscall.c"
 
 static int fail_allocation;
 void *kernel_malloc(size_t size) { return fail_allocation ? NULL : malloc(size); }

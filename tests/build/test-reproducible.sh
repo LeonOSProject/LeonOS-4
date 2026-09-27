@@ -36,8 +36,10 @@ build_into() {
     mkdir -p "$1" || return 1
     # Different output paths, including a different depth from the source root,
     # so an accidentally embedded build directory shows up as a hash difference.
+    # build-info is explicit since the kernel adapter: the version header is
+    # parent-owned (rpr/site/app packages) and no longer rides the kernel link.
     SOURCE_DATE_EPOCH="$epoch" \
-        make -s O="$1" -j"$(nproc)" kernel >"$1.log" 2>&1
+        make -s O="$1" -j"$(nproc)" kernel build-info >"$1.log" 2>&1
 }
 
 first=$work/one/out
@@ -59,10 +61,11 @@ fi
 pass 'both output trees build from scratch'
 
 # Every product, not just the image: a generated header that drifts would change
-# what the next rebuild recompiles.
+# what the next rebuild recompiles. The kernel side is compared through the
+# sub-build tree (ntclks/) and the products the adapter publishes.
 for product in include/generated/autoconf.h \
-        include/generated/build_info.h obj/kernel/sources.list \
-        generated/system/kernel.unstripped generated/system/kernel.sys \
+        include/generated/build_info.h ntclks/obj/kernel/sources.list \
+        ntclks/generated/system/kernel.unstripped generated/system/kernel.sys \
         generated/system/kernel.debug; do
     checks=$((checks + 1))
     if [ ! -f "$first/$product" ]; then

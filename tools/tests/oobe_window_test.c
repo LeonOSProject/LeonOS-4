@@ -4,7 +4,7 @@
 #define main windowd_program_main
 #include "../../userland/apps/windowd/main.c"
 #undef main
-#include "../../userland/libc/src/wind.c"
+#include "../../userland/runtime/src/wind.c"
 
 static uint32_t test_now;
 static int request_pending;

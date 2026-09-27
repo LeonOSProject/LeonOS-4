@@ -1,4 +1,4 @@
-#include "include/uapi/leonos/rootfs.h"
+#include "kernel/ntclks/include/uapi/leonos/rootfs.h"
 #include <stdio.h>
 int main(void) {
 #define DIRECTORY(path, mode)                                                  \

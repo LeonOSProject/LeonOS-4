@@ -5,5 +5,9 @@ depend() { before "*"; }
 start() {
     checkpath --directory --mode 0755 /run/leonos /run/lock /var/log || return 1
     checkpath --directory --mode 1777 /tmp /var/tmp || return 1
+    # Hostname load moved out of the kernel (A16); keep the default
+    # "leonos" when /etc/hostname is absent or rejected, like the old
+    # kernel loader did. Never fail the service over the hostname.
+    test -f /etc/hostname && hostname -F /etc/hostname
     test -r /proc/self/status && test -d /sys && test -c /dev/console
 }

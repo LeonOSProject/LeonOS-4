@@ -10,21 +10,23 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class GpuAbiTests(unittest.TestCase):
     def test_syscall_and_copyout(self):
-        for name, source in (("gpu_syscall", "kernel/ntclks/gpu.c"),
-                             ("gpu_usercopy", "kernel/ntclks/user/usercopy.c")):
+        for name, source in (("gpu_syscall", "kernel/ntclks/kernel/ntclks/gpu.c"),
+                             ("gpu_usercopy", "kernel/ntclks/kernel/exec/usercopy.c")):
             with self.subTest(name=name), tempfile.TemporaryDirectory(prefix="leonos-gpu-") as tmp:
                 executable = str(Path(tmp) / name)
                 subprocess.run([
                     "cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-g",
                     "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
-                    "-Ikernel/ntclks/include", "-Iinclude", "-Iinclude/uapi",
+                    "-Ikernel/ntclks/kernel/ntclks/include", "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi",
                     f"tools/tests/{name}_test.c", source, "-o", executable,
                 ], cwd=ROOT, check=True)
                 subprocess.run([executable], cwd=ROOT, check=True, timeout=30)
 
-    def test_sdk_header_matches(self):
-        self.assertEqual((ROOT / "include/leonos/gpu.h").read_bytes(),
-                         (ROOT / "devtools/include/leonos/gpu.h").read_bytes())
+    def test_sdk_header_single_source(self):
+        # SDK ABI headers come from the headers_install export; the old
+        # hand-maintained devtools/include mirrors must not come back.
+        self.assertFalse((ROOT / "devtools/include/leonos").exists())
+        self.assertFalse((ROOT / "devtools/include/linux").exists())
 
     def test_taskmgr_sampling(self):
         with tempfile.TemporaryDirectory(prefix="leonos-gpu-sampler-") as tmp:
@@ -32,7 +34,8 @@ class GpuAbiTests(unittest.TestCase):
             subprocess.run([
                 "cc", "-std=c11", "-O1", "-g", "-Wall", "-Wextra", "-Werror",
                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer", "-Iinclude",
-                "tools/tests/taskmgr_gpu_sample_test.c", "-o", executable,
+                "-Ikernel/ntclks/include/uapi",
+                    "tools/tests/taskmgr_gpu_sample_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=30)
 

@@ -17,6 +17,11 @@
 struct entry {
     char *source, *path, *owner, *target;
     mode_t mode;
+    /* Guest gid for the staged inode (plan column 7, default 0). The rootfs
+     * image build re-applies it after its blanket chown (tools/build/images.sh);
+     * the M1 service role gids live there and in the staged group files
+     * (system/rootfs/etc/group, system/test-accounts/group). */
+    unsigned gid;
     char type;
     int override;
     size_t order;
@@ -88,7 +93,8 @@ static char *link_text(const char *source) {
     return NULL;
 }
 static void add(char type, const char *source, const char *path, mode_t mode,
-                const char *owner, int override, const char *target) {
+                unsigned gid, const char *owner, int override,
+                const char *target) {
     valid_guest(path);
     if (count == 1000000)
         die("manifest entry limit");
@@ -100,8 +106,10 @@ static void add(char type, const char *source, const char *path, mode_t mode,
         entries = p;
     }
     entries[count] = (struct entry){
-        copy(source), copy(path), copy(owner), target ? copy(target) : NULL,
-        mode,         type,       override,    count};
+        .source = copy(source), .path = copy(path), .owner = copy(owner),
+        .target = target ? copy(target) : NULL,
+        .mode = mode, .gid = gid, .type = type, .override = override,
+        .order = count};
     ++count;
 }
 static void expand(const char *source, const char *path, const char *owner,
@@ -113,7 +121,7 @@ static void expand(const char *source, const char *path, const char *owner,
         die("stat %s: %s", source, strerror(errno));
     if (S_ISDIR(st.st_mode)) {
         if (strcmp(path, "/"))
-            add('d', source, path, st.st_mode & 07777, owner, override, NULL);
+            add('d', source, path, st.st_mode & 07777, 0, owner, override, NULL);
         struct dirent **names;
         int n = scandir(source, &names, NULL, alphasort);
         if (n < 0)
@@ -131,10 +139,10 @@ static void expand(const char *source, const char *path, const char *owner,
         }
         free(names);
     } else if (S_ISREG(st.st_mode)) {
-        add('f', source, path, st.st_mode & 07777, owner, override, NULL);
+        add('f', source, path, st.st_mode & 07777, 0, owner, override, NULL);
     } else if (S_ISLNK(st.st_mode)) {
         char *target = link_text(source);
-        add('l', source, path, 0777, owner, override, target);
+        add('l', source, path, 0777, 0, owner, override, target);
         free(target);
     } else
         die("unsupported source file type: %s", source);
@@ -153,18 +161,20 @@ static void read_plan(const char *name) {
             line[--length] = 0;
         if (!length || line[0] == '#')
             continue;
-        char *fields[6], *p = line;
-        for (size_t i = 0; i < 6; ++i) {
-            fields[i] = p;
-            char *tab = strchr(p, '\t');
-            if (i < 5) {
-                if (!tab)
-                    die("plan requires six tab-separated fields");
-                *tab = 0;
-                p = tab + 1;
-            } else if (tab)
+        char *fields[7], *p = line;
+        size_t nfields = 0;
+        for (;;) {
+            if (nfields == 7)
                 die("extra plan fields");
+            fields[nfields++] = p;
+            char *tab = strchr(p, '\t');
+            if (!tab)
+                break;
+            *tab = 0;
+            p = tab + 1;
         }
+        if (nfields < 6)
+            die("plan requires six tab-separated fields");
         char type = fields[0][0];
         if (fields[0][1] || !strchr("tfdlx", type))
             die("invalid plan type");
@@ -173,6 +183,16 @@ static void read_plan(const char *name) {
         unsigned long mode = strtoul(fields[3], &end, 8);
         if (errno || !*fields[3] || *end || mode > 07777)
             die("invalid mode");
+        /* Column 7 is the guest gid (decimal), optional; an absent or
+         * explicitly zero column keeps the historic root-owned staging. */
+        unsigned gid = 0;
+        if (nfields == 7) {
+            errno = 0;
+            unsigned long value = strtoul(fields[6], &end, 10);
+            if (errno || !*fields[6] || *end || value > 4294967295UL)
+                die("invalid gid");
+            gid = (unsigned)value;
+        }
         int override = !strcmp(fields[5], "override");
         if (!override && strcmp(fields[5], "unique"))
             die("invalid overlay policy");
@@ -185,7 +205,7 @@ static void read_plan(const char *name) {
                     die("regular source required: %s", fields[1]);
             }
             add(type, type == 'l' ? "" : fields[1], fields[2], (mode_t)mode,
-                fields[4], override, type == 'l' ? fields[1] : NULL);
+                gid, fields[4], override, type == 'l' ? fields[1] : NULL);
         }
     }
     free(line);
@@ -307,8 +327,8 @@ static void apply(const char *root, const char *manifest) {
         json_string(f, e->source);
         fputs(",\"path\":", f);
         json_string(f, e->path);
-        fprintf(f, ",\"mode\":\"%04o\",\"uid\":0,\"gid\":0,\"owner\":",
-                (unsigned)e->mode);
+        fprintf(f, ",\"mode\":\"%04o\",\"uid\":0,\"gid\":%u,\"owner\":",
+                (unsigned)e->mode, e->gid);
         json_string(f, e->owner);
         if (e->target) {
             fputs(",\"target\":", f);

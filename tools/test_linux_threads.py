@@ -13,10 +13,10 @@ with tempfile.TemporaryDirectory(prefix="leonos-threads-") as tmp:
             "cc", "-std=c11", "-pthread", "-g", "-O1", "-fsanitize=address,undefined",
             "-fno-sanitize-recover=all", "-ffunction-sections", "-fdata-sections",
             "-Wl,--gc-sections", "-fno-pie", "-no-pie",
-            "-Iinclude", "-Iinclude/uapi", "-Ikernel/ntclks/include",
+            "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
             *(["-D_GNU_SOURCE"] if test == "signal_address_space" else []),
-        f"tools/tests/{test}_test.c", "kernel/ntclks/syscall_sysv_sem.c",
-        *(["kernel/ntclks/syscall_locks.c"] if test == "signal_address_space" else []), "-o", output,
+        f"tools/tests/{test}_test.c", "kernel/ntclks/kernel/ntclks/syscall_sysv_sem.c",
+        *(["kernel/ntclks/kernel/ntclks/syscall_locks.c"] if test == "signal_address_space" else []), "-o", output,
         ], cwd=root, check=True)
         subprocess.run([output], cwd=root, check=True, timeout=20)
     output = str(Path(tmp) / "signal_queue_abi")

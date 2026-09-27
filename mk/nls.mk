@@ -13,7 +13,7 @@ NLS_DIR := $(O_GENERATED)/nls
 NLS_MO := $(addsuffix /LC_MESSAGES/leonos.mo,$(addprefix $(NLS_DIR)/,$(LEONOS_NLS_LANGS)))
 NLS_MUSL_MO := $(addsuffix .UTF-8,$(addprefix $(O_GENERATED)/musl-locales/,$(LEONOS_NLS_LANGS)))
 LEONOS_NLS_SOURCES := $(sort $(wildcard $(LEONOS_SRC)/userland/apps/*/*.c \
-    $(LEONOS_SRC)/userland/apps/*/*.h $(LEONOS_SRC)/userland/libc/src/*.c $(LEONOS_SRC)/configs/nls/messages.c))
+    $(LEONOS_SRC)/userland/apps/*/*.h $(LEONOS_SRC)/userland/runtime/src/*.c $(LEONOS_SRC)/configs/nls/messages.c))
 LEONOS_NLS_REL_SOURCES := $(patsubst $(LEONOS_SRC)/%,%,$(LEONOS_NLS_SOURCES))
 LEONOS_SIG_nls := msgfmt=$(shell msgfmt --version 2>/dev/null | head -n1)|flags=-c --check --endianness=little|langs=$(LEONOS_NLS_LANGS)|sources=$(LEONOS_NLS_REL_SOURCES)
 $(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,nls)))

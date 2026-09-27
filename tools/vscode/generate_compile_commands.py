@@ -16,22 +16,21 @@ from pathlib import Path
 
 REGION_PATTERNS: dict[str, tuple[str, ...]] = {
     "kernel": (
-        "kernel/ntclks/**/*.c", "kernel/ntclks/**/*.S",
-        "kernel/ostui/**/*.c", "drivers/bootstrap/**/*.c",
-        "drivers/bootstrap/**/*.S",
+        "kernel/ntclks/kernel/ntclks/**/*.c", "kernel/ntclks/kernel/ntclks/**/*.S",
+        "kernel/ntclks/kernel/exec/**/*.c", "kernel/ntclks/drivers/console/**/*.c",
+        "kernel/ntclks/drivers/bootstrap/**/*.c",
+        "kernel/ntclks/drivers/bootstrap/**/*.S",
+        "kernel/ntclks/arch/**/*.c", "kernel/ntclks/arch/**/*.S",
+        "kernel/ntclks/mm/**/*.c", "kernel/ntclks/fs/**/*.c", "kernel/ntclks/net/**/*.c",
     ),
-    "loader": ("boot/loader/**/*.c", "boot/loader/**/*.S"),
+    "loader": ("kernel/ntclks/boot/loader/**/*.c", "kernel/ntclks/boot/loader/**/*.S"),
     "libc": (
-        "userland/libc/src/**/*.c", "userland/libc/src/**/*.S",
-        "userland/libc/src/**/*.cpp",
+        "userland/runtime/src/**/*.c", "userland/runtime/src/**/*.S",
+        "userland/runtime/src/**/*.cpp",
     ),
     "userland": (
         "userland/**/*.c", "userland/**/*.cpp", "userland/**/*.cc",
         "userland/**/*.cxx", "userland/**/*.S",
-    ),
-    "devtools": (
-        "devtools/examples/**/*.c", "devtools/examples/**/*.cpp",
-        "devtools/examples/**/*.cc", "devtools/examples/**/*.cxx",
     ),
 }
 
@@ -48,12 +47,21 @@ def all_sources(root: Path, region: str) -> list[Path]:
 def include_flags(root: Path, region: str) -> list[str]:
     common = [root / "include", root / "build/include", root / "build/include/generated"]
     if region == "kernel":
-        paths = common + [root / "kernel/ntclks/include", root / "drivers/bootstrap"]
+        # Mirrors the kernel build's include order (paths relative to the
+        # ntclks submodule root): O_INCLUDE, core private include, UAPI,
+        # leonos heads; the parent's include stays as a fallback for runtime
+        # forwarders.
+        paths = [root / "build/include", root / "kernel/ntclks/kernel/ntclks/include",
+                 root / "kernel/ntclks/include/uapi", root / "kernel/ntclks/include",
+                 root / "include", root / "build/include/generated",
+                 root / "kernel/ntclks/drivers/bootstrap"]
     elif region == "loader":
-        paths = common
+        paths = [root / "build/include", root / "kernel/ntclks/include/uapi",
+                 root / "kernel/ntclks/include", root / "include",
+                 root / "build/include/generated"]
     elif region in {"libc", "userland"}:
         paths = common + [
-            root / "userland/libc/include",
+            root / "userland/runtime/include",
             root / "build/musl/sysroot/include",
             root / "third_party/mbedtls/include",
             root / "third_party/zlib",
@@ -63,9 +71,8 @@ def include_flags(root: Path, region: str) -> list[str]:
             root / "third_party/stardustui",
         ]
     else:
-        paths = [root / "devtools/include", root / "devtools/examples",
-                 root / "include",
-                 root / "build/include", root / "userland/libc/include",
+        paths = [root / "include",
+                 root / "build/include", root / "userland/runtime/include",
                  root / "build/musl/sysroot/include"]
     return [f"-I{path.relative_to(root).as_posix()}" for path in paths if path.is_dir()]
 
@@ -122,16 +129,14 @@ def output_path(root: Path, source: Path) -> Path:
 
 
 def source_region(root: Path, source: Path, selected: str) -> str:
-    # A source can match multiple broad patterns (notably userland/libc).
+    # A source can match multiple broad patterns (notably userland/runtime).
     # Keep the most specific region first so its flags and headers win.
-    if source.is_relative_to(root / "boot/loader"):
+    if source.is_relative_to(root / "kernel/ntclks/boot/loader"):
         return "loader"
-    if source.is_relative_to(root / "userland/libc") or source.is_relative_to(root / "third_party/mbedtls"):
+    if source.is_relative_to(root / "userland/runtime") or source.is_relative_to(root / "third_party/mbedtls"):
         return "libc"
-    if source.is_relative_to(root / "kernel") or source.is_relative_to(root / "drivers"):
+    if source.is_relative_to(root / "kernel"):
         return "kernel"
-    if source.is_relative_to(root / "devtools"):
-        return "devtools"
     return "userland" if selected == "all" else selected
 
 

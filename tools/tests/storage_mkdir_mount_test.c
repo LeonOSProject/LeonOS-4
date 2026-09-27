@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../drivers/bootstrap/storage.c"
+#include "../../kernel/ntclks/drivers/bootstrap/storage.c"
 
 static int test_fail_cache_alloc;
 void *kernel_malloc(size_t size) { return malloc(size); }
@@ -25,6 +25,8 @@ void page_cache_invalidate_node(const struct storage_node *node)
 { assert(node && (node->flags & STORAGE_NODE_FLAG_EXT2)); }
 uint32_t smp_cpu_count(void) { return 1; }
 int pty_lookup_path(const char *path, struct storage_node *node)
+{ (void)path; (void)node; abort(); }
+int pty_lookup_vt_path(const char *path, struct storage_node *node)
 { (void)path; (void)node; abort(); }
 /* RAM-backed ext2 must never touch the physical controller or other codecs. */
 void kernel_spin_lock(struct kernel_spinlock *lock) { (void)lock; assert(0); }

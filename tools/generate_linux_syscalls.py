@@ -30,7 +30,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    target = ROOT / "include/uapi/linux/syscall.h"
+    target = ROOT / "kernel/ntclks/include/uapi/linux/syscall.h"
     if args.check:
         if target.read_text() != header():
             raise SystemExit("stale Linux syscall UAPI; run tools/generate_linux_syscalls.py")

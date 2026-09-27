@@ -176,7 +176,7 @@ def main():
                        f'offsetof(struct linux_stat_abi, {raw}), "{libc} offset");']
         source = temp / "uapi.c"
         source.write_text("\n".join(checks) + "\n")
-        run([*cc, "-I", ROOT / "include/uapi", "-Werror", "-fsyntax-only", source])
+        run([*cc, "-I", ROOT / "kernel/ntclks/include/uapi", "-Werror", "-fsyntax-only", source])
         print("PASS musl installed headers vs Linux v6.12 numbers and shared UAPI", flush=True)
         obj = temp / "runtime.o"
         run([*cc, "-c", ROOT / "tools/tests/musl_runtime_test.c", "-o", obj])

@@ -93,9 +93,9 @@ fi
 
 # The refusal must not leave a half-written tree behind, and the winner must not
 # have been disturbed by the loser parsing the same makefiles.
-owner_objects=$(find "$same_o/obj/kernel" \( -name '*.c.o' -o -name '*.S.o' \) 2>/dev/null |
+owner_objects=$(find "$same_o/ntclks/obj/kernel" \( -name '*.c.o' -o -name '*.S.o' \) 2>/dev/null |
         wc -l | tr -d ' ')
-listed=$(wc -l <"$same_o/obj/kernel/sources.list" 2>/dev/null || printf 'unreadable')
+listed=$(wc -l <"$same_o/ntclks/obj/kernel/sources.list" 2>/dev/null || printf 'unreadable')
 if [ "$owner_objects" = "$listed" ] && [ "$owner_objects" -gt 50 ]; then
     pass "the winning build has every manifest source as an object ($owner_objects)"
 else
@@ -142,7 +142,7 @@ for tree in "$other_a" "$other_b"; do
     else
         fail "$name has its own kernel image" 'missing or empty'
     fi
-    if grep -qF -- "$tree" "$tree/obj/kernel/sources.mk" 2>/dev/null; then
+    if grep -qF -- "$tree" "$tree/ntclks/obj/kernel/sources.mk" 2>/dev/null; then
         pass "$name's generated fragment points at $name"
     else
         fail "$name's generated fragment points at $name" \

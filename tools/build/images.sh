@@ -26,6 +26,20 @@ ext2)
     # fakeroot intercepts chown/stat; real host privileges are unnecessary.
     E2FSPROGS_FAKE_TIME="$epoch" FAKEROOTDONTTRYCHOWN=1 fakeroot -- sh -eu -c '
         find "$1" -exec chown -h 0:0 {} +
+        # M1 service role gids (kernel LEONOS_GID_*): re-apply the role marks
+        # the blanket root chown above just erased, for the runtime apps and
+        # the embedded /install/root payload alike (the in-guest installer
+        # copies uid/gid through to the installed system). Absent paths stay
+        # unmarked (component disabled); tools/test_service_marker.py pins the
+        # marked set against the plan/manifest and system/*/etc/group.
+        for base in "" /install/root; do
+            for role in /usr/lib/leonos/apps/desktop/desktop.elf:60001 \
+                        /usr/lib/leonos/apps/windowd/windowd.elf:60002 \
+                        /usr/lib/leonos/apps/imd/imd.elf:60002; do
+                [ -e "$1$base${role%:*}" ] || continue
+                chown -h "0:${role##*:}" "$1$base${role%:*}"
+            done
+        done
         if [ -f "$1/etc/leonos/test-image" ]; then
             test "$(cat "$1/etc/leonos/test-image")" = leonos-standalone-test-v1
             test ! -L "$1/home/test"

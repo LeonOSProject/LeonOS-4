@@ -10,8 +10,10 @@ trap 'rm -rf "$work"' EXIT HUP INT TERM
 mkdir "$work/root" "$work/data" "$work/manifests"
 plan=$work/plan
 : > "$plan"
-record() { printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$@" >> "$plan"; }
-file() { record f "$1" "/$2" "${3:-0644}" "${4:-leonos-base}" "${5:-unique}"; }
+# Plan columns: kind, source, guest path, mode, component, overlay policy and
+# the optional guest gid (decimal, default 0; see leonos-stage read_plan).
+record() { printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "$5" "$6" "${7:-0}" >> "$plan"; }
+file() { record f "$1" "/$2" "${3:-0644}" "${4:-leonos-base}" "${5:-unique}" "${6:-0}"; }
 tree() { record t "$1" "/$2" 0755 "$3" "${4:-unique}"; }
 link() { record l "$2" "/$1" 0777 "${3:-leonos-base}" "${4:-unique}"; }
 enabled() { awk -F '\t' -v id="$1" '$1==id && $4==1 {found=1} END {exit !found}' "$metadata"; }
@@ -74,7 +76,11 @@ $4==1 && ($2 ~ /-app$/ || $1 ~ /^(busybox|cmd|sl)$/) {
 awk -F '\t' '$4==1 && $2 ~ /-app$/ {print $1, $5}' "$metadata" > "$work/apps"
 while read -r app entry; do
     case $app in sudo|su) continue ;; esac
-    file "$out/userland/$app.elf" "usr/lib/leonos/apps/$app/$app.elf" 0755 "$app"
+    # M1 service role gids (kernel LEONOS_GID_*, images.sh re-chown, /etc/group
+    # leonos-window-server/leonos-service): authority rides on the image gid.
+    gid=0
+    case $app in desktop) gid=60001 ;; windowd|imd) gid=60002 ;; esac
+    file "$out/userland/$app.elf" "usr/lib/leonos/apps/$app/$app.elf" 0755 "$app" unique "$gid"
     file "$work/manifests/$app.ini" "usr/lib/leonos/apps/$app/manifest.ini" 0644 "$app"
     if [ "$entry" = 1 ]; then
         file "$src/resources/build-art/app-icons/$app.bmp" "usr/lib/leonos/apps/$app/$app.bmp" 0644 "$app"

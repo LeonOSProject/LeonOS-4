@@ -21,6 +21,17 @@ head -c 8192 /dev/zero > "$tmp/kernel.sys"
 head -c 4096 /dev/zero > "$tmp/loader.elf"
 head -c 123456 /dev/zero > "$tmp/leonos4-installer.iso"
 
+# The kernel side of the release metadata: an install manifest whose per-artifact
+# hashes match these exact bytes, and the kernel's build-version file.
+mkdir -p "$tmp/kernel-install"
+kernel_hash=$(sha256sum "$tmp/kernel.sys" | cut -d' ' -f1)
+loader_hash=$(sha256sum "$tmp/loader.elf" | cut -d' ' -f1)
+manifest="$tmp/kernel-install/manifest.txt"
+printf 'format_version: 1\narch: x86_64\nartifacts:\n  %s  kernel.sys\n  %s  loader.elf\n' \
+    "$kernel_hash" "$loader_hash" > "$manifest"
+version_src="$tmp/build-version"
+printf 'kernel_name=ntclks\nrelease_version=4.9.1\n' > "$version_src"
+
 # Stub apk: mkndx just creates the requested output, as in the RPR test.
 mkdir -p "$tmp/fake-bin"
 cat > "$tmp/fake-bin/apk" <<'EOF'
@@ -44,7 +55,7 @@ printf bb  > "$tmp/apps/leonos-helloworld-4.9.1-r5.apk"
 
 # 1. Build the RPR subtree, then assemble the full Pages tree.
 sh "$src/tools/build/rpr-pages.sh" "$tmp/repository" "$tmp/apps" \
-    "$tmp/kernel.sys" "$tmp/loader.elf" "$build" \
+    "$tmp/kernel.sys" "$tmp/loader.elf" "$manifest" "$version_src" \
     "$tmp/fake-bin/apk" "$tmp/key" "$tmp/rpr-pages" \
     || { echo 'rpr-pages.sh failed' >&2; exit 1; }
 sh "$src/tools/build/site.sh" "$tmp/rpr-pages" "$tmp/leonos4-installer.iso" \
@@ -71,6 +82,20 @@ done
 grep -q '^version=4.9.1$' "$tmp/pages/rpr/kernel/release.txt" \
     && ok 'release.txt version matches build' \
     || bad 'release.txt version drifted from build'
+
+# 4b. The release.txt key set and the pairing hashes are the fixed machine
+#     contract (format_version=2: kernel and loader update as one unit).
+keys=$(sed 's/=.*//' "$tmp/pages/rpr/kernel/release.txt" | LC_ALL=C sort | tr '\n' ' ')
+expected_keys='format_version image_version kernel_file kernel_sha256 loader_file loader_sha256 version '
+if [ "$keys" = "$expected_keys" ]; then
+    ok 'release.txt key set unchanged'
+else
+    bad "release.txt key set drifted: $keys"
+fi
+grep -q "^kernel_sha256=$kernel_hash\$" "$tmp/pages/rpr/kernel/release.txt" \
+    && grep -q "^loader_sha256=$loader_hash\$" "$tmp/pages/rpr/kernel/release.txt" \
+    && ok 'release.txt hashes match the published kernel manifest' \
+    || bad 'release.txt hashes drifted from the kernel manifest'
 
 # 5. No JavaScript anywhere and the ISO hash matches its SHA256SUMS.
 [ -z "$(find "$tmp/pages" -type f -name '*.js' 2>/dev/null)" ] \

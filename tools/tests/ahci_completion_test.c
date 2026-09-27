@@ -2,7 +2,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include "../../drivers/bootstrap/storage/storage_internal.h"
+#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_internal.h"
 
 static int task_file_errors;
 static int timeouts;
@@ -23,7 +23,7 @@ void console_printf(const char *format, ...)
     va_end(ap);
 }
 
-#include "../../drivers/bootstrap/storage/storage_ahci.c"
+#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_ahci.c"
 
 int main(void)
 {

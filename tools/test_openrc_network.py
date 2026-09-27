@@ -12,9 +12,9 @@ def main():
             binary = Path(directory) / name
             subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-Iinclude", "-Iinclude/uapi", "-Ikernel/ntclks/include",
+                "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
                 f"tools/tests/{name}_test.c",
-                *(["kernel/ntclks/time_discipline.c"] if name == "timekeeper_discipline" else []),
+                *(["kernel/ntclks/kernel/ntclks/time_discipline.c"] if name == "timekeeper_discipline" else []),
                 "-o", str(binary)], cwd=ROOT, check=True)
             subprocess.run([str(binary)], check=True, timeout=15)
 

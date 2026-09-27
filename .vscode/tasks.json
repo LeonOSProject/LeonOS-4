@@ -221,14 +221,6 @@
             "presentation": {"reveal": "always", "panel": "shared", "clear": false}
         },
         {
-            "label": "LeonOS: Generate compile database (devtools SDK)",
-            "type": "process",
-            "command": "wsl.exe",
-            "args": ["--cd", "${config:leonos.wslProjectRoot}", "--", "bash", "-lc", "python3 tools/vscode/generate_compile_commands.py --region devtools"],
-            "problemMatcher": [],
-            "presentation": {"reveal": "always", "panel": "shared", "clear": false}
-        },
-        {
             "label": "LeonOS: clang-tidy kernel",
             "type": "process",
             "command": "wsl.exe",

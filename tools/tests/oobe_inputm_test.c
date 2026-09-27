@@ -4,7 +4,7 @@
 #define main imd_program_main
 #include "../../userland/apps/imd/main.c"
 #undef main
-#include "../../userland/libc/src/inputm.c"
+#include "../../userland/runtime/src/inputm.c"
 
 static uint32_t test_now;
 static uint32_t reply_type;

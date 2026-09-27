@@ -23,13 +23,12 @@
         "bugprone-easily-swappable-parameters",
         "performance-no-int-to-ptr"
     ],
-    "C_Cpp.codeAnalysis.clangTidy.headerFilter": "(^|/)(boot|drivers|include|kernel|userland|devtools)/",
+    "C_Cpp.codeAnalysis.clangTidy.headerFilter": "(^|/)(boot|drivers|include|kernel|userland)/",
     "C_Cpp.codeAnalysis.clangTidy.useBuildPath": true,
     "C_Cpp.codeAnalysis.updateDelay": 1500,
     "C_Cpp.codeAnalysis.exclude": {
         "**/build/**": true,
-        "**/third_party/**": true,
-        "**/devtools/components/**/upstream/**": true
+        "**/third_party/**": true
     },
     "C_Cpp.codeAnalysis.clangTidy.codeAction.showDocumentation": true,
     "C_Cpp.codeAnalysis.clangTidy.codeAction.showDisable": true,

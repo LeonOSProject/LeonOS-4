@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
-#include "../../kernel/ntclks/time.c"
+#include "../../kernel/ntclks/kernel/ntclks/time.c"
 static unsigned held;
 void kernel_spin_lock_irqsave(struct kernel_spinlock *lock, uint64_t *flags)
 { (void)lock; assert(held++ == 0); *flags=0; }

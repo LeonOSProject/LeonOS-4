@@ -253,7 +253,7 @@ login marker stalled while opening a PAM session; that separate failure is
 preserved in `build/hyfetch-qemu/login-stalled.log` and is not certified by this
 test. VMware and installed-system login were not verified in this follow-up.
 The pre-existing whole-UAPI header check still fails
-because `include/uapi/leonos/net_control.h` includes `leonos/net.h` outside the
+because `kernel/ntclks/include/uapi/leonos/net_control.h` includes `leonos/net.h` outside the
 UAPI include root; the changed `linux/mman.h` passes standalone C/C++ checks.
 
 The TCP/e1000 receive-path correction is covered by `tools/test_network.py`,

@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "../../kernel/ntclks/uts.c"
+#include "../../kernel/ntclks/kernel/ntclks/uts.c"
 static const char *config="test-host\n";
 static unsigned locked;
 static int read_error, lookup_error;

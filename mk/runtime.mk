@@ -15,7 +15,7 @@ RUNTIME_ZLIB_NAMES := adler32 compress crc32 deflate infback inffast inflate inf
 RUNTIME_PNG_NAMES := png pngerror pngget pngmem pngpread pngread pngrio pngrtran pngrutil \
  pngset pngtrans pngwio pngwrite pngwtran pngwutil
 RUNTIME_SOURCES := $(sort $(patsubst $(LEONOS_SRC)/%,%,$(wildcard \
- $(LEONOS_SRC)/userland/libc/src/*.c $(LEONOS_SRC)/userland/libc/src/*.S \
+ $(LEONOS_SRC)/userland/runtime/src/*.c $(LEONOS_SRC)/userland/runtime/src/*.S \
  $(LEONOS_SRC)/userland/auth/*.c)) \
  $(addprefix third_party/mbedtls/library/,$(addsuffix .c,$(RUNTIME_MBEDTLS_NAMES))) \
  $(addprefix third_party/zlib/,$(addsuffix .c,$(RUNTIME_ZLIB_NAMES))) \
@@ -25,8 +25,8 @@ RUNTIME_INSTALLER_OBJECTS := $(addprefix $(O_OBJ)/installer-runtime/,$(addsuffix
 RUNTIME_FLAGS := --target=$(TRIPLE_USER) $(LEONOS_OPTIMIZATION_FLAGS) -std=c11 \
  -ffreestanding -fno-stack-protector -fPIC -ffunction-sections -fdata-sections \
  -Wall -Wextra -DLEONOS_USE_MUSL -D_GNU_SOURCE -mno-avx -mno-avx2 \
- -I$(LEONOS_SRC)/include/uapi -I$(PAM_ROOT)/usr/include -I$(AUTH_ROOT)/usr/include -I$(MUSL_SYSROOT)/include \
- -I$(LEONOS_SRC)/userland/libc/include \
+ -I$(HEADER_EXPORT_INCLUDE) -I$(PAM_ROOT)/usr/include -I$(AUTH_ROOT)/usr/include -I$(MUSL_SYSROOT)/include \
+ -I$(LEONOS_SRC)/userland/runtime/include \
  -I$(O_INCLUDE) -I$(LEONOS_SRC)/include -I$(LEONOS_SRC)/third_party/mbedtls/include \
  -I$(LEONOS_SRC)/third_party/zlib -I$(LEONOS_SRC)/third_party/libpng \
  -I$(O_INCLUDE)/libpng -DMBEDTLS_CONFIG_FILE='"leonos_mbedtls_config.h"' \
@@ -51,7 +51,7 @@ $(PNG_CONFIG): $(LEONOS_SRC)/third_party/libpng/scripts/pnglibconf.h.prebuilt $(
 	$(Q)sh $(LEONOS_SRC)/tools/build/png-config.sh $< $@ $(LEONOS_EMIT)
 
 define LEONOS_RUNTIME_COMPILE
-$(O_OBJ)/$(1)/%.c.o: $(LEONOS_SRC)/%.c $(2) $(GBK_TABLE) $(PNG_CONFIG) $(MUSL_STAMP) $(RUNTIME_HEADERS) $(O_META)/runtime-cc.sig
+$(O_OBJ)/$(1)/%.c.o: $(LEONOS_SRC)/%.c $(2) $(GBK_TABLE) $(PNG_CONFIG) $(MUSL_STAMP) $(RUNTIME_HEADERS) $(HEADER_EXPORT_MANIFEST) $(O_META)/runtime-cc.sig
 	$$(Q)mkdir -p $$(dir $$@)
 	$$(call LEONOS_LOG,CC,$$<)
 	$$(Q)$$(TARGET_CC) $$(RUNTIME_FLAGS) $$(RUNTIME_CFLAGS) -include $(2) \
@@ -59,9 +59,9 @@ $(O_OBJ)/$(1)/%.c.o: $(LEONOS_SRC)/%.c $(2) $(GBK_TABLE) $(PNG_CONFIG) $(MUSL_ST
 	 $$(if $$(findstring /libpng/,$$<),-DLEONOS_LIBPNG_FIXED_POINT=3) \
 	 -MMD -MP -MF $$@.d -MT $$@ -c $$< -o $$@.tmp
 	$$(Q)mv $$@.tmp $$@
-$(O_OBJ)/$(1)/%.S.o: $(LEONOS_SRC)/%.S $(2) $(O_META)/runtime-cc.sig
+$(O_OBJ)/$(1)/%.S.o: $(LEONOS_SRC)/%.S $(2) $(HEADER_EXPORT_MANIFEST) $(O_META)/runtime-cc.sig
 	$$(Q)mkdir -p $$(dir $$@)
-	$$(Q)$$(TARGET_CC) --target=$$(TRIPLE_USER) -fPIC -I$$(LEONOS_SRC)/include/uapi -MMD -MP -MF $$@.d -MT $$@ -c $$< -o $$@.tmp
+	$$(Q)$$(TARGET_CC) --target=$$(TRIPLE_USER) -fPIC -I$$(HEADER_EXPORT_INCLUDE) -MMD -MP -MF $$@.d -MT $$@ -c $$< -o $$@.tmp
 	$$(Q)mv $$@.tmp $$@
 endef
 $(eval $(call LEONOS_RUNTIME_COMPILE,runtime,$(AUTOCONF_H)))
