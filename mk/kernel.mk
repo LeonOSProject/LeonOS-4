@@ -45,9 +45,14 @@ endif
 endif
 # Sub-build output directory: the checkout writes everything under O.
 NTCLKS_O ?= $(O)/ntclks
+# The sub-make changes directory to NTCLKS_DIR. Resolve paths in the parent
+# before passing them across that boundary, including a caller's NTCLKS_O
+# override; otherwise O=out writes into kernel/ntclks/out instead of ./out.
+NTCLKS_SUBBUILD_O := $(abspath $(NTCLKS_O))
 # DESTDIR for the sub-make's `install`; the published products are copied out
 # of here.
 NTCLKS_DEST := $(O)/kernel-install
+NTCLKS_SUBBUILD_DEST := $(abspath $(NTCLKS_DEST))
 
 # Legacy product locations (kept stable for mk/rootfs.mk, mk/images.mk,
 # mk/rpr.mk and mk/boot.mk).
@@ -105,9 +110,9 @@ $(NTCLKS_PUBLISHED) &: FORCE $(LEONOS_EMIT) | $(O)/kernel-export/manifest.txt
 	        'checkout, e.g. NTCLKS_DIR=/path/to/ntclks or NTCLKS_DIR=.' >&2; \
 	    exit 1; \
 	fi; \
-	exec $(MAKE) -C '$(NTCLKS_DIR)' O='$(NTCLKS_O)' ARCH='$(ARCH)' \
+	exec $(MAKE) -C '$(NTCLKS_DIR)' O='$(NTCLKS_SUBBUILD_O)' ARCH='$(ARCH)' \
 	    PROFILE='$(PROFILE)' SOURCE_DATE_EPOCH='$(or $(SOURCE_DATE_EPOCH),0)' \
-	    $(NTCLKS_TOOL_PASSTHRU) all install DESTDIR='$(NTCLKS_DEST)'
+	    $(NTCLKS_TOOL_PASSTHRU) all install DESTDIR='$(NTCLKS_SUBBUILD_DEST)'
 	$(Q)set -eu; \
 	test -f $(NTCLKS_DEST)/manifest.txt || { \
 	    echo "ntclks adapter: $(NTCLKS_DEST)/manifest.txt missing after install" >&2; \

@@ -27,7 +27,7 @@ HEADER_EXPORT_INSTALLED := $(addprefix $(HEADER_EXPORT_INCLUDE)/, \
 
 # The sub-build's own export tree; the checkout exports the same whitelist into
 # its O before this side publishes it.
-NTCLKS_EXPORT_INCLUDE := $(NTCLKS_O)/kernel-export/include
+NTCLKS_EXPORT_INCLUDE := $(NTCLKS_SUBBUILD_O)/kernel-export/include
 
 # Delegation + publish. The recipe runs on every invocation (FORCE): the
 # checkout decides internally whether anything changed, and the publish below is
@@ -48,7 +48,7 @@ $(HEADER_EXPORT_MANIFEST): FORCE $(LEONOS_EMIT)
 	        'checkout, e.g. NTCLKS_DIR=/path/to/ntclks or NTCLKS_DIR=.' >&2; \
 	    exit 1; \
 	fi; \
-	exec $(MAKE) -C '$(NTCLKS_DIR)' O='$(NTCLKS_O)' ARCH='$(ARCH)' \
+	exec $(MAKE) -C '$(NTCLKS_DIR)' O='$(NTCLKS_SUBBUILD_O)' ARCH='$(ARCH)' \
 	    PROFILE='$(PROFILE)' SOURCE_DATE_EPOCH='$(SOURCE_DATE_EPOCH)' \
 	    headers_install HEADER_EXPORT_LIST='$(HEADER_EXPORT_LIST)'
 	$(Q)set -eu; \
