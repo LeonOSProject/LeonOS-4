@@ -8,13 +8,14 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 
-def prepare(source, output, text_only=False, compiler=None):
+def prepare(source, output, text_only=False, compiler=None,
+            probe_source='tools/tests/vt_guest_test.c'):
     output.mkdir(parents=True, exist_ok=False)
     probe = output / 'vt-probe'
     if compiler is None:
         compiler = ROOT / 'out/x86_64/release/sdk/leonos-musl-sdk/bin/leonos-musl-cc'
     subprocess.run([str(compiler), '-D_GNU_SOURCE', '-static', '-Iinclude', '-Ikernel/ntclks/include/uapi',
-                    'tools/tests/vt_guest_test.c', '-o', str(probe)], cwd=ROOT, check=True)
+                    probe_source, '-o', str(probe)], cwd=ROOT, check=True)
     disk = output / 'disk.raw'
     subprocess.run(['cp', '--reflink=auto', '--sparse=always', str(source), str(disk)], check=True)
     layout = json.loads(subprocess.check_output(['sfdisk', '--json', str(disk)]))['partitiontable']
@@ -46,5 +47,7 @@ if __name__ == '__main__':
     parser.add_argument('--compiler', type=Path, default=None,
                         help='leonos-musl-cc to build the probe with '
                              '(default: out/x86_64/release/sdk/leonos-musl-sdk/bin/leonos-musl-cc)')
+    parser.add_argument('--probe-source', default='tools/tests/vt_guest_test.c',
+                        help='guest probe C source to install as /tmp/vt-probe')
     args = parser.parse_args()
-    print(prepare(args.image, args.output, args.text_only, args.compiler))
+    print(prepare(args.image, args.output, args.text_only, args.compiler, args.probe_source))
