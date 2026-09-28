@@ -16,7 +16,7 @@ int main(void)
     setvbuf(stdout, NULL, _IONBF, 0);
     for (unsigned i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i) {
         char path[128];
-        snprintf(path, sizeof(path), "/usr/lib/leonos/tests/%s.elf", tests[i]);
+        snprintf(path, sizeof(path), "/usr/lib/reliefos/tests/%s.elf", tests[i]);
         printf("[ltp-musl] BEGIN %s\n", tests[i]);
         pid_t child = fork();
         if (child == 0) {

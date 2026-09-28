@@ -2,7 +2,7 @@
 """Run the built Linux ncurses binaries on the host and check their runtime data.
 
 Vim used to be validated here as well; it is a signed upstream Alpine package
-now, so only the LeonOS ncurses build keeps a host-side runtime check.
+now, so only the ReliefOS ncurses build keeps a host-side runtime check.
 """
 
 import argparse
@@ -33,7 +33,7 @@ def main() -> None:
     cleared = subprocess.check_output([str(clear)], env=env)
     assert cleared.startswith(b"\x1b[")
 
-    # LeonOS must retain its native terminal types even if the external
+    # ReliefOS must retain its native terminal types even if the external
     # database is missing or damaged; this is the failure mode from issue #27.
     fallback_env = {**env, "TERMINFO": "/nonexistent/terminfo",
                     "TERMINFO_DIRS": "/nonexistent/terminfo"}
@@ -43,7 +43,7 @@ def main() -> None:
     fallback_columns = subprocess.check_output(
         [str(ncurses / "bin/tput"), "cols"], env=fallback_env)
     assert int(fallback_columns) > 0
-    with tempfile.TemporaryDirectory(prefix="leonos-terminal-test-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-terminal-test-") as directory:
         work = Path(directory)
         probe = work / "ncurses-test"
         subprocess.run([

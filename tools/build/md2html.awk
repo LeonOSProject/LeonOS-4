@@ -1,6 +1,6 @@
 # md2html.awk — a dependency-free Markdown-to-HTML converter.
 #
-# The LeonOS production build must not shell out to Python, Node or any other
+# The ReliefOS production build must not shell out to Python, Node or any other
 # runtime (Makefile contract), so this is a self-contained awk program covering
 # exactly the Markdown surface the docs/ tree actually uses:
 #   - ATX headings (#..######) with GitHub-style slug ids (unique per page)

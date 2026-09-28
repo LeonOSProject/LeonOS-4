@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the MOTD/PAM-topology probe on NTCLKS using an isolated diagnostic ISO.
+"""Run the MOTD/PAM-topology probe on ReliefNT using an isolated diagnostic ISO.
 First build: make O=out image-vmdk iso
 Then run: python3 tests/integration/test-motd-qemu.py out
 No production image is modified; the existing ioctl regression launch slot is
@@ -23,7 +23,7 @@ assert firmware, 'OVMF firmware is required'
 def run(args, **kwargs):
     return subprocess.run([str(a) for a in args], check=True, **kwargs)
 
-with tempfile.TemporaryDirectory(prefix='leonos-motd-qemu-') as directory:
+with tempfile.TemporaryDirectory(prefix='reliefos-motd-qemu-') as directory:
     work = Path(directory)
     probe = work / 'probe.elf'
     run(['clang', '--target=x86_64-linux-musl', f'--sysroot={out}/sysroot/musl',
@@ -32,8 +32,8 @@ with tempfile.TemporaryDirectory(prefix='leonos-motd-qemu-') as directory:
          src / 'tools/tests/motd_guest_probe.c', '-o', probe])
     root = work / 'root.ext2'
     shutil.copyfile(out / 'images/root.ext2', root)
-    guest = '/usr/lib/leonos/tests/linux-ioctl-cloexec.elf'
-    for command in ('mkdir /usr/lib/leonos/tests', f'rm {guest}',
+    guest = '/usr/lib/reliefos/tests/linux-ioctl-cloexec.elf'
+    for command in ('mkdir /usr/lib/reliefos/tests', f'rm {guest}',
                     f'write {probe} {guest}', f'set_inode_field {guest} mode 0100755'):
         run(['debugfs', '-w', '-R', command, root], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     config = work / 'grub.cfg'
@@ -61,7 +61,7 @@ with tempfile.TemporaryDirectory(prefix='leonos-motd-qemu-') as directory:
                 if '[motd-test] DONE' in text:
                     assert '[motd-test] DONE failures=0' in text, text[text.find('[motd-test] BEGIN'):]
                     print(text[text.find('[motd-test] BEGIN'):])
-                    print(f'PASS NTCLKS: PTY width, both locales, sysinfo load and .hushlogin; {log}')
+                    print(f'PASS ReliefNT: PTY width, both locales, sysinfo load and .hushlogin; {log}')
                     break
                 if process.poll() is not None:
                     raise RuntimeError(f'QEMU exited: see {log}')

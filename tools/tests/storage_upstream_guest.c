@@ -210,7 +210,7 @@ int main(void)
     check_transfers("/tmp/storage-transfer");
     RUN("BusyBox pipeline", NULL, "3", "/bin/busybox", "sh", "-c", "printf abc | wc -c");
     RUN("file ELF and text without magic warnings", NULL, "FILE_OK", "/bin/sh", "-c",
-        "set -e; printf 'Hello from LeonOS\\n' >/tmp/file-text.txt; "
+        "set -e; printf 'Hello from ReliefOS\\n' >/tmp/file-text.txt; "
         "/usr/bin/file /bin/busybox /tmp/file-text.txt >/tmp/file-result.txt 2>/tmp/file-errors.txt; "
         "cat /tmp/file-result.txt; cat /tmp/file-errors.txt; "
         "test ! -s /tmp/file-errors.txt; "

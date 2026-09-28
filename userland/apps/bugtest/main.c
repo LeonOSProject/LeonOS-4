@@ -244,7 +244,7 @@ static const struct bug_test tests[TEST_COUNT] = {
     {"read bad dst", "read(fd=0) into unmapped user pointer 0x200000", TEST_SAFE, safe_read_bad_dst},
     {"write bad src", "write(fd=1) from unmapped user pointer 0x200000", TEST_SAFE, safe_write_bad_src},
     {"open bad path", "open() with path pointer outside user range", TEST_SAFE, safe_open_bad_path},
-    {"stat bad out", "leonos_stat_legacy() writes result to bad user pointer", TEST_SAFE, safe_stat_bad_out},
+    {"stat bad out", "reliefos_stat_legacy() writes result to bad user pointer", TEST_SAFE, safe_stat_bad_out},
     {"getcwd bad out", "getcwd() writes cwd to bad user pointer", TEST_SAFE, safe_getcwd_bad_out},
     {"listdir bad entries", "LIST_DIR writes entries to bad pointer", TEST_SAFE, safe_list_dir_bad_entries},
     {"system info bad out", "SYSTEM_INFO writes struct to bad pointer", TEST_SAFE, safe_system_info_bad_out},

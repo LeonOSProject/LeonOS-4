@@ -112,7 +112,7 @@ int handle_toolbar_click(int32_t x, int32_t y)
         return 1;
     }
     if (hit_rect_i(x, y, toolbar_home_x(), button_y(), BROWSER_HOME_W, RELIEFOS_UI_BUTTON_H)) {
-        navigate_to("about:leonos", 1);
+        navigate_to("about:reliefos", 1);
         return 1;
     }
     if (hit_rect_i(x, y, go_x(), address_y(), BROWSER_GO_W, RELIEFOS_UI_BUTTON_H)) {
@@ -181,7 +181,7 @@ int handle_menu_click(int32_t x, int32_t y)
                                      sizeof(items) / sizeof(items[0]), &id)) {
             menu_open = BROWSER_MENU_NONE;
             if (id == BROWSER_CMD_HOME) {
-                navigate_to("about:leonos", 1);
+                navigate_to("about:reliefos", 1);
             } else if (id == BROWSER_CMD_REFRESH) {
                 navigate_to(current_location, 0);
             } else if (id == BROWSER_CMD_DOWNLOAD) {

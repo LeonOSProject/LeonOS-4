@@ -609,21 +609,21 @@ endmenu
 menu "Input methods"
 
 config RELIEFOS_COMPONENT_APP_OSCHINPT_BUILD
-    bool "Build LeonOS 4 Chinese Input"
+    bool "Build ReliefOS Chinese Input"
     default y
 
 config RELIEFOS_COMPONENT_APP_OSCHINPT_IMAGE
-    bool "Include LeonOS 4 Chinese Input in system images"
+    bool "Include ReliefOS Chinese Input in system images"
     default n
     depends on RELIEFOS_COMPONENT_APP_OSCHINPT_BUILD
 
 config RELIEFOS_COMPONENT_APP_OSCHINPT_ENTRY
-    bool "Generate a desktop entry for LeonOS 4 Chinese Input"
+    bool "Generate a desktop entry for ReliefOS Chinese Input"
     default n
     depends on RELIEFOS_COMPONENT_APP_OSCHINPT_BUILD
 
 config RELIEFOS_COMPONENT_APP_OSCHINPT_SDK
-    bool "Include LeonOS 4 Chinese Input in the developer SDK"
+    bool "Include ReliefOS Chinese Input in the developer SDK"
     default n
     depends on RELIEFOS_COMPONENT_APP_OSCHINPT_BUILD
 

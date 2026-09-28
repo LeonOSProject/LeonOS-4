@@ -31,8 +31,8 @@ class ImageToolsTests(unittest.TestCase):
 
         evidence = []
         for name, root, config, guest in (
-                ("leonos4.iso", "build/live/root.ext2", "boot/grub/live.cfg", "live-smp1"),
-                ("leonos4-installer.iso", "build/install/root.fat", "boot/grub/installer.cfg", "install-smp2")):
+                ("reliefos.iso", "build/live/root.ext2", "boot/grub/live.cfg", "live-smp1"),
+                ("reliefos-installer.iso", "build/install/root.fat", "boot/grub/installer.cfg", "install-smp2")):
             iso = ROOT / "build/images" / name
             result = json.loads((ROOT / f"build/storage-upstream-guest/{guest}/result.json").read_text())
             self.assertTrue(result["complete"])
@@ -40,7 +40,7 @@ class ImageToolsTests(unittest.TestCase):
             self.assertEqual(digest(ROOT / root), result["base_sha256"])
             self.assertEqual(digest(ROOT / "build/system/kernel.sys"), result["kernel_sha256"])
             payloads = {}
-            with tempfile.TemporaryDirectory(prefix="leonos-iso-check-") as directory:
+            with tempfile.TemporaryDirectory(prefix="reliefos-iso-check-") as directory:
                 for inside, source in (("/install/root.fat", root),
                                        ("/leonos/kernel.sys", "build/system/kernel.sys"),
                                        ("/grub/grub.cfg", config)):

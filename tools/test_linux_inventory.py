@@ -56,7 +56,7 @@ def guest(args):
         assert hashlib.sha256(target.read_bytes()).hexdigest()==digest
         target=stage/'usr/lib/reliefos/tests/linux-inventory.elf'; target.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(probe,target)
         write_ext2_root(stage,image)
-    iso_tools.GRUB_TEMPLATE=iso_tools.GRUB_TEMPLATE.replace('autospawn=ioctlcloexec autospawn=python315','autospawn=inventory').replace('syscall-trace=/opt/python/','').replace('LeonOS 4 ioctl CLOEXEC regression','ReliefOS inventory verification')
+    iso_tools.GRUB_TEMPLATE=iso_tools.GRUB_TEMPLATE.replace('autospawn=ioctlcloexec autospawn=python315','autospawn=inventory').replace('syscall-trace=/opt/python/','').replace('ReliefOS ioctl CLOEXEC regression','ReliefOS inventory verification')
     if release_dir:
         iso=WORK/'reliefos-fastfetch.iso'
         grub_config=WORK/'grub.cfg'
@@ -75,7 +75,7 @@ def guest(args):
         iso=iso_tools.build_iso(image,WORK/'reliefos-fastfetch.iso',WORK/'grub.cfg',WORK)
     serial=WORK/'guest-serial.log'; serial.write_text('')
     stderr=WORK/'qemu.log'
-    with tempfile.TemporaryDirectory(prefix='leonos-inventory-') as directory, stderr.open('w') as errors:
+    with tempfile.TemporaryDirectory(prefix='reliefos-inventory-') as directory, stderr.open('w') as errors:
         qmp=Path(directory)/'qmp.sock'
         process=subprocess.Popen(['qemu-system-x86_64','-enable-kvm','-cpu','host','-machine','q35','-m','4096',
             '-smp','2,sockets=1,cores=2,threads=1','-bios','/usr/share/edk2/x64/OVMF.4m.fd',

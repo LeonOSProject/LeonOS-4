@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-threads-") as tmp:
+with tempfile.TemporaryDirectory(prefix="reliefos-threads-") as tmp:
     for test in ("futex_queue", "process_signal_queue", "signal_info_queue", "signalfd",
                  "signal_address_space", "resource_limits", "membarrier_cpu"):
         output = str(Path(tmp) / test)

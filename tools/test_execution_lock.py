@@ -6,7 +6,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
-with tempfile.TemporaryDirectory(prefix="leonos-execution-lock-") as tmp:
+with tempfile.TemporaryDirectory(prefix="reliefos-execution-lock-") as tmp:
     binary = str(Path(tmp) / "test")
     subprocess.run(["cc", "-std=c11", "-pthread", "-O2", "-g", "-Wall", "-Wextra",
                     "-fsanitize=address,undefined", "-fno-pie", "-no-pie",

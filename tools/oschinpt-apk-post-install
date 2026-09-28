@@ -4,8 +4,8 @@ PATH=/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 
 provider_id=oschinpt
-provider_path=/usr/lib/leonos/apps/oschinpt/oschinpt.elf
-settings_path=/usr/lib/leonos/apps/oschinpt/settings.ini
+provider_path=/usr/lib/reliefos/apps/oschinpt/oschinpt.elf
+settings_path=/usr/lib/reliefos/apps/oschinpt/settings.ini
 max_providers=8
 
 install_provider() {

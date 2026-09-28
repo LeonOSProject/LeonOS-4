@@ -6,7 +6,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
-with tempfile.TemporaryDirectory(prefix="leonos-power-") as directory:
+with tempfile.TemporaryDirectory(prefix="reliefos-power-") as directory:
     output = str(Path(directory) / "reboot")
     # Specialize the included dispatcher for SYS_reboot, discarding unrelated
     # kernel handlers. Only the final hardware operations are intercepted.

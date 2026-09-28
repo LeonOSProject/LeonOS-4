@@ -91,7 +91,7 @@ fi
 # --- HTML links resolve to something inside the tree ------------------------
 # All href values except external http(s) URLs must exist relative to the
 # containing HTML file. This guards against a broken base path (plan §25).
-linkfails=$(mktemp "${TMPDIR:-/tmp}/leonos-links.XXXXXX")
+linkfails=$(mktemp "${TMPDIR:-/tmp}/reliefos-links.XXXXXX")
 trap 'rm -f "$linkfails"' EXIT HUP INT TERM
 for page in $(find "$site" -name '*.html' -print); do
     dir=$(dirname "$page")

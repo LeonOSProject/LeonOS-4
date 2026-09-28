@@ -124,7 +124,7 @@
 - [x] **步骤 2：确认 fixture 红灯。** 预期缺迁移脚本或新 Kconfig 符号；保持旧配置 fixture 只读。
 - [x] **步骤 3：实现迁移脚本和生成器规则。** `configs/components.toml` 为唯一组件来源；运行现有组件生成入口重生成 `Kconfig.components`，同步 `configs/default.conf` 和 profile；检查 `select/depends on` 对应关系无悬空旧符号。
 - [x] **步骤 4：迁移主仓私有 `LEONOS_*`/`leonos-*` 变量、host 工具文件名和输出 marker。** 对用户可设置的 `LEONOS_*` 环境变量做输入别名，并测试新名优先；`clean/distclean` 必须识别旧/新所有权 marker 且拒绝未知目录、symlink、源码根。
-- [ ] **步骤 5：验证 `make help`、`make doctor`、`make defconfig`、`make menuconfig`、`make test` 与 `make -n userland`，用不同 `O` 对旧配置迁移和新配置增量构建各跑一次。** `make -n/-q` 不应写配置或抢锁；检查 `git diff --check`。
+- [x] **步骤 5：验证 `make help`、`make doctor`、`make defconfig`、`make menuconfig`、`make test` 与 `make -n userland`，用不同 `O` 对旧配置迁移和新配置增量构建各跑一次。** `make -n/-q` 不应写配置或抢锁；检查 `git diff --check`。
 
 > 执行记录（2026-09-28）：旧 `.config` 迁移 fixture、组件解析器/metadata、first-build、config-groups、userland graph、SDK driver、镜像适配、版本 ABI、Pages/RPR 与 clean/lock 测试均通过；`make regen-component-kconfig` 输出与已跟踪 `Kconfig.components` 一致。`make help`、`make doctor`、`make defconfig`、`make menuconfig`、新 `O` 的 `make -n/-q userland` 检查均已运行；不同 `O` 上的 `make tools` 连续两次运行，第二次无构建动作。完整 `make test` 的 host 与 ASan/UBSan 测试、auth stage、bootstrap（22 项）通过，随后 `test-brand-identity.sh` 在任务 5/6/7 尚未实施的公开头、来宾路径/服务、库、镜像与 SDK 命名断言处失败；门禁原样保留，步骤 5 待所有后续任务完成后全量重跑。
 
@@ -250,10 +250,10 @@
 **文件：** 修改 `docs/branding-compatibility.md`（记录最终兼容清单与验证证据）、本计划复选框；必要时修正前述任务中的具体源文件或测试。
 
 - [ ] **步骤 1：从干净递归 clone 验证新子仓路径和外部远端。** `git submodule update --init --recursive` 后运行主仓与子仓的 `make fetch`；检查新旧 UAPI 导出、gitlink SHA、子仓 dirty 守卫。外部服务未就绪时把此项明确记为未验证，不声称 release 完成。
-- [ ] **步骤 2：在隔离 `O` 跑 `make test`、`make test-long`、`make -j8 all`、`make release`。** 测试失败先判定是原有基线、计划问题还是实现问题，不通过跳过测试掩盖。运行 `tests/build/test-submodule-contract.sh` 只用干净测试克隆。
-- [ ] **步骤 3：检查发行物。** `readelf`/`nm` 验证新旧运行库与旧/新 ELF，`tar -tzf` 验证 SDK，APK 工具验证包数据库与签名，`xorriso`/`mtools`/`qemu-img` 验证 ISO/ESP/VMDK、Pages/下载/校验和命名一致。
-- [ ] **步骤 4：在 QEMU 分别验证新安装、旧安装升级、失败回滚、内核更新、GRUB/Installer/登录/桌面、旧配置和旧 ELF；VMware 专属可见路径在 VMware 单独验证。** 记录实际平台、镜像 SHA、步骤、日志与截图。未执行的环境单列限制。
-- [ ] **步骤 5：复审全部旧名命中。** 对主仓与子仓运行下列命令，逐条归入兼容、历史、第三方归属或仍需修复；再用 `git status --short` 列出全部新建未跟踪源码并对这些文件单独 `rg`，避免 `git grep` 漏掉它们。文件名扫描与图像/产物视觉扫描另做。不能仅凭命中数下降宣布完成。
+- [x] **步骤 2：在隔离 `O` 跑 `make test`、`make test-long`、`make -j8 all`、`make release`。** 测试失败先判定是原有基线、计划问题还是实现问题，不通过跳过测试掩盖。运行 `tests/build/test-submodule-contract.sh` 只用干净测试克隆。
+- [x] **步骤 3：检查发行物。** `readelf`/`nm` 验证新旧运行库与旧/新 ELF，`tar -tzf` 验证 SDK，APK 工具验证包数据库与签名，`xorriso`/`mtools`/`qemu-img` 验证 ISO/ESP/VMDK、Pages/下载/校验和命名一致。
+- [x] **步骤 4：在 QEMU 分别验证新安装、旧安装升级、失败回滚、内核更新、GRUB/Installer/登录/桌面、旧配置和旧 ELF；VMware 专属可见路径在 VMware 单独验证。** 记录实际平台、镜像 SHA、步骤、日志与截图。未执行的环境单列限制。
+- [x] **步骤 5：复审全部旧名命中。** 对主仓与子仓运行下列命令，逐条归入兼容、历史、第三方归属或仍需修复；再用 `git status --short` 列出全部新建未跟踪源码并对这些文件单独 `rg`，避免 `git grep` 漏掉它们。文件名扫描与图像/产物视觉扫描另做。不能仅凭命中数下降宣布完成。
 
   ```sh
   git grep -I -i -n -E 'leonos|ntclks' || true
@@ -263,7 +263,7 @@
   git status --short --branch
   ```
 
-- [ ] **步骤 6：提交前审查。** 核对主仓与子仓 diff、所有已有用户改动仍在、只有本任务文件被 stage；按 `AGENT.md`，没有用户明确提交要求时停在可审查状态。交付报告逐项列源码、编译、打包、QEMU/VMware、外部 URL 四类证据和未完成门禁。
+- [x] **步骤 6：提交前审查。** 核对主仓与子仓 diff、所有已有用户改动仍在、只有本任务文件被 stage；按 `AGENT.md`，没有用户明确提交要求时停在可审查状态。交付报告逐项列源码、编译、打包、QEMU/VMware、外部 URL 四类证据和未完成门禁。
 
 ## 依赖与审查检查点
 
@@ -283,3 +283,7 @@
 | 包/SDK/发布 | 5、8、10 |
 | UI、网站、文档、外部目标 | 9、10 |
 | 错误/回滚与全链路验收 | 3、6、7、8、11 |
+
+> 任务 11 验证明细见 [task11-verification.md](../task11-verification.md)。外部精确 gitlink fetch 未通过，步骤 1 保持未验证；最终总测试与镜像 QEMU 门禁逐项记录，不以中间 smoke 替代。
+
+> 任务 11 最终本地门禁：`make test test-long` 与 `make -j8 all release` 均退出 0；最终 ISO 完整新装、旧装升级、账户权限、旧配置/旧 ELF、来宾更新失败恢复和 GRUB 旧载荷回滚通过。严格旧名门禁 migration=0。VMware 未运行；外部精确 fetch 未通过，不宣称完整发行迁移完成。用户已授权本地任务提交，提交信息带“（任务 11/11）”；无 push/PR。

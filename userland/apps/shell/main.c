@@ -38,7 +38,7 @@ static void shell_line(const char *text)
 static void shell_prompt(void)
 {
     char cwd[RELIEFOS_FS_PATH_LEN];
-    shell_write("\x1b[96mleonos\x1b[0m:");
+    shell_write("\x1b[96mreliefos\x1b[0m:");
     if (getcwd(cwd, sizeof(cwd))) {
         shell_write(cwd);
     } else {

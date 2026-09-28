@@ -4,7 +4,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-inet-") as work:
+with tempfile.TemporaryDirectory(prefix="reliefos-inet-") as work:
     for name in ("udp_socket", "tcp_state", "ntp_protocol"):
         binary = Path(work) / name
         subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",

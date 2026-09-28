@@ -13,7 +13,8 @@ import subprocess
 import tempfile
 import unittest
 
-import leonos_layout as layout
+import reliefos_layout as layout
+import leonos_layout as legacy_layout
 
 ROOT = Path(__file__).resolve().parents[1]
 SEED = ROOT / "system/rootfs"
@@ -38,8 +39,51 @@ SEED_FILES = tuple(sorted(p.relative_to(SEED).as_posix() for parent in
 
 
 class ApkSeedTests(unittest.TestCase):
+    def test_reliefos_layout_module_is_canonical_and_old_import_forwards(self):
+        import reliefos_layout
+
+        self.assertIs(legacy_layout.layout_directories, layout.layout_directories)
+        self.assertIs(legacy_layout.apply_root_symlinks, layout.apply_root_symlinks)
+        self.assertEqual(legacy_layout.ETC_LEONOS, layout.ETC_RELIEFOS)
+
+    def test_reliefos_layout_constants_match_public_header(self):
+        contract = (ROOT / "include/reliefos/layout.h").read_text(encoding="ascii")
+        pairs = {
+            "ETC_RELIEFOS": "RELIEFOS_LAYOUT_ETC_RELIEFOS",
+            "VAR_LIB_RELIEFOS": "RELIEFOS_LAYOUT_VAR_LIB_RELIEFOS",
+            "VAR_CACHE_RELIEFOS": "RELIEFOS_LAYOUT_VAR_CACHE_RELIEFOS",
+            "RUN_RELIEFOS": "RELIEFOS_LAYOUT_RUN_RELIEFOS",
+            "RELIEFOS_LIB": "RELIEFOS_LAYOUT_RELIEFOS_LIB",
+            "RELIEFOS_APPS": "RELIEFOS_LAYOUT_RELIEFOS_APPS",
+            "RELIEFOS_DRIVERS": "RELIEFOS_LAYOUT_RELIEFOS_DRIVERS",
+            "RELIEFOS_TESTS": "RELIEFOS_LAYOUT_RELIEFOS_TESTS",
+            "RELIEFOS_SHARE": "RELIEFOS_LAYOUT_RELIEFOS_SHARE",
+            "RELIEFOS_RESOURCES": "RELIEFOS_LAYOUT_RELIEFOS_RESOURCES",
+            "RELIEFOS_FONTS": "RELIEFOS_LAYOUT_RELIEFOS_FONTS",
+            "RELIEFOS_DOC": "RELIEFOS_LAYOUT_RELIEFOS_DOC",
+            "P_ETC_RELIEFOS": "RELIEFOS_LAYOUT_ETC_RELIEFOS",
+            "P_VAR_LIB_RELIEFOS": "RELIEFOS_LAYOUT_VAR_LIB_RELIEFOS",
+            "P_VAR_CACHE_RELIEFOS": "RELIEFOS_LAYOUT_VAR_CACHE_RELIEFOS",
+            "P_RUN_RELIEFOS": "RELIEFOS_LAYOUT_RUN_RELIEFOS",
+            "P_RELIEFOS_LIB": "RELIEFOS_LAYOUT_RELIEFOS_LIB",
+            "P_RELIEFOS_APPS": "RELIEFOS_LAYOUT_RELIEFOS_APPS",
+            "P_RELIEFOS_DRIVERS": "RELIEFOS_LAYOUT_RELIEFOS_DRIVERS",
+            "P_RELIEFOS_TESTS": "RELIEFOS_LAYOUT_RELIEFOS_TESTS",
+            "P_RELIEFOS_SHARE": "RELIEFOS_LAYOUT_RELIEFOS_SHARE",
+            "P_RELIEFOS_RESOURCES": "RELIEFOS_LAYOUT_RELIEFOS_RESOURCES",
+            "P_RELIEFOS_FONTS": "RELIEFOS_LAYOUT_RELIEFOS_FONTS",
+            "P_RELIEFOS_DOC": "RELIEFOS_LAYOUT_RELIEFOS_DOC",
+        }
+        for python_name, c_name in pairs.items():
+            match = re.search(rf'^#define {c_name} "([^"]+)"$', contract, re.MULTILINE)
+            self.assertIsNotNone(match, c_name)
+            expected = match.group(1)
+            if not python_name.startswith("P_"):
+                expected = expected.lstrip("/")
+            self.assertEqual(getattr(layout, python_name), expected, python_name)
+
     def test_layout_and_shared_ca_links(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-apk-layout-") as directory:
+        with tempfile.TemporaryDirectory(prefix="reliefos-apk-layout-") as directory:
             root = Path(directory)
             layout.layout_directories(root)
             bundle = root / "etc/ssl/certs/ca-certificates.crt"
@@ -83,7 +127,7 @@ class ApkSeedTests(unittest.TestCase):
         self.assertEqual([line for line in options if line and not line.startswith("#")],
                          ["timeout 60", "wait 30", "cache-dir /var/cache/apk"])
         self.assertFalse((SEED / "etc/apk/world").read_text().strip())
-        self.assertIn("ID=leonos", (SEED / "etc/os-release").read_text())
+        self.assertIn("ID=reliefos", (SEED / "etc/os-release").read_text())
         self.assertFalse((SEED / "etc/alpine-release").exists())
         for name in STATE_FILES:
             self.assertFalse((SEED / name).exists(), name)
@@ -145,12 +189,12 @@ def check_images():
             assert hashlib.sha256(debugfs(image, f"cat /{prefix}sbin/apk")).hexdigest() == (
                 "5118a57ae7c07e13268a754f78aa9c7d39a0bed708bb11c101d78e2a884cee5d")
             assert debugfs(image, f"cat /{prefix}usr/share/reliefos/apk/repository/packages.adb")
-            for name in ("usr/lib/leonos/apps/desktop/desktop.elf", "usr/lib/leonos/libleonos.so.2",
+            for name in ("usr/lib/reliefos/apps/desktop/desktop.elf", "usr/lib/reliefos/libreliefos.so.2", "usr/lib/leonos/libleonos.so.2",
                          "sbin/apk", "usr/bin/vim", "usr/bin/sudo", "lib/ld-musl-x86_64.so.1"):
                 entry = package_files["/" + name]
                 assert hashlib.sha256(debugfs(image, f"cat /{prefix}{name}")).hexdigest() == entry["sha256"], (image, prefix, name)
                 stat(image, prefix + name, "regular", int(entry["mode"], 8))
-            assert debugfs(image, f"cat /{prefix}usr/share/doc/leonos/APK_PREPARATION.md") == (
+            assert debugfs(image, f"cat /{prefix}usr/share/doc/reliefos/APK_PREPARATION.md") == (
                 ROOT / "docs/APK_PREPARATION.md").read_bytes()
             print(f"PASS {image.relative_to(ROOT)} {prefix or '/'}: real APK database, executable, repository, modes and trust")
 
@@ -158,7 +202,7 @@ def check_images():
 def check_upstream(apk: Path):
     """Run a separately verified upstream apk against a disposable host root."""
     apk = apk.resolve(strict=True)
-    with tempfile.TemporaryDirectory(prefix="leonos-apk-reference-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-apk-reference-") as directory:
         root = Path(directory)
         layout.layout_directories(root)
         for name in SEED_FILES:

@@ -23,7 +23,7 @@ cd "$repo_root" || exit 1
 deps=${RELIEFOS_DEPS:-${LEONOS_DEPS:?set by mk/tests.mk}}
 lock=${RELIEFOS_LOCK:-${LEONOS_LOCK:-configs/dependencies.lock.json}}
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-fetch-delegate.XXXXXX") || exit 1
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-fetch-delegate.XXXXXX") || exit 1
 failures=0
 checks=0
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check LeonOS third-party license and attribution packaging policy.
+"""Check ReliefOS third-party license and attribution packaging policy.
 
 The checker deliberately uses an explicit policy instead of guessing from
 arbitrary filenames.  It can inspect source trees, staging directories and
@@ -150,7 +150,7 @@ class Artifact:
         return bool(self.archive and any(name.startswith(prefix) for name in self.names))
 
     def api_member(self, api_relative: str, member: str) -> bool:
-        """Check a member inside LeonOS's tar-based ``.api`` package."""
+        """Check a member inside ReliefOS's tar-based ``.api`` package."""
         if not self.root:
             return False
         package = self.root / Path(*api_relative.replace("\\", "/").split("/"))
@@ -231,6 +231,7 @@ def check_image(source: Path, category: str = "image-license") -> list[Finding]:
             # named license directory.
             exec_candidates = (
                 f"programs/{program}/{program}.elf",
+                f"usr/lib/reliefos/apps/{program}/{program}.elf",
                 f"usr/lib/leonos/apps/{program}/{program}.elf",
                 f"usr/bin/{program}",
                 f"bin/{program}",
@@ -239,6 +240,7 @@ def check_image(source: Path, category: str = "image-license") -> list[Finding]:
             )
             present = any(artifact.exists(candidate) for candidate in exec_candidates) or \
                 artifact.has_prefix(f"programs/{program}") or \
+                artifact.has_prefix(f"usr/lib/reliefos/apps/{program}") or \
                 artifact.has_prefix(f"usr/lib/leonos/apps/{program}") or \
                 artifact.has_prefix(f"opt/{program}")
             if not present:
@@ -271,10 +273,10 @@ def check_image(source: Path, category: str = "image-license") -> list[Finding]:
                                        "API package attribution file is present" if found else
                                        "API package is present but its attribution file is missing"))
         # Notices for content which is not an application directory.
-        if artifact.has_any(("programs/doom/doom.elf", "programs/doom/doomgeneric.elf", "api/doom.api")):
-            found = artifact.find(("usr/share/doc/leonos/FREEDOOM-COPYING.txt",))
+        if artifact.has_any(("usr/lib/reliefos/apps/doom/doom.elf", "usr/lib/leonos/apps/doom/doom.elf", "programs/doom/doom.elf", "programs/doom/doomgeneric.elf", "api/doom.api")):
+            found = artifact.find(("usr/share/doc/reliefos/FREEDOOM-COPYING.txt", "usr/lib/reliefos/apps/doom/FREEDOOM-COPYING.txt", "usr/share/doc/leonos/FREEDOOM-COPYING.txt"))
             findings.append(result(category, "pass" if found else "fail", "info" if found else "error",
-                                   "freedoom", "usr/share/doc/leonos/FREEDOOM-COPYING.txt", found or "missing",
+                                   "freedoom", "usr/share/doc/reliefos/FREEDOOM-COPYING.txt or packaged Doom notice", found or "missing",
                                    str(source), "Freedoom notice is present" if found else "Freedoom content lacks its notice"))
         if not findings:
             findings.append(result(category, "warn", "warning", "image", "packaged third-party programs",

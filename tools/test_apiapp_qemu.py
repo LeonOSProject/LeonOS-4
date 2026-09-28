@@ -16,7 +16,7 @@ from test_sudo_e2e_qemu import Probe
 from test_installer_window_qemu import title_point, wait_log
 
 ROOT = Path(__file__).resolve().parents[1]
-APP = "/usr/lib/leonos/apps/apiapp/apiapp.elf"
+APP = "/usr/lib/reliefos/apps/apiapp/apiapp.elf"
 
 
 def wait_since(serial, offset, needle, process, timeout=30):
@@ -50,7 +50,7 @@ def check_wizard(probe, serial, process, terminal_title, package, outcome):
     probe.click(*button)
     time.sleep(.5)
     probe.click(*button)
-    wait_since(serial, authorization_offset, re.escape("path=/usr/lib/leonos/apps/sudod/sudod.elf"), process)
+    wait_since(serial, authorization_offset, re.escape("path=/usr/lib/reliefos/apps/sudod/sudod.elf"), process)
     time.sleep(1)
     probe.frame(f"{outcome}-authorization-zh")
     if outcome == "cancel":
@@ -99,16 +99,16 @@ def main():
         inject(image, pipe_probe, "/bin/pipe-stat-test", "0100755")
         locale = work / "locale.conf"
         locale.write_text("lang=zh\n", encoding="ascii")
-        inject(image, locale, "/etc/leonos/locale.conf")
+        inject(image, locale, "/etc/reliefos/locale.conf")
         # A real file/directory collision forces extraction failure. The
         # package and installer are otherwise the production implementations.
         collision = work / "collision"
         collision.write_text("installation target is a regular file\n", encoding="ascii")
-        inject(image, collision, "/usr/lib/leonos/apps/api-failure")
+        inject(image, collision, "/usr/lib/reliefos/apps/api-failure")
         for name in ("failure", "success"):
             package = work / f"{name}.api"
             build_api_file(f"API {name} fixture", "1.0", "fixture.elf",
-                           f"/usr/lib/leonos/apps/api-{name}", True, False, "",
+                           f"/usr/lib/reliefos/apps/api-{name}", True, False, "",
                            [(str(ROOT / "build/userland/helloworld.elf"), "fixture.elf")],
                            str(package), app_id=f"api-{name}")
             inject(image, package, f"/api/{name}.api")

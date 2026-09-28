@@ -26,7 +26,7 @@ with tempfile.TemporaryDirectory(prefix="pam-helper-reference-", dir=work) as te
               (runtime / "libmimalloc.so.3", "/lib/libmimalloc.so.3"),
               (ROOT / "build/system/lib/libleonos.so.2", "/lib/libleonos.so.2")]
     files += [(scratch / name, "/etc/" + name) for name in ("passwd", "shadow", "group")]
-    files += [(path, "/usr/lib/leonos/tests/pam.d/" + path.name)
+    files += [(path, "/usr/lib/reliefos/tests/pam.d/" + path.name)
               for path in sorted((scratch / "pam.d").iterdir()) if path.is_file()]
     command = ["python3", "tools/test_linux_reference.py", "--probe-binary",
                str(work / "pam-helper-runtime.elf"), "--case", "pam_helper",

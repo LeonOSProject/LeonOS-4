@@ -85,7 +85,7 @@ def main():
     entries = whitelist_entries()
     expected = {install_relative(entry) for entry in entries}
 
-    with tempfile.TemporaryDirectory(prefix="leonos-hexport-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-hexport-") as directory:
         temp = Path(directory)
         if args.out:
             outdir = args.out

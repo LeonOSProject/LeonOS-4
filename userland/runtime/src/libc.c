@@ -841,7 +841,7 @@ static uint32_t http_build_request_text(char *dst, uint32_t cap,
     }
     http_append_text(dst, &pos, cap, "\r\n");
     if (!http_extra_header_present(request->extra_headers, "User-Agent")) {
-        http_append_text(dst, &pos, cap, "User-Agent: LeonOS/4\r\n");
+        http_append_text(dst, &pos, cap, "User-Agent: ReliefOS/4\r\n");
     }
     if (!http_extra_header_present(request->extra_headers, "Accept")) {
         http_append_text(dst, &pos, cap, "Accept: */*\r\n");

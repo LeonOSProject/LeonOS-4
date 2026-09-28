@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare pinned musl secure-exec against Linux 6.12 and a private LeonOS disk."""
+"""Compare pinned musl secure-exec against Linux 6.12 and a private ReliefOS disk."""
 import argparse
 import json
 from pathlib import Path
@@ -20,8 +20,8 @@ def main():
     module = ROOT / "tools/tests/secure_loader_module.c"
     files = []
     for name, definition, destination in (
-            ("trusted", "DEPENDENCY_VALUE=1", "/lib/libleonos-security-probe.so"),
-            ("hostile", "DEPENDENCY_VALUE=2", "/tmp/libleonos-security-probe.so"),
+            ("trusted", "DEPENDENCY_VALUE=1", "/lib/libreliefos-security-probe.so"),
+            ("hostile", "DEPENDENCY_VALUE=2", "/tmp/libreliefos-security-probe.so"),
             ("preload", "HOSTILE_PRELOAD", "/tmp/hostile-preload.so")):
         path = output / name
         path.mkdir()
@@ -32,7 +32,7 @@ def main():
     binary = output / "secure-loader.elf"
     subprocess.run([*compiler, "-O2", "-DSECURE_LOADER_TEST",
                     str(ROOT / "tools/tests/setid_runtime_probe.c"),
-                    "-L" + str(output / "trusted"), "-lleonos-security-probe", "-o", str(binary)], check=True)
+                    "-L" + str(output / "trusted"), "-lreliefos-security-probe", "-o", str(binary)], check=True)
     subprocess.run(["python3", "tools/test_linux_reference.py", "--probe-binary", str(binary),
                     "--case", "secure_loader", "--log", str(output / "linux-6.12.log"),
                     "--file", str(ROOT / "build/musl/sysroot/lib/libc.so"), "/lib/ld-musl-x86_64.so.1",

@@ -1,10 +1,10 @@
-#ifndef LEONOS_NCURSES_H
-#define LEONOS_NCURSES_H
+#ifndef RELIEFOS_NCURSES_H
+#define RELIEFOS_NCURSES_H
 
 #include <stdarg.h>
 
 /*
- * LeonOS exposes the small ANSI curses surface implemented by libleonos.
+ * ReliefOS exposes the small ANSI curses surface implemented by libreliefos.
  * This is intentionally source-compatible with the subset used by Nano and
  * other terminal applications; it is not an ABI-compatible ncurses clone.
  */

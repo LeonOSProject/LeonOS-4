@@ -21,7 +21,7 @@ void reliefos_ui_listview_state_set_count(struct reliefos_ui_listview_state *vie
 int reliefos_sudo_run(const char *user, const char *password, char *const args[], uint32_t *pid)
 {
     assert(!user && !password);
-    assert(!strcmp(args[0], "/usr/lib/leonos/apps/netctl/netctl.elf"));
+    assert(!strcmp(args[0], "/usr/lib/reliefos/apps/netctl/netctl.elf"));
     assert(!strcmp(args[1], "--renew-dhcp") && !args[2]);
     ++authorizations;
     *pid = 123;

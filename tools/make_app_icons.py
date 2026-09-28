@@ -491,7 +491,7 @@ def write_bmp(path: Path, pixels: list[list[tuple[int, int, int, int]]]) -> None
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate LeonOS BMP app icons")
+    parser = argparse.ArgumentParser(description="Generate ReliefOS BMP app icons")
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--apps", nargs="+", required=True)
     args = parser.parse_args()

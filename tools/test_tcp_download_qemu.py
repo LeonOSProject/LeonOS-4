@@ -78,11 +78,11 @@ def main():
     shutil.copyfile(ROOT / "build/live/root.ext2", image)
     run(["truncate", "-s", "768M" if args.install else "512M", image])
     run(["resize2fs", "-f", image], capture_output=True)
-    run(["debugfs", "-w", "-R", "mkdir /usr/lib/leonos/tests", image], capture_output=True)
-    inject(image, probe, "/usr/lib/leonos/tests/linux-inventory.elf", "0100755")
-    inject(image, ROOT / "build/drivers/e1000.drv", "/usr/lib/leonos/drivers/e1000.drv", "0100755")
+    run(["debugfs", "-w", "-R", "mkdir /usr/lib/reliefos/tests", image], capture_output=True)
+    inject(image, probe, "/usr/lib/reliefos/tests/linux-inventory.elf", "0100755")
+    inject(image, ROOT / "build/drivers/e1000.drv", "/usr/lib/reliefos/drivers/e1000.drv", "0100755")
     repositories = work / "repositories"
-    repositories.write_text("ndx /usr/share/leonos/apk/repository/packages.adb\n"
+    repositories.write_text("ndx /usr/share/reliefos/apk/repository/packages.adb\n"
                             "https://10.0.2.2/packages.adb\n")
     selection = work / "package"
     selection.write_text(args.package + "\n")

@@ -4,11 +4,11 @@ PATH=/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 
 [ "$(id -u)" -eq 0 ] || {
-    printf '%s\n' 'leonos-rpr-apkcheck: root privileges are required' >&2
+    printf '%s\n' 'reliefos-rpr-apkcheck: root privileges are required' >&2
     exit 1
 }
 [ "$#" -eq 0 ] || {
-    printf '%s\n' 'Usage: leonos-rpr-apkcheck' >&2
+    printf '%s\n' 'Usage: reliefos-rpr-apkcheck' >&2
     exit 2
 }
 
@@ -20,7 +20,7 @@ case "$rpr_url" in https://*) ;; *) printf '%s\n' 'Invalid RPR URL: HTTPS is req
 case "$key_name" in ''|*/*|*[!A-Za-z0-9._-]*) printf '%s\n' 'Invalid RPR public-key name' >&2; exit 1;; esac
 
 mkdir -p /etc/apk/keys /etc/apk
-key_tmp=$(mktemp /etc/apk/keys/.leonos-rpr-key.XXXXXX)
+key_tmp=$(mktemp /etc/apk/keys/.reliefos-rpr-key.XXXXXX)
 repo_tmp=$(mktemp /etc/apk/.repositories.XXXXXX)
 cleanup() { rm -f -- "$key_tmp" "$repo_tmp"; }
 trap cleanup EXIT HUP INT TERM

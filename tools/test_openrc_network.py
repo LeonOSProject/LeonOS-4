@@ -7,7 +7,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 def main():
-    with tempfile.TemporaryDirectory(prefix="leonos-openrc-network-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-openrc-network-") as directory:
         for name in ("net_interface", "net_packet", "time_discipline", "timekeeper_discipline", "driver_control"):
             binary = Path(directory) / name
             subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",

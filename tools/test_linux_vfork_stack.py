@@ -6,7 +6,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
-with tempfile.TemporaryDirectory(prefix="leonos-vfork-stack-") as directory:
+with tempfile.TemporaryDirectory(prefix="reliefos-vfork-stack-") as directory:
     output = Path(directory) / "vfork_stack_abi"
     subprocess.run([
         "cc", "-D_GNU_SOURCE", "-std=c11", "-O2", "-g", "-Wall", "-Wextra",

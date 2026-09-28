@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "LeonOS: Build image (VMDK)",
+            "label": "ReliefOS: Build image (VMDK)",
             "type": "process",
             "command": "wsl.exe",
             "args": [
@@ -11,7 +11,7 @@
                 "--",
                 "bash",
                 "-lc",
-                "python3 build.py run image-vmdk --theme ${config:leonos.buildTheme}"
+                "make image-vmdk"
             ],
             "group": {
                 "kind": "build",
@@ -25,7 +25,7 @@
             }
         },
         {
-            "label": "LeonOS: Build all",
+            "label": "ReliefOS: Build all",
             "type": "process",
             "command": "wsl.exe",
             "args": [
@@ -34,7 +34,7 @@
                 "--",
                 "bash",
                 "-lc",
-                "python3 build.py run all --theme ${config:leonos.buildTheme}"
+                "make all"
             ],
             "problemMatcher": [],
             "presentation": {
@@ -44,7 +44,7 @@
             }
         },
         {
-            "label": "LeonOS: Build kernel",
+            "label": "ReliefOS: Build kernel",
             "type": "process",
             "command": "wsl.exe",
             "args": [
@@ -53,7 +53,7 @@
                 "--",
                 "bash",
                 "-lc",
-                "python3 build.py run kernel --theme ${config:leonos.buildTheme}"
+                "make kernel"
             ],
             "problemMatcher": [],
             "presentation": {
@@ -63,7 +63,7 @@
             }
         },
         {
-            "label": "LeonOS: Build installer",
+            "label": "ReliefOS: Build installer",
             "type": "process",
             "command": "wsl.exe",
             "args": [
@@ -72,7 +72,7 @@
                 "--",
                 "bash",
                 "-lc",
-                "python3 build.py run installer --theme ${config:leonos.buildTheme}"
+                "make installer"
             ],
             "problemMatcher": [],
             "presentation": {
@@ -82,7 +82,7 @@
             }
         },
         {
-            "label": "LeonOS: Run QEMU",
+            "label": "ReliefOS: Run QEMU",
             "type": "process",
             "command": "wsl.exe",
             "args": [
@@ -91,7 +91,7 @@
                 "--",
                 "bash",
                 "-lc",
-                "python3 build.py run run --theme ${config:leonos.buildTheme}"
+                "make run"
             ],
             "problemMatcher": [],
             "presentation": {
@@ -101,7 +101,7 @@
             }
         },
         {
-            "label": "LeonOS: Start QEMU for GDB",
+            "label": "ReliefOS: Start QEMU for GDB",
             "type": "process",
             "command": "wsl.exe",
             "args": [
@@ -110,20 +110,20 @@
                 "--",
                 "bash",
                 "-lc",
-                "ovmf='${config:leonos.wslOvmfPath}'; test -r \"$ovmf\" || { echo \"OVMF not found: $ovmf\"; exit 1; }; rm -f build/qemu-vscode.pid build/qemu-vscode-serial.log; echo 'LeonOS QEMU GDB starting'; qemu-system-x86_64 -cpu max -machine q35 -m 512M -bios \"$ovmf\" -serial file:build/qemu-vscode-serial.log -device VGA,xres=1920,yres=1080 -netdev user,id=net0 -device e1000,netdev=net0 -audiodev driver=none,id=snd0 -device AC97,audiodev=snd0 -gdb tcp::1234 -S -no-reboot -no-shutdown -pidfile build/qemu-vscode.pid -drive file=build/images/leonos4.vmdk,if=none,id=sata0 -device ich9-ahci,id=ahci -device ide-hd,drive=sata0,bus=ahci.0; code=$?; rm -f build/qemu-vscode.pid; exit $code"
+                "ovmf='${config:leonos.wslOvmfPath}'; test -r \"$ovmf\" || { echo \"OVMF not found: $ovmf\"; exit 1; }; rm -f build/qemu-vscode.pid build/qemu-vscode-serial.log; echo 'ReliefOS QEMU GDB starting'; qemu-system-x86_64 -cpu max -machine q35 -m 512M -bios \"$ovmf\" -serial file:build/qemu-vscode-serial.log -device VGA,xres=1920,yres=1080 -netdev user,id=net0 -device e1000,netdev=net0 -audiodev driver=none,id=snd0 -device AC97,audiodev=snd0 -gdb tcp::1234 -S -no-reboot -no-shutdown -pidfile build/qemu-vscode.pid -drive file=out/x86_64/release/images/reliefos.vmdk,if=none,id=sata0 -device ich9-ahci,id=ahci -device ide-hd,drive=sata0,bus=ahci.0; code=$?; rm -f build/qemu-vscode.pid; exit $code"
             ],
-            "dependsOn": "LeonOS: Build image (VMDK)",
+            "dependsOn": "ReliefOS: Build image (VMDK)",
             "dependsOrder": "sequence",
             "isBackground": true,
             "problemMatcher": {
-                "owner": "leonos-qemu",
+                "owner": "reliefos-qemu",
                 "pattern": {
                     "regexp": "^$"
                 },
                 "background": {
                     "activeOnStart": true,
-                    "beginsPattern": "^LeonOS QEMU GDB starting$",
-                    "endsPattern": "^LeonOS QEMU GDB starting$"
+                    "beginsPattern": "^ReliefOS QEMU GDB starting$",
+                    "endsPattern": "^ReliefOS QEMU GDB starting$"
                 }
             },
             "presentation": {
@@ -135,7 +135,7 @@
             }
         },
         {
-            "label": "LeonOS: Stop QEMU for GDB",
+            "label": "ReliefOS: Stop QEMU for GDB",
             "type": "process",
             "command": "wsl.exe",
             "args": [
@@ -154,7 +154,7 @@
             }
         },
         {
-            "label": "LeonOS: Test terminal (QMP)",
+            "label": "ReliefOS: Test terminal (QMP)",
             "type": "process",
             "command": "wsl.exe",
             "args": [
@@ -173,7 +173,7 @@
             }
         },
         {
-            "label": "LeonOS: Generate compile database (all regions)",
+            "label": "ReliefOS: Generate compile database (all regions)",
             "type": "process",
             "command": "wsl.exe",
             "args": [
@@ -189,7 +189,7 @@
             "presentation": {"reveal": "always", "panel": "shared", "clear": false}
         },
         {
-            "label": "LeonOS: Generate compile database (kernel)",
+            "label": "ReliefOS: Generate compile database (kernel)",
             "type": "process",
             "command": "wsl.exe",
             "args": ["--cd", "${config:leonos.wslProjectRoot}", "--", "bash", "-lc", "python3 tools/vscode/generate_compile_commands.py --region kernel"],
@@ -197,7 +197,7 @@
             "presentation": {"reveal": "always", "panel": "shared", "clear": false}
         },
         {
-            "label": "LeonOS: Generate compile database (libc)",
+            "label": "ReliefOS: Generate compile database (libc)",
             "type": "process",
             "command": "wsl.exe",
             "args": ["--cd", "${config:leonos.wslProjectRoot}", "--", "bash", "-lc", "python3 tools/vscode/generate_compile_commands.py --region libc"],
@@ -205,7 +205,7 @@
             "presentation": {"reveal": "always", "panel": "shared", "clear": false}
         },
         {
-            "label": "LeonOS: Generate compile database (userland)",
+            "label": "ReliefOS: Generate compile database (userland)",
             "type": "process",
             "command": "wsl.exe",
             "args": ["--cd", "${config:leonos.wslProjectRoot}", "--", "bash", "-lc", "python3 tools/vscode/generate_compile_commands.py --region userland"],
@@ -213,7 +213,7 @@
             "presentation": {"reveal": "always", "panel": "shared", "clear": false}
         },
         {
-            "label": "LeonOS: Generate compile database (loader)",
+            "label": "ReliefOS: Generate compile database (loader)",
             "type": "process",
             "command": "wsl.exe",
             "args": ["--cd", "${config:leonos.wslProjectRoot}", "--", "bash", "-lc", "python3 tools/vscode/generate_compile_commands.py --region loader"],
@@ -221,61 +221,61 @@
             "presentation": {"reveal": "always", "panel": "shared", "clear": false}
         },
         {
-            "label": "LeonOS: clang-tidy kernel",
+            "label": "ReliefOS: clang-tidy kernel",
             "type": "process",
             "command": "wsl.exe",
             "args": ["--cd", "${config:leonos.wslProjectRoot}", "--", "bash", "-lc", "python3 tools/vscode/run_clang_tidy.py --region kernel"],
-            "dependsOn": "LeonOS: Generate compile database (kernel)",
+            "dependsOn": "ReliefOS: Generate compile database (kernel)",
             "problemMatcher": [],
             "presentation": {"reveal": "always", "panel": "shared", "clear": false}
         },
         {
-            "label": "LeonOS: clang-tidy libc",
+            "label": "ReliefOS: clang-tidy libc",
             "type": "process",
             "command": "wsl.exe",
             "args": ["--cd", "${config:leonos.wslProjectRoot}", "--", "bash", "-lc", "python3 tools/vscode/run_clang_tidy.py --region libc"],
-            "dependsOn": "LeonOS: Generate compile database (libc)",
+            "dependsOn": "ReliefOS: Generate compile database (libc)",
             "problemMatcher": [],
             "presentation": {"reveal": "always", "panel": "shared", "clear": false}
         },
         {
-            "label": "LeonOS: clang-tidy userland",
+            "label": "ReliefOS: clang-tidy userland",
             "type": "process",
             "command": "wsl.exe",
             "args": ["--cd", "${config:leonos.wslProjectRoot}", "--", "bash", "-lc", "python3 tools/vscode/run_clang_tidy.py --region userland"],
-            "dependsOn": "LeonOS: Generate compile database (userland)",
+            "dependsOn": "ReliefOS: Generate compile database (userland)",
             "problemMatcher": [],
             "presentation": {"reveal": "always", "panel": "shared", "clear": false}
         },
         {
-            "label": "LeonOS: clang-tidy loader",
+            "label": "ReliefOS: clang-tidy loader",
             "type": "process",
             "command": "wsl.exe",
             "args": ["--cd", "${config:leonos.wslProjectRoot}", "--", "bash", "-lc", "python3 tools/vscode/run_clang_tidy.py --region loader"],
-            "dependsOn": "LeonOS: Generate compile database (loader)",
+            "dependsOn": "ReliefOS: Generate compile database (loader)",
             "problemMatcher": [],
             "presentation": {"reveal": "always", "panel": "shared", "clear": false}
         },
         {
-            "label": "LeonOS: clang-tidy devtools SDK",
+            "label": "ReliefOS: clang-tidy devtools SDK",
             "type": "process",
             "command": "wsl.exe",
             "args": ["--cd", "${config:leonos.wslProjectRoot}", "--", "bash", "-lc", "python3 tools/vscode/run_clang_tidy.py --region devtools"],
-            "dependsOn": "LeonOS: Generate compile database (devtools SDK)",
+            "dependsOn": "ReliefOS: Generate compile database (devtools SDK)",
             "problemMatcher": [],
             "presentation": {"reveal": "always", "panel": "shared", "clear": false}
         },
         {
-            "label": "LeonOS: clang-tidy all first-party code",
+            "label": "ReliefOS: clang-tidy all first-party code",
             "type": "process",
             "command": "wsl.exe",
             "args": ["--cd", "${config:leonos.wslProjectRoot}", "--", "bash", "-lc", "python3 tools/vscode/run_clang_tidy.py --region all"],
-            "dependsOn": "LeonOS: Generate compile database (all regions)",
+            "dependsOn": "ReliefOS: Generate compile database (all regions)",
             "problemMatcher": [],
             "presentation": {"reveal": "always", "panel": "dedicated", "clear": false}
         },
         {
-            "label": "LeonOS: Clean build outputs",
+            "label": "ReliefOS: Clean build outputs",
             "type": "process",
             "command": "wsl.exe",
             "args": [
@@ -284,7 +284,7 @@
                 "--",
                 "bash",
                 "-lc",
-                "python3 build.py run clean --theme ${config:leonos.buildTheme}"
+                "make clean"
             ],
             "problemMatcher": [],
             "presentation": {

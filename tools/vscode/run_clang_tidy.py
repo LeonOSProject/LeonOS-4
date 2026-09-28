@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run clang-tidy for a selected LeonOS source region from WSL."""
+"""Run clang-tidy for a selected ReliefOS source region from WSL."""
 
 from __future__ import annotations
 

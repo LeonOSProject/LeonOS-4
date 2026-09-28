@@ -1,6 +1,6 @@
 # Third-Party Code
 
-LeonOS keeps third-party source code in `third_party/` and records Git-backed
+ReliefOS keeps third-party source code in `third_party/` and records Git-backed
 dependencies as submodules.
 
 ## External Native Toolchain Test Fixture
@@ -35,7 +35,7 @@ images or installer options; it will be supplied by apk after integration.
 
 The following inventory covers every Git submodule declared by the root
 `.gitmodules` file, plus the nested submodule declared by StardustUI. The
-commits are the revisions recorded by the LeonOS checkout.
+commits are the revisions recorded by the ReliefOS checkout.
 
 | Path | Upstream | Pinned commit |
 | --- | --- | --- |
@@ -63,7 +63,7 @@ commits are the revisions recorded by the LeonOS checkout.
 - License: Apache-2.0 (selected from the upstream dual Apache-2.0 or
   GPL-2.0-or-later terms; see `third_party/mbedtls/LICENSE`).
 
-LeonOS builds a TLS 1.2 client profile with certificate and hostname
+ReliefOS builds a TLS 1.2 client profile with certificate and hostname
 verification for the shared HTTP client. The system image includes
 `/etc/ssl/certs/ca-certificates.crt`, the curl CA Extract from
 `https://curl.se/ca/cacert.pem`, to establish public Web PKI trust.
@@ -78,8 +78,10 @@ The recorded `patches/musl/0001-enforce-password-file-lock.patch` replaces musl'
 no-op password-file lock for PAM/account writers. It is applied to an isolated
 build source, leaves the pinned submodule unchanged and is listed with its hash
 in the runtime's `.leonos-musl.json` metadata.
-`libleonos.so.2` and `libleonos.a` provide LeonOS extensions; they contain no
-replacement standard POSIX implementation. Legacy binaries must be rebuilt.
+`libreliefos.so.2` and `libreliefos.a` provide ReliefOS extensions; they contain no
+replacement standard POSIX implementation. The compatible `libleonos.so.2` and
+`libleonos.a` remain available for existing ABI-v2 applications. Pre-musl binaries
+covered by the earlier migration must still be rebuilt.
 See `MUSL_MIGRATION_2026-09-08.md` for exact validation and remaining gaps.
 
 ## Alpine package signing keys
@@ -116,13 +118,13 @@ are listed in [SUDOERS_PAM_UPSTREAM.md](SUDOERS_PAM_UPSTREAM.md) and
 - Upstream: `https://github.com/xingji-studio/StardustUI.git`
 - Pinned commit: `67aae17214a0d27bb6a8b0caf10b7c1f98313086`
 - License: MIT; preserve `third_party/stardustui/LICENSE`. The generated SDK
-  includes the library's public headers, LeonOS C++ compatibility headers and
+  includes the library's public headers, ReliefOS C++ compatibility headers and
   the full license text.
 
-LeonOS builds StardustUI as `libstardustui.a` over its existing pixel-buffer
+ReliefOS builds StardustUI as `libstardustui.a` over its existing pixel-buffer
 window ABI and UI text renderer. The image includes the upstream Hello World,
-layout and widget-showcase examples at `/usr/lib/leonos/apps/stardusthello/`,
-`/usr/lib/leonos/apps/stardustlayout/` and `/usr/lib/leonos/apps/stardustshowcase/`, plus the
+layout and widget-showcase examples at `/usr/lib/reliefos/apps/stardusthello/`,
+`/usr/lib/reliefos/apps/stardustlayout/` and `/usr/lib/reliefos/apps/stardustshowcase/`, plus the
 upstream Material 3 example themes in `/etc/stardustui/theme/`. StardustUI's
 socket API is linked but currently reports that networking is unavailable, so
 the network-dependent DuckChat example is intentionally not installed.
@@ -143,8 +145,8 @@ StardustUI also records one nested dependency:
 - Pinned commit: `da607da739fa6047df13e66a2af6b8bec7c2a498` (`v1.3.2`)
 - License: zlib License; preserve `third_party/zlib/LICENSE`.
 
-LeonOS builds zlib's freestanding in-memory compression/decompression core as
-`libz.a`.  Gzip file-stream helpers are intentionally excluded because LeonOS
+ReliefOS builds zlib's freestanding in-memory compression/decompression core as
+`libz.a`.  Gzip file-stream helpers are intentionally excluded because ReliefOS
 does not provide a hosted stdio file backend to the library.
 
 ## libpng
@@ -155,9 +157,9 @@ does not provide a hosted stdio file backend to the library.
 - Pinned commit: `3061454d980de7d53608f594194cfac722721d2a` (`v1.6.58`)
 - License: libpng License; preserve `third_party/libpng/LICENSE`.
 
-LeonOS builds libpng as `libpng.a` against its bundled zlib.  The public SDK
-includes both upstream libraries and headers, while `leonos/png.h` provides a
-bounded PNG-to-LeonOS-pixel decoder for ordinary GUI applications.
+ReliefOS builds libpng as `libpng.a` against its bundled zlib.  The public SDK
+includes both upstream libraries and headers, while `reliefos/png.h` provides a
+bounded PNG-to-ReliefOS-pixel decoder for ordinary GUI applications.
 
 ## SQLite
 
@@ -168,8 +170,8 @@ bounded PNG-to-LeonOS-pixel decoder for ordinary GUI applications.
 - License: SQLite public domain dedication and blessing; preserve
   `third_party/sqlite/LICENSE.md`.
 
-LeonOS installs the ABI-v1 shared library as `/usr/lib/sqlite.so.3` and
-packages `sqlite3.h` in the SDK. The port uses a LeonOS VFS and currently
+ReliefOS installs the ABI-v1 shared library as `/usr/lib/sqlite.so.3` and
+packages `sqlite3.h` in the SDK. The port uses a ReliefOS VFS and currently
 disables WAL, loadable extensions, and cross-process file locking.
 
 ## findutils
@@ -187,14 +189,14 @@ disables WAL, loadable extensions, and cross-process file locking.
 - Version: `1.36.1`
 - Pinned commit: `1a64f6a20aaf6ea4dbba68bbfa8cc1ab7e5c57c4` (`1_36_1`)
 - License: GPL-2.0-only; the complete upstream `LICENSE` is staged at
-  `/usr/lib/leonos/apps/busybox/LICENSE` beside the executable.
+  `/usr/lib/reliefos/apps/busybox/LICENSE` beside the executable.
 
-LeonOS builds a static, basic-applet BusyBox profile at
+ReliefOS builds a static, basic-applet BusyBox profile at
 `/bin/busybox`. It includes file/text utilities such as
 `ls`, `pwd`, `cat`, `echo`, `head`, `tail`, `wc`, `diff`, `less`, `mkdir`,
 `rmdir`, `cp`, `mv`, `rm`, `unlink`, `printenv`, `uname`, `sleep`, `true`,
 `false`, `nohup`, `vi`, and `printf`. The `sh` entry point is BusyBox Ash built for
-LeonOS's MMU path. It uses the kernel COW `fork`/`execve` ABI, inherited file
+ReliefOS's MMU path. It uses the kernel COW `fork`/`execve` ABI, inherited file
 descriptors, process groups and PTY foreground groups for pipelines,
 redirection, background jobs, and `jobs`/`fg`/`bg`. The image profile selects
 Ash as its shell implementation. `nohup` is available from both the GUI
@@ -210,7 +212,7 @@ supplies fdisk/sfdisk, mount/umount, blkid, lsblk and fsck; e2fsprogs 1.47.3,
 dosfstools 4.2 and exfatprogs 1.4.3 supply filesystem tools. Fixed archives and
 checksums are in `configs/auth-upstream.json` and `configs/storage-upstream.json`;
 notices are installed in `/usr/share/licenses/<package>/`.
-`leonos-grub-installer` is a LeonOS shell helper copying an existing EFI payload,
+`leonos-grub-installer` is a ReliefOS shell helper copying an existing EFI payload,
 not upstream grub-install. See `docs/UPSTREAM_TOOLS.md` for host, image and guest
 evidence and remaining kernel compatibility gaps. Availability in an image does
 not certify every operation or filesystem feature.
@@ -218,7 +220,7 @@ not certify every operation or filesystem feature.
 ## ncurses and Vim
 
 ncurses 6.6 is a default component, built from the pinned, unmodified upstream
-submodule by `make upstream-ncurses`. Vim is no longer compiled by LeonOS: the
+submodule by `make upstream-ncurses`. Vim is no longer compiled by ReliefOS: the
 signed upstream Alpine `vim`, `vim-common` and `xxd` packages are preinstalled
 instead and carry their own package license metadata.
 
@@ -230,7 +232,7 @@ executables. The developer and musl SDKs include upstream curses headers,
 Link wide-character applications with `-lncursesw -ltinfow`.
 
 The earlier internal ANSI curses implementation remains an implementation
-detail of existing LeonOS applications; its headers are not the SDK's ncurses
+detail of existing ReliefOS applications; its headers are not the SDK's ncurses
 interface. Licenses ship as `/usr/share/licenses/ncurses/COPYING`, with
 `THIRD_PARTY/NCURSES-COPYING` in the developer SDK.
 `python3 tools/test_terminal_packages.py` runs the ncurses binaries and library on
@@ -253,10 +255,10 @@ instead of being compiled.
 - Upstream modified fork: `https://github.com/Leonmmcoset/pl_editor.git`
 - Pinned commit: `22fae7a1bc2362486d8bf845f0daf6ec7060a3a1`
 - License: MIT; the complete upstream `LICENSE` is staged at
-  `/usr/lib/leonos/apps/pleditor/LICENSE` beside the executable.
+  `/usr/lib/reliefos/apps/pleditor/LICENSE` beside the executable.
 
-LeonOS builds PL Editor at `/usr/lib/leonos/apps/pleditor/pleditor.elf`. Its upstream
-platform-independent editor core is kept as a submodule; the LeonOS platform
+ReliefOS builds PL Editor at `/usr/lib/reliefos/apps/pleditor/pleditor.elf`. Its upstream
+platform-independent editor core is kept as a submodule; the ReliefOS platform
 adapter provides raw PTY input, ANSI terminal output, terminal sizing and
 multi-encoding file persistence. It is launched through Terminal and supports
 syntax highlighting, search, undo/redo, line numbers, automatic bracket
@@ -272,10 +274,10 @@ extended syntax set.
 - License: GPL-3.0-only; the complete upstream `LICENSE` is staged at
   `/opt/cmd/LICENSE` beside the executable.
 
-LeonOS builds the interpreter at `/opt/cmd/cmd.elf`. From the BusyBox
+ReliefOS builds the interpreter at `/opt/cmd/cmd.elf`. From the BusyBox
 Ash prompt, enter `cmd` to use it. The port keeps the upstream interpreter,
 built-ins, batch files, variables and redirection, and executes enabled
-BusyBox applets or supported LeonOS terminal programs through the shared COW
+BusyBox applets or supported ReliefOS terminal programs through the shared COW
 `fork`/`execve`/`waitpid` path. Foreground pipelines use inherited anonymous
 pipes and support per-stage redirection. `cmd` also supports `command &`,
 external pipelines ending in `&`, plus `jobs`, `fg`, and `bg`; those background
@@ -286,7 +288,7 @@ semantics.
 
 ## file / libmagic
 
-file and libmagic are no longer compiled by LeonOS. The signed upstream Alpine
+file and libmagic are no longer compiled by ReliefOS. The signed upstream Alpine
 `file` and `libmagic` packages are preinstalled instead: `/usr/bin/file` comes
 from `file`, and `libmagic.so.1` plus the compiled magic database
 `/usr/share/misc/magic.mgc` come from `libmagic`. Their license metadata
@@ -298,18 +300,18 @@ travels with the packages.
 - Packaged fork: `https://github.com/VasilyZa/fastfetch`
 - Release: `https://github.com/VasilyZa/fastfetch/releases/download/2.68.1/fastfetch`
 - Packaged version: `2.68.1`, supplied native x86-64 static musl build with
-  the LeonOS logo. Binary SHA-256:
+  the legacy LeonOS logo alias. Binary SHA-256:
   `25107efd56d0286059487bab17d964a6ec72275263de2ab09095a46637b06be1`.
-- The old Fastfetch submodule and LeonOS adapter have been removed.
+- The old Fastfetch submodule and ReliefOS adapter have been removed.
 - License: MIT; `userland/fastfetch/LICENSE` preserves the complete upstream
   license, matching the supplied build's source license byte for byte, staged at
   `/usr/share/licenses/fastfetch/LICENSE`.
 
 `tools/package_fastfetch.py` downloads, validates and copies the release unchanged
-to `/usr/lib/leonos/apps/fastfetch/fastfetch.elf`, reached through
-`/usr/bin/fastfetch`. It reads Linux interfaces directly; no LeonOS detection
-adapter is linked. `/etc/fastfetch/config.jsonc` selects `--logo LeonOS`'s
-built-in logo through the normal configuration mechanism. See
+to `/usr/lib/reliefos/apps/fastfetch/fastfetch.elf`, reached through
+`/usr/bin/fastfetch`. It reads Linux interfaces directly; no ReliefOS detection
+adapter is linked. `/etc/fastfetch/config.jsonc` selects the built-in logo through the legacy
+`--logo LeonOS` alias and the normal configuration mechanism. See
 `userland/fastfetch/README.md` for the proxy, cache, offline input, and checks.
 
 ## sl
@@ -318,10 +320,10 @@ built-in logo through the normal configuration mechanism. See
 - Upstream: `https://github.com/mtoyoda/sl.git`
 - Pinned commit: `923e7d7ebc5c1f009755bdeb789ac25658ccce03`
 - License: permissive upstream license; the complete upstream `LICENSE` is
-  staged at `/usr/lib/leonos/apps/sl/LICENSE` beside the executable.
+  staged at `/usr/lib/reliefos/apps/sl/LICENSE` beside the executable.
 
-LeonOS builds the Steam Locomotive joke command at
-`/usr/lib/leonos/apps/sl/sl.elf`. The upstream animation is kept intact and its curses
+ReliefOS builds the Steam Locomotive joke command at
+`/usr/lib/reliefos/apps/sl/sl.elf`. The upstream animation is kept intact and its curses
 calls are implemented by the ANSI adapter in `userland/sl`.
 
 ## minimp3
@@ -346,7 +348,7 @@ calls are implemented by the ANSI adapter in `userland/sl`.
 - Recorded commit: `b9e89f0b9494ff9a5f008800af35503efabddf59`
 - License: New BSD License / BSD-3-Clause, see `third_party/litehtml/LICENSE`
 
-`browser.elf` does not yet link upstream litehtml directly because LeonOS
+`browser.elf` does not yet link upstream litehtml directly because ReliefOS
 userland is still freestanding C without a C++ runtime or STL. The browser now
 uses `userland/apps/browser/litehtml_core.c` as the staged C document layout
 core. That keeps the browser shell, network loading, history, and GUI wiring
@@ -359,7 +361,7 @@ ready for a later full litehtml container.
 - License: Apache License 2.0, see `third_party/litehtml/src/gumbo/LICENSE`.
 
 Gumbo source is present through the litehtml submodule. It is not built or
-executed by the current LeonOS browser path.
+executed by the current ReliefOS browser path.
 
 ## Microsoft Fonts
 
@@ -382,13 +384,13 @@ executed by the current LeonOS browser path.
 - Upstream: `https://github.com/rswinkle/PortableGL.git`
 - Pinned commit: `7cf39dc1741ea2be60ce3bd327f6e5337f60207f`
 - License: MIT; the complete upstream `LICENSE` is staged at
-  `/usr/share/doc/leonos/PORTABLEGL-LICENSE` and in the Developer SDK.
+  `/usr/share/doc/reliefos/PORTABLEGL-LICENSE` and in the Developer SDK.
 
-LeonOS builds the single-header implementation as ABI-v1
+ReliefOS builds the single-header implementation as ABI-v1
 `/usr/lib/libportablegl.so.1` and also exposes `libportablegl.a` and the
-`leonos/pgl.h` window wrapper in the Developer SDK. The port fixes the
+`reliefos/pgl.h` window wrapper in the Developer SDK. The port fixes the
 framebuffer to ABGR32 and depth/stencil to D24S8 and connects presentation to
-the LeonOS pixel-buffer window service. The system build uses PortableGL's
+the ReliefOS pixel-buffer window service. The system build uses PortableGL's
 small-memory profile (50,000 output vertices per draw call) to fit the current
 user address-space budget. `glxgears` is the bundled GUI smoke test; GLX/X11,
 hardware acceleration and multi-threaded contexts are not part of this port.

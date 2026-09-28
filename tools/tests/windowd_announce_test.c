@@ -43,7 +43,7 @@ int test_open(const char *path, int flags, ...)
 }
 ssize_t test_read(int fd, void *buffer, size_t length)
 {
-    const char path[] = "/usr/lib/leonos/apps/terminal/terminal.elf\n";
+    const char path[] = "/usr/lib/reliefos/apps/terminal/terminal.elf\n";
     assert(fd == 43 && length >= sizeof(path));
     memcpy(buffer, path, sizeof(path) - 1);
     return sizeof(path) - 1;
@@ -69,7 +69,7 @@ int reliefos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t lengt
     if (++sends == 1) { errno = EAGAIN; return -1; }
     assert(delivered < 4);
     const struct reliefos_gui_window_msg *message = payload;
-    assert(!strcmp(message->app_path, "/usr/lib/leonos/apps/terminal/terminal.elf"));
+    assert(!strcmp(message->app_path, "/usr/lib/reliefos/apps/terminal/terminal.elf"));
     delivered_types[delivered++] = ((const struct reliefos_gui_window_msg *)payload)->type;
     return 0;
 }

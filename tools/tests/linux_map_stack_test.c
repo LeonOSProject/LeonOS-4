@@ -1,4 +1,4 @@
-/* The same raw Linux mmap call and signal-stack checks run on Linux and NTCLKS. */
+/* The same raw Linux mmap call and signal-stack checks run on Linux and ReliefNT. */
 #define _GNU_SOURCE
 #include <signal.h>
 #include <stdint.h>

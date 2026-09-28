@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build .api package files for LeonOS."""
+"""Build .api package files for ReliefOS."""
 import os
 import sys
 import struct
@@ -37,11 +37,12 @@ def validate_install_path(path):
     # Accept the current application package root and /opt suites.  The
     # legacy /programs prefix remains accepted so older package recipes can
     # be rebuilt; libc remaps it to the current root during installation.
-    if not (path.startswith('/usr/lib/leonos/apps/') or
+    if not (path.startswith('/usr/lib/reliefos/apps/') or
+            path.startswith('/usr/lib/leonos/apps/') or
             path.startswith('/opt/') or
             path.startswith('/programs/')):
         raise ValueError(
-            f"default_path must be under /usr/lib/leonos/apps/, /opt/, or legacy /programs/: {path}"
+            f"default_path must be under /usr/lib/reliefos/apps/, /opt/, or legacy /usr/lib/leonos/apps/ or /programs/: {path}"
         )
     parts = path[1:].split('/')
     if any(part in ('', '.', '..') for part in parts):
@@ -284,7 +285,7 @@ def main():
         name = "Hello World"
         version = "1.0.0"
         main_exe = "files/helloworld.elf"
-        default_path = "/usr/lib/leonos/apps/helloworld"
+        default_path = "/usr/lib/reliefos/apps/helloworld"
         files = [(args.legacy[0], main_exe)]
         output = args.legacy[1]
         requires_admin = True

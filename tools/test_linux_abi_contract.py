@@ -42,7 +42,7 @@ def test_native_syscall_entry_and_stack_protocol() -> None:
 
 
 def test_contract_fixes_are_present() -> None:
-    syscall_h = read("kernel/reliefnt/kernel/reliefnt/include/ntclks/syscall.h")
+    syscall_h = read("kernel/reliefnt/kernel/reliefnt/include/reliefnt/syscall.h")
     process = read("kernel/reliefnt/kernel/reliefnt/syscall_process.c")
     syscall = read("kernel/reliefnt/kernel/reliefnt/syscall.c")
     ipc = read("kernel/reliefnt/kernel/reliefnt/syscall_ipc.c")
@@ -50,8 +50,8 @@ def test_contract_fixes_are_present() -> None:
     assert "LINUX_SYS_NICE __NR_nice" not in syscall_h
     assert "SIG_BLOCK=0" in process or "SIG_BLOCK" in process
     assert "case LINUX_SYS_PAUSE" in syscall
-    assert "flags & ~(uint32_t)(LEONOS_O_NONBLOCK | LEONOS_O_CLOEXEC)" in ipc
-    assert "return -LEONOS_EBADF" in syscall
+    assert "flags & ~(uint32_t)(RELIEFOS_O_NONBLOCK | RELIEFOS_O_CLOEXEC)" in ipc
+    assert "return -RELIEFOS_EBADF" in syscall
 
 
 if __name__ == "__main__":

@@ -63,7 +63,7 @@ void *paging_kernel_direct_map(uint64_t p) { return p>=0x1000 && p<0x3000?argume
 
 int main(void)
 {
-    strcpy(current.path, "/usr/lib/leonos/apps/procsys/procsys.elf");
+    strcpy(current.path, "/usr/lib/reliefos/apps/procsys/procsys.elf");
     struct storage_node node;
     assert(proc_lookup("/proc/42", &node) == 0 && node.type == RELIEFOS_FS_TYPE_DIR);
     assert(proc_lookup("/proc/self", &node) == 0 && node.type == RELIEFOS_FS_TYPE_SYMLINK);

@@ -23,7 +23,10 @@ def main():
     if stage.exists():
         shutil.rmtree(stage)
     shutil.copytree(ROOT / "build/esp", stage, symlinks=True)
-    shutil.copy2(ROOT / "build/system/kernel.sys", stage / "leonos/kernel.sys")
+    for namespace in ("reliefos", "leonos"):
+        (stage / namespace).mkdir(exist_ok=True)
+        shutil.copy2(ROOT / "build/system/kernel.sys", stage / namespace / "kernel.sys")
+        shutil.copy2(ROOT / "build/boot/loader.elf", stage / namespace / "loader.elf")
     shutil.copy2(ROOT / "build/boot/loader.elf", stage / "loader.elf")
     from package_musl_gcc import COMMANDS
     for name in ("opt/dyne", "usr/share/licenses/musl-gcc", "usr/share/examples/musl-gcc"):
@@ -32,7 +35,7 @@ def main():
         link = stage / "usr/bin" / name
         link.unlink(missing_ok=True)
         link.symlink_to("../../opt/dyne/bin/reliefos-musl-cc")
-    tests = stage / "usr/lib/leonos/tests"
+    tests = stage / "usr/lib/reliefos/tests"
     tests.mkdir(parents=True, exist_ok=True)
     shutil.copy2(args.runner, tests / "gcc-probe.elf")
     config = stage / "grub/grub.cfg"
@@ -43,7 +46,7 @@ insmod fat
 insmod multiboot2
 insmod all_video
 set gfxpayload=keep
-menuentry "LeonOS GCC ABI probe" {
+menuentry "ReliefOS GCC ABI probe" {
     set root=(hd0,gpt1)
     multiboot2 /loader.elf root=/ log=serial autospawn=gcc syscall-trace=/opt/dyne/
     boot

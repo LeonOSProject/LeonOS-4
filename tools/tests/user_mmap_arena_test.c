@@ -10,7 +10,7 @@
  * mmap (map_library in third_party/musl/ldso/dynlink.c), so a program's
  * resident set of file mappings has to fit in the kernel's read-only file mmap
  * arena.  Clang's libLLVM.so.22.1 alone needs a 183 MiB span and its complete
- * DT_NEEDED closure needs 278 MiB.  Before NTCLKS_USER_TOP moved to 768 MiB the
+ * DT_NEEDED closure needs 278 MiB.  Before RELIEFNT_USER_TOP moved to 768 MiB the
  * arena was 255 MiB, mmap returned ENOMEM, and every LLVM symbol afterwards
  * failed to resolve.
  *

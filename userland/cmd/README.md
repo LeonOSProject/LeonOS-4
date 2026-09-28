@@ -1,10 +1,10 @@
-# ChenPi11/cmd on LeonOS
+# ChenPi11/cmd on ReliefOS
 
-LeonOS builds the upstream `cmd` interpreter as `/opt/cmd/cmd.elf`.
+ReliefOS builds the upstream `cmd` interpreter as `/opt/cmd/cmd.elf`.
 BusyBox Ash starts it with the `cmd` command.
 
 The port retains the interpreter, built-in commands, batch files, variables,
-redirection and the LeonOS terminal's canonical input mode. External commands
+redirection and the ReliefOS terminal's canonical input mode. External commands
 and foreground pipelines use the common COW `fork`/`pipe`/`dup2`/`execve`/
 `waitpid` path, so pipeline stages can run built-ins and use their own
 redirections. `command &` and external pipelines ending in `&` run as tracked

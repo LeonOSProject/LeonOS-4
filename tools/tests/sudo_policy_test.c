@@ -12,7 +12,7 @@
 #include "../../userland/apps/authd/sudo_policy.h"
 
 /* Keep the test independent of the authd wire header; these values are
- * asserted against LEONOS_FILEOP_* in the authd unit test instead. */
+ * asserted against RELIEFOS_FILEOP_* in the authd unit test instead. */
 enum { OP_LIST = 1, OP_MKDIR = 2, OP_RENAME = 3, OP_UNLINK = 4 };
 
 static struct reliefos_auth_record records[3];

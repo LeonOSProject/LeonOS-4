@@ -1,4 +1,4 @@
-# Linux-PAM 1.7.2, LeonOS musl feature policy. Source is a patched, read-only tree.
+# Linux-PAM 1.7.2, ReliefOS musl feature policy. Source is a patched, read-only tree.
 # Parent owns download, patch application, output lock and staging publication.
 .DEFAULT_GOAL := all
 .DELETE_ON_ERROR:

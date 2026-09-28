@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Benchmark demand-zero faults and check parallel processes/CLONE_VM in LeonOS."""
+"""Benchmark demand-zero faults and check parallel processes/CLONE_VM in ReliefOS."""
 import argparse
 import hashlib
 import json
@@ -34,7 +34,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="stage-", dir=work) as tmp:
         stage = Path(tmp) / "root"
         make_live_tree(ROOT / "build/apk/root", stage)
-        tests = stage / "usr/lib/leonos/tests"
+        tests = stage / "usr/lib/reliefos/tests"
         tests.mkdir(parents=True, exist_ok=True)
         shutil.copy2(executable, tests / "linux-inventory.elf")
         write_ext2_root(stage, work / "root.ext2", minimum_mib=512)
@@ -42,7 +42,7 @@ def main():
     iso.GRUB_TEMPLATE = iso.GRUB_TEMPLATE.replace(
         "autospawn=ioctlcloexec autospawn=python315", "autospawn=inventory").replace(
         "syscall-trace=/opt/python/", "").replace("set timeout=5", "set timeout=0")
-    iso.build_iso(work / "root.ext2", work / "leonos4-apk.iso", work / "grub.cfg", work)
+    iso.build_iso(work / "root.ext2", work / "reliefos-apk.iso", work / "grub.cfg", work)
     runner.WORK = work
     runner.guest(args.timeout)
     serial = (work / "guest-serial.log").read_text(errors="replace")

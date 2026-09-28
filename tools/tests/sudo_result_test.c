@@ -3,6 +3,7 @@
 #undef main
 #include "../../userland/apps/authd/authd_sudo.c"
 #include <assert.h>
+#include "host_tmp.h"
 
 static int collected = -1;
 static int result_send(void *context, uint32_t type, const void *payload, uint32_t length, int fd)
@@ -17,7 +18,8 @@ static int result_send(void *context, uint32_t type, const void *payload, uint32
 
 int main(void)
 {
-    char path[] = "/tmp/leonos-sudo-result-XXXXXX";
+    char path[256];
+    host_tmp_path(path, sizeof(path), "sudo-result-XXXXXX");
     int fd = mkstemp(path);
     assert(fd >= 0 && write(fd, "result", 6) == 6);
     close(fd);

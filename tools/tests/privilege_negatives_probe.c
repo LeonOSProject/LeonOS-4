@@ -1,6 +1,6 @@
 /* Guest-side helper for tools/test_privilege_negatives.py (ntclks separation
  * phase 4 privilege negative tests). Never run on the host: every mode reads
- * LeonOS /proc and /dev/ttyS0 as implemented by this kernel.
+ * ReliefOS /proc and /dev/ttyS0 as implemented by this kernel.
  *
  * All output lines are "PR <tag> key=value ..." written to /dev/ttyS0 so the
  * QEMU harness can parse them from the serial log. Modes:
@@ -90,7 +90,7 @@ struct status_info {
     unsigned long long flags;
 };
 
-/* Read LeonOS /proc/<pid>/status: Name, Uid (real/effective) and LeonOSFlags. */
+/* Read ReliefOS /proc/<pid>/status: Name, Uid (real/effective) and LeonOSFlags. */
 static int read_status(int pid, struct status_info *out)
 {
     char path[64], buf[8192];

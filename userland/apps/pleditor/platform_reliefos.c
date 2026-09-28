@@ -1,4 +1,4 @@
-/* LeonOS terminal/PTY adapter for the upstream PL Editor core. */
+/* ReliefOS terminal/PTY adapter for the upstream PL Editor core. */
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>

@@ -40,7 +40,7 @@
 #include "r_data.h"
 
 /* Loading Freedoom's renderer data requires hundreds of small WAD reads.
- * LeonOS uses cooperative yielding while storage requests are in flight, so
+ * ReliefOS uses cooperative yielding while storage requests are in flight, so
  * periodically hand control back to the desktop instead of making startup
  * appear frozen on slower virtual disks. */
 static void R_StartupYield(void)

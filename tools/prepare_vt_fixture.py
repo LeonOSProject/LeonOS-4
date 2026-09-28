@@ -13,7 +13,7 @@ def prepare(source, output, text_only=False, compiler=None,
     output.mkdir(parents=True, exist_ok=False)
     probe = output / 'vt-probe'
     if compiler is None:
-        compiler = ROOT / 'out/x86_64/release/sdk/leonos-musl-sdk/bin/reliefos-musl-cc'
+        compiler = ROOT / 'out/x86_64/release/sdk/reliefos-musl-sdk/bin/reliefos-musl-cc'
     subprocess.run([str(compiler), '-D_GNU_SOURCE', '-static', '-Iinclude', '-Ikernel/reliefnt/include/uapi',
                     probe_source, '-o', str(probe)], cwd=ROOT, check=True)
     disk = output / 'disk.raw'
@@ -31,7 +31,7 @@ def prepare(source, output, text_only=False, compiler=None,
             dst.write(chunk)
             remaining -= len(chunk)
     commands = [f'write {probe.resolve()} /tmp/vt-probe', 'set_inode_field /tmp/vt-probe mode 0100755']
-    if text_only: commands.append('rm /etc/leonos/desktop-session')
+    if text_only: commands.append('rm /etc/reliefos/desktop-session')
     for command in commands:
         subprocess.run(['debugfs', '-w', '-R', command, str(fs)], check=True)
     with fs.open('rb') as src, disk.open('r+b') as dst:
@@ -41,12 +41,12 @@ def prepare(source, output, text_only=False, compiler=None,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--image', type=Path, default=ROOT / 'out/x86_64/release/images/leonos4.raw')
+    parser.add_argument('--image', type=Path, default=ROOT / 'out/x86_64/release/images/reliefos.raw')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--text-only', action='store_true')
     parser.add_argument('--compiler', type=Path, default=None,
                         help='reliefos-musl-cc to build the probe with '
-                             '(default: out/x86_64/release/sdk/leonos-musl-sdk/bin/reliefos-musl-cc)')
+                             '(default: out/x86_64/release/sdk/reliefos-musl-sdk/bin/reliefos-musl-cc)')
     parser.add_argument('--probe-source', default='tools/tests/vt_guest_test.c',
                         help='guest probe C source to install as /tmp/vt-probe')
     args = parser.parse_args()

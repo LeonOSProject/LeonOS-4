@@ -1293,7 +1293,7 @@ static void draw_welcome(struct reliefos_ui_surface *ui)
     struct installer_layout l = get_layout();
     draw_title(ui, T("ReliefOS Setup"), T("Install a new system or update an existing ReliefOS disk."));
     reliefos_ui_text(ui, l.content_x, l.content_y + 84, T("Setup can copy the full normal system payload"), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
-    reliefos_ui_text(ui, l.content_x, l.content_y + 108, T("or replace the boot/leonos and system files on an existing installation."), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, l.content_x, l.content_y + 108, T("or replace the boot/reliefos and system files on an existing installation."), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     reliefos_ui_text(ui, l.content_x, l.content_y + 164, T("SATA/AHCI and IDE/PATA target disks are supported."), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
 }
 
@@ -1823,7 +1823,7 @@ static int copy_file_path(const char *src, const char *dst,
     if (!S_ISREG(source.st_mode)) { error = EINVAL; goto done; }
     const char *slash = strrchr(dst, '/');
     if (!slash) { error = EINVAL; goto done; }
-    int n = snprintf(temporary, sizeof(temporary), "%.*s.leonos-copy-XXXXXX",
+    int n = snprintf(temporary, sizeof(temporary), "%.*s.reliefos-copy-XXXXXX",
                      (int)(slash - dst + 1), dst);
     if (n < 0 || (size_t)n >= sizeof(temporary)) { error = ENAMETOOLONG; goto done; }
     /* A failed copy must leave the previous file (and any hard-link aliases)
@@ -1911,7 +1911,7 @@ static int copy_symlink_path(const char *src, const char *dst)
     if (lstat(src, &status) < 0) return -errno;
     const char *slash = strrchr(dst, '/');
     if (!slash) return -EINVAL;
-    int n = snprintf(temporary, sizeof(temporary), "%.*s.leonos-link-XXXXXX",
+    int n = snprintf(temporary, sizeof(temporary), "%.*s.reliefos-link-XXXXXX",
                      (int)(slash - dst + 1), dst);
     if (n < 0 || (size_t)n >= sizeof(temporary)) return -ENAMETOOLONG;
     int fd = mkstemp(temporary);
@@ -2310,12 +2310,12 @@ static int copy_payload_ordered(int window_id, struct reliefos_ui_surface *ui)
 
 static int check_update_target_required(void)
 {
-    /* Updates accept only the current non-usr-merge root. Old images need
-     * a fresh installation; never mutate them in an attempted migration. */
+    /* Both brand namespaces use the same non-usr-merge filesystem contract.
+     * Accept a complete old namespace for migration, but never a usr-merged
+     * root or symlinked hierarchy. This preflight performs no writes. */
     static const char *const required_dirs[] = {
-        "/etc/reliefos", "/var/lib/reliefos", "/bin", "/sbin", "/lib",
+        "/etc", "/var", "/var/lib", "/bin", "/sbin", "/lib",
         "/usr", "/usr/bin", "/usr/sbin", "/usr/lib",
-        RELIEFOS_LAYOUT_RELIEFOS_APPS, RELIEFOS_LAYOUT_RELIEFOS_DRIVERS,
     };
     for (uint32_t i = 0; i < sizeof(required_dirs) / sizeof(required_dirs[0]); ++i) {
         char path[RELIEFOS_FS_PATH_LEN];
@@ -2327,17 +2327,29 @@ static int check_update_target_required(void)
         }
     }
     {
-        char desktop[RELIEFOS_FS_PATH_LEN];
+        static const char *const namespaces[][6] = {
+            {"/etc/reliefos", "/var/lib/reliefos", "/usr/lib/reliefos",
+             "/usr/lib/reliefos/apps", "/usr/lib/reliefos/drivers",
+             "/usr/lib/reliefos/apps/desktop/desktop.elf"},
+            {"/etc/leonos", "/var/lib/leonos", "/usr/lib/leonos",
+             "/usr/lib/leonos/apps", "/usr/lib/leonos/drivers",
+             "/usr/lib/leonos/apps/desktop/desktop.elf"},
+        };
         int found = 0;
-        if (path_join(desktop, sizeof(desktop), TARGET_RELIEFOS_APPS,
-                      "desktop/desktop.elf") == 0 &&
-            path_has_type(desktop, RELIEFOS_FS_TYPE_FILE) == 0) {
-            found = 1;
+        for (uint32_t n = 0; n < sizeof(namespaces) / sizeof(namespaces[0]); ++n) {
+            int complete = 1;
+            for (uint32_t i = 0; i < 6; ++i) {
+                char path[RELIEFOS_FS_PATH_LEN];
+                int required = i == 5 ? RELIEFOS_FS_TYPE_FILE : RELIEFOS_FS_TYPE_DIR;
+                if (path_join(path, sizeof(path), INSTALL_ROOT_MOUNT, namespaces[n][i]) < 0)
+                    return -ENAMETOOLONG;
+                if (path_type_nofollow(path) != required) { complete = 0; break; }
+            }
+            if (complete) { found = 1; break; }
         }
         if (!found) {
-            set_status(T("Existing ReliefOS was not detected"),
-                       desktop);
-            return -2;
+            set_status(T("Existing ReliefOS was not detected"), INSTALL_ROOT_MOUNT);
+            return -EINVAL;
         }
     }
     {
@@ -2391,7 +2403,8 @@ static int check_update_payload_required(void)
         INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_LIB "/ld-musl-x86_64.so.1",
         INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_LIB "/libc.so",
         INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_LIB "/libmimalloc.so.3",
-        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_LIB "/libleonos.so.2",
+        INSTALL_ROOT_PAYLOAD RELIEFOS_PATH_LIBRELIEFOS,
+        INSTALL_ROOT_PAYLOAD "/usr/lib/leonos/libleonos.so.2",
         INSTALL_ESP_PAYLOAD "/reliefos/kernel.sys",
         INSTALL_ESP_PAYLOAD "/reliefos/loader.elf",
         INSTALL_ESP_PAYLOAD "/leonos/kernel.sys",

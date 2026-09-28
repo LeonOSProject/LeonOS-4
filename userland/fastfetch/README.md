@@ -4,29 +4,32 @@ The image ships Fastfetch 2.68.1 as a prebuilt native x86-64 static musl
 executable, with the ReliefOS logo included. Its Linux detection code uses
 `uname`, `/etc/os-release`, `/proc`, and `/sys`; it does not link an OS-specific adapter. The former submodule and adapter build have been removed.
 
-The packager downloads the binary from
+Explicit `make fetch` downloads the binary from
 `https://github.com/VasilyZa/fastfetch/releases/download/2.68.1/fastfetch`
 using the host's normal network and optional proxy environment. It pins SHA-256
 `25107efd56d0286059487bab17d964a6ec72275263de2ab09095a46637b06be1`
 and caches it in
-`buildsystem/deps/fastfetch/fastfetch-2.68.1-leonos-x86_64-linux-musl`.
+`$(RELIEFOS_CACHE)/fastfetch` (by default `cache/downloads/fastfetch`).
+The retained Python reference packager uses the historical
+`buildsystem/deps/fastfetch/fastfetch-2.68.1-leonos-x86_64-linux-musl` cache.
 Subsequent builds use the validated cache without downloading again.
 Downloads are verified before atomic publication; partial downloads and hash
 mismatches are errors. The build never falls back to an older implementation.
-`LEONOS_FASTFETCH_BINARY` can supply an offline copy with the same pinned hash.
+For an offline build, provision the same hash-verified file in the configured
+`RELIEFOS_CACHE`; the Make adapter reads only that explicit cache.
 Updating the release requires explicitly updating the URL and pinned hash.
 
 ```sh
-python3 build.py run fastfetch
-python3 build.py run installer
-python3 build.py run test-fastfetch-package
+make fetch
+make installer
+make test
 python3 tools/test_linux_inventory.py --guest
 ```
 
 `/usr/bin/fastfetch` resolves to the packaged executable at
-`/usr/lib/leonos/apps/fastfetch/fastfetch.elf`. Both normal and installer image
+`/usr/lib/reliefos/apps/fastfetch/fastfetch.elf`. Both normal and installer image
 staging use this same payload. `/etc/fastfetch/config.jsonc` selects the built-in
-`LeonOS` logo by default. Users can override the logo with
+`LeonOS` logo alias for the ReliefOS artwork by default. Users can override the logo with
 `fastfetch --logo LeonOS`, another upstream logo, or their own configuration.
 The component's MIT license is installed in `/usr/share/licenses/fastfetch`.
 Its `package.json` records the release URL, version, and binary hash.
@@ -36,7 +39,7 @@ OS row reads the ReliefOS identity from `/etc/os-release`. No application-side
 output substitution is used.
 
 HyFetch supplies its own ASCII art to Fastfetch, so Fastfetch's default logo
-does not select HyFetch's logo. The package also ships the same LeonOS art in
+does not select HyFetch's logo. The package also ships the ReliefOS art in
 `/usr/share/fastfetch/leonos-ascii.txt` and a HyFetch configuration template in
 `/etc/skel/.config/hyfetch.json`. New standalone-image and installer accounts
 receive this template, which selects RGB rainbow coloring and the Fastfetch
@@ -57,7 +60,7 @@ select that file when asked for custom ASCII art. Users can also set the
 absolute path without changing the other settings.
 
 The guest inventory test checks the binary actually staged at
-`build/esp/usr/bin/fastfetch`, including Kernel, hardware and resource JSON,
+the supplied guest image, including Kernel, hardware and resource JSON,
 and execution through Desktop Terminal. Passing this subset does not certify
 every upstream module or VMware behavior.
 

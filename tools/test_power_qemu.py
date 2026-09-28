@@ -177,7 +177,7 @@ def main():
     serial, qmp = out / "serial.log", out / "qmp.sock"
     qmp.unlink(missing_ok=True)
     is_installer = args.case == "installer-reboot"
-    iso = args.iso or ROOT / "build/images" / ("leonos4-installer.iso" if is_installer else "leonos4.iso")
+    iso = args.iso or ROOT / "build/images" / ("reliefos-installer.iso" if is_installer else "reliefos-live.iso")
     command = ["qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-machine", "q35",
                "-m", "4096", "-smp", "2", "-display", "none", "-serial", f"file:{serial}",
                "-device", "VGA,xres=1280,yres=720", "-device", "qemu-xhci", "-device", "usb-tablet",

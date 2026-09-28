@@ -1,6 +1,6 @@
 #!/bin/sh
 # Exercise the actual guest updater in a private Linux mount namespace. This proves package
-# transactions, not LeonOS kernel/VM execution. All writes go to a private copy.
+# transactions, not ReliefOS kernel/VM execution. All writes go to a private copy.
 set -eu
 [ "$#" = 2 ] || { echo 'usage: test-apk-upgrade OUTPUT_TREE OLD_MANAGED_ROOT' >&2; exit 2; }
 out=$(CDPATH= cd -- "$1" && pwd -P)
@@ -55,6 +55,8 @@ done
 printf 'local-admin-setting=yes\n' > "$work/runner/target/etc/leonos/upgrade-fixture.conf"
 mkdir -p "$work/runner/target/etc/reliefos"
 printf 'canonical-local-setting=yes\n' > "$work/runner/target/etc/reliefos/upgrade-fixture.conf"
+printf 'LANG=C\nMUSL_LOCPATH=/usr/share/musl/locales\n' > "$work/runner/target/etc/leonos/locale.conf"
+cp "$work/runner/target/etc/leonos/locale.conf" "$work/legacy-locale-before"
 cp "$work/runner/target/etc/apk/world" "$work/world-before"
 sed 's/^leonos-/reliefos-/' "$work/world-before" > "$work/world-after-rename"
 awk '/^P:/{if($0=="P:leonos-apps") found=1} END{exit !found}' \
@@ -184,4 +186,5 @@ awk '
     echo 'ReliefOS APK database does not record replacement and ownership of the canonical runtime library' >&2
     exit 1
 }
+cmp "$work/legacy-locale-before" "$work/runner/target/etc/reliefos/locale.conf"
 printf 'APK upgrade: unsigned repository rejection, real ReliefOS package replacements, external package, world and local configuration verified\n'

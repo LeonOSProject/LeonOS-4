@@ -18,7 +18,7 @@ deps=${RELIEFOS_DEPS:-${LEONOS_DEPS:-$repo_root/tools/host/gen/reliefos-deps}}
 lock=$repo_root/configs/dependencies.lock.json
 auth_script=$repo_root/tools/build/auth-upstream.sh
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-auth.XXXXXX") || exit 1
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-auth.XXXXXX") || exit 1
 O="$work/out"
 failures=0
 checks=0

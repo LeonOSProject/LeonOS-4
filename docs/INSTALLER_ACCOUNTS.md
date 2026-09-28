@@ -19,13 +19,13 @@ The graphical and TTY installers use the same account and component helpers.
   in both group and gshadow. It retains UID/GID 1000 and authenticates with its
   own password to use the default `%wheel ALL=(ALL:ALL) ALL` sudo rule.
 
-The installer creates `/etc/leonos/installed`. Installed desktops require a
+The installer creates `/etc/reliefos/installed`. Installed desktops require a
 login even when account lookup or PAM fails. The installer runtime has no
 installed marker and remains a live environment. Standalone VMDK and ordinary
 ISO test images have their own preseeded `test`/`test` and `root`/`root` accounts
 and installed marker; the test account joins wheel. These image-only fixtures
 do not enter the installer's source payload.
-The PAM login process owns `/run/leonos/session-user`; UID 0 is a valid authenticated
+The PAM login process owns `/run/reliefos/session-user`; UID 0 is a valid authenticated
 identity, separate from the absence of a login session. Ordinary login and
 desktop application launch apply the PAM session's supplementary groups,
 environment and available resource limits, then set GID and UID and abort if
@@ -50,7 +50,7 @@ This does not change the Linux syscall ABI of Python or GCC.
 `sudo` and `su` execute the official set-ID programs. Fileman executes a fixed
 worker through sudo, with a new policy decision for every command. sudo normally
 authenticates the caller; knowing root's password does not grant an unlisted
-ordinary user sudo permission. `leonos_admin_elevate()` launches a new application
+ordinary user sudo permission. `reliefos_admin_elevate()` launches a new application
 instance through the same sudo policy and never grants the original process root.
 See `docs/SUDO_AND_ELEVATION.md` for configuration and limited grants.
 

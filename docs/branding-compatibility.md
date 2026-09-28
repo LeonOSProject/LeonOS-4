@@ -34,7 +34,7 @@
 | 类别 | 旧规范值 | 新规范值 |
 | --- | --- | --- |
 | 内核子仓路径 | `kernel/ntclks/` | `kernel/reliefnt/` |
-| 内核私有源/头 | `kernel/ntclks/kernel/ntclks/`、`include/ntclks/` | `kernel/ntclks/kernel/reliefnt/`、`include/reliefnt/` |
+| 内核私有源/头 | `kernel/ntclks/kernel/ntclks/`、`include/ntclks/` | `kernel/reliefnt/kernel/reliefnt/`、`include/reliefnt/` |
 | 公开 UAPI 头 | `include/uapi/leonos/*.h` | `include/uapi/reliefos/*.h`（旧路径转发头兼容） |
 | 主仓公共头 | `include/leonos/` | `include/reliefos/`（旧目录转发头兼容） |
 | 运行库头 | `userland/runtime/include/leonos/` | `userland/runtime/include/reliefos/` |
@@ -103,7 +103,7 @@
 | 外部目标 | 当前配置 | 本轮证据与处理 |
 | --- | --- | --- |
 | 主仓 GitHub slug | `LeonOSProject/LeonOS-4` | 新主仓地址未提供；README 源码链接、签名配置工具仓库参数和已有工作流目标保持不变。 |
-| ReliefNT 子仓远端 | `https://github.com/LeonOSProject/NTCLKS.git` | 用户确认 ReliefNT 新远端尚未就绪；任务 3 已按现有 URL 完成隔离递归克隆/fetch 验证。`.gitmodules` 保持原 URL。 |
+| ReliefNT 子仓远端 | `https://github.com/LeonOSProject/NTCLKS.git` | 新远端尚未就绪。任务 3 的旧 SHA 曾验证可 fetch，但任务 11 原 gitlink `76834e55` 返回 `not our ref`；最终本地 SHA `3132fb6a` 的精确浅 fetch 返回 TLS unexpected EOF。当前远端可获取性未通过，`.gitmodules` 保持原 URL。 |
 | Pages / RPR 默认地址 | `https://leonosproject.github.io/LeonOS-4/rpr` | 新 Pages/RPR 地址未提供或实测；保留 Kconfig、默认配置和文档中的现有地址。 |
 | SourceHut 同步目标 | `git@git.sr.ht:~leonmmcoset/LeonOS-4` | 新账号/仓库地址未提供或实测；保留工作流中已配置目标，本轮未运行外部同步。 |
 | APK 签名 Secret | 新名 `RELIEFOS_APK_SIGNING_KEY_B64`；旧名 `LEONOS_APK_SIGNING_KEY_B64` | Pages 工作流优先读取新名，未设置时回退旧名；只检查空值并报告 Secret 名，不输出密钥。新 Secret 是否已在 GitHub 配置，本地无法确认。签名配置脚本仍写入旧名。 |
@@ -121,3 +121,5 @@
 - 历史安全审计：[2026-07-07.md](security/2026-07-07.md)、[2026-08-04.md](security/2026-08-04.md)、[2026-08-30.md](security/2026-08-30.md)、[2026-09-11.md](security/2026-09-11.md)
 - Linux ABI 现状审计：[LINUX_ABI_AUDIT_2026-09-07.md](LINUX_ABI_AUDIT_2026-09-07.md)
 - 本次迁移的基线、设计和执行计划：[基线](superpowers/specs/2026-09-27-reliefos-reliefnt-rename-baseline.md)、[设计规格](superpowers/specs/2026-09-27-reliefos-reliefnt-rename-design.md)、[实施计划](superpowers/plans/2026-09-27-reliefos-reliefnt-rename.md)
+
+任务 11 的分层证据、最终制品校验和及未运行环境见 [本地验证记录](superpowers/task11-verification.md)。本地 QEMU 通过不代表上述外部服务门禁通过。

@@ -114,7 +114,7 @@ static struct reliefos_doom_music_state reliefos_doom_music;
 static uint32_t reliefos_doom_last_audio_ms;
 static uint32_t reliefos_doom_audio_frame_remainder;
 
-/* Kept for the shared DOOM configuration ABI; LeonOS uses nearest-neighbour
+/* Kept for the shared DOOM configuration ABI; ReliefOS uses nearest-neighbour
  * conversion in this backend and never links libsamplerate. */
 int use_libsamplerate;
 float libsamplerate_scale = 0.65f;

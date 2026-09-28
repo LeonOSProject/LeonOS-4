@@ -1,13 +1,13 @@
-# LeonOS 4 Driver Modules
+# ReliefNT Driver Modules
 
 ## Layout
 
-All driver source code lives in the kernel submodule under `kernel/ntclks/drivers/`.
+All driver source code lives in the kernel submodule under `kernel/reliefnt/drivers/`.
 
-- `kernel/ntclks/drivers/bootstrap`: console, framebuffer, VGA, EFI filesystem, storage, and
+- `kernel/reliefnt/drivers/bootstrap`: console, framebuffer, VGA, EFI filesystem, storage, and
   USB UHCI/HID implementations that are linked into `kernel.sys`.
-- `kernel/ntclks/drivers/mouse`, `kernel/ntclks/drivers/serial`, `kernel/ntclks/drivers/e1000`, `kernel/ntclks/drivers/ac97`, and
-  `kernel/ntclks/drivers/es1371`: loadable driver implementations built as `mouse.drv`,
+- `kernel/reliefnt/drivers/mouse`, `kernel/reliefnt/drivers/serial`, `kernel/reliefnt/drivers/e1000`, `kernel/reliefnt/drivers/ac97`, and
+  `kernel/reliefnt/drivers/es1371`: loadable driver implementations built as `mouse.drv`,
   `serial.drv`, `e1000.drv`, `ac97.drv`, and `es1371.drv` (see `DRIVER_NAMES`
   in `mk/boot.mk`).
 
@@ -16,11 +16,12 @@ loadable modules directly in `/drivers`.
 
 ## Module ABI
 
-A `.drv` is an unsigned x86_64 ELF64 `ET_REL` module. The kernel accepts only
-the LeonOS driver descriptor symbol `leonos_driver_module`, ABI version
-`LEONOS_DRIVER_ABI_VERSION`, bounded allocatable sections, and supported local
-relocations. Modules receive only `struct leonos_driver_kernel_api`; they do
-not link directly against arbitrary kernel symbols.
+A `.drv` is an unsigned x86_64 ELF64 `ET_REL` module. The kernel prefers the
+`reliefos_driver_module` descriptor and still accepts the legacy
+`leonos_driver_module` symbol. Both use ABI version
+`RELIEFOS_DRIVER_ABI_VERSION`, bounded allocatable sections, and supported
+local relocations. Modules receive `struct reliefos_driver_kernel_api`; they
+do not link directly against arbitrary kernel symbols.
 
 The descriptor identifies the module, declares its driver kind, and supplies
 `init` and optional `fini` callbacks. The kernel uses the API table to bind a
@@ -32,7 +33,7 @@ After `/` is mounted, the kernel scans the direct files in `/drivers`.
 Every valid, enabled `.drv` is loaded in deterministic directory order. A
 failed module is retried once, then recorded as failed while boot continues.
 
-`/etc/leonos/drivers.conf` is optional. It uses UTF-8 text with a `version=1` line
+`/etc/reliefos/drivers.conf` is optional. It uses UTF-8 text with a `version=1` line
 and one `disabled=<file>.drv` line per module excluded from automatic startup.
 Absent entries are enabled by default.
 

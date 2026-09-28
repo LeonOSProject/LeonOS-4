@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run upstream apk and signed package transactions on the NTCLKS kernel."""
+"""Run upstream apk and signed package transactions on the ReliefNT kernel."""
 import argparse
 from pathlib import Path
 import shutil
@@ -46,7 +46,7 @@ def prepare(package_cache=None, guest_proxy=None, testing_only=False):
         make_live_tree(managed, stage)
         shutil.rmtree(stage / "var/cache/apk")
         (stage / "var/cache/apk").mkdir(mode=0o755)
-        tests = stage / "usr/lib/leonos/tests"
+        tests = stage / "usr/lib/reliefos/tests"
         tests.mkdir(parents=True, exist_ok=True)
         shutil.copy2(WORK / "probe.elf", tests / "linux-inventory.elf")
         shutil.copy2(WORK / "zlib-probe.elf", tests / "apk-zlib.elf")
@@ -96,7 +96,7 @@ def prepare(package_cache=None, guest_proxy=None, testing_only=False):
     iso_tools.GRUB_TEMPLATE = iso_tools.GRUB_TEMPLATE.replace(
         "autospawn=ioctlcloexec autospawn=python315", "autospawn=inventory").replace(
         "syscall-trace=/opt/python/", "").replace("set timeout=5", "set timeout=0")
-    iso_tools.build_iso(WORK / "root.ext2", WORK / "leonos4-apk.iso", WORK / "grub.cfg", WORK)
+    iso_tools.build_iso(WORK / "root.ext2", WORK / "reliefos-apk.iso", WORK / "grub.cfg", WORK)
 
 
 def guest(timeout):
@@ -108,7 +108,7 @@ def guest(timeout):
             "qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-machine", "q35", "-m", "4096",
             "-smp", "2,sockets=1,cores=2,threads=1", "-bios", "/usr/share/edk2/x64/OVMF.4m.fd",
             "-display", "none", "-serial", f"file:{serial}", "-device", "VGA,xres=1280,yres=720",
-            "-netdev", "user,id=net0", "-device", "e1000,netdev=net0", "-cdrom", str(WORK / "leonos4-apk.iso"),
+            "-netdev", "user,id=net0", "-device", "e1000,netdev=net0", "-cdrom", str(WORK / "reliefos-apk.iso"),
             "-boot", "d", "-qmp", f"unix:{qmp},server=on,wait=off", "-no-reboot", "-no-shutdown"],
             stdout=subprocess.DEVNULL, stderr=errors)
         deadline = time.monotonic() + timeout

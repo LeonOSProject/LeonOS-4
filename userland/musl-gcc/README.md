@@ -14,12 +14,14 @@ The isolated GCC probe adds `/usr/bin` aliases for `gcc`, `cc`, `musl-gcc`, `g++
 names. They locate the installed compiler and sysroot; no compiler source or
 binary patches are applied. Compiler flags are forwarded unchanged, so request
 static output explicitly, for example `musl-gcc -static hello.c -o hello`.
-This standalone Linux toolchain does not replace the LeonOS GUI SDK and does
+This standalone Linux toolchain does not replace the ReliefOS GUI SDK and does
 not link mimalloc into generated programs automatically.
 
 GCC and binutils are no longer production components. Normal image and SDK
 builds do not build, download or install this fixture. Future system installs
-will use apk. To reproduce the independent regression fixture explicitly:
+use apk. The commands below record the historical independent fixture using
+the retired Python build driver; they are not current Make instructions. The
+current SDK entry is `out/x86_64/release/sdk/reliefos-musl-sdk/bin/reliefos-musl-cc`.
 
 ```sh
 python3 tools/package_musl_gcc.py --archive buildsystem/deps/musl-gcc/dyne-gcc-musl-x86_64.tar.xz --out build/musl-gcc/root

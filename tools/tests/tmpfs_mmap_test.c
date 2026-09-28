@@ -1,4 +1,4 @@
-/* Identical Linux/musl and LeonOS tests; no LeonOS headers or libc adapters. */
+/* Identical Linux/musl and ReliefOS tests; no ReliefOS headers or libc adapters. */
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>

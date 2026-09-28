@@ -7,7 +7,7 @@
 # All writes go to a disposable tree under OUTPUT_DIR (default: mktemp).
 set -eu
 [ "$#" -le 1 ] || { echo 'usage: test-kernel-update.sh [OUTPUT_DIR]' >&2; exit 2; }
-out=${1:-$(mktemp -d "${TMPDIR:-/tmp}/leonos-kernel-update-test.XXXXXX")}
+out=${1:-$(mktemp -d "${TMPDIR:-/tmp}/reliefos-kernel-update-test.XXXXXX")}
 mkdir -p "$out"
 out=$(CDPATH= cd -- "$out" && pwd -P)
 src=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd -P)

@@ -80,7 +80,7 @@ static void bookmark_save(void)
     int fd;
     bookmark_store_location(bookmark_store_path, sizeof(bookmark_store_path));
     data[0] = 0;
-    append_text(data, &pos, sizeof(data), "# LeonOS Browser bookmarks v1\n");
+    append_text(data, &pos, sizeof(data), "# ReliefOS Browser bookmarks v1\n");
     for (uint32_t i = 0; i < browser_bookmark_count; ++i) {
         append_text(data, &pos, sizeof(data), browser_bookmarks[i].title);
         append_char(data, &pos, sizeof(data), '\t');

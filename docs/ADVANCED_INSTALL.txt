@@ -1,9 +1,9 @@
-LeonOS 4 Installer ISO - Advanced Installation Quick Guide
+ReliefOS Installer ISO - Advanced Installation Quick Guide
 ==========================================================
 
 Read this guide with: less /root/ADVANCED_INSTALL.txt
 
-Select "Install LeonOS 4 (TTY mode)" from the Installer ISO boot menu. The
+Select "Install ReliefOS (TTY mode)" from the Installer ISO boot menu. The
 entry starts a root Ash shell. Run "installer" to launch the interactive TTY
 installer, or continue with this guide for a manual installation.
 
@@ -113,7 +113,7 @@ cp -a /install/root/. /mnt/root/
 The -a option preserves symbolic links, permissions, and timestamps. Check
 the copied runtime:
 
-ls -l /mnt/root/usr/lib/leonos/apps/desktop/desktop.elf
+ls -l /mnt/root/usr/lib/reliefos/apps/desktop/desktop.elf
 ls -l /mnt/root/lib/ld-musl-x86_64.so.1
 
 6. Write /etc/fstab
@@ -140,7 +140,7 @@ cat /mnt/root/etc/fstab
 
 leonos-grub-installer /mnt/esp
 
-This command copies EFI/BOOT/BOOTX64.EFI, loader.elf, leonos/kernel.sys,
+This command copies EFI/BOOT/BOOTX64.EFI, loader.elf, reliefos/kernel.sys,
 and the grub directory from /install/esp. It is not
 GNU grub-install. It does not format or mount the ESP and does not create a
 firmware NVRAM boot entry.

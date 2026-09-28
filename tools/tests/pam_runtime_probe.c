@@ -102,7 +102,7 @@ static int install_guest_fixture(void)
     if (access("/run/leonos/authd.sock", F_OK) < 0 || geteuid() != 0) return -1;
     for (unsigned i = 0; i < 3; ++i) {
         char source[160], destination[64], temporary[80];
-        snprintf(source, sizeof(source), "/usr/lib/leonos/tests/pam-fixture/%s", names[i]);
+        snprintf(source, sizeof(source), "/usr/lib/reliefos/tests/pam-fixture/%s", names[i]);
         snprintf(destination, sizeof(destination), "/etc/%s", names[i]);
         snprintf(temporary, sizeof(temporary), "/etc/.pam-fixture-%s", names[i]);
         int in = open(source, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
@@ -163,9 +163,9 @@ static void nonroot_helper(const char *directory)
 int main(int argc, char **argv)
 {
 #ifdef PAM_TEST_NONROOT_HELPER
-    const char *directory = "/usr/lib/leonos/tests/pam.d";
+    const char *directory = "/usr/lib/reliefos/tests/pam.d";
 #else
-    const char *directory = argc > 1 ? argv[1] : "/usr/lib/leonos/tests/pam.d";
+    const char *directory = argc > 1 ? argv[1] : "/usr/lib/reliefos/tests/pam.d";
 #endif
     setvbuf(stdout, NULL, _IONBF, 0);
     puts("[pam-runtime] BEGIN Linux-PAM 1.7.2 / pinned musl, production DSOs");
@@ -224,7 +224,7 @@ int main(int argc, char **argv)
 #ifdef PAM_TEST_NONROOT_HELPER
     unix_fixture = 1;
 #endif
-    if (argc == 1 && access("/usr/lib/leonos/tests/pam-fixture/shadow", F_OK) == 0) {
+    if (argc == 1 && access("/usr/lib/reliefos/tests/pam-fixture/shadow", F_OK) == 0) {
         int result = install_guest_fixture();
         CHECK(result == 0);
         unix_fixture = result == 0;

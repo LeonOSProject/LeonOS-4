@@ -5,12 +5,12 @@ PATH=/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 source=/install/esp
 if [ "${1-}" = --source ]; then
-    [ "$#" -ge 3 ] || { printf '%s\n' 'Usage: leonos-grub-installer [--source DIR] ESP-MOUNTPOINT' >&2; exit 2; }
+    [ "$#" -ge 3 ] || { printf '%s\n' 'Usage: reliefos-grub-installer [--source DIR] ESP-MOUNTPOINT' >&2; exit 2; }
     source=$2
     shift 2
 fi
 [ "$#" -eq 1 ] && [ -d "$1" ] || {
-    printf '%s\n' 'Usage: leonos-grub-installer [--source DIR] ESP-MOUNTPOINT' >&2
+    printf '%s\n' 'Usage: reliefos-grub-installer [--source DIR] ESP-MOUNTPOINT' >&2
     exit 2
 }
 esp=$1

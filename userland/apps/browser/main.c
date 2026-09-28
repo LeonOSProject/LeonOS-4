@@ -26,7 +26,7 @@ int main(int argc, char **argv, char **envp)
     bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
     struct reliefos_gui_app_event event;
-    const char *initial = "about:leonos";
+    const char *initial = "about:reliefos";
     (void)envp;
     puts("[browser.elf] browser starting");
     if (argc > 1 && argv && argv[1] && argv[1][0]) {
@@ -46,7 +46,7 @@ int main(int argc, char **argv, char **envp)
     address_edit.focused = 1;
     browser_bookmarks_load();
     load_about();
-    if (!text_eq(initial, "about:leonos")) {
+    if (!text_eq(initial, "about:reliefos")) {
         navigate_to(initial, 1);
     } else {
         push_history(current_location);

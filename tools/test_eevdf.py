@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-eevdf-") as tmp:
+with tempfile.TemporaryDirectory(prefix="reliefos-eevdf-") as tmp:
     for name in ("eevdf", "eevdf_scheduler"):
         binary = str(Path(tmp) / name)
         subprocess.run(["cc", "-std=c11", "-O2", "-g", "-Wall", "-Wextra",

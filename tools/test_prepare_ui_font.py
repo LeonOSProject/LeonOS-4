@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for the generated LeonOS UI fonts."""
+"""Regression tests for the generated ReliefOS UI fonts."""
 
 from __future__ import annotations
 

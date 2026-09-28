@@ -26,7 +26,7 @@ happened on a text VT.
 The keyboard evdev stream includes an absolute `EV_LED/LED_CAPSL` snapshot before
 each key event. Repeating the snapshot lets late readers and readers recovering
 from ring overflow recover the state without counting key presses. This is a
-LeonOS stream policy, not a claim that Linux emits redundant LED events.
+ReliefOS stream policy, not a claim that Linux emits redundant LED events.
 `EVIOCGLED` also exposes the current bitmap, with native x86-64 bitmap sizing.
 The complete Linux evdev queue-flushing/SYN_DROPPED semantics remain outside this
 change.
@@ -38,7 +38,8 @@ application does not need to have received the Caps Lock key itself.
 
 The new `modifiers` byte occupies existing padding/reserved space: input messages
 remain 24 bytes and app events remain 36 bytes. Rebuild and deploy kernel,
-windowd, desktop, apps and `libleonos.so.2` together. The old process-local
+windowd, desktop, apps and `libreliefos.so.2` (plus its `libleonos.so.2`
+compatibility library) together. The old process-local
 `leonos_ui_caps_lock_event` API is removed; SDK headers are updated. Mixing old
 applications with the new runtime is unsupported.
 

@@ -1,4 +1,5 @@
 #include <assert.h>
+#include "host_tmp.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,7 +9,8 @@
 
 int main(void)
 {
-    char directory[] = "/tmp/leonos-installer-accounts-XXXXXX";
+    char directory[192];
+    host_tmp_path(directory, sizeof(directory), "installer-accounts-XXXXXX");
     assert(mkdtemp(directory));
     struct reliefos_auth_record records[2] = {
         {.user = {.uid = 0, .role = 2, .username = "root", .home = "/root"}},

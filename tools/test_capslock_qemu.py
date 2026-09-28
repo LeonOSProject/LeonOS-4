@@ -8,7 +8,7 @@ import time
 from test_pam_desktop_qemu import root_partition
 from test_installer_accounts_qemu import boot, wait_log
 from test_sudo_e2e_qemu import Probe
-from leonos_layout import app_exec_path_abs
+from reliefos_layout import app_exec_path_abs
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -25,11 +25,15 @@ def main():
     disk = output / "scratch.raw"
     subprocess.run(["cp", "--reflink=auto", str(args.disk.resolve()), str(disk)], check=True)
     for source, target in (("build/boot/loader.elf", "::/loader.elf"),
-                           ("build/system/kernel.sys", "::/leonos/kernel.sys")):
+                           ("build/system/kernel.sys", "::/leonos/kernel.sys"),
+                           ("build/system/kernel.sys", "::/reliefos/kernel.sys"),
+                           ("build/boot/loader.elf", "::/reliefos/loader.elf"),
+                           ("build/boot/loader.elf", "::/leonos/loader.elf")):
         subprocess.run(["mcopy", "-o", "-i", f"{disk}@@1048576", str(ROOT / source), target], check=True)
     filesystem = output / "root.ext2"
     start = root_partition(disk, filesystem)
-    replacements = [(ROOT / "build/system/lib/libleonos.so.2", "/usr/lib/leonos/libleonos.so.2")]
+    replacements = [(ROOT / "build/system/lib/libreliefos.so.2", "/usr/lib/reliefos/libreliefos.so.2"),
+                    (ROOT / "build/system/lib/libleonos.so.2", "/usr/lib/leonos/libleonos.so.2")]
     replacements += [(ROOT / f"build/userland/{name}.elf", app_exec_path_abs(name))
                      for name in ("desktop", "windowd", "terminal", "calc", "login")]
     for source, target in replacements:

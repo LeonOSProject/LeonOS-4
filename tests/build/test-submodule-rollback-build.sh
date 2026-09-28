@@ -52,7 +52,7 @@ if [ -z "$gitlink" ]; then
     exit 1
 fi
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-rollback-build.XXXXXX") || exit 1
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-rollback-build.XXXXXX") || exit 1
 restored=0
 cleanup() {
     if [ "$restored" = 0 ]; then

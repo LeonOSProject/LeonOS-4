@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-mkdir-mount-") as directory:
+with tempfile.TemporaryDirectory(prefix="reliefos-mkdir-mount-") as directory:
     work = Path(directory)
     image, executable = work / "root.ext2", work / "mkdir-mount"
     subprocess.run(["mke2fs", "-q", "-t", "ext2", "-b", "1024", "-I", "128",

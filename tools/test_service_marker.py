@@ -7,7 +7,7 @@ image inode. The mark must live in exactly one place per layer, and the layers
 must agree - a drifted constant silently drops the SERVICE grant, a spread
 mark hands it to the wrong binary. This test pins the inventory:
 
-1. kernel defines: LEONOS_GID_WINDOW_SERVER/LEONOS_GID_SERVICE in
+1. kernel defines: RELIEFOS_GID_WINDOW_SERVER/RELIEFOS_GID_SERVICE in
    kernel/reliefnt/kernel/exec/userland.c carry the pinned values;
 2. staging plan: tools/build/rootfs-stage.sh assigns gid 60001 to desktop.elf
    and 60002 to windowd.elf/imd.elf and nothing else;
@@ -40,9 +40,9 @@ SERVICE_GID = 60002
 
 # The complete mark inventory: path -> role gid. Nothing else may be marked.
 ROLE_MARKS = {
-    "/usr/lib/leonos/apps/desktop/desktop.elf": WINDOW_SERVER_GID,
-    "/usr/lib/leonos/apps/windowd/windowd.elf": SERVICE_GID,
-    "/usr/lib/leonos/apps/imd/imd.elf": SERVICE_GID,
+    "/usr/lib/reliefos/apps/desktop/desktop.elf": WINDOW_SERVER_GID,
+    "/usr/lib/reliefos/apps/windowd/windowd.elf": SERVICE_GID,
+    "/usr/lib/reliefos/apps/imd/imd.elf": SERVICE_GID,
 }
 
 GROUP_NAMES = {
@@ -53,8 +53,8 @@ GROUP_NAMES = {
 
 def check_kernel_defines(failures):
     text = KERNEL_USERLAND.read_text()
-    for name, value in (("LEONOS_GID_WINDOW_SERVER", WINDOW_SERVER_GID),
-                        ("LEONOS_GID_SERVICE", SERVICE_GID)):
+    for name, value in (("RELIEFOS_GID_WINDOW_SERVER", WINDOW_SERVER_GID),
+                        ("RELIEFOS_GID_SERVICE", SERVICE_GID)):
         match = re.search(rf"^#define {name} (\d+)u$", text, re.M)
         if not match:
             failures.append(f"KERNEL: {name} define missing in {KERNEL_USERLAND}")

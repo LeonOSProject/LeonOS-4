@@ -240,7 +240,7 @@ int reliefos_task_snapshot(struct reliefos_task_info *tasks, uint32_t capacity,
         if (ps_parse_stat(path, &tasks[count]) == 0) {
             char status[512], password_buffer[1024];
             struct passwd record, *account = NULL;
-            /* Identity and LeonOS-specific metadata are named status fields,
+            /* Identity and ReliefOS-specific metadata are named status fields,
              * never extra columns in the Linux stat ABI. */
             char *suffix = strrchr(path, '/');
             ps_copy(suffix + 1, (uint32_t)(sizeof(path) - (suffix + 1 - path)), "status");

@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-rlimit-") as directory:
+with tempfile.TemporaryDirectory(prefix="reliefos-rlimit-") as directory:
     for test in ("resource_limits", "resource_mm"):
         output = str(Path(directory) / test)
         subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",

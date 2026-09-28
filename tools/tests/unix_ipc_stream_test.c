@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 #endif
 #include <assert.h>
+#include "host_tmp.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -113,7 +114,11 @@ int main(void)
     assert(reliefos_ipc_close(pair[0]) == 0 && reliefos_ipc_close(pair[1]) == 0);
     close(first[1]); close(second[1]);
     char path[108];
-    snprintf(path, sizeof(path), "/tmp/leonos-ipc-host-%ld.sock", (long)getpid());
+    host_tmp_path(path, sizeof(path), "ipc-XXXXXX");
+    int reservation = mkstemp(path);
+    assert(reservation >= 0);
+    close(reservation);
+    assert(unlink(path) == 0);
     int listener = reliefos_ipc_bind_listen(path, 2);
     assert(listener >= 0);
     struct stat node;

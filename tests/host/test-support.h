@@ -80,7 +80,7 @@ static int test_join(char *out, size_t out_size, const char *dir, const char *na
 /* Creates a private temporary directory, or returns NULL. */
 static inline char *test_temp_dir(char *buffer, size_t size)
 {
-    const char *pattern = "./leonos-host-test-XXXXXX";
+    const char *pattern = "./reliefos-host-test-XXXXXX";
 
     if (size < strlen(pattern) + 1) {
         return NULL;
@@ -179,4 +179,4 @@ static inline int test_write_plain(const char *path, const void *data, size_t si
     return result;
 }
 
-#endif /* LEONOS_TEST_SUPPORT_H */
+#endif /* RELIEFOS_TEST_SUPPORT_H */

@@ -155,7 +155,7 @@ static int load_rules(struct state *state, const char *policy_path, json_value *
         if (group->type != JSON_OBJECT) return fail("group %s must be an object", name);
         if (add_string_rules(state, json_member(group, "paths"), name, "", "") != 0 ||
             add_string_rules(state, json_member(group, "components"), name,
-                "usr/lib/leonos/apps", "") != 0 ||
+                "usr/lib/reliefos/apps", "") != 0 ||
             add_string_rules(state, stems, name, "", ".so") != 0 ||
             add_string_rules(state, stems, name, "", ".a") != 0 ||
             add_string_rules(state, stems, name, "", ".la") != 0) return -1;
@@ -389,7 +389,7 @@ static void emit_json(FILE *stream, const json_value *value, int policy_root)
                     quote_json(stream, "installed-by-upstream-apk"); continue;
                 }
                 if (policy_root && !strcmp(value->keys[i], "current_distributor")) {
-                    quote_json(stream, "leonos-apk"); continue;
+                    quote_json(stream, "reliefos-apk"); continue;
                 }
             }
             emit_json(stream, &value->children[i], 0);

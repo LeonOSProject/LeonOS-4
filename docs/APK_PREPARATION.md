@@ -1,5 +1,10 @@
 # APK-managed LeonOS roots
 
+> Historical snapshot from 2026-09-14, before the ReliefOS package and brand
+> migration. Package names, kernel identity, and validation output below record
+> that earlier state; current package names and identity are documented in
+> `docs/BUILDSYSTEM.md` and `docs/branding-compatibility.md`.
+
 LeonOS now ships the unmodified Alpine apk-tools-static 3.0.8-r0 executable as
 `/sbin/apk`. Normal ISO, VMDK and installer builds use real signed APK
 transactions to populate the root filesystem and `/lib/apk/db/installed`.

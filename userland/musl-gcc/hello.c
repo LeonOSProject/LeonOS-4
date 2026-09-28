@@ -2,6 +2,6 @@
 
 int main(void)
 {
-    puts("Hello from musl GCC on LeonOS!");
+    puts("Hello from musl GCC on ReliefOS!");
     return 0;
 }

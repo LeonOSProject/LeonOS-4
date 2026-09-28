@@ -18,7 +18,7 @@ struct reliefos_locale_setting {
  * @param text 文件内容，不要求 NUL 结尾。
  * @param length text 字节数。
  * @param out 输出数组，由调用方提供。
- * @param capacity out 的元素个数，须不小于 LEONOS_LOCALE_MAX 才能收满全部类别。
+ * @param capacity out 的元素个数，须不小于 RELIEFOS_LOCALE_MAX 才能收满全部类别。
  * @return 写入的条目数；0 表示无有效条目。同名键后出现者覆盖先出现者。
  */
 int reliefos_locale_parse(const char *text, size_t length,

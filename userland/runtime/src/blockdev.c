@@ -1,4 +1,4 @@
-/* Block-device helpers for LeonOS userland tools.
+/* Block-device helpers for ReliefOS userland tools.
  *
  * This module deliberately uses only POSIX file descriptors, Linux block
  * ioctls, and sector-aligned raw I/O.  It is the shared implementation for

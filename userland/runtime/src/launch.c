@@ -339,7 +339,7 @@ int reliefos_launch_create_shortcut(const char *shortcut_path, const char *targe
         return launch_fail(RELIEFOS_LAUNCH_ERR_EXISTS);
     }
     body[0] = 0;
-    append_text(body, &pos, sizeof(body), "# LeonOS shortcut\n");
+    append_text(body, &pos, sizeof(body), "# ReliefOS shortcut\n");
     append_text(body, &pos, sizeof(body), "target=");
     append_text(body, &pos, sizeof(body), target_path);
     append_char(body, &pos, sizeof(body), '\n');
@@ -862,7 +862,7 @@ int reliefos_launch_file_with_app(const char *target_path, const char *program_p
         argv[1] = (char *)target_path;
         argv[2] = 0;
         /* The caller explicitly selected this executable as the handler.
-         * Do not feed it back through leonos_launch_argv(): that routine is
+         * Do not feed it back through reliefos_launch_argv(): that routine is
          * for user-entered paths and may reinterpret its first argument as a
          * directory or another associated document.  An explicit handler
          * must be spawned directly, otherwise selecting Notepad can fall

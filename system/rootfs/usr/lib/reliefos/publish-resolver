@@ -24,7 +24,7 @@ esac
 umask 022
 tmp=$(mktemp /etc/.resolv.conf.XXXXXX)
 trap 'rm -f "$tmp"' EXIT HUP INT TERM
-printf '# Managed by LeonOS udhcpc resolver hook\noptions timeout:2 attempts:2\n' > "$tmp"
+printf '# Managed by ReliefOS udhcpc resolver hook\noptions timeout:2 attempts:2\n' > "$tmp"
 for server in $servers; do
     valid_ipv4 "$server" || exit 1
     printf 'nameserver %s\n' "$server" >> "$tmp"

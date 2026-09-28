@@ -1537,7 +1537,7 @@ static void present_taskmgr(uint32_t window_id, struct reliefos_ui_surface *ui)
     reliefos_gui_present_window(window_id, view_w, view_h, TASKMGR_MAX_W, pixels);
 }
 
-/* Keep thumb geometry identical to leonos_ui_vscrollbar. Capture the drag
+/* Keep thumb geometry identical to reliefos_ui_vscrollbar. Capture the drag
  * until release, including motion outside the narrow scrollbar rectangle. */
 static int process_scroll_event(const struct reliefos_gui_app_event *event)
 {

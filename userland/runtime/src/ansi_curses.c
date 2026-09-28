@@ -1,4 +1,4 @@
-/* Shared ANSI curses subset for LeonOS terminal applications. */
+/* Shared ANSI curses subset for ReliefOS terminal applications. */
 #include <ncurses.h>
 
 #include <stdint.h>
@@ -494,7 +494,7 @@ int wgetch(WINDOW *window)
         if (result == 1) {
             return value;
         }
-        /* LeonOS PTYs report an empty input queue as a zero-byte read rather
+        /* ReliefOS PTYs report an empty input queue as a zero-byte read rather
          * than blocking in the kernel.  Nano expects blocking curses reads;
          * sleep for one scheduler tick instead of spinning millions of times. */
         if (result == 0) {

@@ -42,9 +42,9 @@ static int unprivileged_management(void)
           "ordinary user DHCP requires authorization");
     CHECK(reliefos_net_config(&config) == 0 && config.local_ip == 0x0a25000f,
           "network service remains usable after denied update");
-    char *direct[] = {"/usr/lib/leonos/apps/netctl/netctl.elf", "--renew-dhcp", NULL};
+    char *direct[] = {"/usr/lib/reliefos/apps/netctl/netctl.elf", "--renew-dhcp", NULL};
     CHECK(run(direct) == 128 + EACCES, "DHCP helper rejects direct unprivileged execution");
-    char *authorized[] = {"/usr/bin/sudo", "-n", "--", "/usr/lib/leonos/apps/netctl/netctl.elf",
+    char *authorized[] = {"/usr/bin/sudo", "-n", "--", "/usr/lib/reliefos/apps/netctl/netctl.elf",
                           "--renew-dhcp", NULL};
     CHECK(run(authorized) == 0, "upstream sudo authorizes actual DHCP worker");
     return failures != 0;
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
     struct reliefos_net_dhcp renewed;
     CHECK(reliefos_net_dhcp_renew(4000, &renewed) == 0 && renewed.status == 0 &&
           renewed.config.local_ip == 0x0a25000f, "root DHCP update through production service");
-    char *ordinary[] = {"/usr/lib/leonos/tests/linux-inventory.elf", "--netmand-unprivileged", NULL};
+    char *ordinary[] = {"/usr/lib/reliefos/tests/linux-inventory.elf", "--netmand-unprivileged", NULL};
     CHECK(run(ordinary) == 0, "network controller authorization workflow");
     int datagrams[2] = {socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0), socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)};
     struct sockaddr_in loop = {.sin_family=AF_INET, .sin_port=htons(53000), .sin_addr={.s_addr=htonl(0x7f000001)}};

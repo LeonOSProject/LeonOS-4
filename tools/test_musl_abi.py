@@ -23,7 +23,7 @@ def main():
     resource = subprocess.check_output(["clang", "-print-resource-dir"], text=True).strip()
     cc = ["clang", "--target=x86_64-linux-musl", "-O2", "-fPIC", "-nostdinc",
           "-isystem", prefix / "include", "-isystem", Path(resource) / "include"]
-    with tempfile.TemporaryDirectory(prefix="leonos-musl-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-musl-") as directory:
         temp = Path(directory)
         checks = ["#define _GNU_SOURCE", "#include <fcntl.h>", "#include <sys/stat.h>",
                   "#include <sys/syscall.h>", "#include <stddef.h>",

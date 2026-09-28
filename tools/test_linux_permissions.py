@@ -6,7 +6,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
-with tempfile.TemporaryDirectory(prefix="leonos-permissions-") as directory:
+with tempfile.TemporaryDirectory(prefix="reliefos-permissions-") as directory:
     executable = str(Path(directory) / "permissions")
     subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                     "-fno-omit-frame-pointer", "-ffunction-sections", "-fdata-sections",

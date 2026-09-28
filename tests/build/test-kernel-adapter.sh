@@ -18,7 +18,7 @@ cd "$repo_root" || exit 1
 # The kernel checkout under test (env-overridable, see tests/build/test-incremental.sh).
 reliefnt=${RELIEFNT_DIR:-${NTCLKS_DIR:-$repo_root/kernel/reliefnt}}
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-adapter.XXXXXX") || exit 1
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-adapter.XXXXXX") || exit 1
 O="$work/out"
 failures=0
 checks=0
@@ -345,7 +345,7 @@ recovered_checksum=$(sha256sum "$fail_out/generated/system/kernel.sys" | cut -d'
 
 # A real content change must re-publish with new bytes (the dirty-modification
 # path), and restoring the content must restore the image byte for byte.
-printf '\nint leonos_probe_marker = 1;\n' >>"$broken"
+printf '\nint reliefos_probe_marker = 1;\n' >>"$broken"
 if build "$work/content.log" "$fail_out" RELIEFNT_DIR="$fixture"; then
     content_checksum=$(sha256sum "$fail_out/generated/system/kernel.sys" | cut -d' ' -f1)
     if [ "$content_checksum" != "$recovered_checksum" ]; then

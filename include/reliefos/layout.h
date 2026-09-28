@@ -4,7 +4,7 @@
 #include <reliefos/rootfs.h>
 
 /*
- * ReliefOS 4 guest root filesystem layout contract.
+ * ReliefOS guest root filesystem layout contract.
  *
  * The installed root follows the Alpine Linux FHS shape: /bin, /sbin, /lib,
  * /usr/bin, /usr/sbin and /usr/lib are real directories.  There is no

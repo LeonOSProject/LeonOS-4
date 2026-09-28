@@ -44,7 +44,7 @@ def text_keys(text: str) -> tuple[str, ...]:
         ":": "shift-semicolon",
         # QEMU's HMP key name for the pipe key is the shifted backslash key.
         # `bar` is accepted by some builds but does not inject a character on
-        # the guest keyboard layout used by LeonOS.
+        # the guest keyboard layout used by ReliefOS.
         "|": "shift-backslash",
         "&": "shift-7",
     }
@@ -227,7 +227,7 @@ def main() -> int:
         return 0
 
     if hyfetch_smoke:
-        send_keys(sock, text_keys("sh /usr/lib/leonos/tests/hyfetch.sh") + ("ret",))
+        send_keys(sock, text_keys("sh /usr/lib/reliefos/tests/hyfetch.sh") + ("ret",))
         time.sleep(6.0)
         # Accept the upstream wizard's defaults. Stop as soon as the wrapper
         # reports its repeated run, so keystrokes cannot run shell commands.
@@ -308,7 +308,7 @@ def main() -> int:
         # Terminal and desktop have the runtime resident already.  Deleting
         # the on-disk runtime must therefore leave the desktop available to
         # display the statically linked recovery window for the next launch.
-        send_keys(sock, text_keys("rm /usr/lib/leonos/libleonos.so.1") + ("ret",))
+        send_keys(sock, text_keys("rm /usr/lib/reliefos/libreliefos.so.2") + ("ret",))
         time.sleep(2.0)
         send_keys(sock, text_keys("pleditor") + ("ret",))
         time.sleep(5.0)

@@ -10,9 +10,8 @@ start() {
     fi
     test -d /run/leonos || return 1
     checkpath --directory --mode 1777 /tmp /var/tmp || return 1
-    # Hostname load moved out of the kernel (A16); keep the default
-    # "leonos" when /etc/hostname is absent or rejected, like the old
-    # kernel loader did. Never fail the service over the hostname.
+    # Hostname load moved out of the kernel (A16). The rootfs default is
+    # "reliefos"; a missing or rejected hostname file must not fail the service.
     test -f /etc/hostname && hostname -F /etc/hostname
     test -r /proc/self/status && test -d /sys && test -c /dev/console
 }

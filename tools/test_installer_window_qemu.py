@@ -154,7 +154,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     serial, qmp = out / "serial.log", out / "qmp.sock"
     qmp.unlink(missing_ok=True)
-    iso = ROOT / "build/images" / ("leonos4.iso" if args.case == "desktop" else "leonos4-installer.iso")
+    iso = ROOT / "build/images" / ("reliefos-live.iso" if args.case == "desktop" else "reliefos-installer.iso")
     if args.iso:
         iso = args.iso.resolve()
     disk = out / "scratch.raw"

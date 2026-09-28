@@ -16,7 +16,7 @@ def verify(root: Path) -> None:
         assert digest(root / name) == expected, name
     launcher = root / "opt/dyne/bin/reliefos-musl-cc"
     assert launcher.is_file(), launcher
-    with tempfile.TemporaryDirectory(prefix="leonos-gcc-package-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-gcc-package-") as directory:
         work = Path(directory)
         bin_dir = work / "bin"
         bin_dir.mkdir()

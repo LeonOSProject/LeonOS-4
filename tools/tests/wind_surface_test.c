@@ -1,4 +1,5 @@
 #include <assert.h>
+#include "host_tmp.h"
 #include <stdlib.h>
 #include <sys/un.h>
 
@@ -66,7 +67,8 @@ static void assert_reply_closed(void)
 
 int main(void)
 {
-    char path[] = "/tmp/leonos-surface-XXXXXX";
+    char path[256];
+    host_tmp_path(path, sizeof(path), "surface-XXXXXX");
     backing_fd = mkstemp(path);
     assert(backing_fd >= 0);
     assert(unlink(path) == 0 && ftruncate(backing_fd, 4096) == 0);
@@ -92,7 +94,7 @@ int main(void)
                pixels[4] == 23 && pixels[5] == 24);
     }
     assert(fetches == 1);
-    assert(fcntl(reply_fd, F_GETFD) >= 0); /* LeonOS SHM lifetime is FD-owned. */
+    assert(fcntl(reply_fd, F_GETFD) >= 0); /* ReliefOS SHM lifetime is FD-owned. */
     assert(fcntl(reply_fd, F_GETFD) & FD_CLOEXEC);
     memset(pixels, 0, sizeof(pixels));
     assert(reliefos_gui_fetch_window(7, 2, 2, 1, pixels, 0, 0) == 1);

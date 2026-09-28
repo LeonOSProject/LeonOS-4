@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the same chroot probe on Linux and LeonOS, including dynamic exec."""
+"""Run the same chroot probe on Linux and ReliefOS, including dynamic exec."""
 from pathlib import Path
 import shutil
 import subprocess
@@ -37,12 +37,12 @@ def main():
         stage = Path(tmp) / "root"
         make_live_tree(ROOT / "build/apk/root", stage)
         fixture(stage / "tmp/chroot-fixture", WORK / "dynamic")
-        tests = stage / "usr/lib/leonos/tests"
+        tests = stage / "usr/lib/reliefos/tests"
         tests.mkdir(parents=True, exist_ok=True)
         shutil.copy2(WORK / "static", tests / "chroot-probe")
         launcher = WORK / "launcher.c"
         launcher.write_text('#include <unistd.h>\nint main(void) {\n'
-                            'execl("/usr/lib/leonos/tests/chroot-probe", "probe", '
+                            'execl("/usr/lib/reliefos/tests/chroot-probe", "probe", '
                             '"/tmp/chroot-fixture", (char *)0); return 1; }\n')
         subprocess.run([str(compiler), "-static", str(launcher), "-o",
                         str(tests / "linux-inventory.elf")], check=True)
@@ -51,7 +51,7 @@ def main():
     iso.GRUB_TEMPLATE = iso.GRUB_TEMPLATE.replace(
         "autospawn=ioctlcloexec autospawn=python315", "autospawn=inventory").replace(
         "syscall-trace=/opt/python/", "").replace("set timeout=5", "set timeout=0")
-    iso.build_iso(WORK / "root.ext2", WORK / "leonos4-apk.iso", WORK / "grub.cfg", WORK)
+    iso.build_iso(WORK / "root.ext2", WORK / "reliefos-apk.iso", WORK / "grub.cfg", WORK)
     runner.WORK = WORK
     runner.guest(180)
 

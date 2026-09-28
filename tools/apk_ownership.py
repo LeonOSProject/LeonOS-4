@@ -12,7 +12,7 @@ import re
 import stat
 import tomllib
 
-import leonos_layout as layout
+import reliefos_layout as layout
 from storage_tools import FORMATTER_COMMANDS, UTIL_LINUX_COMMANDS, UTIL_LINUX_LIBRARIES
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,7 +41,7 @@ def load_policy(policy_path: Path, components_path: Path):
             if component in owners:
                 raise ValueError(f"duplicate component: {component}")
             owners[component] = group
-            claim(f"usr/lib/leonos/apps/{component}", group)
+            claim(str(layout.app_package_dir(component)), group)
             for path in layout.tool_payload_paths(component):
                 claim(str(path), group)
         for path in entry.get("paths", []):

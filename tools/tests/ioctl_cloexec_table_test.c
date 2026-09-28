@@ -6,7 +6,7 @@
  * descriptor tables and error paths rather than a re-implementation.  It is
  * the host-side half of the ioctl(FIOCLEX/FIONCLEX) regression; the guest half
  * is tools/tests/linux_ioctl_cloexec_test.c, which runs the same Linux ABI on
- * the real LeonOS kernel and on the host Linux kernel as the reference.
+ * the real ReliefOS kernel and on the host Linux kernel as the reference.
  */
 #include <assert.h>
 #include <stdio.h>

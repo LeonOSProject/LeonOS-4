@@ -835,7 +835,7 @@ int reliefos_gui_fetch_window(uint32_t window_id, uint32_t capacity_width,
         surface->width = ack.width;
         surface->height = ack.height;
         /* windowd keeps this allocation until DESTROY. Retain the FD too:
-         * LeonOS SHM pages are owned by descriptors, not by VM mappings. */
+         * ReliefOS SHM pages are owned by descriptors, not by VM mappings. */
     }
     if (out_width) *out_width = surface->width;
     if (out_height) *out_height = surface->height;

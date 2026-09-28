@@ -84,7 +84,7 @@ int main(void)
     dialogs = 0;
     assert(mkdir("/etc/pam.d", 0755) == 0);
     assert(mkdir("/etc/security", 0755) == 0);
-    assert(mkdir("/run/leonos", 0755) == 0);
+    assert(mkdir("/run/reliefos", 0755) == 0);
     write_file("/etc/passwd", "root:x:0:0:root:/root:/bin/sh\n");
     write_file("/etc/group", "root:x:0:\n");
     char salt[CRYPT_GENSALT_OUTPUT_SIZE], text[512];
@@ -94,7 +94,7 @@ int main(void)
     assert(hash && *hash == '$');
     snprintf(text, sizeof(text), "root:%s:20000:0:99999:7:::\n", hash);
     write_file("/etc/shadow", text);
-    write_file("/etc/pam.d/leonos-gui",
+    write_file("/etc/pam.d/reliefos-gui",
                "auth required pam_unix.so\naccount required pam_unix.so\n"
                "session required pam_limits.so\n");
     run_case("wrong lowercase", "abc123!", "", EACCES, ENOSYS);

@@ -1,5 +1,5 @@
 /* Phase 0 Unix-IPC self test: blocking socketpair, SCM_RIGHTS, shm mmap,
- * uid syscalls, and a tolerant AF_INET connect probe. Run from the LeonOS
+ * uid syscalls, and a tolerant AF_INET connect probe. Run from the ReliefOS
  * shell as /usr/lib/reliefos/apps/ipctest/ipctest.elf. */
 #include <errno.h>
 #include <fcntl.h>
@@ -40,7 +40,7 @@ int main(void)
         return failures ? 1 : 0;
     }
     /* Native Linux allows fd 3 and reused standard descriptors. Validate the
-     * allocated objects, rather than the retired LeonOS reserved-fd range. */
+     * allocated objects, rather than the retired ReliefOS reserved-fd range. */
     failures += !check(sockets[0] >= 0 && sockets[1] >= 0 && sockets[0] != sockets[1] &&
                        fcntl(sockets[0], F_GETFD) == 0 && fcntl(sockets[1], F_GETFD) == 0,
                        "socketpair");

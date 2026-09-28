@@ -26,7 +26,7 @@ int reliefos_sudo_run_stdout(const char *user, char *const argv[], int output, u
 {
     assert(!user && !strcmp(argv[0], APIAPP_PATH));
     assert(!strcmp(argv[1], "--install-worker") && !argv[5]);
-    assert(!strcmp(argv[2], "/api/example.api") && !strcmp(argv[3], "/usr/lib/leonos/apps/example"));
+    assert(!strcmp(argv[2], "/api/example.api") && !strcmp(argv[3], "/usr/lib/reliefos/apps/example"));
     assert(!strcmp(argv[4], "1"));
     ++workers;
     if (spawn_error) { errno = spawn_error; return -1; }
@@ -79,7 +79,7 @@ int main(void)
         child_result = attempt == 0 ? 0 : 1;
         send_progress = attempt < 2;
         spawn_error = attempt == 3 ? ENOENT : 0;
-        int result = install_api_with_progress(1, "/api/example.api", "/usr/lib/leonos/apps/example", 1);
+        int result = install_api_with_progress(1, "/api/example.api", "/usr/lib/reliefos/apps/example", 1);
         assert(relaunches == 0);
         assert(workers == attempt + 1);
         assert(result == (attempt == 0));

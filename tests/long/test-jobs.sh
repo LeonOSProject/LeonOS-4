@@ -15,9 +15,9 @@ repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 
 # The kernel checkout under test (env-overridable, see tests/build/test-incremental.sh).
-ntclks=${NTCLKS_DIR:-$repo_root/kernel/reliefnt}
+reliefnt=${RELIEFNT_DIR:-${NTCLKS_DIR:-$repo_root/kernel/reliefnt}}
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-jobs.XXXXXX") || exit 1
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-jobs.XXXXXX") || exit 1
 failures=0
 checks=0
 
@@ -48,7 +48,7 @@ rounds=3
 # different names, and a comparison that includes them measures the test fixture
 # rather than the work Make chose to do.
 snapshot() {
-    find "$1/ntclks/obj/kernel" -name '*.o' -printf '%P %T@\n' 2>/dev/null | LC_ALL=C sort
+    find "$1/reliefnt/obj/kernel" -name '*.o' -printf '%P %T@\n' 2>/dev/null | LC_ALL=C sort
 }
 
 changed_between() {
@@ -59,8 +59,8 @@ changed_between() {
 # The three invalidations are deliberately different action classes: one ordinary
 # source, one header with dozens of consumers, and the linker script, which must
 # relink without recompiling anything. They live in the kernel checkout.
-touch_targets="$ntclks/kernel/reliefnt/futex.c $ntclks/kernel/reliefnt/include/ntclks/types.h
-$ntclks/arch/x86_64/linker.ld"
+touch_targets="$reliefnt/kernel/reliefnt/futex.c $reliefnt/kernel/reliefnt/include/reliefnt/types.h
+$reliefnt/arch/x86_64/linker.ld"
 
 printf '=== A08: -j1 and -j8 from clean output directories ===\n'
 for level in $jobs; do
@@ -87,7 +87,7 @@ for level in $jobs; do
     # has none, so the check names exactly the four it expects.
     missing_sig=''
     for class in kernel-cc kernel-as kernel-link kernel-objcopy; do
-        [ -f "$tree/ntclks/meta/$class.sig" ] || missing_sig="$missing_sig $class"
+        [ -f "$tree/reliefnt/meta/$class.sig" ] || missing_sig="$missing_sig $class"
     done
     if [ -z "$missing_sig" ]; then
         pass "-j$level publishes a signature for every kernel action class"
@@ -97,7 +97,7 @@ for level in $jobs; do
     fi
     # The signature legitimately contains -I$(O)/include, so normalise the tree
     # path before comparing: what must agree is the tool, its identity and flags.
-    sed "s#$tree#<O>#g" "$tree/ntclks/meta/kernel-cc.sig" >"$work/sig-j$level" 2>/dev/null ||
+    sed "s#$tree#<O>#g" "$tree/reliefnt/meta/kernel-cc.sig" >"$work/sig-j$level" 2>/dev/null ||
         : >"$work/sig-j$level"
 done
 
@@ -119,7 +119,7 @@ printf '\n=== A08: the same invalidations at both job levels, three rounds ===\n
 # is stable. The cheap pair is also two different action classes: one object, and
 # a relink with no recompilation at all.
 heavy_targets=$touch_targets
-light_targets="$ntclks/kernel/reliefnt/futex.c $ntclks/arch/x86_64/linker.ld"
+light_targets="$reliefnt/kernel/reliefnt/futex.c $reliefnt/arch/x86_64/linker.ld"
 for round in 1 2 3; do
     if [ "$round" = 1 ]; then
         round_targets=$heavy_targets
@@ -167,8 +167,8 @@ done
 
 printf '\n=== A08: comparable output content ===\n'
 for product in generated/system/kernel.sys generated/system/kernel.debug \
-        ntclks/generated/system/kernel.unstripped ntclks/obj/kernel/sources.list \
-        include/generated/autoconf.h ntclks/include/generated/build_info.h; do
+        reliefnt/generated/system/kernel.unstripped reliefnt/obj/kernel/sources.list \
+        include/generated/autoconf.h reliefnt/include/generated/build_info.h; do
     a=$work/j1/$product
     b=$work/j8/$product
     if [ ! -f "$a" ] || [ ! -f "$b" ]; then
@@ -212,7 +212,7 @@ make -s O="$victim" -j2 SOURCE_DATE_EPOCH=$epoch kernel \
 victim_pid=$!
 waited=0
 while [ "$waited" -lt 200 ]; do
-    if [ -n "$(find "$victim/ntclks/obj/kernel" -name '*.o' -newer "$work/interrupt-trigger" \
+    if [ -n "$(find "$victim/reliefnt/obj/kernel" -name '*.o' -newer "$work/interrupt-trigger" \
             -print -quit 2>/dev/null)" ]; then
         break
     fi

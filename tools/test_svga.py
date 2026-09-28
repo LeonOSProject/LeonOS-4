@@ -14,7 +14,7 @@ class SvgaTests(unittest.TestCase):
     def test_driver(self):
         self.assertTrue(all(path.exists() for path in SOURCES),
                         "SVGA3D implementation is missing")
-        with tempfile.TemporaryDirectory(prefix="leonos-svga-") as directory:
+        with tempfile.TemporaryDirectory(prefix="reliefos-svga-") as directory:
             executable = Path(directory) / "svga-test"
             subprocess.run([
                 "cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-g",
@@ -34,7 +34,7 @@ class SvgaTests(unittest.TestCase):
             "paging_kernel_direct_map", "paging_mmio_uncached", "x86_64_inl",
             "x86_64_outl", "memcpy", "memset", "memmove",
         }
-        with tempfile.TemporaryDirectory(prefix="leonos-svga-kernel-") as directory:
+        with tempfile.TemporaryDirectory(prefix="reliefos-svga-kernel-") as directory:
             for optimization in ("-O0", "-O2"):
                 with self.subTest(optimization=optimization):
                     objects = []

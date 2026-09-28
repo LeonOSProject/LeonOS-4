@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-sysv-msg-") as directory:
+with tempfile.TemporaryDirectory(prefix="reliefos-sysv-msg-") as directory:
     output = str(Path(directory) / "sysv_msg")
     subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                     "-fno-sanitize-recover=all", "-ffunction-sections", "-fdata-sections",

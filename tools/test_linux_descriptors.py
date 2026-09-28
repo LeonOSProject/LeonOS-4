@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-descriptors-") as directory:
+with tempfile.TemporaryDirectory(prefix="reliefos-descriptors-") as directory:
     binary = str(Path(directory) / "descriptors")
     subprocess.run([
         "clang", "-std=c11", "-g", "-O1", "-ffunction-sections", "-fdata-sections",

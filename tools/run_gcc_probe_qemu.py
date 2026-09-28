@@ -45,7 +45,7 @@ def main() -> int:
     parser.add_argument("--timeout", type=float, default=900.0)
     parser.add_argument("--serial", type=Path,
                         default=ROOT / "build/gcc-probe/guest-serial.log")
-    parser.add_argument("--qmp", type=Path, default=Path("/tmp/leonos-gcc-probe-qmp.sock"))
+    parser.add_argument("--qmp", type=Path, default=ROOT / "build/gcc-probe/qmp.sock")
     args = parser.parse_args()
     image = ROOT / "build/gcc-probe/gcc-probe.vmdk"
     if not image.exists():

@@ -87,7 +87,7 @@ def main():
     serial = args.log.resolve()
     serial.parent.mkdir(parents=True, exist_ok=True)
     serial.write_text("")
-    with tempfile.TemporaryDirectory(prefix="leonos-linux-reference-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-linux-reference-") as directory:
         qmp = Path(directory) / "qmp.sock"
         command = ["qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-machine", "q35",
                    "-m", "512", "-smp", "2", "-kernel", str(output / "arch/x86/boot/bzImage"),

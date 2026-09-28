@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class RuntimeResponsivenessTests(unittest.TestCase):
     def test_framebuffer_reports_hardware_limits_and_remaps_after_mode_change(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-wind-fb-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="reliefos-wind-fb-") as tmp:
             executable = str(Path(tmp) / "wind-framebuffer")
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
@@ -20,7 +20,7 @@ class RuntimeResponsivenessTests(unittest.TestCase):
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
 
     def test_window_repaints_reuse_live_shared_memory(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-wind-surface-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="reliefos-wind-surface-") as tmp:
             executable = str(Path(tmp) / "wind-surface")
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
@@ -31,7 +31,7 @@ class RuntimeResponsivenessTests(unittest.TestCase):
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
 
     def test_signal_frame_uses_destination_address_space(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-signal-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="reliefos-signal-") as tmp:
             executable = str(Path(tmp) / "signal")
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",

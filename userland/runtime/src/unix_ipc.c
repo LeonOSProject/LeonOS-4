@@ -1,4 +1,4 @@
-/* Unix domain socket framing client used by every migrated LeonOS service. */
+/* Unix domain socket framing client used by every migrated ReliefOS service. */
 #include <reliefos/unix_ipc.h>
 #include <errno.h>
 #include <fcntl.h>

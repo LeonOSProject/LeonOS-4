@@ -70,7 +70,7 @@ def main():
     if args.sudo:
         overlay_auth_tree(auth / "root/usr", stage / "usr", stage)
         overlay_auth_tree(auth / "root/bin", stage / "bin", stage)
-    tests = stage / "usr/lib/leonos/tests"
+    tests = stage / "usr/lib/reliefos/tests"
     tests.mkdir(parents=True, exist_ok=True)
     if args.ltp:
         shutil.copytree(ROOT / "build/musl/ltp", tests, dirs_exist_ok=True)
@@ -96,7 +96,7 @@ insmod fat
 insmod multiboot2
 insmod all_video
 set gfxpayload=keep
-menuentry "LeonOS PAM runtime probe" {
+menuentry "ReliefOS PAM runtime probe" {
     set root=(hd0,gpt1)
     multiboot2 /loader.elf root=/ log=serial autospawn=gcc
     boot
@@ -112,7 +112,7 @@ menuentry "LeonOS PAM runtime probe" {
     artifacts += [tests / "gcc-probe.elf", stage / "leonos/kernel.sys",
                   stage / "loader.elf", stage / "lib/ld-musl-x86_64.so.1"]
     artifacts += [stage / "usr/lib/leonos/libleonos.so.2",
-                  stage / "usr/lib/leonos/apps/authd/authd.elf"]
+                  stage / "usr/lib/reliefos/apps/authd/authd.elf"]
     artifacts += extra_files
     if args.sudo:
         artifacts += [stage / "usr/bin/sudo", stage / "usr/sbin/visudo", stage / "bin/su",

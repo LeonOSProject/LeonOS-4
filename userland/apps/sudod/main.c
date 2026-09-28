@@ -166,7 +166,7 @@ static int sudod_parent_of(struct sudod_path *out, const char *path)
 }
 
 /* Enumerate `path` into the shared result buffer. This is the same
- * open + leonos_readdir pair Fileman itself uses, so the entries are exactly
+ * open + reliefos_readdir pair Fileman itself uses, so the entries are exactly
  * what its list view already understands. */
 static int sudod_load_dir(const char *path)
 {

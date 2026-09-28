@@ -242,7 +242,7 @@ static void cookie_save(void)
     browser_cookie_file_buffer[0] = 0;
     append_text(browser_cookie_file_buffer, &pos,
                 sizeof(browser_cookie_file_buffer),
-                "# LeonOS Browser cookies v1\n");
+                "# ReliefOS Browser cookies v1\n");
     for (uint32_t i = 0; i < browser_cookie_count; ++i) {
         const struct browser_cookie *cookie = &browser_cookies[i];
         append_text(browser_cookie_file_buffer, &pos,

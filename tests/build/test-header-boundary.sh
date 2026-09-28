@@ -22,9 +22,10 @@ reliefnt=${RELIEFNT_DIR:-${NTCLKS_DIR:-$repo_root/kernel/reliefnt}}
 # Probe files live in the shared checkout, so runs must not interleave: two
 # instances racing on the same files restore each other's half-written state
 # into the tree and the loser's marker stays behind forever. The lock is keyed
-# by checkout path and user, and lives in /tmp so runs with different TMPDIR
-# values still serialize on one checkout.
-probe_lock=/tmp/reliefos-header-boundary-probe-$(id -u)-$(printf '%s' "$reliefnt" | cksum | cut -d' ' -f1).lock
+# by checkout, and lives in its Git metadata so runs with different TMPDIR
+# values still serialize without writing outside the repository's data disk.
+probe_gitdir=$(git -C "$reliefnt" rev-parse --absolute-git-dir) || exit 1
+probe_lock=$probe_gitdir/reliefos-header-boundary-probe-$(id -u).lock
 exec 9>"$probe_lock" || exit 1
 if ! flock -n 9; then
     printf 'FAIL - another header-boundary run on %s is in flight\n' "$reliefnt"
@@ -45,7 +46,7 @@ for changed in "$probe_sched" "$probe_fsabi"; do
     fi
 done
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-header-boundary.XXXXXX") || exit 1
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-header-boundary.XXXXXX") || exit 1
 O="$work/out"
 failures=0
 checks=0

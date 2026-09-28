@@ -2,7 +2,7 @@
 set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../../../.." && pwd)
-test_dir=$(mktemp -d "${TMPDIR:-/tmp}/leonos-glxgears-tests.XXXXXX")
+test_dir=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-glxgears-tests.XXXXXX")
 generated_dir=${GLXGEARS_GENERATED_DIR:-"$repo_root/build/generated/glxgears"}
 trap 'rm -rf "$test_dir"' EXIT HUP INT TERM
 

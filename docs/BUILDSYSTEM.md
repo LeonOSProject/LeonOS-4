@@ -25,7 +25,7 @@ defconfig 重置为 configs/default.conf。可以复制 `.config` 保存配置�
 Kconfig 菜单（Build、Image defaults 等）决定默认配置，configs/components.toml 用 stage/entry/sdk/api 字段区分组件归属；required 组件强制开启。
 
 生成文件只写 O。`SOURCE_DATE_EPOCH` 默认为提交时间，仅用于时间元数据与可复现打包；
-版本为 `major.minor.patch`，没有构建号覆盖或计数器，提交身份另存 LEONOS_SOURCE_ID。
+版本为 `major.minor.patch`，没有构建号覆盖或计数器，提交身份另存 RELIEFOS_SOURCE_ID。
 
 | 目标 | 输出 |
 | --- | --- |

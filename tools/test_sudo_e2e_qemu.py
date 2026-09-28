@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end verification of sudo/su elevation on an installed LeonOS 4 disk.
+"""End-to-end verification of sudo/su elevation on an installed ReliefOS disk.
 
 Boots a scratch disk installed from the current installer ISO, logs into the
 desktop as the ordinary account, and drives the Terminal through the QMP
@@ -170,7 +170,7 @@ def run_elevation_checks(probe, serial, process, output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--iso", type=Path,
-                        default=ROOT / "build/images/leonos4-installer.iso")
+                        default=ROOT / "build/images/reliefos-installer.iso")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--skip-install", action="store_true",
                         help="Only boot the existing scratch disk")

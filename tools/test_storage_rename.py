@@ -32,7 +32,7 @@ def check_image(directory, features, block_size, ram_root=False):
 
 for features, block_size, ram_root in (("none", 1024, False), ("none,filetype", 1024, False),
                                       ("none,filetype", 4096, False), ("none,filetype", 4096, True)):
-    with tempfile.TemporaryDirectory(prefix="leonos-rename-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-rename-") as directory:
         check_image(directory, features, block_size, ram_root)
 
 with tempfile.TemporaryDirectory(prefix="linux-symlink-reference-") as directory:

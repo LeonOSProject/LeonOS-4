@@ -1,4 +1,4 @@
-/* Ordinary Linux/musl executable: no LeonOS SDK headers or adapted Fastfetch. */
+/* Ordinary Linux/musl executable: no ReliefOS SDK headers or adapted Fastfetch. */
 #define _GNU_SOURCE
 #include <assert.h>
 #include <errno.h>

@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-capabilities-") as directory:
+with tempfile.TemporaryDirectory(prefix="reliefos-capabilities-") as directory:
     binary = str(Path(directory) / "capabilities")
     subprocess.run([
         "cc", "-std=c11", "-O2", "-g", "-flto", "-fwhole-program",

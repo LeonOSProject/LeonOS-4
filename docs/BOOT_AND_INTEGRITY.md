@@ -2,7 +2,7 @@
 
 ## Boot flow
 
-LeonOS 4 boots through GRUB and the custom loader:
+ReliefOS boots through GRUB and the custom loader:
 
 The image build uses the tracked GRUB 2.12 EFI kernel and modules in
 `boot/grub_modules_x86_64-efi`. The host `grub-mkstandalone` assembles these
@@ -14,15 +14,15 @@ read-only relocator stubs during Multiboot2 boot; upstream fixes this in
 1. GRUB starts `boot/loader.elf` through Multiboot2.
 2. The loader locates `kernel.sys`.
 3. The loader validates that file before loading its ELF image.
-4. The kernel receives a `struct leonos_boot_handoff` with the loader, kernel and
+4. The kernel receives a `struct reliefos_boot_handoff` with the loader, kernel and
    installer-root module ranges. Its version is
-   `LEONOS_BOOT_HANDOFF_VERSION`; a kernel that expects a different layout
+   `RELIEFOS_BOOT_HANDOFF_VERSION`; a kernel that expects a different layout
    refuses the handoff instead of partially reading it.
 
 During early boot, normal disk images load components from the FAT32 ESP:
 
 - `/boot/loader.elf`
-- `/leonos/kernel.sys`
+- `/reliefos/kernel.sys` (the loader also accepts `/leonos/kernel.sys` for old disks)
 
 After the kernel starts, its storage layer mounts the separate ext2 partition
 as the normal `/` runtime root. The ESP stays separate so a full root cannot
@@ -30,8 +30,9 @@ consume UEFI boot space.
 
 Installer and live ISOs pass the kernel and installer root as GRUB modules:
 
-- `/leonos/kernel.sys` with module tag `leonos-kernel`
-- `/install/root.fat` with module tag `leonos-installer-root`
+- `/reliefos/kernel.sys` with module tag `reliefos-kernel` (legacy path/tag pairs remain accepted)
+- `/install/root.fat` with module tag `reliefos-installer-root`
+  (legacy `leonos-installer-root` remains accepted)
 
 The installer root remains resident for the installer session. It is accessed
 through a shared supervisor-only high direct map so user page tables cannot
@@ -50,7 +51,7 @@ corrupting the FAT filesystem.
 
 ## Build-time hashes
 
-`kernel/ntclks/tools/build/loader-integrity.sh` calculates the SHA-256 hash of
+`kernel/reliefnt/tools/build/loader-integrity.sh` calculates the SHA-256 hash of
 `$(O_GENERATED)/system/kernel.sys` and publishes
 `$(O_INCLUDE)/generated/loader_integrity.h`, which the loader objects include.
 `mk/boot.mk` declares that header as a prerequisite of every loader object, so a
@@ -79,12 +80,13 @@ After GRUB supplies the Multiboot2 framebuffer tag, the loader creates an
 on-screen boot log using the built-in 8x16 PSF font. All subsequent loader
 serial output is mirrored to this panel, including component discovery,
 integrity results, load failures, and the kernel handoff. The loader records
-the panel geometry and cursor in `struct leonos_boot_handoff`, so the kernel
+the panel geometry and cursor in `struct reliefos_boot_handoff`, so the kernel
 bootstrap console appends its startup log to the same GRUB framebuffer panel
 instead of opening a separate top-corner framebuffer console.
 
 The panel uses Metro blue by default and switches to the persisted Win95 or
-Metro theme after the loader reads `/etc/leonos/display.conf`. It requires a 32-bit
+Metro theme after the loader reads `/etc/reliefos/display.conf` (with the old
+`/leonos/config/display.conf` path accepted for existing disks). It requires a 32-bit
 linear framebuffer; serial logging remains available when GOP/framebuffer
 output is unavailable.
 

@@ -1,5 +1,5 @@
 msgid ""
-msgstr "Project-Id-Version: LeonOS musl locale\nPO-Revision-Date: 2026-09-21 00:00+0000\nLast-Translator: LeonOS\nLanguage-Team: Chinese\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nLanguage: zh_CN\n"
+msgstr "Project-Id-Version: ReliefOS musl locale\nPO-Revision-Date: 2026-09-21 00:00+0000\nLast-Translator: LeonOS\nLanguage-Team: Chinese\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nLanguage: zh_CN\n"
 
 msgid "Sun"
 msgstr "日"

@@ -1,4 +1,4 @@
-# LeonOS BusyBox profile
+# ReliefOS BusyBox profile
 
 The image builds BusyBox 1.36.1 as `/bin/busybox` with a
 small, static collection of file and text applets. Double-clicking it opens a
@@ -31,7 +31,7 @@ filesystem checker when a read-only check is intended.
 These programs access `/dev/disk0` and `/dev/disk0pN` through standard file
 I/O, Linux block-device ioctls, and `mount(2)`/`umount2(2)`. Formatting,
 partition changes, and mount operations require an administrator account.
-`leonos-grub-installer ESP` remains a separate LeonOS script that copies the
+`leonos-grub-installer ESP` remains a separate ReliefOS script that copies the
 prebuilt EFI/GRUB payload to an already-mounted ESP. The installer ISO also
 retains the older installer-only `gptinit` utility, but it is no longer needed
 for blank disks because upstream `fdisk` can create GPT itself.
@@ -57,7 +57,7 @@ color sequences without moving its cursor, so colored prompts can use the
 usual `\\[...\\]` markers.
 
 In TTY mode, `~` and `~/path` resolve to the home directory of the account that
-logged in. This is resolved from the current LeonOS session, so it remains
+logged in. This is resolved from the current ReliefOS session, so it remains
 correct even though the shell starts before the login program completes.
 
 Interactive Ash uses BusyBox's line editor with Tab command/path completion. The terminal sends
@@ -81,13 +81,13 @@ stdout/stderr to `nohup.out` in the current directory, falling back to
 `$HOME/nohup.out` when the current directory is not writable.
 
 `cp`, `mv`, and `rm` operate on regular files and directories through the
-LeonOS filesystem ABI. Symbolic links, ownership changes, and special device
+ReliefOS filesystem ABI. Symbolic links, ownership changes, and special device
 nodes remain unsupported by the filesystem and return an error.
 
 The `file` command is provided as an external program backed by upstream
 libmagic. Ash resolves it to `/usr/bin/file`; the matching
 compiled database is installed at `/usr/share/misc/magic.mgc`.
-`fastfetch` is likewise resolved to `/usr/lib/leonos/apps/fastfetch/fastfetch.elf`.
+`fastfetch` is likewise resolved to `/usr/lib/reliefos/apps/fastfetch/fastfetch.elf`.
 The `sl` terminal joke is resolved to `/usr/bin/sl`.
 
 The kernel provides process inspection through the task snapshot ABI,

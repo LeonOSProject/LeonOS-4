@@ -1,10 +1,10 @@
 /*
- * LeonOS frontend for PortableGL's upstream classic gears example, with
+ * ReliefOS frontend for PortableGL's upstream classic gears example, with
  * native SVGA3D drawing and a PortableGL software fallback.
  *
  * The renderer and gear mesh below come from
  * third_party/portablegl/examples/classic/gears.c.  That example has an SDL
- * frontend; LeonOS supplies the window, event and presentation layer here.
+ * frontend; ReliefOS supplies the window, event and presentation layer here.
  * pgl.h is included first so the upstream implementation section is skipped
  * by portablegl.h's include guard and is provided by libportablegl instead.
  */

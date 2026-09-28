@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class ProcfsTaskmgrTests(unittest.TestCase):
     def test_status_snapshot_consumer(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-procsys-") as directory:
+        with tempfile.TemporaryDirectory(prefix="reliefos-procsys-") as directory:
             executable = str(Path(directory) / "procsys")
             subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                             "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
@@ -20,7 +20,7 @@ class ProcfsTaskmgrTests(unittest.TestCase):
             subprocess.run([executable], check=True, timeout=10)
 
     def test_real_procfs_directory_lookup_and_enumeration(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-procfs-") as directory:
+        with tempfile.TemporaryDirectory(prefix="reliefos-procfs-") as directory:
             executable = str(Path(directory) / "procfs")
             subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                             "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ikernel/reliefnt/kernel/reliefnt/include",
@@ -48,8 +48,8 @@ class ProcfsTaskmgrTests(unittest.TestCase):
     def test_taskmgr_service_manager_entry_uses_openrc_manager(self):
         source = (ROOT / "userland/apps/taskmgr/main.c").read_text()
         self.assertIn('T("Service Manager")', source)
-        self.assertIn('leonos_launch_builtin_path("servicemgr")', source)
-        self.assertIn('leonos_launch_argv(argv)', source)
+        self.assertIn('reliefos_launch_builtin_path("servicemgr")', source)
+        self.assertIn('reliefos_launch_argv(argv)', source)
         self.assertNotIn('T("Startup Apps")', source)
 
     def test_musl_forkpty_propagates_child_setup_failure(self):

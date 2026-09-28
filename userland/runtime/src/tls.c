@@ -398,7 +398,7 @@ int reliefos_tls_http_exchange(int socket, const char *hostname,
     mbedtls_ctr_drbg_init(&drbg);
     mbedtls_entropy_init(&entropy);
     ret = mbedtls_ctr_drbg_seed(&drbg, mbedtls_entropy_func, &entropy,
-                                (const unsigned char *)"LeonOS TLS", 10);
+                                (const unsigned char *)"ReliefOS TLS", sizeof("ReliefOS TLS") - 1);
     if (ret != 0) {
         printf("[tls] exchange rng seed failed host=%s ret=%d\n", hostname, ret);
         goto cleanup;
@@ -552,7 +552,7 @@ int reliefos_tls_http_stream(int socket, const char *hostname,
     mbedtls_ctr_drbg_init(&drbg);
     mbedtls_entropy_init(&entropy);
     ret = mbedtls_ctr_drbg_seed(&drbg, mbedtls_entropy_func, &entropy,
-                                (const unsigned char *)"LeonOS TLS", 10);
+                                (const unsigned char *)"ReliefOS TLS", sizeof("ReliefOS TLS") - 1);
     if (ret != 0) {
         printf("[tls] stream rng seed failed host=%s ret=%d\n", hostname, ret);
         goto cleanup;

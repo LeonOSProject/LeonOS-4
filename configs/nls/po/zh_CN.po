@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: leonos 1\n"
+"Project-Id-Version: ReliefOS 1\n"
 "PO-Revision-Date: 2026-09-21 00:00+0800\n"
-"Last-Translator: ReliefOS NLS <nls@leonos.local>\n"
+"Last-Translator: ReliefOS NLS\n"
 "Language-Team: none\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -4647,7 +4647,7 @@ msgid "open failed "
 msgstr "打开失败 "
 
 #: userland/apps/installer/main.c:1299
-msgid "or replace the boot/leonos and system files on an existing installation."
+msgid "or replace the boot/reliefos and system files on an existing installation."
 msgstr "也可以替换现有安装中的启动和系统文件。"
 
 #: userland/apps/installer/main.c:1373

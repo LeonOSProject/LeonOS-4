@@ -14,7 +14,7 @@ CRYPTO = [f"third_party/mbedtls/library/{name}.c" for name in
 
 class InstallerSetupTests(unittest.TestCase):
     def test_hyfetch_defaults(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-hyfetch-home-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="reliefos-hyfetch-home-") as temporary:
             work = Path(temporary)
             executable = work / "prepare-home"
             subprocess.run([
@@ -57,7 +57,7 @@ class InstallerSetupTests(unittest.TestCase):
             self.assertEqual(list(outside.iterdir()), [])
 
     def test_tty_input(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-login-input-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="reliefos-login-input-") as temporary:
             executable = Path(temporary) / "login-input"
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
@@ -70,7 +70,7 @@ class InstallerSetupTests(unittest.TestCase):
             subprocess.run([str(executable)], check=True, timeout=10)
 
     def test_setup_validation(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-components-test-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="reliefos-components-test-") as temporary:
             root = Path(temporary)
             executable = root / "setup"
             subprocess.run([
@@ -85,7 +85,7 @@ class InstallerSetupTests(unittest.TestCase):
             subprocess.run([str(executable)], check=True, timeout=30)
 
     def test_legacy_accounts(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-setup-test-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="reliefos-setup-test-") as temporary:
             executable = Path(temporary) / "accounts"
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",

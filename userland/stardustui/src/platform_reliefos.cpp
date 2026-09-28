@@ -29,7 +29,7 @@ using namespace stardustui;
 #define STARDUST_SYS_NANOSLEEP 35
 
 namespace {
-struct LeonosSurface {
+struct ReliefosSurface {
     uint32_t handle;
     uint32_t width;
     uint32_t height;
@@ -38,7 +38,7 @@ struct LeonosSurface {
     bool shift;
 };
 
-LeonosSurface g_surface = {0, 0, 0, nullptr, false, false};
+ReliefosSurface g_surface = {0, 0, 0, nullptr, false, false};
 window_message_proc g_message_proc = nullptr;
 
 uint32_t reliefos_color(unsigned int color)
@@ -236,7 +236,7 @@ bool set_window_resizable(unsigned long long handle, bool resizable)
 {
     (void)handle;
     (void)resizable;
-    /* LeonOS only accepts the no-resize bit while the window is created. */
+    /* ReliefOS only accepts the no-resize bit while the window is created. */
     return false;
 }
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Run Alpine Clang on the NTCLKS kernel.
+"""Run Alpine Clang on the ReliefNT kernel.
 
 Clang is the stress case for the user address space: musl's ldso reserves one
 whole PT_LOAD span per shared object with a single mmap, and Alpine's
-libLLVM.so.22.1 spans 183 MiB.  With NTCLKS_USER_TOP at 512 MiB the read-only
+libLLVM.so.22.1 spans 183 MiB.  With RELIEFNT_USER_TOP at 512 MiB the read-only
 file mmap arena was 255 MiB, Clang's 278 MiB DT_NEEDED closure did not fit,
 mmap returned ENOMEM, and the 2500 "Error relocating /usr/bin/clang:
 LLVMInitialize*Target: symbol not found" lines were only the downstream
@@ -63,7 +63,7 @@ def prepare(packages, refresh=False):
             shutil.copytree(managed, stage, symlinks=True)
             base = ["unshare", "-Ur", apk, "--root", stage,
                     "--repositories-file", ROOT / "system/rootfs/etc/apk/repositories",
-                    "--repository", stage / "usr/share/leonos/apk/repository/packages.adb",
+                    "--repository", stage / "usr/share/reliefos/apk/repository/packages.adb",
                     "--cache-dir", cache, "--cache-packages", "--timeout", "120"]
             run([*base, "update"])
             run([*base, "add", "--upgrade", *packages])
@@ -82,14 +82,14 @@ def prepare(packages, refresh=False):
     with tempfile.TemporaryDirectory(prefix="image-", dir=WORK) as directory:
         stage = Path(directory) / "root"
         make_live_tree(root, stage)
-        tests = stage / "usr/lib/leonos/tests"
+        tests = stage / "usr/lib/reliefos/tests"
         tests.mkdir(parents=True, exist_ok=True)
         shutil.copy2(WORK / "probe.elf", tests / "linux-inventory.elf")
         write_ext2_root(stage, WORK / "root.ext2", minimum_mib=64)
     iso_tools.GRUB_TEMPLATE = iso_tools.GRUB_TEMPLATE.replace(
         "autospawn=ioctlcloexec autospawn=python315", "autospawn=inventory").replace(
         "syscall-trace=/opt/python/", "").replace("set timeout=5", "set timeout=0")
-    iso_tools.build_iso(WORK / "root.ext2", WORK / "leonos4-clang.iso", WORK / "grub.cfg", WORK)
+    iso_tools.build_iso(WORK / "root.ext2", WORK / "reliefos-clang.iso", WORK / "grub.cfg", WORK)
 
 
 def guest(timeout, memory_mib=8192):
@@ -104,7 +104,7 @@ def guest(timeout, memory_mib=8192):
             "-smp", "2,sockets=1,cores=2,threads=1", "-bios", "/usr/share/edk2/x64/OVMF.4m.fd",
             "-display", "none", "-serial", f"file:{serial}", "-device", "VGA,xres=1280,yres=720",
             "-netdev", "user,id=net0", "-device", "e1000,netdev=net0",
-            "-cdrom", str(WORK / "leonos4-clang.iso"), "-boot", "d",
+            "-cdrom", str(WORK / "reliefos-clang.iso"), "-boot", "d",
             "-qmp", f"unix:{qmp},server=on,wait=off", "-no-reboot", "-no-shutdown"],
             stdout=subprocess.DEVNULL, stderr=errors)
         deadline = time.monotonic() + timeout
@@ -119,7 +119,7 @@ def guest(timeout, memory_mib=8192):
                 iso_tools.qmp_quit(qmp, process)
     text = serial.read_text(errors="replace")
     markers = ("[clang-probe]", "[reliefnt] mmap", "[reliefnt] ELF",
-               "[ntclks] mmap", "[ntclks] ELF", "Error loading shared library",
+               "Error loading shared library",
                "Error relocating", "KERNEL PANIC")
     print("\n".join(line for line in text.splitlines() if any(m in line for m in markers)))
     if "[clang-probe] DONE failures=0" not in text:

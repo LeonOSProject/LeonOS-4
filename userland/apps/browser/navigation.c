@@ -179,9 +179,9 @@ void load_about(void)
         "<h3>Tip / 提示</h3>"
         "<blockquote>Type a URL in the address bar, or open a local .html file from File Manager.<br>"
         "可以在地址栏输入网址，也可以从文件资源管理器打开本地 .html 文件。</blockquote>"
-        "<p class=\"muted\">about:leonos</p>"
+        "<p class=\"muted\">about:reliefos</p>"
         "</body></html>";
-    copy_text(current_location, sizeof(current_location), "about:leonos");
+    copy_text(current_location, sizeof(current_location), "about:reliefos");
     copy_text(address_input, sizeof(address_input), current_location);
     reliefos_ui_edit_state_sync(&address_edit);
     set_page_source("ReliefOS Browser", about_html, 1, T("Ready"));

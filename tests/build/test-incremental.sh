@@ -23,7 +23,7 @@ cd "$repo_root" || exit 1
 # they are removed; phase-3 verification points it at the standalone checkout.
 reliefnt=${RELIEFNT_DIR:-${NTCLKS_DIR:-$repo_root/kernel/reliefnt}}
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-incremental.XXXXXX") || exit 1
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-incremental.XXXXXX") || exit 1
 O="$work/out"
 reliefnt_o=${RELIEFNT_O:-${NTCLKS_O:-$O/reliefnt}}
 failures=0
@@ -236,7 +236,7 @@ fi
 
 # Simulate a later header removal in a real compiler-generated depfile. Retain
 # any empty targets emitted by the compiler, so dropping -MP breaks this case.
-old_header="$reliefnt/kernel/reliefnt/include/ntclks/arch.h"
+old_header="$reliefnt/kernel/reliefnt/include/reliefnt/arch.h"
 grep -qF "$old_header" "$legacy_object.d" || exit 1
 sed "s|$old_header|$work/removed-header.h|g" "$legacy_object.d" >"$work/removed.d"
 mv "$work/removed.d" "$legacy_object.d"
@@ -299,7 +299,7 @@ printf '\n=== A04: a kernel header several objects share ===\n'
 # The depfiles are the oracle: every object that recorded the header must be
 # rebuilt and no object that did not record it may be. The oracle covers the
 # whole freestanding side of the sub-build (kernel, loader and drivers: they
-# share the ntclks headers); generated headers under the sub-build output tree
+# share the ReliefNT headers); generated headers under the sub-build output tree
 # are excluded so the candidate is a real source header.
 depfiles=$(find "$reliefnt_o/obj" -name '*.o.d' | tr '\n' ' ')
 header=$(for depfile in $depfiles; do
@@ -314,7 +314,7 @@ if [ -z "$header" ] || [ ! -f "$header" ]; then
     fail 'a shared source header was found to test' "candidate: ${header:-none}"
 else
     # Count depfiles that list the header as a whole word. A substring match
-    # would count `ntclks/signal.h` as a consumer of `posix/signal.h` and blame
+    # would count `reliefnt/signal.h` as a consumer of `posix/signal.h` and blame
     # Make for a discrepancy the test invented.
     expected=0
     expected_list=$work/expected-objects

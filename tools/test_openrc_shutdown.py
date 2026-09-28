@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check that LeonOS supervise-daemon services stop within a bounded schedule."""
+"""Check that ReliefOS supervise-daemon services stop within a bounded schedule."""
 
 from pathlib import Path
 from pathlib import PurePosixPath

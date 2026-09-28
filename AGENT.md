@@ -212,7 +212,7 @@ make test-smoke
 - 下载只能出现在显式 fetch；生产消费已校验缓存，不允许隐式联网。依赖锁是唯一下载身份来源。
 - 新源文件、删除源文件、编译/链接参数变化、多输出成员缺失必须正确触发重建。
   对目录 stage 使用完整成员清单，临时树完成并校验后再发布，不能以 stamp 代替存在性检查。
-- 同一 O 的真实构建互斥，不手工伪造 LEONOS_BUILD_OWNER。不同 O 可并行。
+- 同一 O 的真实构建互斥，不手工伪造 RELIEFOS_BUILD_OWNER。不同 O 可并行。
   `-n/-q` 不重建被包含的配置，避免干扰持锁构建；首次准确预览前先 defconfig。
 - `all` 包括 kernel、userland、runtime、sdk、apk-repo、image-vmdk、iso、installer；
   `release` 再加本地 rpr-pages。run/run-debug/run-iso/run-installer 只负责运行对应产物。
@@ -246,7 +246,8 @@ make test-smoke
 - 编译通过不等于镜像已含文件；镜像已生成不等于虚拟机能启动；日志出现不等于
   UI 可见。分别证明。
 - QEMU 的 QMP Unix socket 不要放在 `/mnt/d/...`（WSL DrvFs 不支持绑定）；
-  使用 `/tmp/leonos-qmp-<id>.sock`。
+  使用支持 Unix socket 的数据盘目录，例如
+  `/home/xiaobai/Projects/Projects/.reliefos-qmp-<id>.sock`；不要使用 `/tmp` 或 tmpfs。
 - 遇到概率性失败，记录平台、镜像、网络、操作步骤和关键日志，重复定向验证；
   不要以单次成功或失败就宣布根因。
 - 新增安全审计报告时，使用简体中文，归档为 `docs/security/YYYY-MM-DD.md`，

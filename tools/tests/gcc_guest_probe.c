@@ -31,7 +31,7 @@
 #define GCC "/opt/dyne/gcc-musl/bin/x86_64-linux-musl-gcc"
 #include "../../userland/apps/installer/installer_directory.h"
 #define SYSROOT "--sysroot=/opt/dyne/gcc-musl/x86_64-linux-musl"
-#define SELF_FALLBACK "/usr/lib/leonos/tests/gcc-probe.elf"
+#define SELF_FALLBACK "/usr/lib/reliefos/tests/gcc-probe.elf"
 
 static char self_path[256];
 static volatile int shared_marker;

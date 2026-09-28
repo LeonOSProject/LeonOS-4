@@ -153,6 +153,6 @@ version: 1.0
     %%ENDDOC
 ```
 
-文档 id 可以包含字母、数字、`.`、`_`、`-`。`path` 会生成左侧目录树。译本放在 `/usr/share/doc/leonos/<locale>/` 目录中，默认路径的文件用作英文回退。
+文档 id 可以包含字母、数字、`.`、`_`、`-`。`path` 会生成左侧目录树。译本放在 `/usr/share/doc/reliefos/<locale>/` 目录中，默认路径的文件用作英文回退。
 
 %%ENDDOC

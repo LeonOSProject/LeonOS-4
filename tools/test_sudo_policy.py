@@ -48,7 +48,7 @@ SUITES = (
 
 
 def main() -> int:
-    with tempfile.TemporaryDirectory(prefix="leonos-sudo-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="reliefos-sudo-") as tmp:
         for name, sources in SUITES:
             executable = str(Path(tmp) / name)
             extra = ["-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections"]
@@ -57,7 +57,7 @@ def main() -> int:
                       '-DMBEDTLS_CONFIG_FILE="reliefos_mbedtls_config.h"']
                      if name == "sudo-security" else [])
             if name == "sudo-client":
-                extra += ["-Wl,--wrap=leonos_ipc_connect,--wrap=leonos_ipc_peer_credentials"]
+                extra += ["-Wl,--wrap=reliefos_ipc_connect,--wrap=reliefos_ipc_peer_credentials"]
             subprocess.run(["cc", *COMMON_FLAGS, *extra, *sources, "-o", executable],
                            cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=60)

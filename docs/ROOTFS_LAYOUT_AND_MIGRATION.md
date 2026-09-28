@@ -8,8 +8,9 @@ usr-merge 链接。按维护者决定，不支持从旧目录布局自动迁移�
 
 目录基线为 [Alpine baselayout 3.7.2 的 APKBUILD](https://gitlab.alpinelinux.org/alpine/aports/-/blob/master/main/alpine-baselayout/APKBUILD)。
 共享目录、模式和符号链接表在 `kernel/reliefnt/include/uapi/reliefos/rootfs.h`，由 C 安装器直接展开。
-应用路径常量在 `include/reliefos/layout.h` 及 SDK 镜像头文件中。旧名
-`tools/leonos_layout.py` 不再定义当前 rootfs 契约；其过渡状态留待任务 11 旧名复审。
+应用路径常量在 `include/reliefos/layout.h` 及 SDK 镜像头文件中。主机侧
+staging helper 从 `tools/reliefos_layout.py` 消费共享表；旧导入路径
+`tools/leonos_layout.py` 仅转发到规范模块。
 修改目录清单应修改共享 UAPI 表，不能在各镜像脚本另写列表。
 
 `/bin`、`/sbin`、`/lib`、`/usr/bin`、`/usr/sbin`、`/usr/lib` 均为真实目录。
@@ -103,8 +104,8 @@ rootfs staging 在 images 管线中先于 installer staging 完成（`$(ROOTFS_R
 `/etc/ld-musl-x86_64.path` 搜索 ReliefOS 私有库目录 `/usr/lib/reliefos` 与兼容目录
 `/usr/lib/leonos`，再搜索 `/lib:/usr/lib`。规范扩展库为
 `/usr/lib/reliefos/libreliefos.so.2`，`libleonos.so.2` 保留为 ABI 兼容对象名；
-冻结的 ELF note SONAME `libleonos.so.1` 仅作为指向兼容对象的有限别名。旧 native
-加载器不随发行物提供。glibc 的加载器路径常量仅用于识别与诊断，不打包 glibc。
+冻结的 ELF note 值 `libleonos.so.1` 保留在协议定义中；发行物不提供该旧别名或旧 native
+加载器。glibc 的加载器路径常量仅用于识别与诊断，不打包 glibc。
 
 安装器的 `/install/root` 复制到 `/target`，`/install/esp` 复制到 `/target/boot`。
 更新仅接受现行非 usr-merge ext2 结构与新的 ESP 路径；不迁移 `/system`、

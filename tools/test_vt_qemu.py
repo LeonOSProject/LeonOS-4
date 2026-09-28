@@ -12,7 +12,7 @@ from test_installer_accounts_qemu import Probe
 from run_gcc_probe_qemu import qmp_quit
 
 ROOT = Path(__file__).resolve().parents[1]
-IMAGE = Path(os.environ.get("VT_IMAGE", ROOT / "out/x86_64/release/images/leonos4.raw"))
+IMAGE = Path(os.environ.get("VT_IMAGE", ROOT / "out/x86_64/release/images/reliefos.raw"))
 OUTPUT = Path(os.environ.get("VT_OUTPUT", ROOT / "build/vt-qemu"))
 TEXT_ONLY = os.environ.get("VT_TEXT_ONLY") == "1"
 
@@ -64,7 +64,7 @@ def main():
     OUTPUT.mkdir(parents=True, exist_ok=True)
     serial = OUTPUT / "serial.log"
     serial.write_text("")
-    with tempfile.TemporaryDirectory(prefix="leonos-vt-qmp-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-vt-qmp-") as directory:
         qmp = Path(directory) / "qmp.sock"
         vars_path = Path(directory) / "OVMF_VARS.fd"
         shutil.copyfile("/usr/share/edk2/x64/OVMF_VARS.4m.fd", vars_path)
@@ -123,10 +123,10 @@ def main():
                     wait_log(serial, "VT-PROBE-PASS", process, timeout=30)
                 if not TEXT_ONLY:
                     import re
-                    probe.text("test ! -e /run/leonos/session-user && echo VT-GUI-PENDING >/dev/ttyS0")
+                    probe.text("test ! -e /run/reliefos/session-user && echo VT-GUI-PENDING >/dev/ttyS0")
                     probe.key("ret")
                     wait_log(serial, "VT-GUI-PENDING", process, timeout=20)
-                    match = re.search(r"exec pid=(\d+) path=/usr/lib/leonos/apps/desktop/desktop.elf", serial.read_text())
+                    match = re.search(r"exec pid=(\d+) path=/usr/lib/reliefos/apps/desktop/desktop.elf", serial.read_text())
                     assert match, "Desktop PID not recorded"
                     probe.text(f"kill -STOP {match[1]}")
                     probe.key("ret")
@@ -148,7 +148,7 @@ def main():
                     probe.key("ctrl-alt-f2")
                     # The PAM owner stays alive until logout. Successful GUI
                     # authentication publishes this root-owned session marker.
-                    probe.text("while test ! -f /run/leonos/session-user; do sleep 1; done; echo VT-GUI-LOGIN-OK >/dev/ttyS0")
+                    probe.text("while test ! -f /run/reliefos/session-user; do sleep 1; done; echo VT-GUI-LOGIN-OK >/dev/ttyS0")
                     probe.key("ret")
                     try:
                         wait_log(serial, "VT-GUI-LOGIN-OK", process, timeout=30)

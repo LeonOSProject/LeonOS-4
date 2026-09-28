@@ -10,8 +10,8 @@ for variant in disk live installer; do
     set -- "${QEMU:-qemu-system-x86_64}" -machine q35 -cpu max -m 4096 -smp 2 \
         -bios "$firmware" -display none -serial stdio -no-reboot -no-shutdown
     case $variant in
-    disk) set -- "$@" -snapshot -drive "file=$images/leonos4.vmdk,if=none,id=disk0,format=vmdk" -device ich9-ahci,id=ahci -device ide-hd,drive=disk0,bus=ahci.0 ;;
-    *) set -- "$@" -cdrom "$images/leonos4-$variant.iso" ;;
+    disk) set -- "$@" -snapshot -drive "file=$images/reliefos.vmdk,if=none,id=disk0,format=vmdk" -device ich9-ahci,id=ahci -device ide-hd,drive=disk0,bus=ahci.0 ;;
+    *) set -- "$@" -cdrom "$images/reliefos-$variant.iso" ;;
     esac
     result=0
     timeout --kill-after=5 "${SMOKE_TIMEOUT:-90}" "$@" > "$logs/smoke-$variant.log" 2>&1 || result=$?

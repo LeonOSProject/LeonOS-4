@@ -26,7 +26,7 @@ truncate -s "${size}M" "$work/tree/boot/efiboot.img"
 mkfs.fat --invariant -F 16 -n RELIEFOS "$work/tree/boot/efiboot.img"
 mcopy -s -m -i "$work/tree/boot/efiboot.img" "$work/efi/EFI" ::/
 touch -d "@$epoch" "$work/tree/boot/efiboot.img"
-leonos_log ISO "$output"
+reliefos_log ISO "$output"
 sh "$src/tools/build/run-logged.sh" --tag XORRISO "${output%.iso}.xorriso.log" \
  xorriso -as mkisofs -iso-level 3 -R -J -V "$volume" \
  -uid 0 -gid 0 --set_all_file_dates "$(date -u -d "@$epoch" +%Y%m%d%H%M%S)00" \

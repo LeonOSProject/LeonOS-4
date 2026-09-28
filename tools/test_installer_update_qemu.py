@@ -5,8 +5,9 @@ from pathlib import Path
 import subprocess
 import re
 import json
+import time
 
-from test_installer_accounts_qemu import boot, next_page
+from test_installer_accounts_qemu import boot, next_page, wait_log
 from test_installer_mode_switch_qemu import wait_page
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -60,6 +61,11 @@ def main():
         versions = package_versions(before["installed"])
         assert all(name in versions for name in args.preserve_package), "Fixture lacks required packages"
     with boot(output / "update", disk, args.iso.resolve()) as (probe, serial, process):
+        wait_log(serial, "path=/usr/lib/reliefos/apps/installer/installer.elf", process)
+        time.sleep(4)
+        probe.frame("initial-language")
+        language_y = 64 if probe.height > 640 else 44
+        probe.click(320, language_y + 100)
         wait_page(probe, process, "Select Language")
         probe.frame("language")
         for _ in range(4):
@@ -84,18 +90,22 @@ def main():
                 probe.command("stop")
                 probe.command("pmemsave", {"val": int(match[1], 16), "size": int(match[2]),
                                           "filename": str(memory)})
-                subprocess.run(["debugfs", "-R", f"dump /var/log/installer.log {output / 'installer.log'}",
+                subprocess.run(["debugfs", "-R", f"dump /var/log/desktop.log {output / 'installer.log'}",
                                 str(memory)], check=True)
         log = (output / "installer.log").read_text()
         assert "APK update wait_status=0" in log and "update completed successfully" in log
     if before:
         after = installed_state(disk, output)
         updated = package_versions(after["installed"])
-        assert before["world"] == after["world"], "Update changed world"
+        expected_world = re.sub(r"(?m)^leonos-", "reliefos-", before["world"])
+        # apk serializes world in lexical order after renaming dependencies.
+        assert sorted(expected_world.splitlines()) == sorted(after["world"].splitlines()), \
+            "Update changed world dependencies beyond the package rename"
         for name in args.preserve_package:
             assert versions[name] == updated.get(name), f"Update changed {name}"
-        assert any(name.startswith("leonos-") and updated.get(name) != version
-                   for name, version in versions.items()), "No LeonOS package was upgraded"
+        assert any(name.startswith(("leonos-", "reliefos-")) and
+                   updated.get(re.sub(r"^leonos-", "reliefos-", name)) not in (None, version)
+                   for name, version in versions.items()), "No ReliefOS package was upgraded"
         print("PASS preserved world and packages: " + ", ".join(args.preserve_package))
     print(f"PASS GUI update: confirmation, package transaction and completion; {serial}")
 

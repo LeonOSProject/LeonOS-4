@@ -72,6 +72,13 @@ make -s -C "$root" -f Makefile -f "$w/check.mk" help \
     EXPECTED_NLS_EXTRACT="$w/new-nls-extract" EXPECTED_QEMU_IDE=new-ide \
     EXPECTED_QEMU_NVME=new-nvme EXPECTED_BUILD_OWNER=new-owner >/dev/null
 
+# The total test runner exports canonical tool paths. Remove those ambient
+# inputs so this case actually exercises legacy-only fallback, not precedence.
+unset RELIEFOS_CACHE RELIEFOS_LOCK RELIEFOS_FETCH_SCRIPT RELIEFOS_EMIT \
+    RELIEFOS_CONFIG_TOOL RELIEFOS_VERSION_TOOL RELIEFOS_DEPS_TOOL RELIEFOS_GBK_TOOL \
+    RELIEFOS_SDK_DRIVER RELIEFOS_APK_OWN RELIEFOS_NLS_EXTRACT RELIEFOS_QEMU_IDE \
+    RELIEFOS_QEMU_NVME RELIEFOS_BUILD_OWNER
+
 LEONOS_CACHE="$w/legacy-cache" LEONOS_LOCK="$w/legacy-lock" \
 LEONOS_FETCH_SCRIPT="$w/legacy-fetch" LEONOS_EMIT="$w/legacy-emit" \
 LEONOS_CONFIG_TOOL="$w/legacy-config-tool" LEONOS_VERSION_TOOL="$w/legacy-version-tool" \
@@ -88,6 +95,11 @@ LEONOS_QEMU_NVME=legacy-nvme LEONOS_BUILD_OWNER=legacy-owner \
     EXPECTED_NLS_EXTRACT="$w/legacy-nls-extract" EXPECTED_QEMU_IDE=legacy-ide \
     EXPECTED_QEMU_NVME=legacy-nvme EXPECTED_BUILD_OWNER=legacy-owner >/dev/null
 
+# Dry-run purity is a separate default-configuration check.
+for suffix in CACHE LOCK FETCH_SCRIPT EMIT CONFIG_TOOL VERSION_TOOL DEPS_TOOL \
+    GBK_TOOL SDK_DRIVER APK_OWN NLS_EXTRACT QEMU_IDE QEMU_NVME BUILD_OWNER; do
+    unset "RELIEFOS_$suffix" "LEONOS_$suffix"
+done
 dry_o="$w/dry-output"
 make -s -n -C "$root" O="$dry_o" userland >/dev/null
 if make -s -q -C "$root" O="$dry_o" userland >/dev/null 2>&1; then

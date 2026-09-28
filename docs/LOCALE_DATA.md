@@ -1,12 +1,12 @@
 # Locale data
 
-LeonOS uses the standard musl locale-map search path:
+ReliefOS uses the standard musl locale-map search path:
 
 ```text
 MUSL_LOCPATH=/usr/share/musl/locales
 ```
 
-The path is exported by `/etc/leonos/locale.conf`, while message catalogs remain
+The path is exported by `/etc/reliefos/locale.conf`, while message catalogs remain
 under `/usr/share/locale/<locale>/LC_MESSAGES/`. Locale maps must be named with
 the complete locale value, for example `zh_CN.UTF-8`.
 

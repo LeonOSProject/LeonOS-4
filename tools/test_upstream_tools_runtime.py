@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host reference tests of real target ELFs; not LeonOS guest evidence.
+"""Host reference tests of real target ELFs; not ReliefOS guest evidence.
 
 Build the selected root first; missing artifacts are failures, not skips.
 """
@@ -42,7 +42,7 @@ class UpstreamRuntimeTests(unittest.TestCase):
         self.assertEqual(result.stdout.strip(), "fdisk from util-linux 2.41.6")
 
     def test_fdisk_can_write_and_read_a_gpt_on_a_disposable_file(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-fdisk-runtime-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="reliefos-fdisk-runtime-") as temporary:
             disk = Path(temporary) / "disk.img"
             with disk.open("wb") as stream:
                 stream.truncate(64 * 1024 * 1024)

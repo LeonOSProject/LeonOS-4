@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class RootfsInterfaces(unittest.TestCase):
     def test_fstab_matches_installer_gpt_reader(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-fstab-") as directory:
+        with tempfile.TemporaryDirectory(prefix="reliefos-fstab-") as directory:
             root = Path(directory)
             (root / "etc").mkdir()
             image = root / "disk.img"
@@ -37,7 +37,7 @@ class RootfsInterfaces(unittest.TestCase):
             subprocess.run([executable, image, str(partitions[0]), str(partitions[1])], check=True, timeout=20)
 
     def test_kernel_modules(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-rootfs-") as directory:
+        with tempfile.TemporaryDirectory(prefix="reliefos-rootfs-") as directory:
             for name in ("rootfs_mounts", "rootfs_uts", "rootfs_paths", "procfs_directories", "linux_permissions", "chroot_paths"):
                 with self.subTest(module=name):
                     executable = Path(directory) / name

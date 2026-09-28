@@ -114,6 +114,10 @@ preflight_configuration=$temporary/repositories.preflight
     'NR == 1 { print "ndx " repo_index; next } { print }' \
     "$configuration" > "$preflight_configuration"
 configuration=$preflight_configuration
+# Copy known old-brand configuration before apk introduces canonical defaults.
+# The migrator never overwrites an existing canonical file and verifies bytes,
+# mode and ownership before publishing; a failure prevents the transaction.
+/bin/sh /usr/lib/reliefos/reliefos-migrate "$target"
 broken_packages 1 > "$temporary/broken-before"
 world=$target/etc/apk/world
 /bin/busybox cp "$world" "$temporary/world-before"

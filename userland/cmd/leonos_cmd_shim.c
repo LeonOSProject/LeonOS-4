@@ -1,4 +1,4 @@
-/* LeonOS compatibility layer for the ChenPi11/cmd POSIX implementation. */
+/* ReliefOS compatibility layer for the ChenPi11/cmd POSIX implementation. */
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 700
 #endif
@@ -6,9 +6,9 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <leonos/app.h>
-#include <leonos/pty.h>
-#include <leonos/system.h>
+#include <reliefos/app.h>
+#include <reliefos/pty.h>
+#include <reliefos/system.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -22,20 +22,20 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <linux/syscall.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 
 extern long syscall2(long number, long a0, long a1);
 
-#define LEONOS_CMD_JOB_MAX 16U
-#define LEONOS_CMD_JOB_PROCESS_MAX 64U
-#define LEONOS_CMD_JOB_TEXT_MAX 160U
-#define LEONOS_CMD_TASK_MAX 64U
-#define LEONOS_CMD_TASK_NAME_LEN 32U
+#define RELIEFOS_CMD_JOB_MAX 16U
+#define RELIEFOS_CMD_JOB_PROCESS_MAX 64U
+#define RELIEFOS_CMD_JOB_TEXT_MAX 160U
+#define RELIEFOS_CMD_TASK_MAX 64U
+#define RELIEFOS_CMD_TASK_NAME_LEN 32U
 
 /* Keep this local mirror of the task-snapshot wire layout so this POSIX
- * adapter does not include leonos/gui.h, which intentionally exposes the
- * LeonOS filesystem metadata extension ABI. */
-struct leonos_cmd_task_info {
+ * adapter does not include reliefos/gui.h, which intentionally exposes the
+ * ReliefOS filesystem metadata extension ABI. */
+struct reliefos_cmd_task_info {
     uint32_t pid;
     uint32_t parent_pid;
     uint32_t state;
@@ -51,17 +51,17 @@ struct leonos_cmd_task_info {
     uint64_t wake_tick;
     uint64_t entry;
     uint64_t cr3;
-    char name[LEONOS_CMD_TASK_NAME_LEN];
+    char name[RELIEFOS_CMD_TASK_NAME_LEN];
     char username[32];
 };
 
-enum leonos_cmd_job_state {
-    LEONOS_CMD_JOB_RUNNING = 1,
-    LEONOS_CMD_JOB_STOPPED = 2,
-    LEONOS_CMD_JOB_DONE = 3,
+enum reliefos_cmd_job_state {
+    RELIEFOS_CMD_JOB_RUNNING = 1,
+    RELIEFOS_CMD_JOB_STOPPED = 2,
+    RELIEFOS_CMD_JOB_DONE = 3,
 };
 
-struct leonos_cmd_job {
+struct reliefos_cmd_job {
     int used;
     int id;
     int state;
@@ -70,16 +70,16 @@ struct leonos_cmd_job {
     int last_pid;
     int process_group;
     int exit_code;
-    int pids[LEONOS_CMD_JOB_PROCESS_MAX];
-    char text[LEONOS_CMD_JOB_TEXT_MAX];
+    int pids[RELIEFOS_CMD_JOB_PROCESS_MAX];
+    char text[RELIEFOS_CMD_JOB_TEXT_MAX];
 };
 
-static struct leonos_cmd_job leonos_cmd_jobs[LEONOS_CMD_JOB_MAX];
-static int leonos_cmd_next_job_id = 1;
+static struct reliefos_cmd_job reliefos_cmd_jobs[RELIEFOS_CMD_JOB_MAX];
+static int reliefos_cmd_next_job_id = 1;
 
-extern int leonos_task_snapshot(struct leonos_cmd_task_info *tasks,
+extern int reliefos_task_snapshot(struct reliefos_cmd_task_info *tasks,
                                 uint32_t capacity, uint64_t *tick);
-extern unsigned long leonos_uptime_ms(void);
+extern unsigned long reliefos_uptime_ms(void);
 extern char **environ;
 
 static void fill_exit_info(int status, libcmd_exit_info_t *exit_info)
@@ -151,8 +151,8 @@ int stime(const time_t *time_value)
 
 int uname(struct utsname *name)
 {
-    struct leonos_system_info system_info;
-    struct leonos_machine_identity identity;
+    struct reliefos_system_info system_info;
+    struct reliefos_machine_identity identity;
     char node_name[_UTSNAME_LENGTH];
     uint32_t node_pos;
     if (!name) {
@@ -160,18 +160,18 @@ int uname(struct utsname *name)
         return -1;
     }
     memset(name, 0, sizeof(*name));
-    if (leonos_system_info(&system_info) < 0) {
+    if (reliefos_system_info(&system_info) < 0) {
         errno = EIO;
         return -1;
     }
     memset(&identity, 0, sizeof(identity));
-    leonos_machine_identity(&identity);
+    reliefos_machine_identity(&identity);
     strncpy(name->sysname, system_info.kernel_name, sizeof(name->sysname) - 1U);
     strncpy(name->release, system_info.kernel_version, sizeof(name->release) - 1U);
     strncpy(name->version, system_info.build_time, sizeof(name->version) - 1U);
     strncpy(name->machine, system_info.architecture,
             sizeof(name->machine) - 1U);
-    strncpy(node_name, "leonos", sizeof(node_name) - 1U);
+    strncpy(node_name, "reliefos", sizeof(node_name) - 1U);
     node_pos = (uint32_t)strlen(node_name);
     if (identity.platform_uuid[0] && node_pos + 1U < sizeof(node_name)) {
         node_name[node_pos++] = '-';
@@ -258,9 +258,9 @@ static int job_id_from_arg(const char *text)
 
 static int task_is_stopped(int pid)
 {
-    struct leonos_cmd_task_info tasks[LEONOS_CMD_TASK_MAX];
+    struct reliefos_cmd_task_info tasks[RELIEFOS_CMD_TASK_MAX];
     uint64_t tick = 0;
-    int count = leonos_task_snapshot(tasks, LEONOS_CMD_TASK_MAX, &tick);
+    int count = reliefos_task_snapshot(tasks, RELIEFOS_CMD_TASK_MAX, &tick);
     int i;
     (void)tick;
     if (count < 0) return 0;
@@ -276,32 +276,32 @@ int libcmd_job_is_stopped(int pid)
     return task_is_stopped(pid);
 }
 
-static struct leonos_cmd_job *job_by_id(int id)
+static struct reliefos_cmd_job *job_by_id(int id)
 {
     int i;
-    for (i = 0; i < (int)LEONOS_CMD_JOB_MAX; ++i) {
-        if (leonos_cmd_jobs[i].used && leonos_cmd_jobs[i].id == id)
-            return &leonos_cmd_jobs[i];
+    for (i = 0; i < (int)RELIEFOS_CMD_JOB_MAX; ++i) {
+        if (reliefos_cmd_jobs[i].used && reliefos_cmd_jobs[i].id == id)
+            return &reliefos_cmd_jobs[i];
     }
     return NULL;
 }
 
-static struct leonos_cmd_job *job_last(void)
+static struct reliefos_cmd_job *job_last(void)
 {
-    struct leonos_cmd_job *best = NULL;
+    struct reliefos_cmd_job *best = NULL;
     int i;
-    for (i = 0; i < (int)LEONOS_CMD_JOB_MAX; ++i) {
-        struct leonos_cmd_job *job = &leonos_cmd_jobs[i];
+    for (i = 0; i < (int)RELIEFOS_CMD_JOB_MAX; ++i) {
+        struct reliefos_cmd_job *job = &reliefos_cmd_jobs[i];
         if (job->used && (!best || job->id > best->id)) best = job;
     }
     return best;
 }
 
-static void job_refresh(struct leonos_cmd_job *job)
+static void job_refresh(struct reliefos_cmd_job *job)
 {
     int i;
     int stopped = 0;
-    if (!job || !job->used || job->state == LEONOS_CMD_JOB_DONE) return;
+    if (!job || !job->used || job->state == RELIEFOS_CMD_JOB_DONE) return;
     for (i = 0; i < job->process_count; ++i) {
         int status = 0;
         int waited;
@@ -322,34 +322,34 @@ static void job_refresh(struct leonos_cmd_job *job)
             if (job->remaining > 0) --job->remaining;
         }
     }
-    if (job->remaining == 0) job->state = LEONOS_CMD_JOB_DONE;
-    else job->state = stopped == job->remaining ? LEONOS_CMD_JOB_STOPPED : LEONOS_CMD_JOB_RUNNING;
+    if (job->remaining == 0) job->state = RELIEFOS_CMD_JOB_DONE;
+    else job->state = stopped == job->remaining ? RELIEFOS_CMD_JOB_STOPPED : RELIEFOS_CMD_JOB_RUNNING;
 }
 
 static const char *job_state_text(int state)
 {
-    if (state == LEONOS_CMD_JOB_STOPPED) return "Stopped";
-    if (state == LEONOS_CMD_JOB_DONE) return "Done";
+    if (state == RELIEFOS_CMD_JOB_STOPPED) return "Stopped";
+    if (state == RELIEFOS_CMD_JOB_DONE) return "Done";
     return "Running";
 }
 
-static struct leonos_cmd_job *job_add(const int pids[], int count, int last_pid,
+static struct reliefos_cmd_job *job_add(const int pids[], int count, int last_pid,
                                       const char *text)
 {
-    struct leonos_cmd_job *job = NULL;
+    struct reliefos_cmd_job *job = NULL;
     int i;
-    if (!pids || count <= 0 || count > (int)LEONOS_CMD_JOB_PROCESS_MAX) return NULL;
-    for (i = 0; i < (int)LEONOS_CMD_JOB_MAX; ++i) {
-        if (!leonos_cmd_jobs[i].used || leonos_cmd_jobs[i].state == LEONOS_CMD_JOB_DONE) {
-            job = &leonos_cmd_jobs[i];
+    if (!pids || count <= 0 || count > (int)RELIEFOS_CMD_JOB_PROCESS_MAX) return NULL;
+    for (i = 0; i < (int)RELIEFOS_CMD_JOB_MAX; ++i) {
+        if (!reliefos_cmd_jobs[i].used || reliefos_cmd_jobs[i].state == RELIEFOS_CMD_JOB_DONE) {
+            job = &reliefos_cmd_jobs[i];
             break;
         }
     }
     if (!job) return NULL;
     memset(job, 0, sizeof(*job));
     job->used = 1;
-    job->id = leonos_cmd_next_job_id++;
-    job->state = LEONOS_CMD_JOB_RUNNING;
+    job->id = reliefos_cmd_next_job_id++;
+    job->state = RELIEFOS_CMD_JOB_RUNNING;
     job->process_count = count;
     job->remaining = count;
     job->last_pid = last_pid;
@@ -392,7 +392,7 @@ int libcmd_find_exec(const char *name, const char *path_env, char *out, size_t o
         if (command_name_equal(name, busybox_applets[index]))
             return copy_exec_path(out, out_size, "/bin/busybox");
     }
-    if (leonos_app_registry_resolve(name, out, out_size) == 0)
+    if (reliefos_app_registry_resolve(name, out, out_size) == 0)
         return 0;
     return -1;
 }
@@ -464,7 +464,7 @@ static int child_exec_path(const char *path, char *const argv[], char *const env
 
 /* Foreground commands are placed in their own process group before the shell
  * transfers the PTY.  A non-terminal stdin is valid for batch execution. */
-int leonos_cmd_set_process_group(int pid, int process_group)
+int reliefos_cmd_set_process_group(int pid, int process_group)
 {
     if (pid <= 0 || process_group <= 0) {
         errno = EINVAL;
@@ -473,7 +473,7 @@ int leonos_cmd_set_process_group(int pid, int process_group)
     return setpgid((pid_t)pid, (pid_t)process_group);
 }
 
-int leonos_cmd_foreground_enter(int fd, int process_group, int *saved_group)
+int reliefos_cmd_foreground_enter(int fd, int process_group, int *saved_group)
 {
     int previous;
 
@@ -497,7 +497,7 @@ int leonos_cmd_foreground_enter(int fd, int process_group, int *saved_group)
     return 0;
 }
 
-void leonos_cmd_foreground_leave(int fd, int saved_group)
+void reliefos_cmd_foreground_leave(int fd, int saved_group)
 {
     if (fd >= 0 && saved_group > 0) {
         (void)tcsetpgrp(fd, (pid_t)saved_group);
@@ -521,13 +521,13 @@ int libcmd_exec_sync(const char *path, char *const argv[], char *const envp[],
         (void)child_exec_path(path, argv, envp);
         _exit(127);
     }
-    (void)leonos_cmd_set_process_group((int)pid, (int)pid);
-    (void)leonos_cmd_foreground_enter(stdin_fd, (int)pid, &saved_group);
+    (void)reliefos_cmd_set_process_group((int)pid, (int)pid);
+    (void)reliefos_cmd_foreground_enter(stdin_fd, (int)pid, &saved_group);
     if (waitpid(pid, &status, 0) < 0) {
-        leonos_cmd_foreground_leave(stdin_fd, saved_group);
+        reliefos_cmd_foreground_leave(stdin_fd, saved_group);
         return -1;
     }
-    leonos_cmd_foreground_leave(stdin_fd, saved_group);
+    reliefos_cmd_foreground_leave(stdin_fd, saved_group);
     fill_exit_info(status, exit_info);
     return 0;
 }
@@ -565,7 +565,7 @@ int libcmd_exec_job_async(const char *path, char *const argv[], char *const envp
         (void)child_exec_path(path, argv, envp);
         _exit(127);
     }
-    (void)leonos_cmd_set_process_group((int)pid, (int)pid);
+    (void)reliefos_cmd_set_process_group((int)pid, (int)pid);
     return (int)pid;
 }
 
@@ -632,24 +632,24 @@ int libcmd_exec_pipeline(char *const *const *cmds, const char *const *paths, int
         if (!process_group) {
             process_group = pid;
         }
-        (void)leonos_cmd_set_process_group(pid, process_group);
+        (void)reliefos_cmd_set_process_group(pid, process_group);
         if (prev_owned) close(prev_read);
         if (fds[1] >= 0) close(fds[1]);
         prev_read = fds[0];
         prev_owned = fds[0] >= 0;
     }
     if (prev_owned) close(prev_read);
-    (void)leonos_cmd_foreground_enter(stdin_fd, process_group, &saved_group);
+    (void)reliefos_cmd_foreground_enter(stdin_fd, process_group, &saved_group);
     for (i = 0; i < n; ++i) {
         libcmd_exit_info_t current;
         if (libcmd_wait_pid(pids[i], &current) < 0) {
-            leonos_cmd_foreground_leave(stdin_fd, saved_group);
+            reliefos_cmd_foreground_leave(stdin_fd, saved_group);
             return -1;
         }
         if (i == n - 1 && exit_info)
             *exit_info = current;
     }
-    leonos_cmd_foreground_leave(stdin_fd, saved_group);
+    reliefos_cmd_foreground_leave(stdin_fd, saved_group);
     return 0;
 
 fail:
@@ -701,7 +701,7 @@ int libcmd_exec_pipeline_async(char *const *const *cmds, const char *const *path
         if (!process_group) {
             process_group = pid;
         }
-        (void)leonos_cmd_set_process_group(pid, process_group);
+        (void)reliefos_cmd_set_process_group(pid, process_group);
         if (prev_owned) close(prev_read);
         if (fds[1] >= 0) close(fds[1]);
         prev_read = fds[0];
@@ -716,20 +716,20 @@ fail:
     return -1;
 }
 
-int leonos_cmd_builtin(int argc, char **argv, int *handled)
+int reliefos_cmd_builtin(int argc, char **argv, int *handled)
 {
-    struct leonos_cmd_job *job;
+    struct reliefos_cmd_job *job;
     int id;
     int i;
     if (handled) *handled = 0;
     if (argc <= 0 || !argv || !argv[0]) return 0;
     if (job_name_equal(argv[0], "jobs")) {
         if (handled) *handled = 1;
-        for (i = 0; i < (int)LEONOS_CMD_JOB_MAX; ++i) {
-            job = &leonos_cmd_jobs[i];
+        for (i = 0; i < (int)RELIEFOS_CMD_JOB_MAX; ++i) {
+            job = &reliefos_cmd_jobs[i];
             if (!job->used) continue;
             job_refresh(job);
-            if (job->state == LEONOS_CMD_JOB_DONE)
+            if (job->state == RELIEFOS_CMD_JOB_DONE)
                 printf("[%d] %s %s (exit %d)\n", job->id, job_state_text(job->state),
                        job->text, job->exit_code);
             else
@@ -750,42 +750,42 @@ int leonos_cmd_builtin(int argc, char **argv, int *handled)
         return 1;
     }
     job_refresh(job);
-    if (job->state == LEONOS_CMD_JOB_DONE) {
+    if (job->state == RELIEFOS_CMD_JOB_DONE) {
         fprintf(stderr, "cmd: job [%d] already completed (exit %d)\n", job->id, job->exit_code);
         return job->exit_code;
     }
     if (job->process_group > 0) {
         (void)kill(-job->process_group, SIGCONT);
     }
-    job->state = LEONOS_CMD_JOB_RUNNING;
+    job->state = RELIEFOS_CMD_JOB_RUNNING;
     if (job_name_equal(argv[0], "bg")) {
         printf("[%d] %s\n", job->id, job->text);
         return 0;
     }
     {
         int saved_group = 0;
-        (void)leonos_cmd_foreground_enter(STDIN_FILENO, job->process_group,
+        (void)reliefos_cmd_foreground_enter(STDIN_FILENO, job->process_group,
                                           &saved_group);
         for (i = 0; i < job->process_count; ++i) {
             libcmd_exit_info_t exit_info;
             if (job->pids[i] <= 0) continue;
             if (libcmd_wait_pid(job->pids[i], &exit_info) < 0) {
-                leonos_cmd_foreground_leave(STDIN_FILENO, saved_group);
+                reliefos_cmd_foreground_leave(STDIN_FILENO, saved_group);
                 return 1;
             }
             if (job->pids[i] == job->last_pid) job->exit_code = exit_info.exit_code;
             job->pids[i] = 0;
             if (job->remaining > 0) --job->remaining;
         }
-        leonos_cmd_foreground_leave(STDIN_FILENO, saved_group);
+        reliefos_cmd_foreground_leave(STDIN_FILENO, saved_group);
     }
-    job->state = LEONOS_CMD_JOB_DONE;
+    job->state = RELIEFOS_CMD_JOB_DONE;
     return job->exit_code;
 }
 
-int leonos_cmd_register_job(const int pids[], int count, int last_pid, const char *text)
+int reliefos_cmd_register_job(const int pids[], int count, int last_pid, const char *text)
 {
-    struct leonos_cmd_job *job = job_add(pids, count, last_pid, text);
+    struct reliefos_cmd_job *job = job_add(pids, count, last_pid, text);
     if (!job) {
         errno = EAGAIN;
         return -1;
@@ -794,7 +794,7 @@ int leonos_cmd_register_job(const int pids[], int count, int last_pid, const cha
     return 0;
 }
 
-void leonos_cmd_job_append_word(char *out, size_t cap, const char *word)
+void reliefos_cmd_job_append_word(char *out, size_t cap, const char *word)
 {
     job_append_word(out, cap, word);
 }

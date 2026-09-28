@@ -1,5 +1,5 @@
 #!/bin/sh
-# Fixed LeonOS feature policy, derived from Linux-PAM 1.7.2 meson.build defaults.
+# Fixed ReliefOS feature policy, derived from Linux-PAM 1.7.2 meson.build defaults.
 # Capability checks compile/link only; cross executables are never run.
 set -eu
 if [ "${1:-}" = --help ]; then
@@ -13,7 +13,7 @@ tmp=$(mktemp -d "$(dirname "$output")/.configure.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 : "${CC:?}" "${CPPFLAGS:=}" "${CFLAGS:=}" "${LDFLAGS:=}"
 cat > "$tmp/config.h" <<'HEADER'
-/* Linux-PAM 1.7.2 LeonOS policy; capabilities below are cross-link probes. */
+/* Linux-PAM 1.7.2 ReliefOS policy; capabilities below are cross-link probes. */
 #pragma once
 #define _GNU_SOURCE 1
 #define PACKAGE "Linux-PAM"
@@ -89,7 +89,7 @@ for required in HAVE_CRYPT_R HAVE_CRYPT_RN HAVE_UNSHARE HAVE_QUOTACTL; do
     }
 done
 printf '#include <sys/syscall.h>\nint main(void) { return __NR_keyctl == 0; }\n' > "$tmp/test.c"
-probe LEONOS_PAM_KEYINIT '' || { cat "$tmp/probes.log" >&2; exit 1; }
+probe RELIEFOS_PAM_KEYINIT '' || { cat "$tmp/probes.log" >&2; exit 1; }
 if grep -q '^#define HAVE_DNGETTEXT 1$' "$tmp/config.h"; then
     printf '#define ENABLE_NLS 1\n#define LOCALEDIR "/usr/share/locale"\n' >> "$tmp/config.h"
 fi

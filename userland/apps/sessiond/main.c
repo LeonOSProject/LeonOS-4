@@ -1,6 +1,6 @@
 #include <signal.h>
 #include <sys/wait.h>
-/* sessiond, LeonOS business protocol: startup approval and session launch policy
+/* sessiond, ReliefOS business protocol: startup approval and session launch policy
  * over /run/reliefos/session.sock. */
 #define _GNU_SOURCE
 #include <errno.h>

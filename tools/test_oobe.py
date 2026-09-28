@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class OobeTests(unittest.TestCase):
     def test_account_request_boundaries(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-auth-input-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="reliefos-auth-input-") as tmp:
             executable = str(Path(tmp) / "input")
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
@@ -28,7 +28,7 @@ class OobeTests(unittest.TestCase):
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
 
     def test_posix_account_exports(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-auth-accounts-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="reliefos-auth-accounts-") as tmp:
             executable = str(Path(tmp) / "accounts")
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
@@ -40,7 +40,7 @@ class OobeTests(unittest.TestCase):
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
 
     def test_taskbar_does_not_wait_for_network_service(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-oobe-network-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="reliefos-oobe-network-") as tmp:
             executable = str(Path(tmp) / "network")
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
@@ -51,7 +51,7 @@ class OobeTests(unittest.TestCase):
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
 
     def test_slow_startup_service_does_not_block_desktop(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-oobe-startup-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="reliefos-oobe-startup-") as tmp:
             executable = str(Path(tmp) / "startup")
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
@@ -62,7 +62,7 @@ class OobeTests(unittest.TestCase):
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
 
     def test_reboot_discards_session_but_keeps_accounts(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-auth-boot-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="reliefos-auth-boot-") as tmp:
             executable = str(Path(tmp) / "auth-boot")
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
@@ -75,7 +75,7 @@ class OobeTests(unittest.TestCase):
                     subprocess.run([executable, scenario], cwd=ROOT, check=True, timeout=10)
 
     def test_closed_window_fetch_finishes_without_timeout(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-oobe-window-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="reliefos-oobe-window-") as tmp:
             executable = str(Path(tmp) / "window")
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
@@ -86,7 +86,7 @@ class OobeTests(unittest.TestCase):
             subprocess.run([executable], cwd=ROOT, check=True, timeout=10)
 
     def test_input_method_requests_after_login(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-oobe-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="reliefos-oobe-") as tmp:
             executable = str(Path(tmp) / "inputm")
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",

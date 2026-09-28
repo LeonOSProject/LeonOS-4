@@ -285,7 +285,7 @@ void normalize_location(const char *input, char *out, uint32_t cap)
     uint32_t pos = 0;
     trim_copy(tmp, sizeof(tmp), input);
     if (!tmp[0]) {
-        copy_text(out, cap, "about:leonos");
+        copy_text(out, cap, "about:reliefos");
         return;
     }
     if (starts_with_ignore_case(tmp, "http://") ||

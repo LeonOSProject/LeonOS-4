@@ -17,7 +17,7 @@ import tempfile
 import time
 
 from apk_ownership import ROOT, inventory, load_policy
-from leonos_layout import layout_directories, apply_root_symlinks
+from reliefos_layout import layout_directories, apply_root_symlinks
 
 ARCHIVE_SHA256 = "c8e2c88c13ba12a12269b79a3543e1190ff8c0ab0beb32b58cadfd5881c619e3"
 BINARY_SHA256 = "5118a57ae7c07e13268a754f78aa9c7d39a0bed708bb11c101d78e2a884cee5d"
@@ -28,7 +28,7 @@ LICENSE_URLS = (
     "https://gitlab.alpinelinux.org/alpine/apk-tools/-/raw/v3.0.8/LICENSE",
 )
 REPOSITORY = "usr/share/reliefos/apk/repository"
-EXTERNAL = {"EFI", "grub", "leonos", "loader.elf", "install"}
+EXTERNAL = {"EFI", "grub", "reliefos", "leonos", "loader.elf", "install"}
 _USER_NAMESPACE_AVAILABLE = None
 
 
@@ -291,7 +291,7 @@ def build_distribution(source, output, work, apk, key):
         (tree / "var/log/apk.log").unlink(missing_ok=True)
         # Upstream package files retain their original signatures and ownership,
         # including when repackaging the installer runtime. Local producers may
-        # not overwrite them. Configuration is in LeonOS-specific scripts.
+        # not overwrite them. Configuration is in ReliefOS-specific scripts.
         for name in upstream_paths:
             path = tree / name
             if path.is_file() or path.is_symlink(): path.unlink()

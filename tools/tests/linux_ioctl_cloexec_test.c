@@ -4,11 +4,11 @@
  *
  * The same static binary is executed twice by the build harness:
  *   1. on the host Linux kernel as the reference implementation, and
- *   2. inside the LeonOS guest, where the generic VFS handling is LeonOS code.
+ *   2. inside the ReliefOS guest, where the generic VFS handling is ReliefOS code.
  *
  * Covered behaviour:
  *   - FIOCLEX sets FD_CLOEXEC and FIONCLEX clears it, repeatedly and on every
- *     descriptor type LeonOS supports (regular file, directory, pipe, socket,
+ *     descriptor type ReliefOS supports (regular file, directory, pipe, socket,
  *     PTY endpoint, device node, anonymous/signalfd/memfd and O_PATH).
  *   - The third ioctl argument is ignored and never dereferenced.
  *   - Closed descriptors report EBADF; the fd and cmd arguments are truncated
@@ -586,7 +586,7 @@ static int case_descriptor_types(void)
 /**
  * @brief Case 6: implicit stdin/stdout/stderr descriptors store the flag.
  *
- * LeonOS keeps the three initial descriptors in a deferred table, so a flag
+ * ReliefOS keeps the three initial descriptors in a deferred table, so a flag
  * that is accepted but not saved would only show up at exec time.  The state
  * is restored here so the remaining cases keep their stdio.
  */

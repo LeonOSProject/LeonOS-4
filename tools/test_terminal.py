@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class TerminalTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tmp = tempfile.TemporaryDirectory(prefix="leonos-terminal-")
+        cls.tmp = tempfile.TemporaryDirectory(prefix="reliefos-terminal-")
         cls.addClassCleanup(cls.tmp.cleanup)
         cls.executable = str(Path(cls.tmp.name) / "terminal")
         subprocess.run([

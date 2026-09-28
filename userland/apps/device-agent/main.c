@@ -1,6 +1,6 @@
 #include <signal.h>
 #include <sys/wait.h>
-/* devmand, LeonOS business protocol: /run/reliefos/devman.sock exports the device
+/* devmand, ReliefOS business protocol: /run/reliefos/devman.sock exports the device
  * catalog and driver control plane previously available through /dev/hwinfo
  * and /dev/driverctl. */
 #include <errno.h>

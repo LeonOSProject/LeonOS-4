@@ -153,7 +153,7 @@ static void draw(struct reliefos_ui_surface *ui)
     reliefos_ui_text(ui, 18, 68, "ASCII ABC 123  |  中文宽字符  |  mixed 混排", RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
 
     sample_w = reliefos_ui_text_width("你好，ReliefOS。");
-    reliefos_ui_text(ui, 18, 100, "leonos_ui_text_width(\"你好，ReliefOS。\"):", RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 18, 100, "reliefos_ui_text_width(\"你好，ReliefOS。\"):", RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     reliefos_ui_progress(ui, 328, 98, 220, 18, sample_w, 220);
 
     reliefos_ui_groupbox(ui, 18, 132, 684, 190, "UTF-8 文本域");

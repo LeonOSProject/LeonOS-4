@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Run the production BusyBox as PID 1 in an isolated Linux namespace.
 
-This tests upstream inittab and power semantics on Linux, not NTCLKS support.
+This tests upstream inittab and power semantics on Linux, not ReliefNT support.
 """
 from pathlib import Path
 import shutil
 import subprocess
 import tempfile
 ROOT = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix='leonos-pid1-') as directory:
+with tempfile.TemporaryDirectory(prefix='reliefos-pid1-') as directory:
     root = Path(directory)
     for name in ('bin','sbin','etc','proc','dev','run'):
         (root / name).mkdir()

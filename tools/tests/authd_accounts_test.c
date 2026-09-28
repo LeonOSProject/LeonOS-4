@@ -1,4 +1,5 @@
 #include <assert.h>
+#include "host_tmp.h"
 #include <errno.h>
 #include <grp.h>
 #include <pwd.h>
@@ -11,7 +12,8 @@
 
 int main(void)
 {
-    char directory[] = "/tmp/leonos-accounts-XXXXXX", path[256];
+    char directory[192], path[256];
+    host_tmp_path(directory, sizeof(directory), "accounts-XXXXXX");
     assert(mkdtemp(directory));
     struct reliefos_auth_record records[2] = {0};
     records[0].user.uid = 0;
@@ -75,7 +77,7 @@ int main(void)
     assert(unlink(path) == 0);
     snprintf(path, sizeof(path), "%s/passwd", directory);
     assert(unlink(path) == 0);
-    assert(authd_export_accounts("/proc/leonos-accounts-test", records, 1) == -1);
+    assert(authd_export_accounts("/proc/reliefos-accounts-test", records, 1) == -1);
     assert(rmdir(directory) == 0);
     puts("accounts: standard passwd/group lookup, UID preservation, modes and invalid records PASS");
     return 0;

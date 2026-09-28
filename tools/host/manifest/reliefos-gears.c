@@ -5,7 +5,7 @@
 int main(int argc, char **argv) {
   const char *input = NULL, *output = NULL;
   const char marker[] = "#define PORTABLEGL_IMPLEMENTATION";
-  const char replacement[] = "/* LeonOS links PortableGL dynamically. */";
+  const char replacement[] = "/* ReliefOS links PortableGL dynamically. */";
   struct byte_buffer data = {0}, result = {0};
   int status = 1;
   for (int i = 1; i < argc; i++) {

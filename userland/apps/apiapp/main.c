@@ -504,12 +504,12 @@ static int run_install_worker(const char *api_path, const char *install_path,
         close(state.progress_fd);
         return 1;
     }
-    install_log("calling leonos_api_install_with_progress");
+    install_log("calling reliefos_api_install_with_progress");
     ret = reliefos_api_install_with_progress(api_path, install_path,
                                             create_shortcut,
                                             install_worker_progress, &state);
     install_log_progress(state.last_processed, state.total);
-    install_log_result("leonos_api_install_with_progress result: ", ret);
+    install_log_result("reliefos_api_install_with_progress result: ", ret);
     close(state.progress_fd);
     install_log(ret ? "install worker completed" : "install worker failed");
     return ret ? 0 : 1;

@@ -418,7 +418,7 @@ int reliefos_app_registry_resolve(const char *name_or_path, char *path,
     uint32_t length;
     if (!path || capacity == 0 || !name_or_path || !name_or_path[0]) return -EINVAL;
     /* Resolve before clearing output: callers may resolve a previously returned
-     * path in place through leonos_launch_builtin_path(). */
+     * path in place through reliefos_launch_builtin_path(). */
     if (reliefos_app_registry_find(name_or_path, &info) < 0) {
         path[0] = 0;
         return -ENOENT;

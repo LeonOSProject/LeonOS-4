@@ -1,6 +1,6 @@
-# LeonOS DoomGeneric port
+# ReliefOS DoomGeneric port
 
-The LeonOS target builds DOOM and its launcher into the downloadable
+The ReliefOS target builds DOOM and its launcher into the downloadable
 `0:/api/doom.api` package. The default image does not install DOOM under
 `0:/programs`; open the API package from the file manager to install it.
 It uses a fullscreen GUI window, forwards keyboard scancodes from the desktop

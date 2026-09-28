@@ -42,6 +42,11 @@ check_appearance() {
     else
         fail 'os-release ID must be ID=reliefos'
     fi
+    if grep -qx 'reliefos' "$root/system/rootfs/etc/hostname"; then
+        ok 'new rootfs hostname is reliefos'
+    else
+        fail 'new rootfs hostname must be reliefos'
+    fi
     if grep -qx 'PRETTY_NAME="ReliefOS"' "$root/system/rootfs/etc/os-release"; then
         ok 'os-release PRETTY_NAME is ReliefOS without version suffix'
     else
@@ -112,6 +117,48 @@ userland/apps/shell/main.c
     else
         fail "legacy product display strings remain in:$old_surfaces"
     fi
+    if grep -Fq 'shell_write("\x1b[96mreliefos\x1b[0m:"' \
+            "$root/userland/apps/shell/main.c"; then
+        ok 'interactive shell prompt uses the ReliefOS machine name'
+    else
+        fail 'interactive shell prompt must use the ReliefOS machine name'
+    fi
+    if grep -qx 'CONFIG_UNAME_OSNAME="ReliefOS"' "$root/userland/busybox/leonos.config"; then
+        ok 'BusyBox uname identifies the ReliefOS userland'
+    else
+        fail 'BusyBox uname must identify the ReliefOS userland'
+    fi
+    if grep -Fq 'const char *initial = "about:reliefos"' \
+            "$root/userland/apps/browser/main.c"; then
+        ok 'browser opens its ReliefOS home URI by default'
+    else
+        fail 'browser home URI must use about:reliefos'
+    fi
+    if grep -Fq 'ReliefOS GRUB payload installed' "$root/userland/busybox/block_storage.c"; then
+        ok 'BusyBox GRUB installer reports ReliefOS'
+    else
+        fail 'BusyBox GRUB installer must report ReliefOS'
+    fi
+    if ! grep -Fq 'leonos_api_install_with_progress' \
+            "$root/userland/apps/apiapp/main.c" &&
+       ! grep -Fq 'leonos_stat_legacy()' "$root/userland/apps/bugtest/main.c" &&
+       ! grep -Fq 'leonos_ui_text_width(' "$root/userland/apps/cjktest/main.c"; then
+        ok 'application diagnostics display canonical ReliefOS API names'
+    else
+        fail 'application diagnostics must display ReliefOS API names'
+    fi
+    if grep -Fq 'Checking installed ReliefOS APKs' "$root/userland/storage/leonos-check-update" &&
+       grep -Fq 'ReliefOS RPR reachable' "$root/userland/storage/leonos-rpr-ping"; then
+        ok 'storage update tools report ReliefOS'
+    else
+        fail 'storage update tools must report ReliefOS'
+    fi
+    if grep -Fq 'Project-Id-Version: ReliefOS musl locale' \
+            "$root/configs/locale/zh_CN.po"; then
+        ok 'musl locale catalog identifies ReliefOS'
+    else
+        fail 'musl locale catalog project metadata must identify ReliefOS'
+    fi
     if [ "$(sed -n '1p' "$root/system/rootfs/etc/motd")" = 'ReliefOS' ] &&
        [ "$(sed -n '1p' "$root/system/rootfs/etc/motd.zh_CN")" = '欢迎使用 ReliefOS' ]; then
         ok 'English and Chinese MOTD headers use ReliefOS'
@@ -128,8 +175,60 @@ userland/apps/shell/main.c
     fi
 }
 
+check_current_docs() {
+    if grep -qx '# ReliefOS 高级安装教程' "$root/docs/ADVANCED_INSTALL.md" &&
+       grep -q '^ReliefOS Installer ISO - Advanced Installation Quick Guide$' \
+           "$root/docs/ADVANCED_INSTALL.txt" &&
+       grep -q 'Install ReliefOS (TTY mode)' "$root/docs/ADVANCED_INSTALL.txt"; then
+        ok 'current installer guides use ReliefOS'
+    else
+        fail 'current installer guides must use ReliefOS'
+    fi
+    if grep -q 'kernel/reliefnt/drivers/' "$root/docs/DRIVERS.md" &&
+       ! grep -q 'kernel/ntclks/drivers/' "$root/docs/DRIVERS.md"; then
+        ok 'driver guide uses the ReliefNT submodule path'
+    else
+        fail 'driver guide must use kernel/reliefnt/drivers/'
+    fi
+    if grep -q 'about:reliefos' "$root/docs/BROWSER.md"; then
+        ok 'browser guide documents the ReliefOS home URI'
+    else
+        fail 'browser guide must document about:reliefos'
+    fi
+    if grep -q 'About ReliefOS' "$root/docs/KERNEL_DEBUG.md"; then
+        ok 'kernel debugger guide uses the ReliefOS product name'
+    else
+        fail 'kernel debugger guide must use About ReliefOS'
+    fi
+}
+
 # Layer 2: canonical guest paths and service names.
 check_paths() {
+    if grep -qx 'kernel_name=ReliefNT' "$root/configs/build-version"; then
+        ok 'host version generator uses the ReliefNT identity'
+    else
+        fail 'host version generator must use the ReliefNT identity'
+    fi
+    if grep -Fq '/etc/reliefos/locale.conf' "$root/Kconfig" &&
+       grep -Fq '/etc/reliefos/locale.conf' "$root/kernel/reliefnt/Kconfig"; then
+        ok 'both configuration menus describe the canonical locale path'
+    else
+        fail 'configuration menus must describe /etc/reliefos/locale.conf'
+    fi
+    if grep -qx 'provider_path=/usr/lib/reliefos/apps/oschinpt/oschinpt.elf' \
+           "$root/tools/oschinpt-apk-post-install" &&
+       grep -qx 'settings_path=/usr/lib/reliefos/apps/oschinpt/settings.ini' \
+           "$root/tools/oschinpt-apk-post-install"; then
+        ok 'APK input method registration uses canonical application paths'
+    else
+        fail 'APK input method registration must use canonical application paths'
+    fi
+    if grep -Fq '$images/reliefos.vmdk' "$root/scripts/test-smoke.sh" &&
+       grep -Fq '$images/reliefos-$variant.iso' "$root/scripts/test-smoke.sh"; then
+        ok 'VM smoke test consumes the canonical release artifact names'
+    else
+        fail 'VM smoke test must consume canonical release artifact names'
+    fi
     if [ -f "$root/include/reliefos/layout.h" ]; then
         ok 'include/reliefos/layout.h exists'
     else
@@ -158,6 +257,18 @@ check_headers_libs() {
         ok 'runtime include/reliefos/ exists'
     else
         fail 'userland/runtime/include/reliefos/ is missing'
+    fi
+    if [ -f "$root/tools/reliefos_layout.py" ] &&
+       grep -Fq 'from reliefos_layout import' "$root/tools/make_image.py"; then
+        ok 'host image tools import the canonical ReliefOS layout module'
+    else
+        fail 'host image tools must use tools/reliefos_layout.py'
+    fi
+    if grep -Eq 'LEONOS_(APPS|LIB|RUN|VAR_LIB)' \
+            "$root/tools/make_installer_root.py"; then
+        fail 'host installer tools must use canonical ReliefOS layout constants'
+    else
+        ok 'host installer tools use canonical ReliefOS layout constants'
     fi
     if grep -rq 'libreliefos\.so\.2' "$root/mk" "$root/tools/build" 2>/dev/null; then
         ok 'build graph produces libreliefos.so.2'
@@ -235,6 +346,7 @@ audit_repo() {
 
 check_appearance
 check_visible_surfaces
+check_current_docs
 check_paths
 check_headers_libs
 check_artifacts

@@ -10,7 +10,7 @@ mkdir -p "$work/source" "$work/build" "$output"
 git -C "$src/third_party/busybox" archive "$revision" > "$work/source.tar"
 tar -xf "$work/source.tar" -C "$work/source"
 # Command line overrides from the outer Make must not replace the configured CC.
-SOURCE_DATE_EPOCH=$epoch KBUILD_BUILD_TIMESTAMP=$(date -u -d "@$epoch" '+%Y-%m-%d %H:%M:%S') KBUILD_BUILD_USER=leonos KBUILD_BUILD_HOST=builder
+SOURCE_DATE_EPOCH=$epoch KBUILD_BUILD_TIMESTAMP=$(date -u -d "@$epoch" '+%Y-%m-%d %H:%M:%S') KBUILD_BUILD_USER=reliefos KBUILD_BUILD_HOST=builder
 export SOURCE_DATE_EPOCH KBUILD_BUILD_TIMESTAMP KBUILD_BUILD_USER KBUILD_BUILD_HOST
 make -C "$work/source" O="$work/build" allnoconfig
 awk 'FNR==NR { if ($0 ~ /^CONFIG_/){split($0,a,"=");if(a[1] !~ /^CONFIG_LEONOS_/ && a[1] != "CONFIG_EXTRA_LDLIBS") value[a[1]]=$0} else if($0 ~ /^# CONFIG_.* is not set$/) {value[$2]=$0} next } {key=$1; sub(/=.*/,"",key);if($1=="#")key=$2;if(key in value){print value[key];delete value[key]}else print} END {for(key in value)print value[key]}' "$src/userland/busybox/leonos.config" "$work/build/.config" > "$work/build/.config.new"

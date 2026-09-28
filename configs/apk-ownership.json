@@ -19,7 +19,7 @@
       "destination": "reliefos",
       "components": ["fastfetch"],
       "future_apk_conflicts": ["fastfetch"],
-      "reason": "Retain the verified custom release with LeonOS Logo. The future real local APK must depend on !fastfetch. This manifest does not enforce that conflict."
+      "reason": "Retain the verified ReliefOS release with the legacy LeonOS Logo alias. The future real local APK must depend on !fastfetch. This manifest does not enforce that conflict."
     },
     "musl": {
       "destination": "alpine-after-validation",
@@ -32,7 +32,7 @@
       "destination": "reliefos",
       "components": [],
       "paths": ["lib/libmimalloc.so.3"],
-      "reason": "LeonOS runtime allocator contract; statically linked copies belong to their consumers."
+      "reason": "ReliefOS runtime allocator contract; statically linked copies belong to their consumers."
     },
     "reliefos-musl-dev": {
       "destination": "reliefos",
@@ -115,7 +115,7 @@
       "components": [],
       "paths": ["etc/ssl/certs", "etc/ssl/cert.pem", "etc/apk/keys", "etc/apk/ca.pem", "usr/share/licenses/alpine-keys"],
       "alpine_candidates": ["ca-certificates", "alpine-keys"],
-      "reason": "Transfer trust data via authenticated packages; validate certificate update triggers on LeonOS."
+      "reason": "Transfer trust data via authenticated packages; validate certificate update triggers on ReliefOS."
     },
     "reliefos-apk-tools": {
       "destination": "reliefos",

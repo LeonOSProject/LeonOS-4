@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-mmsg-") as directory:
+with tempfile.TemporaryDirectory(prefix="reliefos-mmsg-") as directory:
     output = str(Path(directory) / "socket_batch")
     subprocess.run(["cc", "-std=c11", "-g", "-O1", "-fsanitize=address,undefined",
                     "-fno-sanitize-recover=all", "-ffunction-sections", "-fdata-sections",

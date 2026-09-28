@@ -245,7 +245,7 @@ all: kernel userland runtime sdk apk-repo image-vmdk iso installer
 
 .PHONY: image-iso release config-sync build-info test-all
 image-iso: iso
-# `release` is gated by the ntclks release guard (mk/rpr.mk): release builds
+# `release` is gated by the ReliefNT release guard (mk/rpr.mk): release builds
 # must come from a clean kernel/reliefnt submodule at the committed gitlink.
 release: reliefnt-release-guard all pages
 config-sync: $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(RELIEFOS_COMPONENT_MK)

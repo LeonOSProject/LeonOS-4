@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Analyze LeonOS loader, kernel, and dynamic-loader boot logs.
+"""Analyze ReliefOS loader, kernel, and dynamic-loader boot logs.
 
 Examples:
     python tools/analyze_boot_log.py serial.log
@@ -80,7 +80,7 @@ DIRECT_RULES = (
         r"^\[loader\].*(?:kernel\.sys load failed|module load failed|no readable EFI FAT volume|unable to open EFI filesystem)",
         "引导加载器无法读取核心启动组件",
         "loader 无法从 EFI 文件系统或 GRUB 模块获得 kernel.sys。",
-        "检查 ESP 中的 boot/、leonos/kernel.sys，以及 ext2 根分区和 EFI/FAT32 挂载状态。",
+        "检查 ESP 中的 boot/、reliefos/kernel.sys（旧盘为 leonos/kernel.sys），以及 ext2 根分区和 EFI/FAT32 挂载状态。",
         "kernel/reliefnt/boot/loader/main.c:1114",
     ),
     Rule(
@@ -103,7 +103,7 @@ DIRECT_RULES = (
         "ELF-HEADER", "错误", "ELF 装载",
         r"^\[(?:reliefnt|ntclks)\] ELF (?:main|interpreter) header (?:read|validation) failed$",
         "ELF 头部读取或验证失败",
-        "程序或动态解释器不是当前 LeonOS 接受的完整 x86_64 ELF，或 ABI note、程序头和段约束未通过。",
+        "程序或动态解释器不是当前 ReliefOS 接受的完整 x86_64 ELF，或 ABI note、程序头和段约束未通过。",
         "用 readelf 检查 ELF 类型、PT_INTERP、ABI note 和段权限；确认镜像未截断且构建产物来自当前工具链。",
         "kernel/reliefnt/kernel/exec/elf.c:848",
     ),
@@ -136,7 +136,7 @@ DIRECT_RULES = (
         r"^\[dynlinkerror\.elf\] unable to start .*: missing ",
         "动态链接库缺失",
         "静态链接的恢复程序已确认应用缺少必需共享库。",
-        "从匹配系统镜像恢复该 .so 文件到 /usr/lib/leonos 或 /usr/lib，或重新打包应用私有库。",
+        "从匹配系统镜像恢复该 .so 文件到 /usr/lib/reliefos、兼容目录 /usr/lib/leonos 或 /usr/lib，或重新打包应用私有库。",
         "userland/apps/dynlinkerror/main.c:52",
     ),
     Rule(
@@ -326,7 +326,7 @@ def _print_text(analysis: LogAnalysis) -> None:
     counts = {severity: 0 for severity in SEVERITY_ORDER}
     for finding in analysis.findings:
         counts[finding.severity] += 1
-    print("LeonOS 启动日志分析")
+    print("ReliefOS 启动日志分析")
     print(f"状态: {analysis.status}")
     print(f"日志行: {analysis.line_count}")
     print("启动完成: " + (f"第 {analysis.boot_complete_line} 行" if analysis.boot_complete_line else "未检测到"))

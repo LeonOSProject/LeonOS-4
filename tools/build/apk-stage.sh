@@ -33,7 +33,7 @@ cp -a "$raw"/. "$tree"/
 
 # Media-only payloads are copied back after the transaction and never claimed
 # by an installed package. Runtime state is always created by apk itself.
-for name in EFI grub leonos loader.elf install; do rm -rf "$tree/$name"; done
+for name in EFI grub reliefos leonos loader.elf install; do rm -rf "$tree/$name"; done
 for name in lib/apk/db var/cache/apk usr/share/reliefos/apk/repository; do
     [ ! -L "$tree/$name" ] || { echo "invalid package-state symlink: $name" >&2; exit 1; }
     rm -rf "$tree/$name"
@@ -166,7 +166,7 @@ package_name()
 
 # Copy exactly the classified payload. Quoting and tab-delimited reads preserve
 # spaces; the inventory tool rejects tabs/newlines because this is its format.
-leonos_log APK "copying $(wc -l < "$scratch/ownership.tsv") payload entries"
+reliefos_log APK "copying $(wc -l < "$scratch/ownership.tsv") payload entries"
 copied=0
 while IFS="$(printf '\t')" read -r group type mode relative target; do
     package=$(package_name "$group")
@@ -179,7 +179,7 @@ while IFS="$(printf '\t')" read -r group type mode relative target; do
         cp -a "$tree/$relative" "$destination"
     fi
     copied=$((copied + 1))
-    if [ $((copied % 2000)) = 0 ]; then leonos_log APK "copied $copied entries"; fi
+    if [ $((copied % 2000)) = 0 ]; then reliefos_log APK "copied $copied entries"; fi
 done <"$scratch/ownership.tsv"
 # Shared parent directories must have the canonical mode in every package.
 for payload in "$scratch"/payload/*; do
@@ -192,7 +192,7 @@ for payload in "$scratch"/payload/*; do
 done
 
 # Derive real ELF capabilities and dependencies from the package payload.
-leonos_log APK 'scanning ELF dependencies and signing packages'
+reliefos_log APK 'scanning ELF dependencies and signing packages'
 : >"$scratch/providers"
 : >"$scratch/needed"
 while IFS= read -r group; do
@@ -291,7 +291,7 @@ while IFS= read -r request; do set -- "$@" "$request"; done <"$scratch/upstream-
 run_apk "$@"
 mkdir -p "$managed/usr/share/reliefos/apk"
 cp -a "$repository" "$managed/usr/share/reliefos/apk/repository"
-for name in EFI grub leonos loader.elf install; do [ ! -e "$raw/$name" ] || cp -a "$raw/$name" "$managed/$name"; done
+for name in EFI grub reliefos leonos loader.elf install; do [ ! -e "$raw/$name" ] || cp -a "$raw/$name" "$managed/$name"; done
 
 mkdir -p "$work/repository.new"
 rm -rf "$work/repository.new"
@@ -317,4 +317,4 @@ rm -rf "$output.previous"
 [ ! -e "$output" ] || mv "$output" "$output.previous"
 mv "$managed" "$output"
 rm -rf "$output.previous"
-leonos_log APK "signed root: $(wc -l <"$scratch/groups") packages -> $output"
+reliefos_log APK "signed root: $(wc -l <"$scratch/groups") packages -> $output"

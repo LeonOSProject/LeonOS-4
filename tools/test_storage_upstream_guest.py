@@ -41,9 +41,9 @@ def main():
                     "-o", str(probe)], cwd=ROOT, check=True)
     image = work / "root.ext2"
     shutil.copy2(args.root, image)
-    target = "/usr/lib/leonos/tests/linux-inventory.elf"
+    target = "/usr/lib/reliefos/tests/linux-inventory.elf"
     # debugfs may return zero on command errors; verify bytes after injection.
-    for command in ("mkdir /usr/lib/leonos/tests", f"rm {target}", f"write {probe} {target}",
+    for command in ("mkdir /usr/lib/reliefos/tests", f"rm {target}", f"write {probe} {target}",
                     f"set_inode_field {target} mode 0100755"):
         subprocess.run(["debugfs", "-w", "-R", command, str(image)], check=True, capture_output=True)
     embedded = subprocess.check_output(["debugfs", "-R", f"cat {target}", str(image)], stderr=subprocess.DEVNULL)

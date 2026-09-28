@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-storage-sync-") as directory:
+with tempfile.TemporaryDirectory(prefix="reliefos-storage-sync-") as directory:
     binary = str(Path(directory) / "sync")
     subprocess.run(["cc", "-std=c11", "-O2", "-g", "-fsanitize=address,undefined",
                     "-fno-sanitize-recover=all", "-fno-pie", "-no-pie",

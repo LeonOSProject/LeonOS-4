@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-storage-") as directory:
+with tempfile.TemporaryDirectory(prefix="reliefos-storage-") as directory:
     temp = Path(directory)
     disk, source, executable = temp / "disk.ext2", temp / "input", temp / "metadata"
     source.write_bytes(b"hello")

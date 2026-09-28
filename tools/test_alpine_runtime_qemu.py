@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install official Alpine packages on the host, execute them on NTCLKS.
+"""Install official Alpine packages on the host, execute them on ReliefNT.
 
 This runtime-focused fixture complements test_apk_qemu.py's guest transactions.
 Package signatures are verified by upstream apk; no binaries are modified.
@@ -34,7 +34,7 @@ def prepare(refresh=False):
             shutil.copytree(managed, stage, symlinks=True)
             base = ["unshare", "-Ur", apk, "--root", stage,
                     "--repositories-file", ROOT / "system/rootfs/etc/apk/repositories",
-                    "--repository", stage / "usr/share/leonos/apk/repository/packages.adb",
+                    "--repository", stage / "usr/share/reliefos/apk/repository/packages.adb",
                     "--cache-dir", cache, "--cache-packages", "--timeout", "60"]
             run([*base, "update"])
             gcc = ROOT / "build/apk-qemu/upstream/gcc-15.2.0-r5.apk"
@@ -51,14 +51,14 @@ def prepare(refresh=False):
     with tempfile.TemporaryDirectory(prefix="image-", dir=WORK) as directory:
         stage = Path(directory) / "root"
         make_live_tree(root, stage)
-        tests = stage / "usr/lib/leonos/tests"
+        tests = stage / "usr/lib/reliefos/tests"
         tests.mkdir(parents=True, exist_ok=True)
         shutil.copy2(WORK / "probe.elf", tests / "linux-inventory.elf")
         write_ext2_root(stage, WORK / "root.ext2", minimum_mib=512)
     iso = guest_runner.iso_tools
     iso.GRUB_TEMPLATE = iso.GRUB_TEMPLATE.replace("autospawn=ioctlcloexec autospawn=python315",
         "autospawn=inventory").replace("syscall-trace=/opt/python/", "").replace("set timeout=5", "set timeout=0")
-    iso.build_iso(WORK / "root.ext2", WORK / "leonos4-apk.iso", WORK / "grub.cfg", WORK)
+    iso.build_iso(WORK / "root.ext2", WORK / "reliefos-apk.iso", WORK / "grub.cfg", WORK)
 
 
 if __name__ == "__main__":

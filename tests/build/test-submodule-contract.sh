@@ -27,7 +27,7 @@ cd "$repo_root" || exit 1
 reliefnt=${RELIEFNT_DIR:-${NTCLKS_DIR:-$repo_root/kernel/reliefnt}}
 gitlink_path=kernel/reliefnt
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-submodule.XXXXXX") || exit 1
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-submodule.XXXXXX") || exit 1
 failures=0
 checks=0
 

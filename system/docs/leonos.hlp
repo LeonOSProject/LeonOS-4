@@ -153,6 +153,6 @@ A `.hlp` file is a plain text container. It starts with file metadata, then one 
     %%ENDDOC
 ```
 
-Document ids may contain letters, digits, `.`, `_` and `-`. The `path` field builds the left-side tree. Store translated files in `/usr/share/doc/leonos/<locale>/`; the default file is the English fallback.
+Document ids may contain letters, digits, `.`, `_` and `-`. The `path` field builds the left-side tree. Store translated files in `/usr/share/doc/reliefos/<locale>/`; the default file is the English fallback.
 
 %%ENDDOC

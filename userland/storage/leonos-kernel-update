@@ -3,7 +3,7 @@ set -u
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 
-usage() { printf '%s\n' 'Usage: leonos-kernel-update [-f|--force|--check]' >&2; }
+usage() { printf '%s\n' 'Usage: reliefos-kernel-update [-f|--force|--check]' >&2; }
 check_only=0
 force=0
 case "${1-}" in
@@ -14,7 +14,7 @@ case "${1-}" in
 esac
 [ "$#" -le 1 ] || { usage; exit 2; }
 if [ "$check_only" -eq 0 ] && [ "$(id -u)" -ne 0 ]; then
-    printf '%s\n' 'leonos-kernel-update: root privileges are required' >&2
+    printf '%s\n' 'reliefos-kernel-update: root privileges are required' >&2
     exit 1
 fi
 
@@ -23,7 +23,7 @@ config=/etc/reliefos/rpr.conf
 rpr_url=$(sed -n 's/^RPR_BASE_URL=//p' "$config")
 case "$rpr_url" in https://*) ;; *) printf '%s\n' 'Invalid RPR URL: HTTPS is required' >&2; exit 1;; esac
 
-manifest=$(mktemp /tmp/leonos-kernel-release.XXXXXX) || exit 1
+manifest=$(mktemp /tmp/reliefos-kernel-release.XXXXXX) || exit 1
 esp=/boot
 boot=$esp/reliefos
 legacy_boot=$esp/leonos

@@ -23,20 +23,20 @@ def main():
     work.mkdir(parents=True, exist_ok=True)
     serial = work / f'guest-smp{args.smp}.log'
     serial.write_text('')
-    with tempfile.TemporaryDirectory(prefix='leonos-openrc-gui-') as directory:
+    with tempfile.TemporaryDirectory(prefix='reliefos-openrc-gui-') as directory:
         qmp = Path(directory) / 'qmp.sock'
         command = ['qemu-system-x86_64','-enable-kvm','-cpu','host','-machine','q35',
             '-m','4096','-smp',str(args.smp),'-bios','/usr/share/edk2/x64/OVMF.4m.fd',
             '-display','none','-serial',f'file:{serial}','-device','VGA,xres=1280,yres=720',
             '-netdev','user,id=n','-device','e1000,netdev=n',
-            '-drive',f'file={ROOT / "build/images/leonos4.vmdk"},if=none,id=d,format=vmdk,snapshot=on',
+            '-drive',f'file={ROOT / "build/images/reliefos.vmdk"},if=none,id=d,format=vmdk,snapshot=on',
             '-device','ich9-ahci,id=a','-device','ide-hd,drive=d,bus=a.0',
             '-qmp',f'unix:{qmp},server=on,wait=off','-no-reboot','-no-shutdown']
         with (work/'qemu.log').open('w') as log:
             process = subprocess.Popen(command,stdout=log,stderr=subprocess.STDOUT)
             probe = None
             try:
-                wait_log(serial, 'path=/usr/lib/leonos/apps/login/login.elf', process, timeout=90)
+                wait_log(serial, 'path=/usr/lib/reliefos/apps/login/login.elf', process, timeout=90)
                 time.sleep(5)
                 probe = Probe(qmp,work)
                 probe.frame('login')
@@ -48,9 +48,9 @@ def main():
                 probe.frame('desktop')
                 probe.key('meta_l'); time.sleep(1)
                 probe.text('terminal'); probe.key('ret')
-                wait_log(serial,'path=/usr/lib/leonos/apps/terminal/terminal.elf',process,timeout=30)
+                wait_log(serial,'path=/usr/lib/reliefos/apps/terminal/terminal.elf',process,timeout=30)
                 time.sleep(5)
-                type_line(probe,'id; rc-status; cat /run/leonos/dhcp-lease',settle=4)
+                type_line(probe,'id; rc-status; cat /run/reliefos/dhcp-lease',settle=4)
                 probe.frame('terminal-openrc')
                 print(f'GUI login + Terminal launched; review {work}/terminal-openrc.png')
             finally:

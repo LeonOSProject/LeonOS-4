@@ -14,7 +14,7 @@ class LinuxMemoryTests(unittest.TestCase):
         cases = (("physical_pages", []), ("paging_protection", []), ("private_anon_fault", []), ("elf_interpreter", []),
                  ("elf_file_page", ["kernel/reliefnt/mm/page_cache.c"]), ("user_mmap_arena", []))
         for name, sources in cases:
-            with self.subTest(name=name), tempfile.TemporaryDirectory(prefix="leonos-mm-") as tmp:
+            with self.subTest(name=name), tempfile.TemporaryDirectory(prefix="reliefos-mm-") as tmp:
                 executable = str(Path(tmp) / name)
                 subprocess.run([
                     "cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
