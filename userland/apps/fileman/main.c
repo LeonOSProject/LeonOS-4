@@ -11,7 +11,7 @@ int main(int argc, char **argv, char **envp)
 
     puts("[fileman.elf] file manager starting");
     printf("[fileman.elf] pid=%d creating GUI window\n", getpid());
-    window_id = reliefos_gui_create_app_window_ex(T("File Manager"), T("LeonOS file browser"),
+    window_id = reliefos_gui_create_app_window_ex(T("File Manager"), T("ReliefOS file browser"),
                                                 FILEMAN_W, FILEMAN_H, 0);
     if (window_id <= 0) {
         printf("[fileman.elf] create window failed=%d\n", window_id);

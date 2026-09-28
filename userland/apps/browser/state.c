@@ -8,7 +8,7 @@ uint32_t view_h = BROWSER_INITIAL_H;
 char address_input[BROWSER_URL_CAP] = "about:leonos";
 struct reliefos_ui_edit_state address_edit;
 char status_text[BROWSER_STATUS_CAP] = "Ready";
-char page_title[BROWSER_TITLE_CAP] = "LeonOS Browser";
+char page_title[BROWSER_TITLE_CAP] = "ReliefOS Browser";
 char current_location[BROWSER_URL_CAP] = "about:leonos";
 char page_source[BROWSER_SOURCE_CAP];
 uint8_t page_is_html;

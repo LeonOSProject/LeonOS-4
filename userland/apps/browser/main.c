@@ -32,7 +32,7 @@ int main(int argc, char **argv, char **envp)
     if (argc > 1 && argv && argv[1] && argv[1][0]) {
         initial = argv[1];
     }
-    window_id = reliefos_gui_create_app_window_ex(T("LeonOS Browser"),
+    window_id = reliefos_gui_create_app_window_ex(T("ReliefOS Browser"),
                                                 T("Classic Web Browser"),
                                                 view_w, view_h, 0);
     if (window_id <= 0) {

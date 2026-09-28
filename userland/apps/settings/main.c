@@ -617,7 +617,7 @@ static void write_services_preferences(void)
         return;
     }
     cfg[0] = 0;
-    append_text(cfg, &pos, sizeof(cfg), "# LeonOS taskbar preferences\n");
+    append_text(cfg, &pos, sizeof(cfg), "# ReliefOS taskbar preferences\n");
     for (uint32_t i = 2; i <= 3; ++i) {
         append_text(cfg, &pos, sizeof(cfg), service_rows[i].key);
         append_char(cfg, &pos, sizeof(cfg), '=');

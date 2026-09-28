@@ -28,7 +28,7 @@ void draw_ui_demo_gallery(uint32_t body_x, uint32_t body_y,
     uint32_t col_w = body_w / 2 > pad * 2 ? body_w / 2 - pad * 2 : 120;
     uint32_t top = body_y + pad;
 
-    text_draw(left_x, top, T("LeonOS UI Component Library"), RELIEFOS_UI_BLACK, bg);
+    text_draw(left_x, top, T("ReliefOS UI Component Library"), RELIEFOS_UI_BLACK, bg);
     text_draw(left_x, top + 18, T("Buttons, inputs, lists, menus, panels, windows"), RELIEFOS_UI_DARK, bg);
 
     uint32_t y = top + header_h + 8;

@@ -82,8 +82,18 @@ def wait_install(probe, serial, process):
     raise AssertionError("Installation timed out")
 
 
+def wait_desktop(probe, timeout=30):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        frame = probe.frame("desktop")
+        if frame.getpixel((probe.width // 2, probe.height - 10)) != (0, 120, 212):
+            return frame
+        time.sleep(.5)
+    raise AssertionError("Login did not transition from the ReliefOS login screen to the desktop")
+
+
 def install_gui(probe, serial, process):
-    wait_log(serial, "[installer.elf] starting installer wizard", process)
+    wait_log(serial, "path=/usr/lib/reliefos/apps/installer/installer.elf", process)
     time.sleep(4)
     probe.frame("language")
     for _ in range(6): next_page(probe)
@@ -170,24 +180,27 @@ def login_tty(probe, serial, process, root):
 
 
 def login_desktop(probe, serial, process):
-    wait_log(serial, "[login.elf] starting login UI", process)
+    wait_log(serial, "path=/usr/lib/reliefos/apps/login/login.elf", process)
     time.sleep(5)
     probe.frame("login")
     probe.key("down")
     probe.text(USER_PASSWORD)
     probe.key("ret")
-    wait_log(serial, "name=login.elf code=0", process)
+    wait_desktop(probe)
     time.sleep(5)
     probe.key("meta_l")
     time.sleep(1)
     probe.text("terminal")
     probe.key("ret")
-    wait_log(serial, "terminal: PTY ready", process)
+    wait_log(serial, "path=/usr/lib/reliefos/apps/terminal/terminal.elf", process)
+    probe.text("fastfetch --format json --structure OS:Kernel")
+    probe.key("ret")
+    time.sleep(3)
+    probe.frame("terminal-fastfetch")
     time.sleep(2)
     probe.text("cat /proc/self/status; echo HOME=$HOME")
     probe.key("ret")
-    wait_log(serial, "name=cat code=0", process)
-    time.sleep(2)
+    time.sleep(3)
     probe.frame("terminal-identity")
     log = serial.read_text(errors="replace")
     assert "name=terminal.elf code=127" not in log, "Terminal shell failed to execute"

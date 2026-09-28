@@ -242,7 +242,7 @@ int main(int argc, char **argv, char **envp)
     if (argc > 1 && argv[1] && argv[1][0]) {
         (void)chdir(argv[1]);
     }
-    shell_line("LeonOS command shell 2");
+    shell_line("ReliefOS command shell 2");
     shell_line("Type help to see available commands.");
     if (argc > 2 && argv[2] && argv[2][0]) {
         char startup[SHELL_LINE_CAP];

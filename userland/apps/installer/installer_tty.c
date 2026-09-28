@@ -143,7 +143,7 @@ int installer_tty_main(const struct installer_tty_context *context)
         return 1;
     }
 
-    puts("LeonOS 4 installer (TTY)");
+    puts("ReliefOS installer (TTY)");
     puts("This installer uses the same disk formatter and payload as the graphical installer.");
     puts("A fresh installation erases the selected disk.");
     for (;;) {

@@ -59,6 +59,75 @@ check_appearance() {
     fi
 }
 
+# User-visible strings use the canonical display names. Old identifiers remain
+# in implementation paths and font aliases, which are not display text.
+check_visible_surfaces() {
+    ui_files='
+boot/grub/grub.cfg
+boot/grub/live.cfg
+boot/grub/installer.cfg
+system/rootfs/etc/os-release
+system/rootfs/etc/issue
+system/docs/leonos.hlp
+system/docs/zh_CN/leonos.hlp
+configs/components.toml
+configs/nls/po/leonos.pot
+configs/nls/po/zh_CN.po
+userland/apps/installer/main.c
+userland/apps/installer/installer_tty.c
+userland/apps/login/main.c
+userland/apps/desktop/desktop.h
+userland/apps/desktop/start_menu.c
+userland/apps/desktop/render.c
+userland/apps/desktop/screen.c
+userland/apps/osver/main.c
+userland/apps/settings/main.c
+userland/apps/run/main.c
+userland/apps/fileman/main.c
+userland/apps/browser/main.c
+userland/apps/browser/input.c
+userland/apps/browser/navigation.c
+userland/apps/browser/state.c
+userland/apps/browser/view.c
+userland/apps/guitest/main.c
+userland/apps/hello/main.c
+userland/apps/cjktest/main.c
+userland/apps/oschinpt/main.c
+userland/apps/uidemo/main.c
+userland/apps/paint/main.c
+userland/apps/minesweeper/main.c
+userland/apps/oshlp/main.c
+userland/apps/notepad/main.c
+userland/apps/terminal/main.c
+userland/apps/shell/main.c
+'
+    old_surfaces=
+    for ui_file in $ui_files; do
+        if grep -Fq 'LeonOS' "$root/$ui_file"; then
+            old_surfaces="$old_surfaces $ui_file"
+        fi
+    done
+    if [ -z "$old_surfaces" ]; then
+        ok 'visible UI, help, translations and GRUB use ReliefOS'
+    else
+        fail "legacy product display strings remain in:$old_surfaces"
+    fi
+    if [ "$(sed -n '1p' "$root/system/rootfs/etc/motd")" = 'ReliefOS' ] &&
+       [ "$(sed -n '1p' "$root/system/rootfs/etc/motd.zh_CN")" = '欢迎使用 ReliefOS' ]; then
+        ok 'English and Chinese MOTD headers use ReliefOS'
+    else
+        fail 'MOTD headers must use ReliefOS'
+    fi
+    if grep -qx 'kernel_name=ReliefNT' "$root/kernel/reliefnt/configs/build-version" &&
+       grep -q 'LINUX_UTS_SYSNAME "ReliefNT"' \
+           "$root/kernel/reliefnt/kernel/reliefnt/include/reliefnt/uts.h" &&
+       grep -q 'info.kernel_name' "$root/userland/apps/osver/main.c"; then
+        ok 'system information surfaces the ReliefNT kernel name'
+    else
+        fail 'kernel identity used by Fastfetch and the version page must be ReliefNT'
+    fi
+}
+
 # Layer 2: canonical guest paths and service names.
 check_paths() {
     if [ -f "$root/include/reliefos/layout.h" ]; then
@@ -165,6 +234,7 @@ audit_repo() {
 }
 
 check_appearance
+check_visible_surfaces
 check_paths
 check_headers_libs
 check_artifacts

@@ -11,7 +11,7 @@ static uint32_t pixels[CJKTEST_W * CJKTEST_H];
 static char status_line[160] = "准备测试中文显示";
 static char text_buffer[512] =
     "中文显示测试\n"
-    "你好，LeonOS 4。\n"
+    "你好，ReliefOS。\n"
     "中文标点：，。！？；：《》【】（）\n"
     "宽度测试：ASCII=1 cell，中文=2 cells。\n"
     "文件名测试会创建 /测试目录/你好.txt\n";
@@ -42,7 +42,7 @@ static void tty_write_chunked(const char *text)
 static int run_tty_test(void)
 {
     tty_write_text("\033[2J\033[H");
-    tty_write_text("LeonOS CJK PTY/TTY test\r\n");
+    tty_write_text("ReliefOS CJK PTY/TTY test\r\n");
     tty_write_text("1. UTF-8 分段写入: ");
     tty_write_chunked("中文 / 한국어 / 日本語 / 繁體中文");
     tty_write_text("\r\n");
@@ -105,7 +105,7 @@ static void run_file_test(void)
 {
     const char *dir = "/测试目录";
     const char *path = "/测试目录/你好.txt";
-    const char *content = "你好，LeonOS 4。中文文件名和 UTF-8 内容测试。\n";
+    const char *content = "你好，ReliefOS。中文文件名和 UTF-8 内容测试。\n";
     struct reliefos_stat st;
     struct reliefos_dir_entry entry;
     uint32_t pos = 0;
@@ -148,12 +148,12 @@ static void draw(struct reliefos_ui_surface *ui)
     uint32_t sample_w;
     reliefos_ui_rect(ui, 0, 0, CJKTEST_W, CJKTEST_H, RELIEFOS_UI_WHITE);
 
-    reliefos_ui_text(ui, 18, 16, "你好，LeonOS 4。中文显示测试。", RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 18, 16, "你好，ReliefOS。中文显示测试。", RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     reliefos_ui_text(ui, 18, 42, "标点：，。！？；：《》【】（）", RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     reliefos_ui_text(ui, 18, 68, "ASCII ABC 123  |  中文宽字符  |  mixed 混排", RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
 
-    sample_w = reliefos_ui_text_width("你好，LeonOS 4。");
-    reliefos_ui_text(ui, 18, 100, "leonos_ui_text_width(\"你好，LeonOS 4。\"):", RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    sample_w = reliefos_ui_text_width("你好，ReliefOS。");
+    reliefos_ui_text(ui, 18, 100, "leonos_ui_text_width(\"你好，ReliefOS。\"):", RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     reliefos_ui_progress(ui, 328, 98, 220, 18, sample_w, 220);
 
     reliefos_ui_groupbox(ui, 18, 132, 684, 190, "UTF-8 文本域");

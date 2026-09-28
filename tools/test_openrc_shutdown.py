@@ -2,6 +2,7 @@
 """Check that LeonOS supervise-daemon services stop within a bounded schedule."""
 
 from pathlib import Path
+from pathlib import PurePosixPath
 import re
 import subprocess
 import unittest
@@ -13,6 +14,26 @@ EXPECTED_RETRY = "TERM/1/KILL/1"
 
 
 class OpenRCShutdownTests(unittest.TestCase):
+    def test_runtime_keeps_legacy_ipc_socket_parent_available(self) -> None:
+        ipc_header = (ROOT / "userland/runtime/include/reliefos/unix_ipc.h").read_text(
+            encoding="utf-8",
+        )
+        socket_paths = re.findall(
+            r'^#define RELIEFOS_IPC_SOCK_\w+ "([^"]+)"$', ipc_header, re.MULTILINE,
+        )
+        self.assertTrue(socket_paths)
+        self.assertEqual({"/run/leonos"}, {
+            str(PurePosixPath(path).parent) for path in socket_paths
+        })
+
+        runtime_script = (INIT_DIR / "reliefos-runtime").read_text(encoding="utf-8")
+        self.assertLess(
+            runtime_script.index("checkpath"),
+            runtime_script.index("ln -s /run/reliefos /run/leonos"),
+        )
+        self.assertIn("ln -s /run/reliefos /run/leonos || return 1", runtime_script)
+        self.assertIn("test -d /run/leonos || return 1", runtime_script)
+
     def test_reliefos_services_have_one_canonical_runlevel_entry(self) -> None:
         services = ("device", "dhcp", "imd", "ntp", "session", "windowd")
         for service in services:

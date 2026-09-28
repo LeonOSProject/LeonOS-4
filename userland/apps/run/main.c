@@ -66,7 +66,7 @@ static void append_text(char *dst, uint32_t cap, const char *prefix, int value)
 static void draw_run(struct reliefos_ui_surface *ui)
 {
     reliefos_ui_rect(ui, 0, 0, RUN_W, RUN_H, RELIEFOS_UI_GRAY);
-    reliefos_ui_text(ui, 12, 14, T("Open LeonOS program or file path"), RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_text(ui, 12, 14, T("Open ReliefOS program or file path"), RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
     reliefos_ui_text(ui, 12, 38, T("Path:"), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     reliefos_ui_edit_state_draw(ui, 56, 34, RUN_W - 68, &input_edit, 0);
     reliefos_ui_statusbar(ui, RUN_H - 28, 28, status_text);

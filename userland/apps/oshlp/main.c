@@ -1857,7 +1857,7 @@ int main(int argc, char **argv, char **envp)
         doc_id = argv[2];
     }
     copy_text(status_text, sizeof(status_text), T("Loading"));
-    window_id = reliefos_gui_create_app_window_ex(T("LeonOS Help"),
+    window_id = reliefos_gui_create_app_window_ex(T("ReliefOS Help"),
                                                 T("Help Viewer"),
                                                 view_w, view_h, 0);
     if (window_id <= 0) {

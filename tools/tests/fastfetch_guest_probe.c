@@ -71,7 +71,7 @@ int main(void)
         const char *paths[] = {"/proc/sys/kernel/ostype", "/proc/sys/kernel/osrelease",
                                "/proc/sys/kernel/version"};
         const char *fields[] = {uts.sysname, uts.release, uts.version};
-        check(!strcmp(uts.sysname, "Linux"), "uname identifies the Linux userspace personality");
+        check(!strcmp(uts.sysname, "ReliefNT"), "uname identifies the ReliefNT kernel");
         for (unsigned i = 0; i < 3; ++i) {
             char actual[128], expected[128];
             snprintf(expected, sizeof(expected), "%s\n", fields[i]);
@@ -99,7 +99,7 @@ int main(void)
     run_fastfetch(1);
     pid_t terminal = fork();
     if (!terminal) {
-        execl("/usr/lib/leonos/apps/terminal/terminal.elf", "terminal", "--run", "/bin/sh", "-c",
+        execl("/usr/lib/reliefos/apps/terminal/terminal.elf", "terminal", "--run", "/bin/sh", "-c",
               "/usr/bin/fastfetch --format json --structure "
               "OS:Host:Kernel:Uptime:CPU:Memory:Swap:Disk:Display:GPU:Shell:Terminal --pipe > "
               "/tmp/fastfetch-terminal.json; echo $? > /tmp/fastfetch-terminal.done",

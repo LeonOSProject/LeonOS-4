@@ -1,9 +1,8 @@
-# Fastfetch for LeonOS
+# Fastfetch for ReliefOS
 
 The image ships Fastfetch 2.68.1 as a prebuilt native x86-64 static musl
-executable, with the LeonOS logo included. Its Linux detection code uses
-`uname`, `/etc/os-release`, `/proc`, and `/sys`; it does not link the LeonOS
-adapter. The former submodule and adapter build have been removed.
+executable, with the ReliefOS logo included. Its Linux detection code uses
+`uname`, `/etc/os-release`, `/proc`, and `/sys`; it does not link an OS-specific adapter. The former submodule and adapter build have been removed.
 
 The packager downloads the binary from
 `https://github.com/VasilyZa/fastfetch/releases/download/2.68.1/fastfetch`
@@ -32,11 +31,9 @@ staging use this same payload. `/etc/fastfetch/config.jsonc` selects the built-i
 The component's MIT license is installed in `/usr/share/licenses/fastfetch`.
 Its `package.json` records the release URL, version, and binary hash.
 
-The Kernel row reports `Linux` as the native ABI personality name and the
-generated `4.6.2-<build>` NTCLKS release. `uname().version` is the build time;
-`/proc/version` retains the NTCLKS name. LeonOS distribution identity remains
-in `/etc/os-release` for the OS row. No application-side output substitution
-is used.
+The Kernel row reports the ReliefNT name and release supplied by `uname`; the
+OS row reads the ReliefOS identity from `/etc/os-release`. No application-side
+output substitution is used.
 
 HyFetch supplies its own ASCII art to Fastfetch, so Fastfetch's default logo
 does not select HyFetch's logo. The package also ships the same LeonOS art in

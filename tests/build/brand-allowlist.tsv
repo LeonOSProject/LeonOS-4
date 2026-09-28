@@ -1175,3 +1175,8 @@ kernel	compatibility	include/reliefos/layout.h	frozen task 6 guest layout values
 kernel	compatibility	include/uapi/reliefos/rootfs.h	frozen task 6 rootfs paths
 kernel	compatibility	kernel/reliefnt/include/reliefnt/storage.h	legacy installer module path reference
 kernel	compatibility	tests/uapi/uapi_compat.c	checks old UAPI forwarding headers
+main	compatibility	system/rootfs/etc/apk/protected_paths.d/reliefos.list	keep legacy APK protected configuration paths
+main	compatibility	system/rootfs/etc/init.d/reliefos-runtime	preserve frozen IPC socket paths and legacy hostname fallback
+main	compatibility	system/rootfs/usr/lib/reliefos/publish-resolver	read the old resolver configuration during migration
+main	compatibility	system/rootfs/usr/lib/reliefos/reliefos-migrate	copy existing user configuration and persistent data
+main	compatibility	tests/build/test-reliefos-migration.sh	fixtures verify migration from legacy configuration and data

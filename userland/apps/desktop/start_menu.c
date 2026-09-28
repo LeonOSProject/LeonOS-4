@@ -772,7 +772,7 @@ static void start_menu_draw_header(const struct start_panel_layout *panel)
     uint32_t header_w = panel->w > 2U ? panel->w - 2U : panel->w;
     reliefos_ui_rect(&ui, panel->x + 1U, panel->y + 1U, header_w,
                    START_PANEL_HEADER_H, RELIEFOS_UI_ACTIVE_TITLE);
-    reliefos_ui_text(&ui, panel->x + 12U, panel->y + 7U, "LeonOS 4",
+    reliefos_ui_text(&ui, panel->x + 12U, panel->y + 7U, "ReliefOS",
                    RELIEFOS_UI_WHITE, RELIEFOS_UI_ACTIVE_TITLE);
     if (reliefos_session_current(&user) == 0 && user.username[0]) {
         session = user.username;

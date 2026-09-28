@@ -117,7 +117,7 @@ static void draw_test_window(struct reliefos_ui_surface *ui, uint32_t width,
     (void)height;
     reliefos_ui_rect(ui, 0, 0, width, height, RELIEFOS_UI_WHITE);
     reliefos_ui_toolbar(ui, 0, 0, width, 42U);
-    reliefos_ui_text(ui, 20, 13, T("LeonOS GUI API Tester"),
+    reliefos_ui_text(ui, 20, 13, T("ReliefOS GUI API Tester"),
                    RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
     reliefos_ui_text_clipped(ui, 24, 62, width > 48U ? width - 48U : width,
                            status, RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);

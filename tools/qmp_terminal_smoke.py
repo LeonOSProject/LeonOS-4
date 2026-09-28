@@ -165,8 +165,10 @@ def main() -> int:
         send_keys(sock, ("n", "a", "n", "o", "t", "e", "s", "t", "ret"))
         time.sleep(5.0)
     elif login_password is not None:
+        hmp(sock, "screendump build/images/login-qmp-smoke.ppm", 0.4)
         send_keys(sock, tuple(login_password) + ("ret",))
         time.sleep(2.0)
+        hmp(sock, "screendump build/images/desktop-qmp-smoke.ppm", 0.4)
     hmp(sock, "sendkey meta_l", 0.5)
     # Opening Start is asynchronous. Give the menu time to claim keyboard
     # focus before the search text starts arriving.

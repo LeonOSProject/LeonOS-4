@@ -454,7 +454,7 @@ int main(void)
         puts("[minesweeper.elf] required BMP assets unavailable");
         return 1;
     }
-    window_id = reliefos_gui_create_app_window_ex(T("Minesweeper"), T("LeonOS Minesweeper"),
+    window_id = reliefos_gui_create_app_window_ex(T("Minesweeper"), T("ReliefOS Minesweeper"),
                                                 MS_W, MS_H, RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[minesweeper.elf] create window failed=%d\n", window_id);

@@ -76,7 +76,7 @@ static const char *const data_rows[][4] = {
     {"osver.elf", "Program", "Idle", "System version dialog"},
 };
 static char sample_path[96] = RELIEFOS_LAYOUT_RELIEFOS_APPS "/notepad/notepad.elf";
-static char sample_text[160] = "Line one\n你好，LeonOS 4。中文显示测试。\nLine three";
+static char sample_text[160] = "Line one\n你好，ReliefOS。中文显示测试。\nLine three";
 static char demo_status[96] = "Click inside the top tabs to switch pages";
 static struct reliefos_ui_edit_state sample_edit;
 static struct reliefos_ui_text_area_state sample_area;
@@ -128,7 +128,7 @@ static void run_unicode_file_test(void)
 {
     const char *dir = "/测试目录";
     const char *path = "/测试目录/你好.txt";
-    const char *content = "你好，LeonOS 4。中文显示测试。\n";
+    const char *content = "你好，ReliefOS。中文显示测试。\n";
     struct reliefos_stat st;
     struct reliefos_dir_entry entry;
     int ret = mkdir(dir, 0777);
@@ -405,13 +405,13 @@ static void draw_demo(struct reliefos_ui_surface *ui, uint32_t page)
     reliefos_ui_menubar_draw(ui, 0, 0, DEMO_W, top_items,
                            sizeof(top_items) / sizeof(top_items[0]),
                            menu_open);
-    reliefos_ui_text(ui, 12, 36, "LeonOS UI Component Library", RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 12, 36, "ReliefOS UI Component Library", RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     reliefos_ui_text(ui, 12, 54,
                    reliefos_ui_theme() == RELIEFOS_UI_THEME_METRO
                        ? "Metro flat reusable drawing controls"
                        : "Win95 reusable drawing controls",
                    RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
-    reliefos_ui_text(ui, 420, 54, "你好，LeonOS 4。中文显示测试。", RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 420, 54, "你好，ReliefOS。中文显示测试。", RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     demo_tab_state.selected_id = page;
     reliefos_ui_tab_control(ui, 236, 36, 410, demo_tabs, 4, &demo_tab_state);
     if (page == 0) {
@@ -543,7 +543,7 @@ static int handle_menu_click(int32_t x, int32_t y, uint32_t *page)
                                      sizeof(items) / sizeof(items[0]), &id)) {
             menu_open = DEMO_MENU_NONE;
             if (id == DEMO_HELP_ABOUT) {
-                reliefos_ui_show_message_box("UI Components", "Gallery for LeonOS UI controls.", "OK");
+                reliefos_ui_show_message_box("UI Components", "Gallery for ReliefOS UI controls.", "OK");
             }
             return 1;
         }
@@ -704,7 +704,7 @@ int main(void)
     puts("[uidemo.elf] UI component gallery starting");
     run_unicode_file_test();
     printf("[uidemo.elf] pid=%d creating UI Components window\n", getpid());
-    window_id = reliefos_gui_create_app_window_ex("UI Components", "LeonOS UI component gallery",
+    window_id = reliefos_gui_create_app_window_ex("UI Components", "ReliefOS UI component gallery",
                                                 DEMO_W, DEMO_H, RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[uidemo.elf] create window failed=%d\n", window_id);

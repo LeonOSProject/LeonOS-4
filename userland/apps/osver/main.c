@@ -167,7 +167,7 @@ static void draw_osver(struct reliefos_ui_surface *ui)
     reliefos_ui_rect(ui, 0, 0, OSVER_W, OSVER_H, RELIEFOS_UI_GRAY);
     reliefos_ui_toolbar(ui, 0, 0, OSVER_W, 68U);
     reliefos_ui_rect(ui, 0, 0, 8U, 68U, RELIEFOS_UI_ACTIVE_TITLE);
-    reliefos_ui_text_resized_clipped(ui, 28U, 12U, 300U, "LeonOS 4",
+    reliefos_ui_text_resized_clipped(ui, 28U, 12U, 300U, "ReliefOS",
                                    RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY, 12U, 24U);
     reliefos_ui_text(ui, 29U, 43U,
                    T("About this operating system"),
@@ -175,7 +175,7 @@ static void draw_osver(struct reliefos_ui_surface *ui)
 
     reliefos_ui_panel(ui, hero_x, hero_y, hero_w, content_h, RELIEFOS_UI_LIGHT);
     reliefos_ui_text(ui, hero_x + 16U, hero_y + 14U,
-                   T("LeonOS 4"), RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
+                   T("ReliefOS"), RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
     reliefos_ui_rect(ui, hero_x + 16U, hero_y + 38U, hero_w - 32U, 1U,
                    RELIEFOS_UI_WHITE);
     reliefos_ui_panel(ui, hero_x + 27U, hero_y + 50U, OSVER_LOGO_BOX,
@@ -183,7 +183,7 @@ static void draw_osver(struct reliefos_ui_surface *ui)
     draw_logo(ui, hero_x + 35U, hero_y + 58U, OSVER_LOGO_BOX - 16U,
               OSVER_LOGO_BOX - 16U);
     reliefos_ui_text_resized_clipped(ui, hero_x + 16U, hero_y + 260U,
-                                   hero_w - 32U, "LeonOS 4", RELIEFOS_UI_BLACK,
+                                   hero_w - 32U, "ReliefOS", RELIEFOS_UI_BLACK,
                                    RELIEFOS_UI_LIGHT, 10U, 20U);
     reliefos_ui_text(ui, hero_x + 16U, hero_y + 287U,
                    T("A compact desktop OS"),
@@ -204,7 +204,7 @@ static void draw_osver(struct reliefos_ui_surface *ui)
                    T("This window reports the version embedded in the running kernel."),
                    RELIEFOS_UI_DARK, RELIEFOS_UI_LIGHT);
     reliefos_ui_text(ui, info_x + 16U, hero_y + 282U,
-                   T("LeonOS is free software for learning and experimentation."),
+                   T("ReliefOS is free software for learning and experimentation."),
                    RELIEFOS_UI_DARK, RELIEFOS_UI_LIGHT);
     reliefos_ui_statusbar(ui, OSVER_H - 28, 28, status_text);
 }
@@ -247,7 +247,7 @@ int main(void)
                       T("Kernel debug mode enabled"));
         }
     }
-    window_id = reliefos_gui_create_app_window_ex(T("About LeonOS"), T("System version"),
+    window_id = reliefos_gui_create_app_window_ex(T("About ReliefOS"), T("System version"),
                                                 OSVER_W, OSVER_H, RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[osver.elf] create window failed=%d\n", window_id);

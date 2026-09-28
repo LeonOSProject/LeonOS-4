@@ -219,9 +219,17 @@
 
 **文件：** 修改 `system/rootfs/etc/os-release`、`system/rootfs/etc/motd*`、`system/docs/leonos.hlp`、`system/docs/zh_CN/leonos.hlp`、`userland/apps/{installer,login,desktop,settings,osver,fastfetch}/`、`userland/fastfetch/leonos-ascii.txt`、`configs/nls/po/{leonos.pot,zh_CN.po}`、`boot/grub/theme/theme.txt`，并检查 `logo.png` 及相关 `resources/build-art/app-icons/` 的使用位置。
 
-- [ ] **步骤 1：先扩展任务 1 的测试，检查 `os-release` 三字段、GRUB/安装器/登录/桌面/版本页、MOTD、Fastfetch 和中英文帮助的用户可见产品名均为 ReliefOS；内核信息使用 ReliefNT。** 不把 `VERSION_ID=4` 误判成显示后缀。
-- [ ] **步骤 2：确认 UI 字符串测试红灯，再逐入口修改源文案与翻译模板。** 更改 `msgid` 时同步 `zh_CN.po`，处理格式参数与长度；旧历史语料不改事实。根 `logo.png` 目前是 740×740 无文字蓝色图形，继续作为 ReliefOS 图标；地球壁纸也沿用，不修改 NASA 来源署名。核验图标、GRUB、站点和镜像 staging 中没有烘焙的旧品牌文字。
-- [ ] **步骤 3：构建受影响应用与图形镜像。** `make app-installer app-login app-desktop app-settings app-osver rootfs image-vmdk`；在 QEMU 分别查看 GRUB、安装器、登录和桌面，并截取证据。壁纸是 1280×720 BMP，遵守现有解码上限与来源署名；检查 `git diff --check`。
+- [x] **步骤 1：先扩展任务 1 的测试，检查 `os-release` 三字段、GRUB/安装器/登录/桌面/版本页、MOTD、Fastfetch 和中英文帮助的用户可见产品名均为 ReliefOS；内核信息使用 ReliefNT。** 不把 `VERSION_ID=4` 误判成显示后缀。
+- [x] **步骤 2：确认 UI 字符串测试红灯，再逐入口修改源文案与翻译模板。** 更改 `msgid` 时同步 `zh_CN.po`，处理格式参数与长度；旧历史语料不改事实。根 `logo.png` 目前是 740×740 无文字蓝色图形，继续作为 ReliefOS 图标；地球壁纸也沿用，不修改 NASA 来源署名。核验图标、GRUB、站点和镜像 staging 中没有烘焙的旧品牌文字。
+- [x] **步骤 3：构建受影响应用与图形镜像。** `make app-installer app-login app-desktop app-settings app-osver rootfs image-vmdk`；在 QEMU 分别查看 GRUB、安装器、登录和桌面，并截取证据。壁纸是 1280×720 BMP，遵守现有解码上限与来源署名；检查 `git diff --check`。
+
+> 执行记录（2026-09-28）：`tests/build/test-brand-identity.sh` 覆盖 `os-release`、GRUB、MOTD、应用文案、翻译与帮助的 ReliefOS/ReliefNT 身份，`VERSION_ID=4` 数值语义保持；旧名扫描通过，1,121 条 `migration` 分类历史命中留到任务 11 复审。PO 经 `msgfmt --check --check-format` 检查通过；根 `logo.png` 保持 740×740 无文字图形，32×32 应用图标保持原样，地球壁纸和 NASA 署名未改。
+>
+> QEMU 检查发现冻结的 IPC socket 值仍是 `/run/leonos/*.sock`，但 runtime 只创建 `/run/reliefos`，导致 `windowd` bind 返回 `ENOENT`。保留冻结值，在 runtime 初始化中建立 `/run/leonos -> /run/reliefos` 兼容链接；`tools/test_openrc_shutdown.py` 的新增断言按红/绿验证。之后安装器 UI smoke、登录/桌面/Terminal Fastfetch、Fastfetch guest inventory 均通过。Fastfetch guest 结果含 `OS: ReliefOS`、`Kernel: ReliefNT`，QEMU 界面截图位于 `build/t9-tty/tty/grub.png`、`build/reliefos-task9-visual-final/installer-pass/installer/` 与 `build/t9-final/desktop/`。
+>
+> `make app-installer app-login app-desktop app-settings app-osver rootfs image-vmdk iso installer` 成功；`python3 tools/test_linux_inventory.py --guest --release-dir out/x86_64/release --timeout 240` 通过，`git diff --check` 通过。
+>
+> QEMU 截图显示 GRUB、图形安装器、登录、桌面与 Fastfetch 的新品牌。logo 和壁纸源文件与 live rootfs staging 哈希一致。GUI 账户安装长测在约 95% 时被本轮中断，之后从其测试盘完成 desktop-only 登录/桌面验证；**不**将其记作完整安装通过，完整新装与旧盘升级仍是任务 11 门禁。附加 TTY 交互 smoke 未完成：测试脚本等待串口提示，但本次启动未在串口输出该提示；该项不代替 GUI 安装器验证。
 
 ### 任务 10：仓库文档、站点、CI 与对外地址切换
 

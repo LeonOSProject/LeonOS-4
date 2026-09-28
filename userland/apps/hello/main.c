@@ -33,7 +33,7 @@ int main(void)
     struct reliefos_gui_app_event event;
     int window_id;
     uint32_t hover = 0;
-    puts("[hello.elf] hello from LeonOS 4 Ring-3 ELF");
+    puts("[hello.elf] hello from ReliefOS Ring-3 ELF");
     printf("[hello.elf] pid=%d creating GUI window\n", getpid());
     window_id = reliefos_gui_create_app_window_ex(T("Hello"), T("Hello from hello.elf process"),
                                                 HELLO_W, HELLO_H, RELIEFOS_GUI_WINDOW_NO_RESIZE);

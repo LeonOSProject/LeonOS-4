@@ -33,7 +33,7 @@ void sched_cpu_ticks(uint64_t *busy, uint64_t *idle) { *busy = 10; *idle = 20; }
 void sched_cpu_ticks_per_cpu(uint64_t *busy, uint64_t *idle, uint32_t capacity)
 { if (capacity) sched_cpu_ticks(busy, idle); }
 static const struct reliefos_system_info fixture_system = {
-    .kernel_name = "ntclks", .kernel_version = "9.8.7-0123",
+    .kernel_name = "ReliefNT", .kernel_version = "9.8.7-0123",
     .build_time = "2026-09-11 01:02:03",
 };
 const struct reliefos_system_info *reliefnt_system_info(void) { return &fixture_system; }

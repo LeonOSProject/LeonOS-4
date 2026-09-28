@@ -69,7 +69,7 @@
 /* A freshly spawned task can take several scheduler ticks before it appears
  * in the task snapshot.  Keep the spawn reservation during that handoff. */
 #define LOGIN_APP_PATH RELIEFOS_LAYOUT_RELIEFOS_APPS "/login/login.elf"
-#define LOGIN_WINDOW_TITLE "LeonOS Login"
+#define LOGIN_WINDOW_TITLE "ReliefOS Login"
 #define LOGIN_WINDOW_TEXT "Sign in"
 #define LOGIN_RESPAWN_MS 1000UL
 /* Login window registration is asynchronous too.  Keep its launch reservation

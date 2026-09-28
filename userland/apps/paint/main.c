@@ -566,7 +566,7 @@ int main(int argc, char **argv, char **envp)
     set_status(T("Ready"));
     if (argc > 1 && argv && argv[1] && argv[1][0]) (void)load_image(argv[1]);
     window_id = reliefos_gui_create_app_window_ex(T("Paint"),
-                                                T("LeonOS Paint"),
+                                                T("ReliefOS Paint"),
                                                 view_w, view_h, 0);
     if (window_id <= 0) { free_canvas(); free(screen_pixels); return 1; }
     draw(&ui, (uint32_t)window_id);

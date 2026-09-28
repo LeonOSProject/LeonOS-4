@@ -91,7 +91,7 @@ static const struct phrase common_phrases[] = {
     {"gong", {"工", "共", "公", "功", "供"}},
     {"zuo", {"作", "做", "坐", "左", "昨"}},
     {"gongzuo", {"工作", 0, 0, 0, 0}},
-    {"leonos", {"LeonOS", 0, 0, 0, 0}},
+    {"leonos", {"ReliefOS", 0, 0, 0, 0}},
 };
 
 static char composition[OSCHINPT_COMPOSITION_CAP];
@@ -1035,7 +1035,7 @@ int main(int argc, char **argv)
         return update_dictionary();
     }
     copy_text(provider.id, sizeof(provider.id), OSCHINPT_ID);
-    copy_text(provider.name, sizeof(provider.name), "LeonOS 4 Chinese Input");
+    copy_text(provider.name, sizeof(provider.name), "ReliefOS Chinese Input");
     copy_text(provider.abbreviation, sizeof(provider.abbreviation), "OSC");
     provider.startup_mode = TEXT_INPUT_START_LOGIN;
     provider.render_flags = TEXT_INPUT_RENDER_CONTROLS;
@@ -1055,7 +1055,7 @@ int main(int argc, char **argv)
             config_generation = state.config_generation;
         }
     }
-    puts("[oschinpt] LeonOS 4 Chinese Input ready");
+    puts("[oschinpt] ReliefOS Chinese Input ready");
     for (;;) {
         unsigned long now = reliefos_uptime_ms();
         if (user.uid && now - last_config_check >= 200UL) {

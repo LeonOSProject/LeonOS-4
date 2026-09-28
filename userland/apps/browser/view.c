@@ -993,7 +993,7 @@ void draw_browser(void)
     draw_toolbar_button(toolbar_home_x(), BROWSER_HOME_W, T("Home"), 0);
     draw_toolbar_button(toolbar_stop_x(), BROWSER_STOP_W, T("Stop"), 1);
     title_line[0] = 0;
-    append_text(title_line, &pos, sizeof(title_line), "LeonOS Browser - ");
+    append_text(title_line, &pos, sizeof(title_line), "ReliefOS Browser - ");
     append_text(title_line, &pos, sizeof(title_line), page_title);
     reliefos_ui_text_clipped(&ui, toolbar_title_x(), button_y() + 5U,
                            view_w > toolbar_title_x() + 12U ? view_w - toolbar_title_x() - 12U : 80U,

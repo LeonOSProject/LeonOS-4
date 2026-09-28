@@ -81,7 +81,7 @@ void set_page_source(const char *title, const char *source,
     rerender_page();
     if (!browser_embedded && window_id > 0) {
         window_title[0] = 0;
-        append_text(window_title, &title_pos, sizeof(window_title), "LeonOS Browser - ");
+        append_text(window_title, &title_pos, sizeof(window_title), "ReliefOS Browser - ");
         append_text(window_title, &title_pos, sizeof(window_title), page_title);
         (void)reliefos_gui_set_window_title((uint32_t)window_id, window_title);
     }
@@ -145,7 +145,7 @@ void format_ret_status(char *dst, uint32_t cap, const char *prefix, int32_t ret)
 void load_about(void)
 {
     static const char about_html[] =
-        "<html><head><title>LeonOS Browser</title></head>"
+        "<html><head><title>ReliefOS Browser</title></head>"
         "<style>"
         "body{color:#202020;background:#ffffff;}"
         ".hero{background:#eaf3ff;border-left:4px solid #2f65c8;padding-left:2em;}"
@@ -156,12 +156,12 @@ void load_about(void)
         "table{border-color:#a8b8c8;background:#f7fbff;}"
         "</style>"
         "<body>"
-        "<h1>LeonOS Browser</h1>"
-        "<p class=\"hero\"><strong>New start page for LeonOS 4.</strong><br>"
-        "LeonOS 4 新版浏览器主页。</p>"
+        "<h1>ReliefOS Browser</h1>"
+        "<p class=\"hero\"><strong>New start page for ReliefOS.</strong><br>"
+        "ReliefOS 新版浏览器主页。</p>"
         "<h2>Quick Start / 快速开始</h2>"
-        "<p>Open HTTP and HTTPS pages, local HTML documents, and files from LeonOS paths.</p>"
-        "<p>可以打开 HTTP、HTTPS 网页、本地 HTML 文档，以及 LeonOS 文件路径。</p>"
+        "<p>Open HTTP and HTTPS pages, local HTML documents, and files from ReliefOS paths.</p>"
+        "<p>可以打开 HTTP、HTTPS 网页、本地 HTML 文档，以及 ReliefOS 文件路径。</p>"
         "<p><a href=\"https://example.com/\">Open example.com / 打开 example.com</a></p>"
         "<h2>What Works / 当前支持</h2>"
         "<ul>"
@@ -184,7 +184,7 @@ void load_about(void)
     copy_text(current_location, sizeof(current_location), "about:leonos");
     copy_text(address_input, sizeof(address_input), current_location);
     reliefos_ui_edit_state_sync(&address_edit);
-    set_page_source("LeonOS Browser", about_html, 1, T("Ready"));
+    set_page_source("ReliefOS Browser", about_html, 1, T("Ready"));
 }
 
 static void browser_copy_bytes(char *dst, uint32_t cap,
@@ -809,7 +809,7 @@ void navigate_to(const char *input, uint8_t add_to_history)
         load_local_file(url);
     } else {
         render_message_page(T("Unsupported Address"),
-                            T("Use http://, https://, about:, or a LeonOS file path such as /file.html."),
+                            T("Use http://, https://, about:, or a ReliefOS file path such as /file.html."),
                             browser_safe_detail(url));
     }
     if (add_to_history) {

@@ -1,6 +1,6 @@
 #!/sbin/openrc-run
-# ntpd requires CAP_SYS_TIME. Run as root until NTCLKS supports the upstream
-# start-stop-daemon capability drop path; no private NTP client is retained.
+# ntpd requires CAP_SYS_TIME. No capability drop is configured for this
+# OpenRC-supervised process; no private NTP client is retained.
 description="BusyBox NTP client"
 supervisor=supervise-daemon
 retry=TERM/1/KILL/1

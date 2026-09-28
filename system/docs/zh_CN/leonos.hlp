@@ -1,17 +1,17 @@
 %%HLP
-title: LeonOS 帮助
-author: LeonOS Team
+title: ReliefOS 帮助
+author: ReliefOS Team
 version: 1.0
 
 %%DOC welcome
-path: LeonOS/欢迎
+path: ReliefOS/欢迎
 title: 欢迎
-author: LeonOS Team
+author: ReliefOS Team
 version: 1.0
 %%BODY
-# 欢迎使用 LeonOS 帮助
+# 欢迎使用 ReliefOS 帮助
 
-LeonOS 帮助把多个 Markdown 页面放在同一个 `.hlp` 文件里。左边选择文档，右边阅读正文。
+ReliefOS 帮助把多个 Markdown 页面放在同一个 `.hlp` 文件里。左边选择文档，右边阅读正文。
 
 ## 导航
 
@@ -31,12 +31,12 @@ LeonOS 帮助把多个 Markdown 页面放在同一个 `.hlp` 文件里。左边�
 %%DOC system.bugcheck
 path: 系统/蓝屏错误
 title: 蓝屏错误
-author: LeonOS Team
+author: ReliefOS Team
 version: 1.0
 %%BODY
 # 蓝屏错误
 
-当内核无法安全继续运行时，LeonOS 会显示蓝屏 bugcheck。屏幕顶部会显示 `STOP:` 原因，后面是 `PID`、`TASK`、`MODE`、`VECTOR`、`ERROR`、`RIP`、`RSP`、`SS`、`CS`、`RFLAGS`、`CR2`、`TICKS`、`UPTIME_MS` 等诊断字段。
+当内核无法安全继续运行时，ReliefOS 会显示蓝屏 bugcheck。屏幕顶部会显示 `STOP:` 原因，后面是 `PID`、`TASK`、`MODE`、`VECTOR`、`ERROR`、`RIP`、`RSP`、`SS`、`CS`、`RFLAGS`、`CR2`、`TICKS`、`UPTIME_MS` 等诊断字段。
 
 ## 如何阅读蓝屏
 
@@ -55,7 +55,7 @@ version: 1.0
 | STOP 原因 | 含义 | 通常怎么查 |
 | KERNEL PANIC | 内核代码调用了 `panic()` 或 `bugcheck_panic()`。detail 行就是 panic 消息。 | 在源码或串口日志里搜索该消息。 |
 | Unhandled Page Fault | 内核态页面错误，或懒加载映射无法恢复的页面错误。 | 查看 `CR2`、`RIP` 和 `PF FLAGS`。 |
-| Window Server Page Fault | 桌面/窗口服务出错。LeonOS 会停止，因为继续运行可能破坏 GUI 所有权。 | 检查窗口服务任务和出错地址。 |
+| Window Server Page Fault | 桌面/窗口服务出错。ReliefOS 会停止，因为继续运行可能破坏 GUI 所有权。 | 检查窗口服务任务和出错地址。 |
 | Divide By Zero | CPU 向量 0，除零。 | 查看 `RIP` 附近的函数。 |
 | Debug Exception | CPU 向量 1，调试异常。 | 通常是错误的调试状态或意外 trap。 |
 | Non Maskable Interrupt | CPU 向量 2，不可屏蔽中断。 | 按硬件或模拟器层中断处理。 |
@@ -94,19 +94,19 @@ version: 1.0
 
 ## 用户程序页面错误
 
-普通 Ring-3 应用的 Page Fault 通常不会导致系统蓝屏。LeonOS 会结束该应用，退出码为 `0x8000000e`，并在桌面弹出 `Application Page Fault` 报告。用户态页面错误主要在当前任务是窗口服务，或没有安全恢复路径时才会变成蓝屏。
+普通 Ring-3 应用的 Page Fault 通常不会导致系统蓝屏。ReliefOS 会结束该应用，退出码为 `0x8000000e`，并在桌面弹出 `Application Page Fault` 报告。用户态页面错误主要在当前任务是窗口服务，或没有安全恢复路径时才会变成蓝屏。
 
 %%ENDDOC
 
 %%DOC fs.permissions
 path: 系统/文件权限
 title: 文件权限
-author: LeonOS Team
+author: ReliefOS Team
 version: 1.0
 %%BODY
 # 文件权限
 
-LeonOS 使用类似 Windows 的文件和文件夹权限模型。当前 v1 权限位保存在 ACL 元数据里，并由内核文件操作进行检查。
+ReliefOS 使用类似 Windows 的文件和文件夹权限模型。当前 v1 权限位保存在 ACL 元数据里，并由内核文件操作进行检查。
 
 ## 权限位
 
@@ -129,7 +129,7 @@ LeonOS 使用类似 Windows 的文件和文件夹权限模型。当前 v1 权限
 %%DOC help.format
 path: 开发者/帮助文件格式
 title: 帮助文件格式
-author: LeonOS Team
+author: ReliefOS Team
 version: 1.0
 %%BODY
 # 帮助文件格式

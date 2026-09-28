@@ -100,13 +100,13 @@ int main(void)
     assert(!strcmp(value, "MAJOR=259\nMINOR=0\nDEVNAME=disk0\nDEVTYPE=disk\n"));
     assert(proc_readlink("/sys/dev/block/259:1", value, sizeof(value)) > 0);
     read_value("/proc/sys/kernel/ostype", value, sizeof(value));
-    assert(!strcmp(value, "Linux\n"));
+    assert(!strcmp(value, "ReliefNT\n"));
     read_value("/proc/sys/kernel/osrelease", value, sizeof(value));
     assert(!strcmp(value, "9.8.7-0123\n"));
     read_value("/proc/sys/kernel/version", value, sizeof(value));
     assert(!strcmp(value, "2026-09-11 01:02:03\n"));
     read_value("/proc/version", value, sizeof(value));
-    assert(!strcmp(value, "ntclks version 9.8.7-0123 (2026-09-11 01:02:03)\n"));
+    assert(!strcmp(value, "ReliefNT version 9.8.7-0123 (2026-09-11 01:02:03)\n"));
     read_value("/proc/cpuinfo", value, sizeof(value));
     assert(strstr(value, "processor\t: 0\n") && strstr(value, "model name\t:") &&
            strstr(value, "cpu cores\t: 1\n"));

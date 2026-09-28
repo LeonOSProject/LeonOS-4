@@ -807,7 +807,7 @@ int main(int argc, char **argv, char **envp)
     puts("[notepad.elf] notepad starting");
     copy_text(status_text, sizeof(status_text),
               T("Choose a text file or PNG image"));
-    window_id = reliefos_gui_create_app_window_ex(T("Notepad"), T("LeonOS text viewer"),
+    window_id = reliefos_gui_create_app_window_ex(T("Notepad"), T("ReliefOS text viewer"),
                                                 NOTEPAD_W, NOTEPAD_H, 0);
     if (window_id <= 0) {
         printf("[notepad.elf] create window failed=%d\n", window_id);

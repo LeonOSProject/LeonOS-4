@@ -287,8 +287,8 @@ int handle_menu_click(int32_t x, int32_t y)
                                      sizeof(items) / sizeof(items[0]), &id)) {
             menu_open = BROWSER_MENU_NONE;
             if (id == BROWSER_CMD_ABOUT) {
-                reliefos_ui_show_message_box(T("LeonOS Browser"),
-                                           T("Classic HTTP browser for LeonOS 4."),
+                reliefos_ui_show_message_box(T("ReliefOS Browser"),
+                                           T("Classic HTTP browser for ReliefOS."),
                                            T("OK"));
             }
             return 1;

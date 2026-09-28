@@ -786,10 +786,10 @@ void draw_power_confirm(void)
                         ? T("Confirm Sign Out")
                         : T("Confirm Shut Down");
         message = power_confirm_action == POWER_CONFIRM_REBOOT
-                      ? T("Restart LeonOS now?")
+                      ? T("Restart ReliefOS now?")
                       : power_confirm_action == POWER_CONFIRM_LOGOUT
-                          ? T("Sign out of LeonOS now?")
-                          : T("Shut down LeonOS now?");
+                          ? T("Sign out of ReliefOS now?")
+                          : T("Shut down ReliefOS now?");
     }
     rect_fill_i((int)x + 5, (int)y + 5, W, H, 0x00404040);
     reliefos_ui_dialog(&ui, x, y, W, H, title);

@@ -23,7 +23,7 @@
 #define LOGIN_MAX_H 1080
 #define LOGIN_INITIAL_W 800
 #define LOGIN_INITIAL_H 600
-#define LOGIN_WINDOW_TITLE "LeonOS Login"
+#define LOGIN_WINDOW_TITLE "ReliefOS Login"
 #define LOGIN_WINDOW_TEXT "Sign in"
 #define LOGIN_KEY_ESCAPE 1U
 #define LOGIN_KEY_UP 72U
@@ -119,7 +119,7 @@ static void draw_login(struct reliefos_ui_surface *ui)
 
     reliefos_ui_rect(ui, 0, 0, surface_w, surface_h, RELIEFOS_UI_DESKTOP);
     reliefos_ui_panel(ui, panel_x, panel_y, panel_w, panel_h, RELIEFOS_UI_LIGHT);
-    reliefos_ui_text(ui, panel_x + 24, panel_y + 24, "LeonOS 4", RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text(ui, panel_x + 24, panel_y + 24, "ReliefOS", RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
     reliefos_ui_text(ui, panel_x + 24, panel_y + 50, T("Sign in"), RELIEFOS_UI_DARK, RELIEFOS_UI_LIGHT);
     reliefos_ui_list_header(ui, list_x, list_y - LOGIN_LIST_HEADER_H, list_w, T("Users"));
     if (user_count == 0) {

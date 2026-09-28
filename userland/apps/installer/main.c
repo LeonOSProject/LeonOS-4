@@ -207,7 +207,7 @@ static uint32_t policy_line_count;
 static const char acknowledgements_en[] =
     "# Acknowledgements\n"
     "\n"
-    "LeonOS 4 gratefully acknowledges the creators, contributors, and maintainers of the public resources and open-source projects used by this release.\n"
+    "ReliefOS gratefully acknowledges the creators, contributors, and maintainers of the public resources and open-source projects used by this release.\n"
     "\n"
     "## Runtime, Toolchain, and Applications\n"
     "- GNU GRUB 2 - GPL-3.0-or-later\n"
@@ -249,7 +249,7 @@ static const char acknowledgements_en[] =
 static const char acknowledgements_zh[] =
     "# 感谢\n"
     "\n"
-    "LeonOS 4 诚挚感谢本发行版所使用的公共资源与开源项目的创作者、贡献者和维护者。\n"
+    "ReliefOS 诚挚感谢本发行版所使用的公共资源与开源项目的创作者、贡献者和维护者。\n"
     "\n"
     "## 运行时、开发工具链与应用程序\n"
     "- GNU GRUB 2 - GPL-3.0-or-later\n"
@@ -842,15 +842,15 @@ static const char *mode_action_text(void)
 
 static const char *mode_progress_title(void)
 {
-    return install_mode == INSTALL_MODE_UPDATE ? T("Updating LeonOS 4")
-                                               : T("Installing LeonOS 4");
+    return install_mode == INSTALL_MODE_UPDATE ? T("Updating ReliefOS")
+                                               : T("Installing ReliefOS");
 }
 
 static void set_disk_select_status(void)
 {
     if (install_mode == INSTALL_MODE_UPDATE) {
         set_status(T("Select the disk to update"),
-                   T("Setup will check for an existing LeonOS 4 system."));
+                   T("Setup will check for an existing ReliefOS system."));
     } else {
         set_status(T("Select the target disk"),
                    T("The selected disk will be erased."));
@@ -1104,7 +1104,7 @@ static void draw_sidebar(struct reliefos_ui_surface *ui)
         return;
     }
     reliefos_ui_rect(ui, 0, 0, l.sidebar_w, surface_h, RELIEFOS_UI_ACTIVE_TITLE);
-    reliefos_ui_text(ui, 18, 24, "LeonOS 4", RELIEFOS_UI_WHITE, RELIEFOS_UI_ACTIVE_TITLE);
+    reliefos_ui_text(ui, 18, 24, "ReliefOS", RELIEFOS_UI_WHITE, RELIEFOS_UI_ACTIVE_TITLE);
     reliefos_ui_text(ui, 18, 48, T("Setup"), RELIEFOS_UI_WHITE, RELIEFOS_UI_ACTIVE_TITLE);
     uint32_t row = 0;
     for (uint32_t i = 0; i < PAGE_COUNT; ++i) {
@@ -1291,7 +1291,7 @@ static void draw_theme_page(struct reliefos_ui_surface *ui)
 static void draw_welcome(struct reliefos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
-    draw_title(ui, T("LeonOS 4 Setup"), T("Install a new system or update an existing LeonOS 4 disk."));
+    draw_title(ui, T("ReliefOS Setup"), T("Install a new system or update an existing ReliefOS disk."));
     reliefos_ui_text(ui, l.content_x, l.content_y + 84, T("Setup can copy the full normal system payload"), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     reliefos_ui_text(ui, l.content_x, l.content_y + 108, T("or replace the boot/leonos and system files on an existing installation."), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     reliefos_ui_text(ui, l.content_x, l.content_y + 164, T("SATA/AHCI and IDE/PATA target disks are supported."), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
@@ -1306,7 +1306,7 @@ static void draw_mode_page(struct reliefos_ui_surface *ui)
                      T("Fresh Install"),
                      install_mode == INSTALL_MODE_FRESH ? RELIEFOS_UI_BUTTON_PRESSED : 0);
     reliefos_ui_text_clipped(ui, l.content_x, l.content_y + 122, card_w,
-                           T("Format the selected disk and copy a clean LeonOS 4 system."),
+                           T("Format the selected disk and copy a clean ReliefOS system."),
                            RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     reliefos_ui_button(ui, l.content_x, l.content_y + 180, card_w, BUTTON_H,
                      T("Update Existing System"),
@@ -1323,8 +1323,8 @@ static void draw_disk_page(struct reliefos_ui_surface *ui)
     draw_title(ui,
                install_mode == INSTALL_MODE_UPDATE ? T("Select Disk to Update")
                                                    : T("Select Installation Disk"),
-               install_mode == INSTALL_MODE_UPDATE ? T("Choose the disk that already contains LeonOS 4.")
-                                                   : T("Choose the disk that will receive LeonOS."));
+               install_mode == INSTALL_MODE_UPDATE ? T("Choose the disk that already contains ReliefOS.")
+                                                   : T("Choose the disk that will receive ReliefOS."));
     reliefos_ui_button(ui, l.disk_refresh_x, l.disk_refresh_y, 92, BUTTON_H, T("Refresh"), 0);
     reliefos_ui_list_header(ui, l.content_x, l.disk_header_y, l.table_w, T("Available disks"));
     reliefos_ui_inset(ui, l.content_x, l.disk_list_y, l.table_w, l.disk_list_h, RELIEFOS_UI_WHITE);
@@ -1442,7 +1442,7 @@ static void draw_confirm_page(struct reliefos_ui_surface *ui)
     draw_title(ui,
                install_mode == INSTALL_MODE_UPDATE ? T("Confirm Update")
                                                    : T("Confirm Installation"),
-               install_mode == INSTALL_MODE_UPDATE ? T("Installed LeonOS packages will be upgraded.")
+               install_mode == INSTALL_MODE_UPDATE ? T("Installed ReliefOS packages will be upgraded.")
                                                    : T("This operation is destructive."));
     if (selected_disk >= 0 && (uint32_t)selected_disk < disk_count) {
         format_disk_line(line, sizeof(line), &disks[selected_disk]);
@@ -1480,8 +1480,8 @@ static void draw_finish_page(struct reliefos_ui_surface *ui)
         draw_title(ui,
                    install_mode == INSTALL_MODE_UPDATE ? T("Update Complete")
                                                        : T("Installation Complete"),
-                   install_mode == INSTALL_MODE_UPDATE ? T("LeonOS was updated on the selected disk.")
-                                                       : T("LeonOS was installed to the selected disk."));
+                   install_mode == INSTALL_MODE_UPDATE ? T("ReliefOS was updated on the selected disk.")
+                                                       : T("ReliefOS was installed to the selected disk."));
         reliefos_ui_text(ui, l.content_x, l.content_y + 96, T("Remove the installation media, then restart."), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
         if (reboot_error) {
             reliefos_ui_text(ui, l.content_x, l.content_y + 130,
@@ -2069,7 +2069,7 @@ out:
 
 /* Return whether any source file differs from the corresponding target file.
  * Extra files already present on the target are intentionally ignored: update
- * mode is additive for user data and only refreshes files shipped by LeonOS. */
+ * mode is additive for user data and only refreshes files shipped by ReliefOS. */
 static int package_has_changes(const char *src, const char *dst)
 {
     struct reliefos_dir_entry *entries = NULL;
@@ -2335,7 +2335,7 @@ static int check_update_target_required(void)
             found = 1;
         }
         if (!found) {
-            set_status(T("Existing LeonOS 4 was not detected"),
+            set_status(T("Existing ReliefOS was not detected"),
                        desktop);
             return -2;
         }
@@ -2346,7 +2346,7 @@ static int check_update_target_required(void)
             char path[RELIEFOS_FS_PATH_LEN];
             if (path_join(path, sizeof(path), INSTALL_ROOT_MOUNT, esp_dirs[i]) < 0 ||
                 path_has_type(path, RELIEFOS_FS_TYPE_DIR) < 0) {
-                set_status(T("Existing LeonOS 4 boot partition was not detected"), path);
+                set_status(T("Existing ReliefOS boot partition was not detected"), path);
                 return -2;
             }
         }
@@ -2355,7 +2355,7 @@ static int check_update_target_required(void)
         char loader[RELIEFOS_FS_PATH_LEN];
         if (path_join(loader, sizeof(loader), TARGET_BOOT, "loader.elf") < 0 ||
             path_has_type(loader, RELIEFOS_FS_TYPE_FILE) < 0) {
-            set_status(T("Existing LeonOS 4 boot partition was not detected"), loader);
+            set_status(T("Existing ReliefOS boot partition was not detected"), loader);
             return -2;
         }
     }
@@ -3192,7 +3192,7 @@ static void prepare_update_target(int window_id, struct reliefos_ui_surface *ui)
         return;
     }
     show_progress(window_id, ui, 18,
-                  T("Checking existing LeonOS 4"),
+                  T("Checking existing ReliefOS"),
                   T("Target: /target"));
     ret = check_update_payload_required();
     if (ret < 0) {
@@ -3209,7 +3209,7 @@ static void prepare_update_target(int window_id, struct reliefos_ui_surface *ui)
                        T("No APK database: reinstall from this media"));
         return;
     }
-    set_status(T("Update installed LeonOS packages"),
+    set_status(T("Update installed ReliefOS packages"),
                T("Alpine packages and local configuration are preserved."));
     page = PAGE_CONFIRM;
     reset_confirm();
@@ -3298,7 +3298,7 @@ static void perform_update(int window_id, struct reliefos_ui_surface *ui)
         return;
     }
 
-    show_progress(window_id, ui, 10, T("Checking existing LeonOS 4"),
+    show_progress(window_id, ui, 10, T("Checking existing ReliefOS"),
                   T("Target: /target"));
     ret = check_update_payload_required();
     if (ret < 0) {
@@ -3340,7 +3340,7 @@ static void perform_update(int window_id, struct reliefos_ui_surface *ui)
             return;
         }
     }
-    show_progress(window_id, ui, 35, T("Upgrading signed LeonOS packages"),
+    show_progress(window_id, ui, 35, T("Upgrading signed ReliefOS packages"),
                   T("Checking dependencies and preserving local configuration"));
     ret = sync_system_payload(window_id, ui);
     if (ret < 0) {
@@ -3818,7 +3818,7 @@ int main(int argc, char **argv)
     }
     puts("[installer.elf] starting installer wizard");
     update_surface_size_from_framebuffer();
-    window_id = reliefos_gui_create_app_window_ex("LeonOS Setup", "Install LeonOS 4",
+    window_id = reliefos_gui_create_app_window_ex("ReliefOS Setup", "Install ReliefOS",
                                                 surface_w, surface_h,
                                                 RELIEFOS_GUI_WINDOW_FULLSCREEN);
     if (window_id <= 0) {
