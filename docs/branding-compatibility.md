@@ -103,7 +103,7 @@
 | 外部目标 | 当前配置 | 本轮证据与处理 |
 | --- | --- | --- |
 | 主仓 GitHub slug | `LeonOSProject/LeonOS-4` | 新主仓地址未提供；README 源码链接、签名配置工具仓库参数和已有工作流目标保持不变。 |
-| ReliefNT 子仓远端 | `https://github.com/LeonOSProject/NTCLKS.git` | 新远端尚未就绪。任务 3 的旧 SHA 曾验证可 fetch，但任务 11 原 gitlink `76834e55` 返回 `not our ref`；最终本地 SHA `3132fb6a` 的精确浅 fetch 返回 TLS unexpected EOF。当前远端可获取性未通过，`.gitmodules` 保持原 URL。 |
+| ReliefNT 子仓远端 | `https://github.com/LeonOSProject/NTCLKS.git` | 保留 `.gitmodules` 原 URL。经本地 HTTP 代理 `127.0.0.1:12334` 将任务 11 子仓提交 `3132fb6a15dd341c70ddca861f342cc2da08676a` 发布到既有 `feature/rename` 分支；随后 `ls-remote` 与干净递归克隆均确认该精确 SHA 可获取，`make fetch` 通过。没有更换 URL。 |
 | Pages / RPR 默认地址 | `https://leonosproject.github.io/LeonOS-4/rpr` | 新 Pages/RPR 地址未提供或实测；保留 Kconfig、默认配置和文档中的现有地址。 |
 | SourceHut 同步目标 | `git@git.sr.ht:~leonmmcoset/LeonOS-4` | 新账号/仓库地址未提供或实测；保留工作流中已配置目标，本轮未运行外部同步。 |
 | APK 签名 Secret | 新名 `RELIEFOS_APK_SIGNING_KEY_B64`；旧名 `LEONOS_APK_SIGNING_KEY_B64` | Pages 工作流优先读取新名，未设置时回退旧名；只检查空值并报告 Secret 名，不输出密钥。新 Secret 是否已在 GitHub 配置，本地无法确认。签名配置脚本仍写入旧名。 |

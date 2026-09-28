@@ -249,7 +249,7 @@
 
 **文件：** 修改 `docs/branding-compatibility.md`（记录最终兼容清单与验证证据）、本计划复选框；必要时修正前述任务中的具体源文件或测试。
 
-- [ ] **步骤 1：从干净递归 clone 验证新子仓路径和外部远端。** `git submodule update --init --recursive` 后运行主仓与子仓的 `make fetch`；检查新旧 UAPI 导出、gitlink SHA、子仓 dirty 守卫。外部服务未就绪时把此项明确记为未验证，不声称 release 完成。
+- [x] **步骤 1：从干净递归 clone 验证新子仓路径和外部远端。** `git submodule update --init --recursive` 后运行主仓与子仓的 `make fetch`；检查新旧 UAPI 导出、gitlink SHA、子仓 dirty 守卫。外部服务未就绪时把此项明确记为未验证，不声称 release 完成。
 - [x] **步骤 2：在隔离 `O` 跑 `make test`、`make test-long`、`make -j8 all`、`make release`。** 测试失败先判定是原有基线、计划问题还是实现问题，不通过跳过测试掩盖。运行 `tests/build/test-submodule-contract.sh` 只用干净测试克隆。
 - [x] **步骤 3：检查发行物。** `readelf`/`nm` 验证新旧运行库与旧/新 ELF，`tar -tzf` 验证 SDK，APK 工具验证包数据库与签名，`xorriso`/`mtools`/`qemu-img` 验证 ISO/ESP/VMDK、Pages/下载/校验和命名一致。
 - [x] **步骤 4：在 QEMU 分别验证新安装、旧安装升级、失败回滚、内核更新、GRUB/Installer/登录/桌面、旧配置和旧 ELF；VMware 专属可见路径在 VMware 单独验证。** 记录实际平台、镜像 SHA、步骤、日志与截图。未执行的环境单列限制。
@@ -284,6 +284,6 @@
 | UI、网站、文档、外部目标 | 9、10 |
 | 错误/回滚与全链路验收 | 3、6、7、8、11 |
 
-> 任务 11 验证明细见 [task11-verification.md](../task11-verification.md)。外部精确 gitlink fetch 未通过，步骤 1 保持未验证；最终总测试与镜像 QEMU 门禁逐项记录，不以中间 smoke 替代。
+> 任务 11 验证明细见 [task11-verification.md](../task11-verification.md)。步骤 1 的精确 gitlink fetch、递归克隆、依赖 fetch、UAPI 导出和子仓 dirty 守卫均已通过；最终总测试与镜像 QEMU 门禁逐项记录，不以中间 smoke 替代。
 
-> 任务 11 最终本地门禁：`make test test-long` 与 `make -j8 all release` 均退出 0；最终 ISO 完整新装、旧装升级、账户权限、旧配置/旧 ELF、来宾更新失败恢复和 GRUB 旧载荷回滚通过。严格旧名门禁 migration=0。VMware 未运行；外部精确 fetch 未通过，不宣称完整发行迁移完成。用户已授权本地任务提交，提交信息带“（任务 11/11）”；无 push/PR。
+> 任务 11 最终本地门禁：`make test test-long` 与 `make -j8 all release` 均退出 0；最终 ISO 完整新装、旧装升级、账户权限、旧配置/旧 ELF、来宾更新失败恢复和 GRUB 旧载荷回滚通过。严格旧名门禁 migration=0。VMware 未运行；主仓 Pages/RPR 与 SourceHut 地址未提供，相关外部服务未验证。内核提交已推送到现有远端分支以完成精确 gitlink fetch 门禁；未推主仓、未创建 PR。用户已授权本地任务提交，提交信息带“（任务 11/11）”。

@@ -8,7 +8,7 @@
 - 内核本地任务 11 提交：`3132fb6a15dd341c70ddca861f342cc2da08676a`。修改配置帮助、旧 splash 依赖文件兼容和 UAPI README；未改变冻结 ABI 数值。
 - 最终产品隔离快照：`84b2179000aeb4c3447a2e382560f6a58364c24c`。之后仅规范生成头换行、修正验证脚本的 world 排序比较及补充验证文档；产品代码一致。
 - 旧系统夹具：主仓 `d1a16c592a81cf78e856ab8a9cfe87197bf526f5`，内核 `5bd8425d10d6879cc578342c0173a92af9468b62`，真实构建的旧系统磁盘。
-- 所有克隆、O、临时文件、日志和镜像均位于 `/home/xiaobai/Projects/Projects` 数据盘。命令设置 `TMPDIR=/home/xiaobai/Projects/Projects/.reliefos-task11-verify-tmp`。没有 push、PR、远端地址替换或用户文件删除。
+- 所有克隆、O、临时文件、日志和镜像均位于 `/home/xiaobai/Projects/Projects` 数据盘。命令设置 `TMPDIR=/home/xiaobai/Projects/Projects/.reliefos-task11-verify-tmp`。内核提交通过 `127.0.0.1:12334` 推送到 `.gitmodules` 已配置的原远端及既有 `feature/rename` 分支；未推主仓、未创建 PR、未替换远端地址或删除用户文件。
 - 用户两份未跟踪交接以及子仓 `max_size = 50G/` 保留且不进入提交。主仓仅记录内核 gitlink。
 
 ## 实现与红绿验证
@@ -23,7 +23,9 @@ APK world 按 canonical 包名迁移后由 APK 重新排序。验证比较排序
 
 | 验证层 | 实际结果和证据 |
 | --- | --- |
-| 主仓 `make fetch` | 本地精确依赖与缓存验证通过；`fetch-current.log`。不是远端 gitlink 可获取性证明。 |
+| 干净递归克隆与精确远端 gitlink | `/home/xiaobai/Projects/Projects/.reliefos-task11-remote-check` 克隆主仓任务 11 提交 `83bb17ce03d00d1f1bae61a41237ae3b96b6e4f8`；递归子模块包含 `kernel/reliefnt` 和嵌套 kconfig，内核 gitlink/HEAD 均为 `3132fb6a15dd341c70ddca861f342cc2da08676a`。代理 `127.0.0.1:12334` 下 `ls-remote`、精确 checkout 和完整主仓 `make fetch` 均通过；日志 `remote-clean-make-fetch.log`，退出码 0。递归 checkout 的第三方子模块复用本地已有对象；SQLite 未从上游克隆或下载。 |
+| 干净克隆 UAPI 与子仓守卫 | `python3 tools/test_header_export.py` 通过：82 个头、白名单、自包含 C/C++、私有头边界及残留检查。`test-submodule-contract.sh` 11 项、0 失败，覆盖未初始化提示、dirty 开发构建允许、dirty release 拒绝、gitlink 不匹配拒绝和一致旧 SHA 回滚守卫。运行前仅向隔离克隆的数据盘缓存复制锁定 Unifont 文件，SHA-256 与 lock 一致。 |
+| 主仓 `make fetch` | 原任务本地精确依赖缓存验证见 `fetch-current.log`；另在干净递归克隆完整 fetch 退出 0，见 `remote-clean-make-fetch.log`。 |
 | 子仓 `make test` / headers / all | 通过；ABI 74 records、32 constants，82 个白名单头及 C/C++ 自包含、旧新 UAPI 兼容。`kernel-test-current.log`、`kernel-all-current.log`。 |
 | 主仓 `make test test-long` | 最终总目标退出 0；`make-test-seventh-long.log`。执行链 14 项、并行/中断恢复 19 项及缺失产物恢复通过。此前失败日志保留，不视作通过。 |
 | 主仓 `make -j8 all release` | 最终运行退出 0；`make-final-all-release.log`。 |
@@ -65,11 +67,11 @@ APK world 按 canonical 包名迁移后由 APK 重新排序。验证比较排序
 
 ## 外部门禁与未运行项
 
-- `.gitmodules` 原 URL 保持不变。递归克隆获取原 gitlink `76834e55f2b9eb035856ce86825f70401ffb01d5` 返回 `upload-pack: not our ref`（`clone-current.log`）。最终本地内核 SHA 的独立 `fetch --depth=1` 返回 TLS unexpected EOF、退出 128（`remote-final-kernel.log`）。精确远端可获取性未通过；使用本地精确 Git 对象完成其余回归，不冒充远端验证。
+- `.gitmodules` 原 URL 保持不变。先前原 gitlink `76834e55f2b9eb035856ce86825f70401ffb01d5` 曾返回 `upload-pack: not our ref`，本地任务 11 内核 SHA 首次 fetch 遇到 TLS EOF；用户修复代理后，提交 `3132fb6a15dd341c70ddca861f342cc2da08676a` 已推至原远端 `feature/rename`，代理下精确 `ls-remote`、递归克隆、主仓及子仓 `make fetch` 全部通过。早期失败日志 `clone-current.log`、`remote-final-kernel.log` 保留为历史诊断，不代表最终状态。
 - 新 GitHub 主/子仓、Pages/RPR、SourceHut 地址未提供；外部发布、同步、真实 HTTPS/RPR 下载、CI Secret 切换均未运行。没有推测或替换地址。完整发行迁移尚不能认证完成。
 - VMware 专属运行与 SVGA II 3D 验证未运行；QEMU 不能替代。
 - 完整安装器 TTY 安装分支、所有独立 QEMU helper 的逐个运行未运行；本次执行的是以上明确列出的 GUI/TTY 登录/升级/回滚路径。
 - 额外审查中运行的旧辅助测试未全绿：netmand 主机 adapter 通过，但后续 Dyne 编译器缺失；API/time 辅助入口同样缺旧编译器；sudo 辅助套件引用已删除 authd 头；legacy installer-account fixture 旧新结构不匹配。日志见 `host-c-agent-report.md`。没有删断言或将这些结果算作通过；它们不属于 `make test`/`test-long` 总目标。
 - IPC ASan/UBSan 与 wind shared-memory 辅助测试通过。旧 authd/OOBE 源 fixture 是退役架构资料，未宣称当前系统测试通过。`tools/test_security_regressions.py` 全脚本未运行（其旧构建路径及 tmpfs 隔离方式不符合本轮数据盘约束）。
 
-任务 1–10 的既有提交保留。任务 11 步骤 2–6 的本地工作完成；步骤 1 外部精确 fetch 未通过，保持未勾选。主仓本次任务提交只记录内核 gitlink，完整 SHA 见 Git 提交记录。
+任务 1–10 的既有提交保留。任务 11 步骤 1–6 均完成；步骤 1 的精确远端与干净 clone 门禁已通过。主仓任务提交只记录内核 gitlink，不含子仓源码；内核子仓提交已在原远端可取。Pages/RPR、SourceHut、GitHub 新 Secret 和 VMware 等未运行项见上文，不能据此声称这些外部服务已切换。
