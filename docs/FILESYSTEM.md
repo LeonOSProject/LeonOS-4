@@ -86,6 +86,52 @@ numbers, encryption, and unsupported incompatible feature bits. Build images
 with `mke2fs -t ext2`; `tools/make_image.py` disables unsupported modern
 extensions explicitly.
 
+### ext4 (2026-09-28 plan)
+
+The ext4 backend described by `docs/superpowers/specs/2026-09-28-reliefos-ext4-design.md`
+is under development; the shipped read-write ext-family backend is still the
+ext2 subset above. The plan's feature policy is defined by the current source
+tree and the in-tree Linux reference (`linux/`, v7.3-rc5, feature masks in
+`linux/fs/ext4/ext4.h`). The machine-readable matrix is
+`tools/tests/ext4_feature_matrix.py`; run
+`python3 tools/tests/ext4_feature_matrix.py --check-schema` to verify every
+mask against the reference tree. Status values are `rw` (read-write supported
+by the plan), `reject` (feature bit present means the mount is refused with
+`-EOPNOTSUPP` and the volume is left unmodified), and `api-eopnotsupp`
+(accepted at mount; the related API call returns `-EOPNOTSUPP`).
+
+| Feature | Class | Mask | Scope | Status | Trigger error |
+| --- | --- | --- | --- | --- | --- |
+| extents | incompat | 0x0040 | extent | rw | |
+| 64bit | incompat | 0x0080 | group-descriptor | rw | |
+| flex_bg | incompat | 0x0200 | group-descriptor | rw | |
+| sparse_super | ro_compat | 0x0001 | superblock | rw | |
+| sparse_super2 | compat | 0x0200 | superblock | rw | |
+| uninit_bg | ro_compat | 0x0010 | group-descriptor | rw | alias of gdt_csum |
+| metadata_csum | ro_compat | 0x0400 | metadata | rw | |
+| gdt_csum | ro_compat | 0x0010 | group-descriptor | rw | |
+| large_file | ro_compat | 0x0002 | inode | rw | |
+| huge_file | ro_compat | 0x0008 | inode | rw | |
+| extra_isize | ro_compat | 0x0040 | inode | rw | |
+| dir_nlink | ro_compat | 0x0020 | directory | rw | |
+| dir_index | compat | 0x0020 | directory | rw | |
+| has_journal | compat | 0x0004 | journal | rw | |
+| bigalloc | ro_compat | 0x0200 | allocation | reject | mount: -EOPNOTSUPP |
+| inline_data | incompat | 0x8000 | inode | reject | mount: -EOPNOTSUPP |
+| casefold | incompat | 0x20000 | directory | reject | mount: -EOPNOTSUPP |
+| encrypt | incompat | 0x10000 | file-data | reject | mount: -EOPNOTSUPP; FS_IOC_SET_ENCRYPTION_POLICY: -EOPNOTSUPP |
+| verity | ro_compat | 0x8000 | file-data | reject | mount: -EOPNOTSUPP; FS_IOC_ENABLE_VERITY: -EOPNOTSUPP |
+| quota | ro_compat | 0x0100 | allocation | reject | mount: -EOPNOTSUPP; quotactl: -EOPNOTSUPP |
+| project | ro_compat | 0x2000 | allocation | reject | mount: -EOPNOTSUPP; FS_IOC_FSSETXATTR: -EOPNOTSUPP |
+| fast_commit | compat | 0x0400 | journal | reject | mount: -EOPNOTSUPP |
+| mmp | incompat | 0x0100 | superblock | reject | mount: -EOPNOTSUPP |
+| dax | none | 0 | vfs-api | api-eopnotsupp | mount -o dax and FS_IOC_FSSETXATTR: -EOPNOTSUPP |
+
+`uninit_bg` is the e2fsprogs name of the same RO_COMPAT bit as `gdt_csum`
+(0x0010); both names map to that one mask. `dax` has no ext4 feature bit
+(mount option / `FS_XFLAG_DAX`), so its mask is 0 and it is refused per call.
+Feature bits outside this table are not part of the plan.
+
 ### exFAT
 
 New images and fresh installations use the standard single-FAT exFAT subset:
