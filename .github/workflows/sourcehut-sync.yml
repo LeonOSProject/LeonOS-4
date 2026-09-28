@@ -1,4 +1,4 @@
-name: Sync branches to SourceHut
+name: Sync ReliefOS branches to SourceHut
 
 on:
   push:
@@ -14,7 +14,7 @@ permissions:
 # A later push must wait for the earlier force-push to finish,
 # preventing two branch sets from racing on SourceHut.
 concurrency:
-  group: leonos4-sourcehut-sync
+  group: reliefos-sourcehut-sync
   cancel-in-progress: false
 
 jobs:

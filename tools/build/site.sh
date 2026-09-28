@@ -12,7 +12,7 @@
 #     rpr_pages  $(O)/rpr-pages   fully generated RPR tree (apk/, kernel/, ...)
 #     iso        .../images/reliefos-installer.iso
 #     build      build_info.h (for the release version)
-#     css        resources/pages/css/leonos.css
+#     css        resources/pages/css/reliefos.css
 #     output     $(O)/pages       the assembled site root
 #
 # Runs the download and home page generators from its own directory so it uses
@@ -40,7 +40,7 @@ cp -R "$rpr_pages" "$work/pages/rpr"
 # 2. Shared top-level stylesheet referenced by home and download pages at the
 #    site root. The RPR subtree keeps its own /rpr/css copy for standalone use.
 mkdir -p "$work/pages/css"
-cp "$css" "$work/pages/css/leonos.css"
+cp "$css" "$work/pages/css/reliefos.css"
 # 3. Installer ISO into /download/ alongside its page.
 mkdir -p "$work/pages/download"
 cp "$iso" "$work/pages/download/${iso##*/}"

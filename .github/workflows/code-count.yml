@@ -1,4 +1,4 @@
-name: Code Statistics
+name: ReliefOS Code Statistics
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: leonos4-code-statistics-${{ github.ref }}
+  group: reliefos-code-statistics-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

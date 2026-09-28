@@ -22,11 +22,11 @@ report() { printf 'verify-pages: %s\n' "$1" >&2; fail="yes"; }
 
 # --- expected files ---------------------------------------------------------
 for f in index.html download/index.html download/reliefos-installer.iso download/SHA256SUMS \
-         css/leonos.css .nojekyll \
+         css/reliefos.css .nojekyll \
          rpr/index.html rpr/packages/index.html rpr/kernel/index.html \
          rpr/apk/index.html \
          rpr/manifest.json rpr/health.txt \
-         rpr/css/leonos.css \
+         rpr/css/reliefos.css \
          rpr/apk/packages.adb rpr/apk/repository.json rpr/apk/reliefos-rpr.rsa.pub rpr/apk/leonos-rpr.rsa.pub rpr/apk/SHA256SUMS \
          rpr/kernel/kernel.sys rpr/kernel/loader.elf \
          rpr/kernel/release.txt rpr/kernel/release.json rpr/kernel/SHA256SUMS; do

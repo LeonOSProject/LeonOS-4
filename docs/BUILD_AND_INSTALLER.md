@@ -137,9 +137,9 @@ runtime `/etc/leonos/license.conf` server override.
 
 Common build outputs (under `$(O)`, default `out/x86_64/release`):
 
-- `images/leonos4.vmdk` / `images/leonos4.raw`
-- `images/leonos4-live.iso`
-- `images/leonos4-installer.iso`
+- `images/reliefos.vmdk` / `images/reliefos.raw`
+- `images/reliefos-live.iso`
+- `images/reliefos-installer.iso`
 - `images/installer-root.ext2` (historically `install/root.fat`)
 - `images/root.ext2` (Live / disk root; default ext2 because FAT/exFAT cannot represent the current real symlinks)
 - `stage/esp` (ESP staging directory; esp.fat is generated from it during ISO/VMDK assembly)
@@ -149,16 +149,16 @@ The common system staging tree is:
 - `stage/esp`
 
 It contains the Alpine-shaped root tree (`bin/`, `sbin/`, `lib/`, `usr/`,
-`etc/leonos/`, `var/lib/leonos/`, `opt/`) plus the ESP-only loader and kernel
-under `leonos/`. Help documents live in
-`usr/share/doc/leonos/`; all application packages live in
-`usr/lib/leonos/apps/`.
+`etc/reliefos/`, `var/lib/reliefos/`, `opt/`) plus the ESP-only loader and kernel
+under `reliefos/`. Legacy `leonos` paths remain available for migration and
+compatibility. Help documents live in `usr/share/doc/reliefos/`; application
+packages live in `usr/lib/reliefos/apps/`.
 Vim and ncurses are enabled by default. Vim now arrives as the unmodified
 Alpine `vim` APK (pinned in `configs/dependencies.lock.json`), and ncurses is
 built from the pinned submodule via `make upstream-ncurses`. Both `image-vmdk` and
 `installer` package Vim's runtime and the
 ncurses terminfo database. The ncurses tools also embed fallback descriptions
-for LeonOS terminal types (`xterm`, `xterm-256color`, `linux`, `vt100`, `ansi`,
+for ReliefOS terminal types (`xterm`, `xterm-256color`, `linux`, `vt100`, `ansi`,
 `screen`, and `screen-256color`), so `clear`, `tput`, and Vim remain usable if
 the external database cannot be read. `musl-desktop-vim` remains a compatible
 target name for the standalone GRUB live desktop ISO, now using this same normal
@@ -190,7 +190,7 @@ The installer has two related payload groups:
 
 - Top-level ISO boot payload: loader, kernel, and installer root.
 - Installed-system root payload: a copy of `build/esp` without `EFI/`,
-  `grub/`, `loader.elf`, or `leonos/`, stored under `install/root` inside
+  `grub/`, `loader.elf`, or `reliefos/`, stored under `install/root` inside
   `build/install/root.fat`.
 - Installed-system FAT32 ESP payload: the UEFI/GRUB and early loader files
   stored under `install/esp` inside `build/install/root.fat`.
@@ -201,11 +201,11 @@ normal staging tree into `/install/root` and its boot subset into
 and overlays
 policy-sensitive binaries built with `autoconf-installer.h`.
 
-`tools/make_installer_iso.py` creates `build/images/leonos4-installer.iso` and
+`tools/make_installer_iso.py` creates `build/images/reliefos-installer.iso` and
 stages:
 
 - `loader.elf`
-- `leonos/kernel.sys`
+- `reliefos/kernel.sys`
 - `install/root.fat`
 
 This keeps installer boot and installed-system boot on the same matched

@@ -235,11 +235,15 @@
 
 **文件：** 修改 `README.md`、`AGENT.md`、`NOTICE`、`docs/{README,RPR,BUILDSYSTEM,BUILD_AND_INSTALLER,ABI,ROOTFS_LAYOUT_AND_MIGRATION}.md`、`resources/pages/css/leonos.css`、`tools/build/{home-page,download-page,site,verify-pages}.sh`、`.github/workflows/{build-installer,build-pages,code-count,sourcehut-sync}.yml`、`.github/ISSUE_TEMPLATE/Bug-Report.yml`、`.gitmodules`。
 
-- [ ] **步骤 1：先写站点与 CI 的新产物路径断言。** 首页标题为 ReliefOS，内核页标题为 ReliefNT，下载页指向真实 `reliefos-installer.iso`，`SHA256SUMS` 文件名和下载物匹配；CI 验证/上传同一个新路径。运行 `sh tests/build/test-pages.sh` 应先在旧布局上失败。
-- [ ] **步骤 2：更新当前技术文档和仓库入口。** `README.md` 可用相对路径 `logo.png`，避免旧 GitHub 图片 URL；`NOTICE` 保留第三方归属与 Apache-2.0 根 `LICENSE` 原文。`BY_AUTHOR.md`、旧安全审计、旧设计规格按历史资料保留原名称，增加迁移索引即可。
-- [ ] **步骤 3：更新站点模板、CSS 文件引用、CI artifact/断言与 bug 模板。** CI 的签名 Secret 名只有在仓库配置中建立新 Secret 后替换；切换期间 CI 应明确兼容读取旧名而不把密钥写入日志。
-- [ ] **步骤 4：外部目标切换门禁。** 使用干净 clone 实测新 GitHub 主仓/子仓 URL 与 gitlink 可 fetch，实测 Pages/RPR 与 SourceHut 同步目标后才替换 `.gitmodules`、Kconfig 默认 URL、MOTD、网站链接和 CI 发布目标。若目标未就绪，此步骤保留可工作的旧 URL，并在 `docs/branding-compatibility.md` 逐项记录原因；不能写入推测的新地址。
-- [ ] **步骤 5：验证 `sh tests/build/test-pages.sh`、`make pages`、`sh tools/build/verify-pages.sh <pages-output>`、`git diff --check`。** 对生成站点和 CI YAML 做路径扫描，确保所有指向的产物存在。
+- [x] **步骤 1：先写站点与 CI 的新产物路径断言。** 首页标题为 ReliefOS，内核页标题为 ReliefNT，下载页指向真实 `reliefos-installer.iso`，`SHA256SUMS` 文件名和下载物匹配；CI 验证/上传同一个新路径。运行 `sh tests/build/test-pages.sh` 应先在旧布局上失败。
+- [x] **步骤 2：更新当前技术文档和仓库入口。** `README.md` 可用相对路径 `logo.png`，避免旧 GitHub 图片 URL；`NOTICE` 保留第三方归属与 Apache-2.0 根 `LICENSE` 原文。`BY_AUTHOR.md`、旧安全审计、旧设计规格按历史资料保留原名称，增加迁移索引即可。
+- [x] **步骤 3：更新站点模板、CSS 文件引用、CI artifact/断言与 bug 模板。** CI 的签名 Secret 名只有在仓库配置中建立新 Secret 后替换；切换期间 CI 应明确兼容读取旧名而不把密钥写入日志。
+- [x] **步骤 4：外部目标切换门禁。** 使用干净 clone 实测新 GitHub 主仓/子仓 URL 与 gitlink 可 fetch，实测 Pages/RPR 与 SourceHut 同步目标后才替换 `.gitmodules`、Kconfig 默认 URL、MOTD、网站链接和 CI 发布目标。若目标未就绪，此步骤保留可工作的旧 URL，并在 `docs/branding-compatibility.md` 逐项记录原因；不能写入推测的新地址。
+- [x] **步骤 5：验证 `sh tests/build/test-pages.sh`、`make pages`、`sh tools/build/verify-pages.sh <pages-output>`、`git diff --check`。** 对生成站点和 CI YAML 做路径扫描，确保所有指向的产物存在。
+
+> 执行记录（2026-09-28）：`sh tests/build/test-pages.sh` 在旧站点契约上先按预期失败（旧标题和 CI 上传/验证路径不符），实现后重跑通过：ReliefOS/ReliefNT 标题、installer ISO 与 `SHA256SUMS` 一致、三个 CI 镜像路径及 Pages 验证/上传树一致；原有 83 篇文档渲染、注入防护、RPR 机器接口和负向校验均通过。CSS 重命名同时更新 `mk/site.mk` 依赖。原工作区子仓含用户未跟踪目录，故在 `/tmp/reliefos-task10-verify` 隔离工作树以精确 gitlink checkout 执行 `make O=/home/xiaobai/Projects/Projects/LeonOS-4/out/x86_64/release pages`，退出码 0；`sh tools/build/verify-pages.sh /home/xiaobai/Projects/Projects/LeonOS-4/out/x86_64/release/pages` 通过（109 个 HTML 页面，RPR 机器接口保留）。活动站点页面旧 CSS/镜像路径扫描无命中；工作流路径断言通过；`git diff --check` 通过。
+>
+> 外部门禁：未提供新主仓、Pages/RPR 或 SourceHut 地址，继续保留现有 URL；`.gitmodules` 和 Kconfig URL 未改。任务 3 已按原有 NTCLKS URL 完成隔离递归克隆/fetch 验证。Pages 工作流优先读 `RELIEFOS_APK_SIGNING_KEY_B64` 并兼容旧 Secret；GitHub 上新 Secret 是否已配置无法从本地确认，签名配置脚本仍写旧 Secret 名。本轮未运行 SourceHut 外部同步或发布。
 
 ### 任务 11：全链路回归、旧名复审与交付
 

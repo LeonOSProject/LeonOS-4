@@ -30,12 +30,12 @@ Kconfig 菜单（Build、Image defaults 等）决定默认配置，configs/compo
 | 目标 | 输出 |
 | --- | --- |
 | kernel / loader / drivers | generated/system、generated/boot、generated/drivers |
-| runtime / userland / leonos-pam / leonos-upstream | 运行库、应用、独立上游安装树 |
-| sdk / musl-sdk | packages/leonos-musl-sdk.tar.gz |
+| runtime / userland / reliefos-pam / reliefos-upstream | 运行库、应用、独立上游安装树 |
+| sdk / musl-sdk | packages/reliefos-musl-sdk.tar.gz |
 | rootfs-raw / rootfs / apk-repo | rootfs/raw、managed、manifest.json；packages/apk/repository |
-| image-vmdk | images/leonos4.raw、leonos4.vmdk |
-| iso / image-iso | images/leonos4-live.iso |
-| installer | images/leonos4-installer.iso |
+| image-vmdk | images/reliefos.raw、reliefos.vmdk |
+| iso / image-iso | images/reliefos-live.iso |
+| installer | images/reliefos-installer.iso |
 | rpr-pages | rpr-pages/，只生成本地 RPR 机器接口与人类页面（apk/、kernel/、packages/、css/） |
 | pages | pages/，完整 GitHub Pages 部署树（首页、download/、rpr/、docs/）；依赖 installer 与 rpr-pages，docs/ 由构建系统扫描 `docs/` 目录并用 awk 渲染 Markdown 为无 JS 静态 HTML |
 | all / release | all 含 SDK 和三类镜像；release 再含完整 pages/，仍不自动上传 |
@@ -56,12 +56,12 @@ clean 保留 `.config`；distclean 清该树配置。两者都检查所有权、
 
 ## SDK、签名和运行
 
-SDK 是可重定位 musl sysroot（`packages/leonos-musl-sdk.tar.gz`）：随包 C 驱动
-`leonos-musl-cc` 按自身位置定位 sysroot，支持重定位、动态与 STATIC=1。
+SDK 是可重定位 musl sysroot（`packages/reliefos-musl-sdk.tar.gz`）：随包 C 驱动
+`reliefos-musl-cc` 按自身位置定位 sysroot，支持重定位、动态与 STATIC=1。
 SDK 的可选头/库由组件选择控制。
 
 APK 使用上游 apk 的真实 mkpkg/mkndx/add，包含数据库和签名。
-默认密钥为 `~/.local/share/leonos/apk-signing/key.pem`（0600），可用 APK_SIGNING_KEY 指定。
+默认密钥为 `~/.local/share/reliefos/apk-signing/key.pem`（0600），可用 APK_SIGNING_KEY 指定。
 默认版本号 `2.<SOURCE_DATE_EPOCH>-r0` 排在旧 gen-1/gen-0 媒体之后。
 正式发行需要递增 epoch 或显式递增 APK_BUILD_VERSION；同一提交的脏工作区不保证内容哈希排序。
 本地 world 请求保持未锁定，升级可替换系统包；外部包与受保护配置保留。
@@ -75,7 +75,7 @@ APK 使用上游 apk 的真实 mkpkg/mkndx/add，包含数据库和签名。
 - test：C 单元测试及 ASan/UBSan、Shell 构建契约。
 - test-long：生产 execve、并行/中断恢复、缺失 stage 恢复；需要较多磁盘临时空间。
 - test-legacy：明确选择的既有 Python OS 主机回归，不参与生产构建。
-- test-smoke：三种介质的真实 QEMU 启动；必须出现 `[ntclks] boot complete:` 与 `[ntclks] PID 1 path=` 标记。
+- test-smoke：三种介质的真实 QEMU 启动；检查 ReliefNT 启动标记，兼容期同时接受 `[ntclks]` 与 `[reliefnt]` 前缀。
 
 可用 `TMPDIR=$PWD/out/test-tmp` 避免 tmpfs 太小。结果以 verification.md 最新记录为准；
 生成镜像或通过主机测试均不能替代来宾安装/升级验收。历史参考 Python 的保留边界见 legacy-removal.md。

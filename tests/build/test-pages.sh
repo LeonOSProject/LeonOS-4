@@ -30,7 +30,7 @@ manifest="$tmp/kernel-install/manifest.txt"
 printf 'format_version: 1\narch: x86_64\nartifacts:\n  %s  kernel.sys\n  %s  loader.elf\n' \
     "$kernel_hash" "$loader_hash" > "$manifest"
 version_src="$tmp/build-version"
-printf 'kernel_name=ntclks\nrelease_version=4.9.1\n' > "$version_src"
+printf 'kernel_name=ReliefNT\nrelease_version=4.9.1\n' > "$version_src"
 
 # Stub apk: mkndx just creates the requested output, as in the RPR test.
 mkdir -p "$tmp/fake-bin"
@@ -59,13 +59,64 @@ sh "$src/tools/build/rpr-pages.sh" "$tmp/repository" "$tmp/apps" \
     "$tmp/fake-bin/apk" "$tmp/key" "$tmp/rpr-pages" \
     || { echo 'rpr-pages.sh failed' >&2; exit 1; }
 sh "$src/tools/build/site.sh" "$tmp/rpr-pages" "$tmp/reliefos-installer.iso" \
-    "$build" "$src/resources/pages/css/leonos.css" "$tmp/pages" \
+    "$build" "$src/resources/pages/css/reliefos.css" "$tmp/pages" \
     || { echo 'site.sh failed' >&2; exit 1; }
 
+# Public brand and download contract: visible page titles use the current
+# product names, and the advertised checksum names the exact ISO beside it.
+grep -q '<title>ReliefOS</title>' "$tmp/pages/index.html" \
+    && grep -q '<h1>ReliefOS</h1>' "$tmp/pages/index.html" \
+    && ok 'home page is titled ReliefOS' \
+    || bad 'home page title is not ReliefOS'
+grep -q '<title>ReliefNT Kernel</title>' "$tmp/pages/rpr/kernel/index.html" \
+    && grep -q '<h1>ReliefNT Kernel</h1>' "$tmp/pages/rpr/kernel/index.html" \
+    && ok 'kernel page is titled ReliefNT' \
+    || bad 'kernel page title is not ReliefNT'
+grep -q '<a class="button" href="reliefos-installer.iso">Download</a>' "$tmp/pages/download/index.html" \
+    && ok 'download page links to reliefos-installer.iso' \
+    || bad 'download page does not link to reliefos-installer.iso'
+sum_names=$(awk '{print $2}' "$tmp/pages/download/SHA256SUMS")
+[ "$sum_names" = reliefos-installer.iso ] \
+    && ok 'SHA256SUMS names the published installer ISO' \
+    || bad "SHA256SUMS names the wrong download: $sum_names"
+
+# The installer workflow must validate and upload the same canonical image
+# paths. Extract the relevant YAML step bodies so a path in an unrelated
+# comment or summary cannot satisfy the contract.
+workflow="$src/.github/workflows/build-installer.yml"
+verify_step="$tmp/ci-verify-step"
+upload_step="$tmp/ci-upload-step"
+awk '/^      - name: Verify generated images$/ { active=1; next }
+     active && /^      - name:/ { exit }
+     active { print }' "$workflow" > "$verify_step"
+awk '/^      - name: Upload ReliefOS artifacts$/ { active=1; next }
+     active && /^      - name:/ { exit }
+     active { print }' "$workflow" > "$upload_step"
+for image in reliefos.vmdk reliefos-live.iso reliefos-installer.iso; do
+    grep -Fq "test -s out/x86_64/release/images/$image" "$verify_step" \
+        && grep -Fq "out/x86_64/release/images/$image" "$upload_step" \
+        && ok "CI validates and uploads $image" \
+        || bad "CI does not validate and upload the same path for $image"
+done
+pages_workflow="$src/.github/workflows/build-pages.yml"
+pages_verify="$tmp/pages-ci-verify-step"
+pages_upload="$tmp/pages-ci-upload-step"
+awk '/^      - name: Verify Pages tree$/ { active=1; next }
+     active && /^      - name:/ { exit }
+     active { print }' "$pages_workflow" > "$pages_verify"
+awk '/^      - name: Upload GitHub Pages artifact$/ { active=1; next }
+     active && /^      - name:/ { exit }
+     active { print }' "$pages_workflow" > "$pages_upload"
+grep -Fq 'sh tools/build/verify-pages.sh out/x86_64/release/pages' "$pages_verify" \
+    && grep -Fq 'path: out/x86_64/release/pages' "$pages_upload" \
+    && ok 'Pages CI verifies and uploads the same assembled tree' \
+    || bad 'Pages CI does not verify and upload the same assembled tree'
+
 # 2. The assembled tree must pass verification.
-if sh "$src/tools/build/verify-pages.sh" "$tmp/pages" >/dev/null 2>&1; then
+if sh "$src/tools/build/verify-pages.sh" "$tmp/pages" >"$tmp/verify-good.log" 2>&1; then
     ok 'verify-pages.sh accepts the assembled tree'
 else
+    cat "$tmp/verify-good.log" >&2
     bad 'verify-pages.sh rejected a good tree'
 fi
 

@@ -13,7 +13,7 @@
 # without the shared stylesheet at the site root, so a partial tree would ship
 # broken links. Keeping one output is what makes the release atomic (plan §45).
 # `rpr-pages` remains independently usable for local RPR-only generation.
-SITE_CSS     := $(RELIEFOS_SRC)/resources/pages/css/leonos.css
+SITE_CSS     := $(RELIEFOS_SRC)/resources/pages/css/reliefos.css
 SITE_SCRIPTS := $(RELIEFOS_SRC)/tools/build/site.sh \
                 $(RELIEFOS_SRC)/tools/build/download-page.sh \
                 $(RELIEFOS_SRC)/tools/build/home-page.sh \

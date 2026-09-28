@@ -9,9 +9,9 @@ body:
 - type: input
   id: version
   attributes:
-    label: NTCLKS版本号
-    description: 操作系统的NTCLKS内核版本号（可通过/system/apps/osver/osver.elf应用程序查看）
-    placeholder: 1.0.0-9999
+    label: ReliefNT 内核版本号
+    description: 操作系统的 ReliefNT 内核版本号（可通过“关于”或版本信息应用查看）
+    placeholder: 4.9.1
   validations:
     required: true
 - type: dropdown

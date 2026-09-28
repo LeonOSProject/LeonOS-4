@@ -1,4 +1,4 @@
-name: Build Pages
+name: Build ReliefOS Pages
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
 # One Pages deployment at a time. cancel-in-progress is false because a
 # half-finished deployment would publish a partial tree.
 concurrency:
-  group: leonos-pages
+  group: reliefos-pages
   cancel-in-progress: false
 
 jobs:
@@ -57,14 +57,16 @@ jobs:
       - name: Import APK signing key
         id: signing_key
         env:
-          APK_SIGNING_KEY_B64: ${{ secrets.LEONOS_APK_SIGNING_KEY_B64 }}
+          RELIEFOS_APK_SIGNING_KEY_B64: ${{ secrets.RELIEFOS_APK_SIGNING_KEY_B64 }}
+          LEONOS_APK_SIGNING_KEY_B64: ${{ secrets.LEONOS_APK_SIGNING_KEY_B64 }}
         run: |
           set -euo pipefail
+          APK_SIGNING_KEY_B64="${RELIEFOS_APK_SIGNING_KEY_B64:-${LEONOS_APK_SIGNING_KEY_B64:-}}"
           test -n "$APK_SIGNING_KEY_B64" || {
-            echo 'Missing GitHub Secret: LEONOS_APK_SIGNING_KEY_B64' >&2
+            echo 'Missing GitHub Secret: RELIEFOS_APK_SIGNING_KEY_B64 (or legacy LEONOS_APK_SIGNING_KEY_B64)' >&2
             exit 1
           }
-          key_path="$RUNNER_TEMP/leonos-rpr-signing-key.rsa"
+          key_path="$RUNNER_TEMP/reliefos-rpr-signing-key.rsa"
           umask 077
           printf '%s' "$APK_SIGNING_KEY_B64" | base64 --decode > "$key_path"
           chmod 0600 "$key_path"
@@ -85,10 +87,10 @@ jobs:
       # one build (plan §30, §31, §45).
       - name: Build Pages tree
         env:
-          LEONOS_APK_SIGNING_KEY: ${{ steps.signing_key.outputs.path }}
+          RELIEFOS_APK_SIGNING_KEY: ${{ steps.signing_key.outputs.path }}
         run: |
           set -euo pipefail
-          make -j"$(nproc)" APK_SIGNING_KEY="$LEONOS_APK_SIGNING_KEY" pages
+          make -j"$(nproc)" APK_SIGNING_KEY="$RELIEFOS_APK_SIGNING_KEY" pages
 
       - name: Verify Pages tree
         run: |

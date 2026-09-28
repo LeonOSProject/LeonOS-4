@@ -1,4 +1,4 @@
-# Shared helpers for the LeonOS static GitHub Pages generators.
+# Shared helpers for the ReliefOS static GitHub Pages generators.
 #
 # Everything here is plain POSIX sh and produces static HTML/CSS only. There is
 # deliberately no JavaScript, no client-side rendering and no runtime API use:
@@ -75,7 +75,7 @@ site_page_end() {
     cat <<'FOOT'
 </main>
 <footer class="site">
-LeonOS Project &mdash; a free and open operating system.
+ReliefOS Project &mdash; a free and open operating system.
 </footer>
 </div>
 </body>
@@ -95,7 +95,7 @@ site_css_href() {
         prefix="../$prefix"
         i=$((i + 1))
     done
-    printf '%scss/leonos.css\n' "$prefix"
+    printf '%scss/reliefos.css\n' "$prefix"
 }
 
 # site_home_href <depth>: relative path from a page at the given depth back to

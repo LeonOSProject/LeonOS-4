@@ -94,3 +94,30 @@
 迁移验证分四层记录：源码、编译/测试、打包、虚拟机运行。各任务的实际完成
 层级记录在实现计划复选框与最终交付报告中；本文件只维护契约，不宣称验证
 已经完成。
+
+## 6. 外部目标切换门禁（任务 10）
+
+未提供并验证新目标前，保留仓库中当前配置的旧目标；本节区分“配置仍在使用”
+和“本轮已实测可达”，不把前者写成后者。
+
+| 外部目标 | 当前配置 | 本轮证据与处理 |
+| --- | --- | --- |
+| 主仓 GitHub slug | `LeonOSProject/LeonOS-4` | 新主仓地址未提供；README 源码链接、签名配置工具仓库参数和已有工作流目标保持不变。 |
+| ReliefNT 子仓远端 | `https://github.com/LeonOSProject/NTCLKS.git` | 用户确认 ReliefNT 新远端尚未就绪；任务 3 已按现有 URL 完成隔离递归克隆/fetch 验证。`.gitmodules` 保持原 URL。 |
+| Pages / RPR 默认地址 | `https://leonosproject.github.io/LeonOS-4/rpr` | 新 Pages/RPR 地址未提供或实测；保留 Kconfig、默认配置和文档中的现有地址。 |
+| SourceHut 同步目标 | `git@git.sr.ht:~leonmmcoset/LeonOS-4` | 新账号/仓库地址未提供或实测；保留工作流中已配置目标，本轮未运行外部同步。 |
+| APK 签名 Secret | 新名 `RELIEFOS_APK_SIGNING_KEY_B64`；旧名 `LEONOS_APK_SIGNING_KEY_B64` | Pages 工作流优先读取新名，未设置时回退旧名；只检查空值并报告 Secret 名，不输出密钥。新 Secret 是否已在 GitHub 配置，本地无法确认。签名配置脚本仍写入旧名。 |
+
+上述地址未切换不代表新目标验证通过。切换前须取得准确的新仓库/Pages/SourceHut
+地址，并分别完成干净递归克隆、下载与目标服务验证。
+
+## 7. 历史材料索引
+
+下列材料保留编写时使用的品牌、仓库名和技术标识，以维持历史证据与第三方
+归属的真实性；新文档和当前实现应以本文及新规范路径为准。
+
+- 作者说明：根目录 `BY_AUTHOR.md`
+- 旧 NTCLKS 分离设计：[2026-09-24-ntclks-separation-design.md](superpowers/specs/2026-09-24-ntclks-separation-design.md)、[09-m1-authority-design-review.md](superpowers/ntclks-separation/09-m1-authority-design-review.md)
+- 历史安全审计：[2026-07-07.md](security/2026-07-07.md)、[2026-08-04.md](security/2026-08-04.md)、[2026-08-30.md](security/2026-08-30.md)、[2026-09-11.md](security/2026-09-11.md)
+- Linux ABI 现状审计：[LINUX_ABI_AUDIT_2026-09-07.md](LINUX_ABI_AUDIT_2026-09-07.md)
+- 本次迁移的基线、设计和执行计划：[基线](superpowers/specs/2026-09-27-reliefos-reliefnt-rename-baseline.md)、[设计规格](superpowers/specs/2026-09-27-reliefos-reliefnt-rename-design.md)、[实施计划](superpowers/plans/2026-09-27-reliefos-reliefnt-rename.md)
