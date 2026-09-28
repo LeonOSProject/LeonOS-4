@@ -21,7 +21,7 @@ int main(void)
     pid_t child = fork();
     if (child == 0) {
         if (install) {
-            execl("/sbin/apk", "apk", "--timeout", "30", "add", "gcc", "leonos-musl-dev", "make", (char *)NULL);
+            execl("/sbin/apk", "apk", "--timeout", "30", "add", "gcc", "reliefos-musl-dev", "make", (char *)NULL);
             _exit(127);
         }
         execl("/sbin/apk", "apk", "--timeout", "30", "fetch", "--output", "/tmp",

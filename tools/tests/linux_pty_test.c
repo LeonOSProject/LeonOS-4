@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "../../kernel/ntclks/kernel/ntclks/pty.c"
+#include "../../kernel/reliefnt/kernel/reliefnt/pty.c"
 
 static struct task owner;
 static unsigned signals;
@@ -57,13 +57,13 @@ int main(void)
     int id = pty_create(owner.pid);
     assert(id > 0);
     struct storage_node node;
-    struct leonos_permissions permissions;
+    struct reliefos_permissions permissions;
     assert(pty_get_node(id, &node) == 0);
     assert(pty_inode_permissions(&node, &permissions, false) == 0);
     assert(permissions.uid == 1000 && permissions.gid == 100 && permissions.mode == 0600);
-    permissions = (struct leonos_permissions){0620, 2000, 5};
+    permissions = (struct reliefos_permissions){0620, 2000, 5};
     assert(pty_inode_permissions(&node, &permissions, true) == 0);
-    permissions = (struct leonos_permissions){0};
+    permissions = (struct reliefos_permissions){0};
     assert(pty_inode_permissions(&node, &permissions, false) == 0 && permissions.uid == 2000);
     struct storage_node stale = node;
     uint32_t group = 99;
@@ -75,7 +75,7 @@ int main(void)
     assert(pty_lookup_path("/dev/pts/1", &node) == 0);
     assert(pty_lookup_path("/dev/pts/1/more", &node) == -2);
     assert(pty_lookup_path("/dev/pts/9999999999999999999999999", &node) == -2);
-    struct leonos_pty_termios mode;
+    struct reliefos_pty_termios mode;
     assert(pty_get_termios(id, &mode) == 0);
     /* Linux native encodings, independent of the private PTY aliases. */
     assert((mode.c_iflag & 0x100) != 0);

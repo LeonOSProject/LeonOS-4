@@ -5,38 +5,84 @@ src=${1:-$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)}
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 
+python3 - "$src/configs/apk-ownership.json" <<'PY'
+import json, sys
+policy = json.load(open(sys.argv[1], encoding="utf-8"))
+groups = policy["groups"]
+required = {"reliefos-nls", "reliefos-apps", "reliefos-fastfetch",
+            "reliefos-mimalloc", "reliefos-musl-dev", "reliefos-apk-tools", "reliefos-base"}
+missing = sorted(required - groups.keys())
+legacy = sorted(name for name in groups if name.startswith("leonos-"))
+if missing or legacy or policy.get("current_distributor") != "reliefos-build":
+    raise SystemExit(f"APK ownership identity is not migrated: missing={missing}, legacy={legacy}, distributor={policy.get('current_distributor')}")
+PY
+
 cc -std=c11 -Wall -Wextra -Wpedantic -Werror -Wformat=2 -Wshadow \
   -Wstrict-prototypes -Wmissing-prototypes -I"$src" \
-  "$src/tools/host/apk/leonos-apk-own.c" \
+  "$src/tools/host/apk/reliefos-apk-own.c" \
   "$src/tools/host/manifest/json.c" "$src/tools/host/common/buffer.c" \
-  "$src/tools/host/common/io.c" -o "$tmp/leonos-apk-own"
+  "$src/tools/host/common/io.c" -o "$tmp/reliefos-apk-own"
 
-mkdir -p "$tmp/root/usr/bin" "$tmp/root/usr/lib/leonos/apps/demo"
+mkdir -p "$tmp/root/usr/bin" "$tmp/root/usr/lib/leonos" "$tmp/root/usr/lib/reliefos/apps/demo"
 printf elf >"$tmp/root/usr/bin/tool"
 chmod 755 "$tmp/root/usr/bin/tool"
 ln -s tool "$tmp/root/usr/bin/tool-link"
-printf app >"$tmp/root/usr/lib/leonos/apps/demo/demo.elf"
+printf app >"$tmp/root/usr/lib/reliefos/apps/demo/demo.elf"
+printf legacy-library >"$tmp/root/usr/lib/leonos/libleonos.so.2"
+printf library >"$tmp/root/usr/lib/reliefos/libreliefos.so.2"
 cat >"$tmp/policy.json" <<'EOF'
-{"version":1,"apk_registration":"not-installed","groups":{
- "tools":{"destination":"leonos","components":[],"paths":["usr/bin/tool"]},
- "apps":{"destination":"leonos","components":["demo"]},
- "leonos-base":{"destination":"leonos","components":[]}
+{"version":1,"current_distributor":"reliefos-build","apk_registration":"not-installed","groups":{
+ "reliefos-tools":{"destination":"reliefos","components":[],"paths":["usr/bin/tool"]},
+ "reliefos-demo":{"destination":"reliefos","components":["demo"]},
+ "reliefos-apps":{"destination":"reliefos","components":[],"paths":["usr/lib/leonos","usr/lib/reliefos"]},
+ "reliefos-base":{"destination":"reliefos","components":[]}
 }}
 EOF
 
-"$tmp/leonos-apk-own" --policy "$tmp/policy.json" --root "$tmp/root" --output "$tmp/list"
-awk -F '\t' '$1=="apps" && $2=="file" && $3=="0644" && $4=="usr/lib/leonos/apps/demo/demo.elf" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
-awk -F '\t' '$1=="tools" && $2=="file" && $3=="0755" && $4=="usr/bin/tool" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
-awk -F '\t' '$1=="tools" && $2=="symlink" && $3=="0777" && $4=="usr/bin/tool-link" && $5=="tool" { ok=1 } END { exit !ok }' "$tmp/list"
+"$tmp/reliefos-apk-own" --policy "$tmp/policy.json" --root "$tmp/root" --output "$tmp/list" \
+  --installed-policy "$tmp/installed.json"
+
+# A component-specific group must beat the broad application-library rule.
+cat >"$tmp/components.toml" <<'EOF'
+[[components]]
+id = "demo"
+EOF
+PYTHONDONTWRITEBYTECODE=1 python3 - "$src" "$tmp" <<'PY'
+import json, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / "tools"))
+import apk_ownership
+root = Path(sys.argv[2])
+_, rules = apk_ownership.load_policy(root / "policy.json", root / "components.toml")
+rows = {row[3]: row for row in (line.split("\t") for line in (root / "list").read_text().splitlines())}
+failures = []
+for path, owner in (("usr/lib/reliefos/apps/demo/demo.elf", "reliefos-demo"),
+                    ("usr/lib/reliefos/libreliefos.so.2", "reliefos-apps"),
+                    ("usr/lib/leonos/libleonos.so.2", "reliefos-apps")):
+    for implementation, actual in (("C", rows[path][0]),
+                                   ("Python", apk_ownership.classify(path, rules)[0])):
+        if actual != owner:
+            failures.append(f"{implementation}: {path} belongs to {actual}, expected {owner}")
+installed = json.loads((root / "installed.json").read_text())
+if installed["current_distributor"] != "reliefos-apk":
+    failures.append(f"installed distributor: {installed['current_distributor']}, expected reliefos-apk")
+if failures:
+    raise SystemExit("\n".join(failures))
+PY
+awk -F '\t' '$1=="reliefos-demo" && $2=="file" && $3=="0644" && $4=="usr/lib/reliefos/apps/demo/demo.elf" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
+awk -F '\t' '$1=="reliefos-apps" && $2=="file" && $4=="usr/lib/reliefos/libreliefos.so.2" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
+awk -F '\t' '$1=="reliefos-apps" && $2=="file" && $4=="usr/lib/leonos/libleonos.so.2" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
+awk -F '\t' '$1=="reliefos-tools" && $2=="file" && $3=="0755" && $4=="usr/bin/tool" && $5=="-" { ok=1 } END { exit !ok }' "$tmp/list"
+awk -F '\t' '$1=="reliefos-tools" && $2=="symlink" && $3=="0777" && $4=="usr/bin/tool-link" && $5=="tool" { ok=1 } END { exit !ok }' "$tmp/list"
 
 # Ambiguous policy claims must fail before any package is built.
 cat >"$tmp/bad.json" <<'EOF'
 {"version":1,"apk_registration":"not-installed","groups":{
- "one":{"destination":"leonos","components":[],"paths":["usr/bin/tool"]},
- "two":{"destination":"leonos","components":[],"paths":["usr/bin/tool"]}
+ "one":{"destination":"reliefos","components":[],"paths":["usr/bin/tool"]},
+ "two":{"destination":"reliefos","components":[],"paths":["usr/bin/tool"]}
 }}
 EOF
-if "$tmp/leonos-apk-own" --policy "$tmp/bad.json" --root "$tmp/root" --output "$tmp/bad-list" 2>"$tmp/error"; then
+if "$tmp/reliefos-apk-own" --policy "$tmp/bad.json" --root "$tmp/root" --output "$tmp/bad-list" 2>"$tmp/error"; then
   echo 'ambiguous ownership was accepted' >&2
   exit 1
 fi
@@ -44,9 +90,9 @@ grep -q 'ambiguous ownership' "$tmp/error"
 
 # Binary detection must use bytes, not executable modes or filename suffixes.
 printf '\177ELFfixture' > "$tmp/root/usr/bin/non-executable-data"
-"$tmp/leonos-apk-own" --policy "$tmp/policy.json" --root "$tmp/root" --output "$tmp/list" \
+"$tmp/reliefos-apk-own" --policy "$tmp/policy.json" --root "$tmp/root" --output "$tmp/list" \
   --elf-list "$tmp/elf" --installed-policy "$tmp/installed.json"
 test "$(wc -l < "$tmp/elf")" = 1
 grep -q 'non-executable-data' "$tmp/elf"
 grep -q '"apk_registration":"installed-by-upstream-apk"' "$tmp/installed.json"
-printf 'apk ownership: policy conflicts, symlink ownership and ELF inventory passed\n'
+printf 'apk ownership: component groups, legacy libraries, installed identity, policy conflicts, symlinks and ELF inventory passed\n'

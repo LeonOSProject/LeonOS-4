@@ -20,7 +20,7 @@ def wait_text(probe, process, name, needle, timeout=30):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--iso', type=Path, default=ROOT / 'out/x86_64/release/images/leonos4-installer.iso')
+    parser.add_argument('--iso', type=Path, default=ROOT / 'out/x86_64/release/images/reliefos-installer.iso')
     parser.add_argument('--tui', action='store_true')
     parser.add_argument('--install', action='store_true')
     parser.add_argument('--exit-recovery', action='store_true',
@@ -51,7 +51,7 @@ def main():
             wait_text(probe, process, f'installer-tty{number}', 'built-in shell')
         probe.key('ctrl-alt-f1')
         if args.tui:
-            probe.text('/usr/lib/leonos/apps/installer/installer.elf')
+            probe.text('/usr/lib/reliefos/apps/installer/installer.elf')
             probe.key('ret')
             wait_text(probe, process, 'installer-tui-mode', 'Mode [install/update')
             probe.text('install'); probe.key('ret')
@@ -66,12 +66,12 @@ def main():
             probe.key('ret')
             wait_log(serial, 'TUI-EXIT-OK', process, 20)
             before = serial.read_text().count(
-                'path=/usr/lib/leonos/apps/login/login.elf')
+                'path=/usr/lib/reliefos/apps/login/login.elf')
             probe.text('exit')
             probe.key('ret')
             deadline = time.monotonic() + 30
             while serial.read_text().count(
-                    'path=/usr/lib/leonos/apps/login/login.elf') <= before:
+                    'path=/usr/lib/reliefos/apps/login/login.elf') <= before:
                 assert process.poll() is None and time.monotonic() < deadline, \
                     'the installer shell did not respawn after exit'
                 time.sleep(.2)
@@ -89,7 +89,7 @@ def main():
             probe.key('ctrl-alt-f2')
             wait_text(probe, process, 'exit-recovery-shell', 'built-in shell')
             match = re.search(
-                r'exec pid=(\d+) path=/usr/lib/leonos/apps/desktop/desktop.elf',
+                r'exec pid=(\d+) path=/usr/lib/reliefos/apps/desktop/desktop.elf',
                 serial.read_text())
             assert match, 'graphical session pid not recorded'
             probe.text(f'kill {match[1]}')

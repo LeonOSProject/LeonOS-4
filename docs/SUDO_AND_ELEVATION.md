@@ -15,12 +15,12 @@ See [SUDOERS_PAM_STATUS.md](SUDOERS_PAM_STATUS.md) for verification boundaries.
 | --- | --- | --- |
 | sudo and sudoedit | `/usr/bin/sudo`, `/usr/bin/sudoedit` | Official sudoers policy, PAM, timestamp and execution plugins |
 | su and login shell | `/bin/su`, `/usr/bin/su` | Official util-linux target authentication and session handling |
-| TTY login | LeonOS console setup execs `/bin/login` | Official shadow login and PAM `login` |
-| GUI login | `userland/runtime/src/pam_session.c` | PAM `leonos-gui`; authentication, account, expired-password update, setcred and session |
+| TTY login | ReliefOS console setup execs `/bin/login` | Official shadow login and PAM `login` |
+| GUI login | `userland/runtime/src/pam_session.c` | PAM `reliefos-gui`; authentication, account, expired-password update, setcred and session |
 | Password modification | `/usr/bin/passwd` | PAM `passwd`; Settings opens it in Terminal |
 | Account and group tools | `/usr/sbin/useradd`, `usermod`, `userdel`, `groupadd`, `groupmod`, `groupdel`; `/usr/bin/gpasswd` | Official shadow tools and their file locks |
 | Settings account creation | `auth_accounts.c` invokes useradd then chpasswd | Root-only; initially expired until the PAM password update succeeds |
-| Fileman privileged operation | Caller forks `/usr/bin/sudo -A -u root -- /usr/lib/leonos/apps/sudod/sudod.elf ...` | A new sudoers decision for each exact command and arguments |
+| Fileman privileged operation | Caller forks `/usr/bin/sudo -A -u root -- /usr/lib/reliefos/apps/sudod/sudod.elf ...` | A new sudoers decision for each exact command and arguments |
 
 No authd process, socket, RUN/VERIFY/WAIT/FILEOP protocol, private target-password
 cache, elevation flag or account-writing kernel operation remains in production.
@@ -67,7 +67,7 @@ alice ALL=(root) /usr/bin/id ""
 A restricted Fileman listing can be granted using the official argument regex:
 
 ```sudoers
-alice ALL=(root) /usr/lib/leonos/apps/sudod/sudod.elf ^--op 1 --path1 /srv/reports --path2 $
+alice ALL=(root) /usr/lib/reliefos/apps/sudod/sudod.elf ^--op 1 --path1 /srv/reports --path2 $
 ```
 
 The final space before `$` matches the empty final argument. Fileman verbs are
@@ -92,7 +92,8 @@ grant; a cached authentication result is insufficient.
 ## PAM and GUI Sessions
 
 Service files live in `system/rootfs/etc/pam.d`: sudo, sudo-i, su, su-l, login,
-leonos-gui, passwd, chpasswd, newusers, chsh, chfn, runuser and runuser-l.
+reliefos-gui, passwd, chpasswd, newusers, chsh, chfn, runuser and runuser-l.
+The `leonos-gui` PAM service file remains available for older callers.
 `other` denies all four stacks. `common-password` applies the shared product
 validator before pam_unix's yescrypt update. The common session stack contains
 pam_unix, pam_env, pam_limits and pam_umask. The packaged modules include the

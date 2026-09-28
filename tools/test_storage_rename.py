@@ -19,8 +19,8 @@ def check_image(directory, features, block_size, ram_root=False):
         subprocess.run(["debugfs", "-w", "-R", command, disk], check=True, capture_output=True)
     subprocess.run(["cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g", "-fsanitize=address,undefined",
                     "-fno-omit-frame-pointer", "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                    "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
-                    "tools/tests/storage_rename_test.c", "kernel/ntclks/fs/tmpfs.c", "-o", executable], cwd=ROOT, check=True)
+                    "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ikernel/reliefnt/kernel/reliefnt/include",
+                    "tools/tests/storage_rename_test.c", "kernel/reliefnt/fs/tmpfs.c", "-o", executable], cwd=ROOT, check=True)
     subprocess.run([executable, disk, *(("--ram-root",) if ram_root else ())], check=True)
     content = subprocess.check_output(["debugfs", "-R", "cat /target", disk])
     assert content == b"new", content
@@ -32,7 +32,7 @@ def check_image(directory, features, block_size, ram_root=False):
 
 for features, block_size, ram_root in (("none", 1024, False), ("none,filetype", 1024, False),
                                       ("none,filetype", 4096, False), ("none,filetype", 4096, True)):
-    with tempfile.TemporaryDirectory(prefix="leonos-rename-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-rename-") as directory:
         check_image(directory, features, block_size, ram_root)
 
 with tempfile.TemporaryDirectory(prefix="linux-symlink-reference-") as directory:

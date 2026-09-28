@@ -26,7 +26,7 @@ def main():
         wait_text(probe, process, 'installed-root-password', 'Password:')
         probe.text('rootpass'); probe.key('ret')
         wait_text(probe, process, 'installed-root-shell', 'built-in shell')
-        probe.text('test ! -e /etc/leonos/installer-runtime && test -t 0 && echo INSTALLED-ROOT-OK >/dev/ttyS0')
+        probe.text('test ! -e /etc/reliefos/installer-runtime && test -t 0 && echo INSTALLED-ROOT-OK >/dev/ttyS0')
         probe.key('ret')
         wait_log(serial, 'INSTALLED-ROOT-OK', process, timeout=30)
         before = serial.read_text().count('path=/bin/login ')

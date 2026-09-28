@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Analyze LeonOS loader, kernel, and dynamic-loader boot logs.
+"""Analyze ReliefOS loader, kernel, and dynamic-loader boot logs.
 
 Examples:
     python tools/analyze_boot_log.py serial.log
@@ -73,70 +73,70 @@ DIRECT_RULES = (
         "引导加载器因完整性策略停止启动",
         "loader 检测到 kernel 的 SHA-256 与其内置值不一致，且用户拒绝继续。",
         "重新构建 loader 与 kernel，或检查 ESP/ISO 中是否混入了不同构建的组件。",
-        "kernel/ntclks/boot/loader/main.c:1028",
+        "kernel/reliefnt/boot/loader/main.c:1028",
     ),
     Rule(
         "LOADER-FILE", "致命", "引导加载器",
         r"^\[loader\].*(?:kernel\.sys load failed|module load failed|no readable EFI FAT volume|unable to open EFI filesystem)",
         "引导加载器无法读取核心启动组件",
         "loader 无法从 EFI 文件系统或 GRUB 模块获得 kernel.sys。",
-        "检查 ESP 中的 boot/、leonos/kernel.sys，以及 ext2 根分区和 EFI/FAT32 挂载状态。",
-        "kernel/ntclks/boot/loader/main.c:1114",
+        "检查 ESP 中的 boot/、reliefos/kernel.sys（旧盘为 leonos/kernel.sys），以及 ext2 根分区和 EFI/FAT32 挂载状态。",
+        "kernel/reliefnt/boot/loader/main.c:1114",
     ),
     Rule(
         "STORAGE-ROOT", "错误", "存储",
-        r"^\[ntclks\] no block-backed root filesystem available for userland$",
+        r"^\[(?:reliefnt|ntclks)\] no block-backed root filesystem available for userland$",
         "用户态没有可用的根文件系统",
         "内核无法找到可供用户态加载的块设备根文件系统。",
         "检查磁盘控制器、ext2 根分区、ESP/FAT32 启动分区、挂载策略和虚拟机磁盘连接。",
-        "kernel/ntclks/kernel/exec/userland.c:636",
+        "kernel/reliefnt/kernel/exec/userland.c:636",
     ),
     Rule(
         "USERLAND-LOAD", "错误", "用户态启动",
-        r"^\[ntclks\] failed to load (?:init\.elf|desktop\.elf).*",
+        r"^\[(?:reliefnt|ntclks)\] failed to load (?:init\.elf|desktop\.elf).*",
         "关键用户态程序未能加载",
         "init.elf 或 desktop.elf 在创建任务时失败，桌面启动无法完成。",
         "先查看前后是否有 ELF 验证、动态解释器或文件查找错误；再检查镜像中对应程序是否完整。",
-        "kernel/ntclks/kernel/exec/userland.c:654",
+        "kernel/reliefnt/kernel/exec/userland.c:654",
     ),
     Rule(
         "ELF-HEADER", "错误", "ELF 装载",
-        r"^\[ntclks\] ELF (?:main|interpreter) header (?:read|validation) failed$",
+        r"^\[(?:reliefnt|ntclks)\] ELF (?:main|interpreter) header (?:read|validation) failed$",
         "ELF 头部读取或验证失败",
-        "程序或动态解释器不是当前 LeonOS 接受的完整 x86_64 ELF，或 ABI note、程序头和段约束未通过。",
+        "程序或动态解释器不是当前 ReliefOS 接受的完整 x86_64 ELF，或 ABI note、程序头和段约束未通过。",
         "用 readelf 检查 ELF 类型、PT_INTERP、ABI note 和段权限；确认镜像未截断且构建产物来自当前工具链。",
-        "kernel/ntclks/kernel/exec/elf.c:848",
+        "kernel/reliefnt/kernel/exec/elf.c:848",
     ),
     Rule(
         "ELF-INTERPRETER", "错误", "动态链接",
-        r"^\[ntclks\] ELF interpreter lookup failed path=",
+        r"^\[(?:reliefnt|ntclks)\] ELF interpreter lookup failed path=",
         "动态 ELF 缺少解释器",
         "动态应用声明的 ELF 解释器无法从系统镜像读取。",
         "检查日志中的解释器路径；musl 镜像应包含 /lib/ld-musl-x86_64.so.1，并检查读取权限与完整性。",
-        "kernel/ntclks/kernel/exec/elf.c:892",
+        "kernel/reliefnt/kernel/exec/elf.c:892",
     ),
     Rule(
         "ELF-ABI", "错误", "动态链接",
-        r"^\[ntclks\] ELF ABI mismatch main=",
+        r"^\[(?:reliefnt|ntclks)\] ELF ABI mismatch main=",
         "动态应用与解释器 ABI 主版本不匹配",
         "检测到旧私有 ABI 程序与解释器不匹配。",
         "使用当前 musl SDK 从源码重建应用，避免混用旧私有 ABI 输出。",
-        "kernel/ntclks/kernel/exec/elf.c:904",
+        "kernel/reliefnt/kernel/exec/elf.c:904",
     ),
     Rule(
         "ELF-MAP", "错误", "ELF 装载",
-        r"^\[ntclks\] failed to (?:map executable|load .* into private address space|prepare argv/envp for) ",
+        r"^\[(?:reliefnt|ntclks)\] failed to (?:map executable|load .* into private address space|prepare argv/envp for) ",
         "用户程序映射到地址空间失败",
         "内核在 ELF 验证、段映射、私有地址空间或启动参数准备阶段失败。",
         "结合相邻的 ELF 细节日志检查段布局、VMA 容量、页权限、解释器和镜像文件内容。",
-        "kernel/ntclks/kernel/exec/userland.c:417",
+        "kernel/reliefnt/kernel/exec/userland.c:417",
     ),
     Rule(
         "DYNLINK-MISSING", "错误", "动态链接",
         r"^\[dynlinkerror\.elf\] unable to start .*: missing ",
         "动态链接库缺失",
         "静态链接的恢复程序已确认应用缺少必需共享库。",
-        "从匹配系统镜像恢复该 .so 文件到 /usr/lib/leonos 或 /usr/lib，或重新打包应用私有库。",
+        "从匹配系统镜像恢复该 .so 文件到 /usr/lib/reliefos、兼容目录 /usr/lib/leonos 或 /usr/lib，或重新打包应用私有库。",
         "userland/apps/dynlinkerror/main.c:52",
     ),
     Rule(
@@ -149,30 +149,30 @@ DIRECT_RULES = (
     ),
     Rule(
         "ASLR-WEAK-ENTROPY", "警告", "内存保护",
-        r"^\[ntclks\] ASLR active with weak entropy ",
+        r"^\[(?:reliefnt|ntclks)\] ASLR active with weak entropy ",
         "ASLR 正在使用弱熵源",
         "系统仍会随机化布局，但当前启动没有获得 RDRAND 硬件熵。",
         "在支持硬件熵的 CPU/虚拟机上启用 RDRAND，或检查启动时序和输入熵是否正常累积。",
-        "kernel/ntclks/kernel/exec/elf.c:156",
+        "kernel/reliefnt/kernel/exec/elf.c:156",
     ),
     Rule(
         "POWER-ACPI", "警告", "电源管理",
-        r"^\[ntclks\] ACPI (?:RSDP|FADT|DSDT|_S5_|PM1 control block) unavailable$",
+        r"^\[(?:reliefnt|ntclks)\] ACPI (?:RSDP|FADT|DSDT|_S5_|PM1 control block) unavailable$",
         "ACPI 关机路径不可用",
         "固件没有提供完成 ACPI S5 关机所需的表或寄存器，关机可能只能停止 CPU。",
         "检查虚拟机 ACPI 选项、固件类型和硬件平台；在 VMware 中验证 ACPI 电源管理已启用。",
-        "kernel/ntclks/arch/x86_64/power.c:532",
+        "kernel/reliefnt/arch/x86_64/power.c:532",
     ),
 )
 
 BUGCHECK_LINE = re.compile(r"^\[bugcheck\] (.*)$")
 EXCEPTION_LINE = re.compile(
-    r"^\[ntclks\] exception vector=(?P<vector>\d+) error=(?P<error>0x[0-9a-fA-F]+) "
+    r"^\[(?:reliefnt|ntclks)\] exception vector=(?P<vector>\d+) error=(?P<error>0x[0-9a-fA-F]+) "
     r"rip=(?P<rip>0x[0-9a-fA-F]+).*"
 )
-BOOT_COMPLETE = re.compile(r"^\[ntclks\] boot complete:")
-TASK_EXIT = re.compile(r"^\[ntclks\] scheduler task exited pid=(?P<pid>\d+) name=(?P<name>.+) code=(?P<code>\d+)$")
-MAP_FAILURE = re.compile(r"^\[ntclks\] failed to map executable (?P<name>.+)$")
+BOOT_COMPLETE = re.compile(r"^\[(?:reliefnt|ntclks)\] boot complete:")
+TASK_EXIT = re.compile(r"^\[(?:reliefnt|ntclks)\] scheduler task exited pid=(?P<pid>\d+) name=(?P<name>.+) code=(?P<code>\d+)$")
+MAP_FAILURE = re.compile(r"^\[(?:reliefnt|ntclks)\] failed to map executable (?P<name>.+)$")
 COMPONENT = re.compile(r"^\[(?P<component>[^\]]+)\]")
 
 
@@ -217,7 +217,7 @@ def _bugcheck_findings(lines: list[str], radius: int) -> list[Finding]:
             tuple(item + 1 for item in indexes), _context(lines, indexes, radius),
             "内核进入不可恢复的停止状态；同一段日志通常包含陷阱向量、任务名、RIP、CR2 和栈指针。",
             "优先检查本条之前最近的 exception、page fault、ELF 或驱动错误；使用 RIP 和任务名定位对应模块。",
-            "kernel/ntclks/kernel/ntclks/lib/bugcheck.c:422",
+            "kernel/reliefnt/kernel/reliefnt/lib/bugcheck.c:422",
         ))
         index = cursor
     return findings
@@ -241,7 +241,7 @@ def _exception_findings(lines: list[str], radius: int) -> list[Finding]:
             _context(lines, (index,), radius),
             f"CPU 在 RIP={match.group('rip')} 触发向量 {vector}，错误码为 {match.group('error')}。",
             "依据 RIP、当前 pid/task 和异常模式检查近期映射、重定位、用户指针或特权级转换；页错误还需检查 CR2 与标志位。",
-            "kernel/ntclks/arch/x86_64/idt.c:156",
+            "kernel/reliefnt/arch/x86_64/idt.c:156",
         ))
     return findings
 
@@ -269,7 +269,7 @@ def _task_exit_findings(lines: list[str], radius: int) -> list[Finding]:
             tuple(location + 1 for location in locations), _context(lines, locations, radius),
             explanation,
             "查看该任务之前的 ELF 头部、解释器、ABI、段映射或动态库错误；init.elf 和 desktop.elf 失败会阻断系统桌面。",
-            "kernel/ntclks/kernel/ntclks/sched/sched.c:498",
+            "kernel/reliefnt/kernel/reliefnt/sched/sched.c:498",
         ))
     return findings
 
@@ -326,7 +326,7 @@ def _print_text(analysis: LogAnalysis) -> None:
     counts = {severity: 0 for severity in SEVERITY_ORDER}
     for finding in analysis.findings:
         counts[finding.severity] += 1
-    print("LeonOS 启动日志分析")
+    print("ReliefOS 启动日志分析")
     print(f"状态: {analysis.status}")
     print(f"日志行: {analysis.line_count}")
     print("启动完成: " + (f"第 {analysis.boot_complete_line} 行" if analysis.boot_complete_line else "未检测到"))
@@ -358,14 +358,17 @@ def _self_test() -> int:
 
 [bugcheck] General Protection Fault
 [bugcheck] detail=Unhandled CPU exception
-""".splitlines()
-    analysis = analyze_lines(sample)
-    identifiers = {finding.identifier for finding in analysis.findings}
+"""
     expected = {"ELF-HEADER", "ELF-MAP", "TASK-EXIT-127", "CPU-EXCEPTION", "BUGCHECK"}
-    missing = expected - identifiers
-    if missing or analysis.status != "启动失败":
-        print(f"boot-log analyzer self-test failed: missing={sorted(missing)} status={analysis.status}", file=sys.stderr)
-        return 1
+    # Both kernel log prefixes must parse: [ntclks] is the pre-rename spelling.
+    for lines in (sample.splitlines(),
+                  sample.replace("[ntclks]", "[reliefnt]").splitlines()):
+        analysis = analyze_lines(lines)
+        identifiers = {finding.identifier for finding in analysis.findings}
+        missing = expected - identifiers
+        if missing or analysis.status != "启动失败":
+            print(f"boot-log analyzer self-test failed: missing={sorted(missing)} status={analysis.status}", file=sys.stderr)
+            return 1
     print("boot-log analyzer self-test passed")
     return 0
 

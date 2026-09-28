@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Summarize LeonOS source code with cloc or scc.
+"""Summarize ReliefOS source code with cloc or scc.
 
 The tool builds an explicit source-file list before invoking the selected
 counter. This keeps build products and temporary files out of the report and
@@ -195,7 +195,7 @@ def run_cloc(cloc: str, root: Path, files: Iterable[Path], config: dict[str, Any
     list_file: Path | None = None
     try:
         with tempfile.NamedTemporaryFile("w", encoding="utf-8", newline="\n", delete=False,
-                                         prefix="leonos-cloc-", suffix=".txt") as handle:
+                                         prefix="reliefos-cloc-", suffix=".txt") as handle:
             list_file = Path(handle.name)
             for path in file_list:
                 handle.write(normalize_relative(os.path.relpath(path, root)))
@@ -592,7 +592,7 @@ def format_markdown(summary: dict[str, Any]) -> str:
     if has_complexity:
         metric_fields.append("complexity")
 
-    lines = ["# LeonOS 4 Code Statistics", "",
+    lines = ["# ReliefOS Code Statistics", "",
              f"- **Engine:** `{markdown_cell(engine)}`",
              f"- **Scan root:** `{markdown_cell(summary.get('root', '.'))}`", "",
              "## Total", "",
@@ -752,7 +752,7 @@ def format_history_text(history: dict[str, Any]) -> str:
 
 def format_history_markdown(history: dict[str, Any]) -> str:
     """Render Git history growth as a readable Markdown report."""
-    lines = ["# LeonOS 4 Code Growth History", "",
+    lines = ["# ReliefOS Code Growth History", "",
              f"- **Scan root:** `{markdown_cell(history.get('root', '.'))}`",
              f"- **Metric:** `{markdown_cell(history.get('metric', 'physical_lines'))}`",
              f"- **Method:** `{markdown_cell(history.get('method', 'git-numstat'))}`",
@@ -792,7 +792,7 @@ def write_history_chart(history: dict[str, Any], output: Path) -> None:
                       '<rect width="100%" height="100%" fill="#ffffff"/>',
                       '<style>text{font-family:Arial,sans-serif;fill:#263238} .grid{stroke:#d9e1e5;stroke-width:1} '
                       '.axis{stroke:#607d8b;stroke-width:1.5} .line{fill:none;stroke:#1565c0;stroke-width:2.5}</style>',
-                      '<text x="82" y="25" font-size="18" font-weight="bold">LeonOS code growth</text>']
+                      '<text x="82" y="25" font-size="18" font-weight="bold">ReliefOS code growth</text>']
     for step in range(6):
         value = minimum + (maximum - minimum) * step / 5
         y = y_at(round(value))

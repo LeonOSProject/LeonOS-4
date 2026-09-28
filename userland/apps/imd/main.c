@@ -2,10 +2,10 @@
  * Provider (oschinpt) keeps one persistent connection; applications submit
  * focused-key events and receive committed text over the same socket path. */
 #include <errno.h>
-#include <leonos/inputm.h>
-#include <leonos/inputmd.h>
-#include <leonos/stdio.h>
-#include <leonos/unix_ipc.h>
+#include <reliefos/inputm.h>
+#include <reliefos/inputmd.h>
+#include <reliefos/stdio.h>
+#include <reliefos/unix_ipc.h>
 #include <poll.h>
 #include <stdint.h>
 #include <string.h>
@@ -30,18 +30,18 @@ struct imd_provider {
     uint32_t uid;
     uint32_t pid;
     int client_slot;
-    struct leonos_inputm_provider provider;
+    struct reliefos_inputm_provider provider;
 };
 
 struct imd_context {
     uint32_t used;
     uint32_t pid;
-    struct leonos_inputm_context context;
+    struct reliefos_inputm_context context;
 };
 
 struct imd_user {
     uint32_t used;
-    struct leonos_inputm_state state;
+    struct reliefos_inputm_state state;
 };
 
 static struct imd_client clients[IMD_MAX_CLIENTS];
@@ -84,7 +84,7 @@ static int imd_text_eq(const char *a, const char *b)
 static void imd_close_client(int slot)
 {
     if (slot < 0 || slot >= (int)IMD_MAX_CLIENTS || !clients[slot].used) return;
-    leonos_ipc_close(clients[slot].fd);
+    reliefos_ipc_close(clients[slot].fd);
     for (uint32_t i = 0; i < IMD_MAX_PROVIDERS; ++i) {
         if (providers[i].used && providers[i].client_slot == slot) {
             providers[i].used = 0;
@@ -96,10 +96,10 @@ static void imd_close_client(int slot)
 
 static int imd_send_ack(int client_slot, int32_t code)
 {
-    struct leonos_imd_ack ack = {.code = code};
+    struct reliefos_imd_ack ack = {.code = code};
     if (client_slot < 0 || client_slot >= (int)IMD_MAX_CLIENTS ||
         !clients[client_slot].used) return -1;
-    return leonos_ipc_send(clients[client_slot].fd, LEONOS_IMD_MSG_ACK,
+    return reliefos_ipc_send(clients[client_slot].fd, RELIEFOS_IMD_MSG_ACK,
                            &ack, sizeof(ack));
 }
 
@@ -157,18 +157,18 @@ static struct imd_context *imd_find_context(uint32_t pid, uint32_t window_id,
 
 static void imd_handle_register(int slot, const uint8_t *buffer, uint32_t length)
 {
-    struct leonos_inputm_provider input;
+    struct reliefos_inputm_provider input;
     struct imd_provider *slot_provider = 0;
     if (length < sizeof(input) || clients[slot].uid == 0) {
         imd_send_ack(slot, -1);
         return;
     }
     memcpy(&input, buffer, sizeof(input));
-    if (!imd_text_valid(input.id, LEONOS_INPUTM_ID_LEN) ||
-        !imd_text_valid(input.name, LEONOS_INPUTM_NAME_LEN) ||
-        !imd_text_valid(input.abbreviation, LEONOS_INPUTM_ABBREV_LEN) ||
-        input.startup_mode > LEONOS_INPUTM_START_ON_DEMAND ||
-        (input.render_flags & ~(LEONOS_INPUTM_RENDER_CONTROLS | LEONOS_INPUTM_RENDER_PIXELS))) {
+    if (!imd_text_valid(input.id, RELIEFOS_INPUTM_ID_LEN) ||
+        !imd_text_valid(input.name, RELIEFOS_INPUTM_NAME_LEN) ||
+        !imd_text_valid(input.abbreviation, RELIEFOS_INPUTM_ABBREV_LEN) ||
+        input.startup_mode > RELIEFOS_INPUTM_START_ON_DEMAND ||
+        (input.render_flags & ~(RELIEFOS_INPUTM_RENDER_CONTROLS | RELIEFOS_INPUTM_RENDER_PIXELS))) {
         imd_send_ack(slot, -1);
         return;
     }
@@ -194,14 +194,14 @@ static void imd_handle_register(int slot, const uint8_t *buffer, uint32_t length
     slot_provider->client_slot = slot;
     slot_provider->provider = input;
     slot_provider->provider.enabled = 1;
-    clients[slot].role = LEONOS_IMD_ROLE_PROVIDER;
+    clients[slot].role = RELIEFOS_IMD_ROLE_PROVIDER;
     imd_send_ack(slot, 1);
 }
 
 static void imd_handle_submit(int slot, const uint8_t *buffer, uint32_t length)
 {
-    struct leonos_inputm_key_event input;
-    struct leonos_inputm_key_event event;
+    struct reliefos_inputm_key_event input;
+    struct reliefos_inputm_key_event event;
     struct imd_context *context;
     struct imd_user *user;
     struct imd_provider *provider;
@@ -211,8 +211,8 @@ static void imd_handle_submit(int slot, const uint8_t *buffer, uint32_t length)
     }
     memcpy(&input, buffer, sizeof(input));
     context = imd_find_context(clients[slot].pid, input.window_id, 0);
-    if (!context || !(context->context.flags & LEONOS_INPUTM_CONTEXT_FOCUSED) ||
-        (context->context.flags & LEONOS_INPUTM_CONTEXT_SECURE)) {
+    if (!context || !(context->context.flags & RELIEFOS_INPUTM_CONTEXT_FOCUSED) ||
+        (context->context.flags & RELIEFOS_INPUTM_CONTEXT_SECURE)) {
         imd_send_ack(slot, 0);
         return;
     }
@@ -238,8 +238,8 @@ static void imd_handle_submit(int slot, const uint8_t *buffer, uint32_t length)
     event.caret_y = context->context.caret_y;
     event.caret_w = context->context.caret_w;
     event.caret_h = context->context.caret_h;
-    if (leonos_ipc_send(clients[provider->client_slot].fd,
-                        LEONOS_IMD_MSG_KEY_EVENT, &event, sizeof(event)) < 0) {
+    if (reliefos_ipc_send(clients[provider->client_slot].fd,
+                        RELIEFOS_IMD_MSG_KEY_EVENT, &event, sizeof(event)) < 0) {
         imd_send_ack(slot, -1);
         return;
     }
@@ -248,30 +248,30 @@ static void imd_handle_submit(int slot, const uint8_t *buffer, uint32_t length)
 
 static void imd_handle_result(int slot, const uint8_t *buffer, uint32_t length)
 {
-    struct leonos_inputm_result result;
+    struct reliefos_inputm_result result;
     int target;
     struct imd_user *user;
-    if (length < sizeof(result) || clients[slot].role != LEONOS_IMD_ROLE_PROVIDER) {
+    if (length < sizeof(result) || clients[slot].role != RELIEFOS_IMD_ROLE_PROVIDER) {
         imd_send_ack(slot, -1);
         return;
     }
     memcpy(&result, buffer, sizeof(result));
     user = imd_find_user(clients[slot].uid);
-    if (user && result.type == LEONOS_INPUTM_RESULT_COMPOSITION) {
+    if (user && result.type == RELIEFOS_INPUTM_RESULT_COMPOSITION) {
         imd_copy(user->state.composition, sizeof(user->state.composition), result.text);
         user->state.candidate_count = result.candidate_count;
         user->state.selected_candidate = result.selected_candidate;
-        for (uint32_t i = 0; i < result.candidate_count && i < LEONOS_INPUTM_MAX_CANDIDATES; ++i) {
+        for (uint32_t i = 0; i < result.candidate_count && i < RELIEFOS_INPUTM_MAX_CANDIDATES; ++i) {
             imd_copy(user->state.candidates[i], sizeof(user->state.candidates[i]),
                      result.candidates[i]);
         }
-    } else if (user && result.type == LEONOS_INPUTM_RESULT_COMMIT) {
+    } else if (user && result.type == RELIEFOS_INPUTM_RESULT_COMMIT) {
         user->state.composition[0] = 0;
         user->state.candidate_count = 0;
     }
     target = imd_client_by_pid(result.client_pid);
-    if (target >= 0 && clients[target].role == LEONOS_IMD_ROLE_APP) {
-        (void)leonos_ipc_send(clients[target].fd, LEONOS_IMD_MSG_RESULT,
+    if (target >= 0 && clients[target].role == RELIEFOS_IMD_ROLE_APP) {
+        (void)reliefos_ipc_send(clients[target].fd, RELIEFOS_IMD_MSG_RESULT,
                               &result, sizeof(result));
     }
     imd_send_ack(slot, 1);
@@ -279,13 +279,13 @@ static void imd_handle_result(int slot, const uint8_t *buffer, uint32_t length)
 
 static void imd_handle_set_active(int slot, const uint8_t *buffer, uint32_t length)
 {
-    struct leonos_inputm_active_request input;
+    struct reliefos_inputm_active_request input;
     struct imd_user *user;
     if (length < sizeof(input)) { imd_send_ack(slot, -1); return; }
     memcpy(&input, buffer, sizeof(input));
     if (!input.uid ||
         (clients[slot].uid != input.uid && clients[slot].uid != 0) ||
-        !imd_text_valid(input.id, LEONOS_INPUTM_ID_LEN)) {
+        !imd_text_valid(input.id, RELIEFOS_INPUTM_ID_LEN)) {
         imd_send_ack(slot, -1);
         return;
     }
@@ -303,8 +303,8 @@ static void imd_handle_set_active(int slot, const uint8_t *buffer, uint32_t leng
 
 static void imd_handle_list(int slot, const uint8_t *buffer, uint32_t length)
 {
-    struct leonos_imd_list request;
-    struct leonos_imd_list_ack ack;
+    struct reliefos_imd_list request;
+    struct reliefos_imd_list_ack ack;
     uint8_t payload[IMD_FRAME_CAP];
     uint32_t offset = sizeof(ack);
     uint32_t count = 0;
@@ -318,7 +318,7 @@ static void imd_handle_list(int slot, const uint8_t *buffer, uint32_t length)
     ack.uid = request.uid;
     ack.count = 0;
     {
-        struct leonos_inputm_provider builtin = {0};
+        struct reliefos_inputm_provider builtin = {0};
         imd_copy(builtin.id, sizeof(builtin.id), "en");
         imd_copy(builtin.name, sizeof(builtin.name), "English");
         imd_copy(builtin.abbreviation, sizeof(builtin.abbreviation), "EN");
@@ -341,13 +341,13 @@ static void imd_handle_list(int slot, const uint8_t *buffer, uint32_t length)
     }
     ack.count = count;
     memcpy(payload, &ack, sizeof(ack));
-    (void)leonos_ipc_send(clients[slot].fd, LEONOS_IMD_MSG_LIST_ACK,
+    (void)reliefos_ipc_send(clients[slot].fd, RELIEFOS_IMD_MSG_LIST_ACK,
                           payload, offset);
 }
 
 static void imd_handle_get_state(int slot, const uint8_t *buffer, uint32_t length)
 {
-    struct leonos_imd_get_state request;
+    struct reliefos_imd_get_state request;
     struct imd_user *user;
     if (length < sizeof(request)) { imd_send_ack(slot, -1); return; }
     memcpy(&request, buffer, sizeof(request));
@@ -358,7 +358,7 @@ static void imd_handle_get_state(int slot, const uint8_t *buffer, uint32_t lengt
     }
     user = imd_find_user(request.uid);
     if (!user) { imd_send_ack(slot, -1); return; }
-    (void)leonos_ipc_send(clients[slot].fd, LEONOS_IMD_MSG_STATE_ACK,
+    (void)reliefos_ipc_send(clients[slot].fd, RELIEFOS_IMD_MSG_STATE_ACK,
                           &user->state, sizeof(user->state));
 }
 
@@ -371,13 +371,13 @@ static void imd_handle_client(int slot)
     for (;;) {
         struct pollfd descriptor = {.fd = client->fd, .events = POLLIN, .revents = 0};
         if (poll(&descriptor, 1, 0) <= 0) return;
-        if (leonos_ipc_recv(client->fd, &type, buffer, sizeof(buffer), &length) < 0) {
+        if (reliefos_ipc_recv(client->fd, &type, buffer, sizeof(buffer), &length) < 0) {
             if (errno == EAGAIN) return;
             imd_close_client(slot);
             return;
         }
-        if (type == LEONOS_IMD_MSG_HELLO) {
-            struct leonos_imd_hello hello;
+        if (type == RELIEFOS_IMD_MSG_HELLO) {
+            struct reliefos_imd_hello hello;
             if (length < sizeof(hello)) { imd_close_client(slot); return; }
             memcpy(&hello, buffer, sizeof(hello));
             if (hello.pid != client->pid) { imd_close_client(slot); return; }
@@ -385,8 +385,8 @@ static void imd_handle_client(int slot)
             imd_send_ack(slot, 1);
             continue;
         }
-        if (type == LEONOS_IMD_MSG_REGISTER) { imd_handle_register(slot, buffer, length); continue; }
-        if (type == LEONOS_IMD_MSG_UNREGISTER) {
+        if (type == RELIEFOS_IMD_MSG_REGISTER) { imd_handle_register(slot, buffer, length); continue; }
+        if (type == RELIEFOS_IMD_MSG_UNREGISTER) {
             for (uint32_t i = 0; i < IMD_MAX_PROVIDERS; ++i) {
                 if (providers[i].used && providers[i].client_slot == slot) {
                     providers[i].used = 0;
@@ -395,10 +395,10 @@ static void imd_handle_client(int slot)
             imd_send_ack(slot, 0);
             continue;
         }
-        if (type == LEONOS_IMD_MSG_SUBMIT_KEY) { imd_handle_submit(slot, buffer, length); continue; }
-        if (type == LEONOS_IMD_MSG_RESULT) { imd_handle_result(slot, buffer, length); continue; }
-        if (type == LEONOS_IMD_MSG_SET_CONTEXT) {
-            struct leonos_inputm_context context;
+        if (type == RELIEFOS_IMD_MSG_SUBMIT_KEY) { imd_handle_submit(slot, buffer, length); continue; }
+        if (type == RELIEFOS_IMD_MSG_RESULT) { imd_handle_result(slot, buffer, length); continue; }
+        if (type == RELIEFOS_IMD_MSG_SET_CONTEXT) {
+            struct reliefos_inputm_context context;
             if (length < sizeof(context)) { imd_send_ack(slot, -1); continue; }
             memcpy(&context, buffer, sizeof(context));
             if (!context.window_id) { imd_send_ack(slot, -1); continue; }
@@ -411,11 +411,11 @@ static void imd_handle_client(int slot)
             }
             continue;
         }
-        if (type == LEONOS_IMD_MSG_SET_ACTIVE) { imd_handle_set_active(slot, buffer, length); continue; }
-        if (type == LEONOS_IMD_MSG_LIST) { imd_handle_list(slot, buffer, length); continue; }
-        if (type == LEONOS_IMD_MSG_GET_STATE) { imd_handle_get_state(slot, buffer, length); continue; }
-        if (type == LEONOS_IMD_MSG_NOTIFY_CONFIG) {
-            struct leonos_inputm_config_request request;
+        if (type == RELIEFOS_IMD_MSG_SET_ACTIVE) { imd_handle_set_active(slot, buffer, length); continue; }
+        if (type == RELIEFOS_IMD_MSG_LIST) { imd_handle_list(slot, buffer, length); continue; }
+        if (type == RELIEFOS_IMD_MSG_GET_STATE) { imd_handle_get_state(slot, buffer, length); continue; }
+        if (type == RELIEFOS_IMD_MSG_NOTIFY_CONFIG) {
+            struct reliefos_inputm_config_request request;
             struct imd_user *user;
             if (length < sizeof(request)) { imd_send_ack(slot, -1); continue; }
             memcpy(&request, buffer, sizeof(request));
@@ -443,28 +443,28 @@ int main(void)
     memset(contexts, 0, sizeof(contexts));
     memset(users, 0, sizeof(users));
     for (uint32_t i = 0; i < IMD_MAX_CLIENTS; ++i) clients[i].fd = -1;
-    listen_fd = leonos_ipc_bind_listen_mode(LEONOS_IPC_SOCK_INPUT_METHOD, 8, 0666);
+    listen_fd = reliefos_ipc_bind_listen_mode(RELIEFOS_IPC_SOCK_INPUT_METHOD, 8, 0666);
     if (listen_fd < 0) {
         printf("[imd.elf] bind failed errno=%d\n", errno);
         return 1;
     }
-    (void)leonos_ipc_set_nonblock(listen_fd, 1);
-    printf("[imd.elf] listening on %s\n", LEONOS_IPC_SOCK_INPUT_METHOD);
+    (void)reliefos_ipc_set_nonblock(listen_fd, 1);
+    printf("[imd.elf] listening on %s\n", RELIEFOS_IPC_SOCK_INPUT_METHOD);
     for (;;) {
         struct pollfd descriptor = {.fd = listen_fd, .events = POLLIN, .revents = 0};
         if (poll(&descriptor, 1, 4) > 0 && (descriptor.revents & POLLIN)) {
             int fd;
-            while ((fd = leonos_ipc_accept(listen_fd, 0)) >= 0) {
+            while ((fd = reliefos_ipc_accept(listen_fd, 0)) >= 0) {
                 struct ucred credentials;
                 int slot = -1;
                 for (uint32_t i = 0; i < IMD_MAX_CLIENTS; ++i) {
                     if (!clients[i].used) { slot = (int)i; break; }
                 }
-                if (slot < 0 || leonos_ipc_peer_credentials(fd, &credentials) < 0) {
+                if (slot < 0 || reliefos_ipc_peer_credentials(fd, &credentials) < 0) {
                     close(fd);
                     continue;
                 }
-                (void)leonos_ipc_set_nonblock(fd, 1);
+                (void)reliefos_ipc_set_nonblock(fd, 1);
                 clients[slot].used = 1;
                 clients[slot].fd = fd;
                 clients[slot].pid = (uint32_t)credentials.pid;

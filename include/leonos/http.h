@@ -1,65 +1,163 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/http.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_HTTP_H
 #define LEONOS_HTTP_H
+#include <reliefos/http.h>
 
-#include <leonos/fs.h>
-#include <leonos/net.h>
-#include <stdint.h>
-
-#define LEONOS_HTTP_URL_LEN LEONOS_FS_PATH_LEN
-#define LEONOS_HTTP_CONTENT_TYPE_LEN 64U
-#define LEONOS_HTTP_DEFAULT_TIMEOUT_MS 10000U
-#define LEONOS_HTTP_DEFAULT_REDIRECTS 5U
-#define LEONOS_HTTP_HEADER_MAX 2048U
-#define LEONOS_HTTP_BODY_MAX 8192U
-#define LEONOS_HTTP_NO_REDIRECTS 0xffffffffU
-
-#define LEONOS_HTTP_FLAG_TRUNCATED 0x00000001U
-#define LEONOS_HTTP_FLAG_CHUNKED 0x00000002U
-#define LEONOS_HTTP_FLAG_REDIRECTED 0x00000004U
-#define LEONOS_HTTP_FLAG_CONTENT_LENGTH 0x00000008U
-
-struct leonos_http_request {
-    const char *url;
-    const char *method;
-    const char *extra_headers;
-    const char *request_body;
-    uint32_t request_body_len;
-    uint32_t timeout_ms;
-    uint32_t max_redirects;
-    char *response_body;
-    uint32_t response_body_capacity;
-    char *response_headers;
-    uint32_t response_headers_capacity;
-};
-
-struct leonos_http_response {
-    uint32_t net_status;
-    uint32_t http_status;
-    uint32_t flags;
-    uint32_t body_len;
-    uint32_t headers_len;
-    uint32_t content_length;
-    uint32_t redirect_count;
-    char content_type[LEONOS_HTTP_CONTENT_TYPE_LEN];
-    char final_url[LEONOS_HTTP_URL_LEN];
-};
-
-typedef int (*leonos_http_download_progress_fn)(uint32_t received,
-                                                uint32_t total,
-                                                void *context);
-
-int leonos_http_request(const struct leonos_http_request *request,
-                        struct leonos_http_response *response);
-int leonos_http_get(const char *url, uint32_t timeout_ms,
-                    char *response_body, uint32_t response_body_capacity,
-                    char *response_headers, uint32_t response_headers_capacity,
-                    struct leonos_http_response *response);
-int leonos_http_download(const char *url, const char *output_path,
-                         uint32_t timeout_ms,
-                         leonos_http_download_progress_fn progress,
-                         void *context,
-                         struct leonos_http_response *response);
-int leonos_http_resolve_url(const char *base_url, const char *location,
-                            char *out, uint32_t capacity);
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_FS_ACL_ACE_INHERITED RELIEFOS_FS_ACL_ACE_INHERITED
+#define LEONOS_FS_ACL_FLAG_CORRUPT RELIEFOS_FS_ACL_FLAG_CORRUPT
+#define LEONOS_FS_ACL_FLAG_SYNTHETIC RELIEFOS_FS_ACL_FLAG_SYNTHETIC
+#define LEONOS_FS_ACL_MAX_ACE RELIEFOS_FS_ACL_MAX_ACE
+#define LEONOS_FS_ACL_PRINCIPAL_ADMINISTRATORS RELIEFOS_FS_ACL_PRINCIPAL_ADMINISTRATORS
+#define LEONOS_FS_ACL_PRINCIPAL_EVERYONE RELIEFOS_FS_ACL_PRINCIPAL_EVERYONE
+#define LEONOS_FS_ACL_PRINCIPAL_GROUP RELIEFOS_FS_ACL_PRINCIPAL_GROUP
+#define LEONOS_FS_ACL_PRINCIPAL_OWNER RELIEFOS_FS_ACL_PRINCIPAL_OWNER
+#define LEONOS_FS_ACL_PRINCIPAL_SYSTEM RELIEFOS_FS_ACL_PRINCIPAL_SYSTEM
+#define LEONOS_FS_ACL_PRINCIPAL_USERS RELIEFOS_FS_ACL_PRINCIPAL_USERS
+#define LEONOS_FS_ACL_VERSION RELIEFOS_FS_ACL_VERSION
+#define LEONOS_FS_FILE_WRITE_SLICE_BYTES RELIEFOS_FS_FILE_WRITE_SLICE_BYTES
+#define LEONOS_FS_H RELIEFOS_FS_H
+#define LEONOS_FS_IO_SLICE_BYTES RELIEFOS_FS_IO_SLICE_BYTES
+#define LEONOS_FS_MAX_ENTRIES RELIEFOS_FS_MAX_ENTRIES
+#define LEONOS_FS_NAME_LEN RELIEFOS_FS_NAME_LEN
+#define LEONOS_FS_PATH_LEN RELIEFOS_FS_PATH_LEN
+#define LEONOS_FS_PERM_DELETE RELIEFOS_FS_PERM_DELETE
+#define LEONOS_FS_PERM_EXEC RELIEFOS_FS_PERM_EXEC
+#define LEONOS_FS_PERM_FULL RELIEFOS_FS_PERM_FULL
+#define LEONOS_FS_PERM_MANAGE RELIEFOS_FS_PERM_MANAGE
+#define LEONOS_FS_PERM_READ RELIEFOS_FS_PERM_READ
+#define LEONOS_FS_PERM_WRITE RELIEFOS_FS_PERM_WRITE
+#define LEONOS_FS_READ_SLICE_BYTES RELIEFOS_FS_READ_SLICE_BYTES
+#define LEONOS_FS_TYPE_DEVICE RELIEFOS_FS_TYPE_DEVICE
+#define LEONOS_FS_TYPE_DIR RELIEFOS_FS_TYPE_DIR
+#define LEONOS_FS_TYPE_FIFO RELIEFOS_FS_TYPE_FIFO
+#define LEONOS_FS_TYPE_FILE RELIEFOS_FS_TYPE_FILE
+#define LEONOS_FS_TYPE_SOCKET RELIEFOS_FS_TYPE_SOCKET
+#define LEONOS_FS_TYPE_SYMLINK RELIEFOS_FS_TYPE_SYMLINK
+#define LEONOS_HTTP_BODY_MAX RELIEFOS_HTTP_BODY_MAX
+#define LEONOS_HTTP_CONTENT_TYPE_LEN RELIEFOS_HTTP_CONTENT_TYPE_LEN
+#define LEONOS_HTTP_DEFAULT_REDIRECTS RELIEFOS_HTTP_DEFAULT_REDIRECTS
+#define LEONOS_HTTP_DEFAULT_TIMEOUT_MS RELIEFOS_HTTP_DEFAULT_TIMEOUT_MS
+#define LEONOS_HTTP_FLAG_CHUNKED RELIEFOS_HTTP_FLAG_CHUNKED
+#define LEONOS_HTTP_FLAG_CONTENT_LENGTH RELIEFOS_HTTP_FLAG_CONTENT_LENGTH
+#define LEONOS_HTTP_FLAG_REDIRECTED RELIEFOS_HTTP_FLAG_REDIRECTED
+#define LEONOS_HTTP_FLAG_TRUNCATED RELIEFOS_HTTP_FLAG_TRUNCATED
+#define LEONOS_HTTP_HEADER_MAX RELIEFOS_HTTP_HEADER_MAX
+#define LEONOS_HTTP_NO_REDIRECTS RELIEFOS_HTTP_NO_REDIRECTS
+#define LEONOS_HTTP_URL_LEN RELIEFOS_HTTP_URL_LEN
+#define LEONOS_NET_AF_INET RELIEFOS_NET_AF_INET
+#define LEONOS_NET_CLOUDFLARE_DNS_IP RELIEFOS_NET_CLOUDFLARE_DNS_IP
+#define LEONOS_NET_CONFIG_FLAG_ACTIVE RELIEFOS_NET_CONFIG_FLAG_ACTIVE
+#define LEONOS_NET_CONFIG_FLAG_DHCP RELIEFOS_NET_CONFIG_FLAG_DHCP
+#define LEONOS_NET_CONFIG_FLAG_PRESENT RELIEFOS_NET_CONFIG_FLAG_PRESENT
+#define LEONOS_NET_CONFIG_SOURCE_DHCP RELIEFOS_NET_CONFIG_SOURCE_DHCP
+#define LEONOS_NET_CONFIG_SOURCE_NONE RELIEFOS_NET_CONFIG_SOURCE_NONE
+#define LEONOS_NET_CONFIG_SOURCE_STATIC RELIEFOS_NET_CONFIG_SOURCE_STATIC
+#define LEONOS_NET_DEFAULT_DNS_IP RELIEFOS_NET_DEFAULT_DNS_IP
+#define LEONOS_NET_DEFAULT_GATEWAY_IP RELIEFOS_NET_DEFAULT_GATEWAY_IP
+#define LEONOS_NET_DEFAULT_LOCAL_IP RELIEFOS_NET_DEFAULT_LOCAL_IP
+#define LEONOS_NET_DEFAULT_SUBNET_MASK RELIEFOS_NET_DEFAULT_SUBNET_MASK
+#define LEONOS_NET_DEFAULT_TIMEOUT_MS RELIEFOS_NET_DEFAULT_TIMEOUT_MS
+#define LEONOS_NET_DNS_MAX_ADDRESSES RELIEFOS_NET_DNS_MAX_ADDRESSES
+#define LEONOS_NET_DNS_MODE_CLOUDFLARE RELIEFOS_NET_DNS_MODE_CLOUDFLARE
+#define LEONOS_NET_DNS_MODE_CUSTOM RELIEFOS_NET_DNS_MODE_CUSTOM
+#define LEONOS_NET_DNS_MODE_DHCP RELIEFOS_NET_DNS_MODE_DHCP
+#define LEONOS_NET_DNS_MODE_QUERY RELIEFOS_NET_DNS_MODE_QUERY
+#define LEONOS_NET_H RELIEFOS_NET_H
+#define LEONOS_NET_HOSTNAME_LEN RELIEFOS_NET_HOSTNAME_LEN
+#define LEONOS_NET_HTTP_PATH_LEN RELIEFOS_NET_HTTP_PATH_LEN
+#define LEONOS_NET_HTTP_RESPONSE_MAX RELIEFOS_NET_HTTP_RESPONSE_MAX
+#define LEONOS_NET_IPPROTO_TCP RELIEFOS_NET_IPPROTO_TCP
+#define LEONOS_NET_MAX_TIMEOUT_MS RELIEFOS_NET_MAX_TIMEOUT_MS
+#define LEONOS_NET_SOCKET_MAX RELIEFOS_NET_SOCKET_MAX
+#define LEONOS_NET_SOCK_STREAM RELIEFOS_NET_SOCK_STREAM
+#define LEONOS_NET_STATUS_ARP_TIMEOUT RELIEFOS_NET_STATUS_ARP_TIMEOUT
+#define LEONOS_NET_STATUS_BAD_ARGUMENT RELIEFOS_NET_STATUS_BAD_ARGUMENT
+#define LEONOS_NET_STATUS_DHCP_FAILED RELIEFOS_NET_STATUS_DHCP_FAILED
+#define LEONOS_NET_STATUS_DHCP_TIMEOUT RELIEFOS_NET_STATUS_DHCP_TIMEOUT
+#define LEONOS_NET_STATUS_DNS_FAILED RELIEFOS_NET_STATUS_DNS_FAILED
+#define LEONOS_NET_STATUS_DNS_NO_ANSWER RELIEFOS_NET_STATUS_DNS_NO_ANSWER
+#define LEONOS_NET_STATUS_DNS_TIMEOUT RELIEFOS_NET_STATUS_DNS_TIMEOUT
+#define LEONOS_NET_STATUS_ECHO_TIMEOUT RELIEFOS_NET_STATUS_ECHO_TIMEOUT
+#define LEONOS_NET_STATUS_HTTP_FAILED RELIEFOS_NET_STATUS_HTTP_FAILED
+#define LEONOS_NET_STATUS_HTTP_TOO_LARGE RELIEFOS_NET_STATUS_HTTP_TOO_LARGE
+#define LEONOS_NET_STATUS_NO_ADDRESS RELIEFOS_NET_STATUS_NO_ADDRESS
+#define LEONOS_NET_STATUS_NO_DEVICE RELIEFOS_NET_STATUS_NO_DEVICE
+#define LEONOS_NET_STATUS_NTP_INVALID RELIEFOS_NET_STATUS_NTP_INVALID
+#define LEONOS_NET_STATUS_NTP_TIMEOUT RELIEFOS_NET_STATUS_NTP_TIMEOUT
+#define LEONOS_NET_STATUS_OK RELIEFOS_NET_STATUS_OK
+#define LEONOS_NET_STATUS_PROTOCOL_UNSUPPORTED RELIEFOS_NET_STATUS_PROTOCOL_UNSUPPORTED
+#define LEONOS_NET_STATUS_SOCKET_BAD_HANDLE RELIEFOS_NET_STATUS_SOCKET_BAD_HANDLE
+#define LEONOS_NET_STATUS_SOCKET_CLOSED RELIEFOS_NET_STATUS_SOCKET_CLOSED
+#define LEONOS_NET_STATUS_SOCKET_LIMIT RELIEFOS_NET_STATUS_SOCKET_LIMIT
+#define LEONOS_NET_STATUS_SOCKET_NOT_CONNECTED RELIEFOS_NET_STATUS_SOCKET_NOT_CONNECTED
+#define LEONOS_NET_STATUS_TCP_FAILED RELIEFOS_NET_STATUS_TCP_FAILED
+#define LEONOS_NET_STATUS_TCP_RESET RELIEFOS_NET_STATUS_TCP_RESET
+#define LEONOS_NET_STATUS_TCP_TIMEOUT RELIEFOS_NET_STATUS_TCP_TIMEOUT
+#define LEONOS_NET_STATUS_TLS_FAILED RELIEFOS_NET_STATUS_TLS_FAILED
+#define LEONOS_NET_STATUS_TX_FAILED RELIEFOS_NET_STATUS_TX_FAILED
+#define LEONOS_NET_TCP_CLOSED RELIEFOS_NET_TCP_CLOSED
+#define LEONOS_NET_TCP_ESTABLISHED RELIEFOS_NET_TCP_ESTABLISHED
+#define LEONOS_NET_TCP_SYN_SENT RELIEFOS_NET_TCP_SYN_SENT
+#define LEONOS_NET_TCP_TIME_WAIT RELIEFOS_NET_TCP_TIME_WAIT
+#define LEONOS_O_ACCMODE RELIEFOS_O_ACCMODE
+#define LEONOS_O_APPEND RELIEFOS_O_APPEND
+#define LEONOS_O_CLOEXEC RELIEFOS_O_CLOEXEC
+#define LEONOS_O_CREAT RELIEFOS_O_CREAT
+#define LEONOS_O_DIRECTORY RELIEFOS_O_DIRECTORY
+#define LEONOS_O_EXCL RELIEFOS_O_EXCL
+#define LEONOS_O_NOFOLLOW RELIEFOS_O_NOFOLLOW
+#define LEONOS_O_NONBLOCK RELIEFOS_O_NONBLOCK
+#define LEONOS_O_RDONLY RELIEFOS_O_RDONLY
+#define LEONOS_O_RDWR RELIEFOS_O_RDWR
+#define LEONOS_O_TRUNC RELIEFOS_O_TRUNC
+#define LEONOS_O_WRONLY RELIEFOS_O_WRONLY
+#define LEONOS_SEEK_CUR RELIEFOS_SEEK_CUR
+#define LEONOS_SEEK_END RELIEFOS_SEEK_END
+#define LEONOS_SEEK_SET RELIEFOS_SEEK_SET
+#define LEONOS_UAPI_FS_ABI_H RELIEFOS_UAPI_FS_ABI_H
+#define LEONOS_UAPI_NET_ABI_H RELIEFOS_UAPI_NET_ABI_H
+#define leonos_dir_entry reliefos_dir_entry
+#define leonos_dir_list reliefos_dir_list
+#define leonos_fs_acl reliefos_fs_acl
+#define leonos_fs_acl_ace reliefos_fs_acl_ace
+#define leonos_fs_acl_get reliefos_fs_acl_get
+#define leonos_fs_acl_repair reliefos_fs_acl_repair
+#define leonos_fs_acl_set reliefos_fs_acl_set
+#define leonos_fs_acl_take_ownership reliefos_fs_acl_take_ownership
+#define leonos_fstat_legacy reliefos_fstat_legacy
+#define leonos_http_download reliefos_http_download
+#define leonos_http_download_progress_fn reliefos_http_download_progress_fn
+#define leonos_http_get reliefos_http_get
+#define leonos_http_request reliefos_http_request
+#define leonos_http_resolve_url reliefos_http_resolve_url
+#define leonos_http_response reliefos_http_response
+#define leonos_list_dir reliefos_list_dir
+#define leonos_net_config reliefos_net_config
+#define leonos_net_connection_info reliefos_net_connection_info
+#define leonos_net_connection_list reliefos_net_connection_list
+#define leonos_net_connections reliefos_net_connections
+#define leonos_net_dhcp reliefos_net_dhcp
+#define leonos_net_dhcp_renew reliefos_net_dhcp_renew
+#define leonos_net_dns reliefos_net_dns
+#define leonos_net_dns_policy reliefos_net_dns_policy
+#define leonos_net_dns_resolve reliefos_net_dns_resolve
+#define leonos_net_get_dns_policy reliefos_net_get_dns_policy
+#define leonos_net_http_get reliefos_net_http_get
+#define leonos_net_ping reliefos_net_ping
+#define leonos_net_set_dns_policy reliefos_net_set_dns_policy
+#define leonos_net_socket_close reliefos_net_socket_close
+#define leonos_net_socket_connect reliefos_net_socket_connect
+#define leonos_net_socket_io reliefos_net_socket_io
+#define leonos_net_socket_open reliefos_net_socket_open
+#define leonos_readdir reliefos_readdir
+#define leonos_socket_close reliefos_socket_close
+#define leonos_socket_connect reliefos_socket_connect
+#define leonos_socket_recv reliefos_socket_recv
+#define leonos_socket_send reliefos_socket_send
+#define leonos_socket_tcp reliefos_socket_tcp
+#define leonos_stat reliefos_stat
+#define leonos_stat_legacy reliefos_stat_legacy
+#endif /* LEONOS_HTTP_H */

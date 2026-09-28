@@ -2,9 +2,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
-#include <leonos/pam_session.h>
-#include <leonos/ui.h>
-#include <leonos/rootfs.h>
+#include <reliefos/pam_session.h>
+#include <reliefos/ui.h>
+#include <reliefos/rootfs.h>
 #include <pwd.h>
 #include <security/pam_appl.h>
 #include <signal.h>
@@ -19,8 +19,8 @@
 #include "../../auth/account_store.h"
 #include "../../auth/standard_accounts.h"
 
-#define SESSION "/run/leonos/session-user"
-#define STATE "/run/leonos/session-state"
+#define SESSION "/run/reliefos/session-user"
+#define STATE "/run/reliefos/session-state"
 struct session_state {
     uint32_t version, uid, mask, resources;
     uint32_t gid, group_count;
@@ -57,7 +57,7 @@ static int trusted_open(const char *path)
     return fd;
 }
 
-int leonos_session_current(struct leonos_user_info *user)
+int reliefos_session_current(struct reliefos_user_info *user)
 {
     int fd = trusted_open(SESSION);
     if (fd < 0) return -1;
@@ -74,14 +74,14 @@ int leonos_session_current(struct leonos_user_info *user)
     errno = 0;
     unsigned long uid = strtoul(text, &end, 10);
     if (size <= 0 || errno || end == text || *end != '\n' || uid >= UINT32_MAX) { errno = EIO; return -1; }
-    if (leonos_account_info(getpwuid((uid_t)uid), user) < 0) return -1;
-    if (user->flags & LEONOS_AUTH_USER_DISABLED) { errno = EACCES; return -1; }
+    if (reliefos_account_info(getpwuid((uid_t)uid), user) < 0) return -1;
+    if (user->flags & RELIEFOS_AUTH_USER_DISABLED) { errno = EACCES; return -1; }
     return 0;
 }
 
 static int session_mutex(void)
 {
-    int fd = open("/run/leonos/.session-lock", O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0600);
+    int fd = open("/run/reliefos/.session-lock", O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0600);
     if (fd < 0) return -1;
     struct stat st;
     if (fstat(fd, &st) < 0 || st.st_uid || !S_ISREG(st.st_mode) || st.st_mode & 0077) {
@@ -91,16 +91,16 @@ static int session_mutex(void)
     return fd;
 }
 
-int leonos_session_initialize(void)
+int reliefos_session_initialize(void)
 {
     if (geteuid() != 0) { errno = EPERM; return -1; }
-    if (leonos_account_legacy_check("") < 0) {
+    if (reliefos_account_legacy_check("") < 0) {
         fputs("Legacy AUS2 accounts require controlled recovery; refusing to reset them.\n", stderr);
         return -1;
     }
     int fd = open("/etc", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
     if (fd < 0) return -1;
-    int result = leonos_account_store_recover(fd), error = errno;
+    int result = reliefos_account_store_recover(fd), error = errno;
     close(fd);
     if (result < 0) { errno = error; return -1; }
     fd = session_mutex();
@@ -112,7 +112,7 @@ int leonos_session_initialize(void)
     return result;
 }
 
-int leonos_auth_logout(void)
+int reliefos_auth_logout(void)
 {
     if (geteuid() != 0) { errno = EPERM; return -1; }
     return unlink(SESSION) == 0 || errno == ENOENT ? 0 : -1;
@@ -137,7 +137,7 @@ static int conversation(int count, const struct pam_message **messages,
                 explicit_bzero(context->secret, strlen(context->secret));
                 free(context->secret); context->secret = NULL;
             } else {
-                int result = leonos_ui_show_password_dialog("Authentication", messages[i]->msg, answer, sizeof(answer));
+                int result = reliefos_ui_show_password_dialog("Authentication", messages[i]->msg, answer, sizeof(answer));
                 if (result != 1) {
                     context->cancelled = result == 0;
                     goto failed;
@@ -145,14 +145,14 @@ static int conversation(int count, const struct pam_message **messages,
                 responses[i].resp = strdup(answer);
             }
         } else if (style == PAM_PROMPT_ECHO_ON) {
-            int result = leonos_ui_show_input_dialog("Authentication", messages[i]->msg, answer, sizeof(answer));
+            int result = reliefos_ui_show_input_dialog("Authentication", messages[i]->msg, answer, sizeof(answer));
             if (result != 1) {
                 context->cancelled = result == 0;
                 goto failed;
             }
             responses[i].resp = strdup(answer);
         } else if (style == PAM_ERROR_MSG || style == PAM_TEXT_INFO) {
-            leonos_ui_show_message_box("Authentication", messages[i]->msg, "OK");
+            reliefos_ui_show_message_box("Authentication", messages[i]->msg, "OK");
         } else goto failed;
         explicit_bzero(answer, sizeof(answer));
         if ((style == PAM_PROMPT_ECHO_ON || style == PAM_PROMPT_ECHO_OFF) && !responses[i].resp) goto failed;
@@ -168,9 +168,9 @@ failed:
     return PAM_CONV_ERR;
 }
 
-static int publish(pam_handle_t *pam, const struct leonos_user_info *user)
+static int publish(pam_handle_t *pam, const struct reliefos_user_info *user)
 {
-    char temporary[] = "/run/leonos/.session-state.XXXXXX";
+    char temporary[] = "/run/reliefos/.session-state.XXXXXX";
     int fd = mkstemp(temporary);
     if (fd < 0) return -1;
     struct session_state state = {.version = 2, .uid = user->uid};
@@ -203,7 +203,7 @@ static int publish(pam_handle_t *pam, const struct leonos_user_info *user)
     }
     uint32_t end = 0;
     if (full_io(fd, &end, sizeof(end), 1) < 0 || fsync(fd) < 0 || rename(temporary, STATE) < 0) goto out;
-    char identity[] = "/run/leonos/.session-user.XXXXXX";
+    char identity[] = "/run/reliefos/.session-user.XXXXXX";
     int marker = mkstemp(identity);
     if (marker < 0) goto out;
     char *text = NULL;
@@ -225,10 +225,10 @@ out:;
     return result;
 }
 
-int leonos_session_apply(void)
+int reliefos_session_apply(void)
 {
-    struct leonos_user_info user;
-    if (leonos_session_current(&user) < 0) return -1;
+    struct reliefos_user_info user;
+    if (reliefos_session_current(&user) < 0) return -1;
     int fd = trusted_open(STATE);
     if (fd < 0) return -1;
     struct session_state state;
@@ -261,7 +261,7 @@ int leonos_session_apply(void)
     if (!account) goto out;
     if (setenv("HOME", account->pw_dir, 1) < 0 || setenv("USER", account->pw_name, 1) < 0 ||
         setenv("LOGNAME", account->pw_name, 1) < 0 || setenv("SHELL", account->pw_shell, 1) < 0 ||
-        (!getenv("PATH") && setenv("PATH", LEONOS_DEFAULT_PATH, 1) < 0) ||
+        (!getenv("PATH") && setenv("PATH", RELIEFOS_DEFAULT_PATH, 1) < 0) ||
         account->pw_gid != state.gid || setgroups(state.group_count, groups) < 0 || setgid(state.gid) < 0 ||
         setuid(account->pw_uid) < 0 || chdir(account->pw_dir) < 0) goto out;
     result = 0;
@@ -309,7 +309,7 @@ static int restore_runtime(const struct runtime_snapshot *state)
     return setgroups((size_t)state->count, state->groups);
 }
 
-int leonos_pam_login(const char *name, char *password, struct leonos_user_info *user)
+int reliefos_pam_login(const char *name, char *password, struct reliefos_user_info *user)
 {
     if (geteuid() != 0 || getuid() != 0) { errno = EPERM; return -1; }
     if (!name || !password || !user) { errno = EINVAL; return -1; }
@@ -326,8 +326,8 @@ int leonos_pam_login(const char *name, char *password, struct leonos_user_info *
     pam_handle_t *pam = NULL;
     int cred = 0, session = 0;
     const char *stage = "start";
-    int code = pam_start("leonos-gui", name, &conv, &pam);
-    if (code == PAM_SUCCESS) code = pam_set_item(pam, PAM_TTY, "leonos-gui");
+    int code = pam_start("reliefos-gui", name, &conv, &pam);
+    if (code == PAM_SUCCESS) code = pam_set_item(pam, PAM_TTY, "reliefos-gui");
     if (code == PAM_SUCCESS) { stage = "authenticate"; code = pam_authenticate(pam, PAM_DISALLOW_NULL_AUTHTOK); }
     if (code == PAM_SUCCESS) { fprintf(stderr, "[pam-login] authentication accepted\n"); stage = "account"; code = pam_acct_mgmt(pam, 0); }
     if (code == PAM_NEW_AUTHTOK_REQD) {
@@ -337,7 +337,7 @@ int leonos_pam_login(const char *name, char *password, struct leonos_user_info *
     }
     const void *canonical = NULL;
     if (code == PAM_SUCCESS) code = pam_get_item(pam, PAM_USER, &canonical);
-    if (code == PAM_SUCCESS && (!canonical || leonos_account_info(getpwnam(canonical), user) < 0)) code = PAM_USER_UNKNOWN;
+    if (code == PAM_SUCCESS && (!canonical || reliefos_account_info(getpwnam(canonical), user) < 0)) code = PAM_USER_UNKNOWN;
     if (code == PAM_SUCCESS) {
         stage = "groups";
         fprintf(stderr, "[pam-login] applying groups\n");
@@ -380,7 +380,7 @@ int leonos_pam_login(const char *name, char *password, struct leonos_user_info *
     return -1;
 }
 
-int leonos_pam_session_wait(void)
+int reliefos_pam_session_wait(void)
 {
     if (!login_pam) { errno = EINVAL; return -1; }
     struct sigaction action = {.sa_handler = session_signal};
@@ -401,3 +401,10 @@ int leonos_pam_session_wait(void)
     close(session_lock); session_lock = -1;
     return status == PAM_SUCCESS && deleted == PAM_SUCCESS ? 0 : -1;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_auth_logout) leonos_auth_logout __attribute__((alias("reliefos_auth_logout")));
+extern __typeof__(reliefos_pam_login) leonos_pam_login __attribute__((alias("reliefos_pam_login")));
+extern __typeof__(reliefos_pam_session_wait) leonos_pam_session_wait __attribute__((alias("reliefos_pam_session_wait")));
+extern __typeof__(reliefos_session_apply) leonos_session_apply __attribute__((alias("reliefos_session_apply")));
+extern __typeof__(reliefos_session_current) leonos_session_current __attribute__((alias("reliefos_session_current")));
+extern __typeof__(reliefos_session_initialize) leonos_session_initialize __attribute__((alias("reliefos_session_initialize")));

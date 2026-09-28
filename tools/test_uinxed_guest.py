@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build an existing Uinxed checkout with Alpine GCC inside LeonOS/QEMU.
+"""Build an existing Uinxed checkout with Alpine GCC inside ReliefOS/QEMU.
 
 Requires the current kernel, build/apk/root, and an Alpine runtime root with
 gcc, binutils, make and curl (build/alpine-runtime/root by default).
@@ -88,7 +88,7 @@ def main():
             f'if (!result) result = system({json.dumps(upload)});\n'
             'printf("[apk-probe] DONE failures=%d status=%d\\n", result != 0, result);\n'
             'return result != 0;\n}\n', encoding="ascii")
-        compiler = ROOT / "build/musl/sdk/bin/leonos-musl-cc"
+        compiler = ROOT / "build/musl/sdk/bin/reliefos-musl-cc"
         for input_file, output in ((probe, work / "probe.elf"),
                 (ROOT / "tools/tests/pselect_runtime_probe.c", work / "pselect-probe")):
             subprocess.run([str(compiler), "-static", "-O2", str(input_file), "-o", str(output)], check=True)
@@ -97,7 +97,7 @@ def main():
             make_live_tree(args.runtime_root.resolve(), stage)
             subprocess.run(["cp", "-a", "--remove-destination",
                             str(ROOT / "build/apk/root") + "/.", str(stage)], check=True)
-            tests = stage / "usr/lib/leonos/tests"
+            tests = stage / "usr/lib/reliefos/tests"
             tests.mkdir(parents=True, exist_ok=True)
             shutil.copy2(work / "probe.elf", tests / "linux-inventory.elf")
             shutil.copy2(work / "pselect-probe", stage / "tmp/pselect-probe")
@@ -107,7 +107,7 @@ def main():
         iso.GRUB_TEMPLATE = iso.GRUB_TEMPLATE.replace(
             "autospawn=ioctlcloexec autospawn=python315", "autospawn=inventory").replace(
             "syscall-trace=/opt/python/", "").replace("set timeout=5", "set timeout=0")
-        iso.build_iso(work / "root.ext2", work / "leonos4-apk.iso", work / "grub.cfg", work)
+        iso.build_iso(work / "root.ext2", work / "reliefos-apk.iso", work / "grub.cfg", work)
         runner.WORK = work
         runner.guest(args.timeout)
         if not received.is_set():
@@ -124,7 +124,7 @@ def main():
             raise RuntimeError("Guest did not report build time")
         (work / "result.json").write_text(json.dumps({
             "source_commit": commit, "sha256": digest, "size": artifact.stat().st_size,
-            "command": "make -j2 UxImage", "platform": "LeonOS QEMU/KVM, 2 vCPUs",
+            "command": "make -j2 UxImage", "platform": "ReliefOS QEMU/KVM, 2 vCPUs",
             "build_seconds": float(timing.group(1)),
             "kernel_sha256": hashlib.sha256((work / "iso/leonos/kernel.sys").read_bytes()).hexdigest(),
         }, indent=2) + "\n")

@@ -129,7 +129,7 @@ Before copying util-linux, staging checks every required command and library
 against the package root. A missing library or a link escaping that root fails
 before copying; an old staging library cannot satisfy the check.
 
-Upstream BusyBox power commands normally signal PID 1. LeonOS init blocks and
+Upstream BusyBox power commands normally signal PID 1. ReliefOS init blocks and
 synchronously receives SIGUSR1 (halt), SIGUSR2 (poweroff) and SIGTERM (reboot),
 calls sync and the real reboot interface, and stays alive if that call fails.
 It also waits for SIGCHLD and reaps exited children. This preserves unmodified
@@ -138,7 +138,8 @@ This is not a service shutdown supervisor: orderly termination of every service
 before power transition remains unimplemented.
 
 The boot copier validates its input files and destination directory, then copies
-`EFI/BOOT/BOOTX64.EFI`, `loader.elf`, `leonos/kernel.sys`
+`EFI/BOOT/BOOTX64.EFI`, `loader.elf`, `reliefos/kernel.sys`,
+and the legacy `leonos/kernel.sys` rollback payload
 and the complete `grub` directory. Default source is `/install/esp`; `--source DIR`
 supports an explicit prebuilt payload. It does not generate GRUB, format/mount an
 ESP, install boot sectors, or update NVRAM. The supplied destination must already

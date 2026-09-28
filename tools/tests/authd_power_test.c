@@ -19,10 +19,10 @@ int reboot(int cmd)
     errno = EIO;
     return -1;
 }
-int leonos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
+int reliefos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
 {
-    assert(fd == 10 && type == LEONOS_AUTHD_MSG_ACK && length == sizeof(struct leonos_authd_ack));
-    reply_code = ((const struct leonos_authd_ack *)payload)->code;
+    assert(fd == 10 && type == RELIEFOS_AUTHD_MSG_ACK && length == sizeof(struct reliefos_authd_ack));
+    reply_code = ((const struct reliefos_authd_ack *)payload)->code;
     return 0;
 }
 
@@ -32,14 +32,14 @@ int main(void)
     session_active = 1;
     user_count = 1;
     users[0].user.uid = 1000;
-    struct leonos_authd_power request = {.command = RB_AUTOBOOT};
+    struct reliefos_authd_power request = {.command = RB_AUTOBOOT};
     authd_handle_power(0, (const uint8_t *)&request, sizeof(request));
     assert(reply_code == -EPERM && !power_calls && !sync_calls);
     current_uid = 1001;
     authd_handle_power(0, (const uint8_t *)&request, sizeof(request));
     assert(reply_code == -EPERM && !power_calls);
     current_uid = 1000;
-    users[0].user.flags = LEONOS_AUTH_USER_DISABLED;
+    users[0].user.flags = RELIEFOS_AUTH_USER_DISABLED;
     authd_handle_power(0, (const uint8_t *)&request, sizeof(request));
     assert(reply_code == -EPERM && !power_calls);
     users[0].user.flags = 0;

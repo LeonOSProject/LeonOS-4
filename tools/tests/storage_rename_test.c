@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_internal.h"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_internal.h"
 
 static FILE *disk;
 static struct task *writer;
-int time_wall_clock(struct leonos_time_info *value)
+int time_wall_clock(struct reliefos_time_info *value)
 { value->unix_seconds = 1800000000; return 0; }
 uint64_t mm_alloc_page(void) { return (uintptr_t)aligned_alloc(4096, 4096); }
 void mm_free_page(uint64_t p) { free((void *)(uintptr_t)p); }
@@ -77,9 +77,9 @@ static int storage_select_node_volume(const struct storage_node *node, struct st
 { *previous = g_active_volume; return node->volume_id == g_storage.volume_id ? 0 : -2; }
 static void storage_restore_volume(struct storage_volume *previous) { g_active_volume = previous; }
 
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_ext2_cache.c"
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_inode.c"
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_ext2.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext2_cache.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_inode.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext2.c"
 
 static void test_held_inode(void)
 {
@@ -153,7 +153,7 @@ static void test_symlinks(void)
         target[length] = 0;
         assert(ext2_symlink(target, "/link") == 0);
         assert(ext2_symlink("other", "/link") == -17);
-        assert(ext2_lookup_path("/link", &node) == 0 && node.type == LEONOS_FS_TYPE_SYMLINK);
+        assert(ext2_lookup_path("/link", &node) == 0 && node.type == RELIEFOS_FS_TYPE_SYMLINK);
         assert(ext2_read_inode(node.first_cluster, &inode) == 0);
         assert(inode.mode == 0120777 && inode.size_lo == length);
         assert(inode.blocks_512 == (length < 60 ? 0 : g_storage.ext2_block_size / 512));
@@ -228,16 +228,16 @@ int main(int argc, char **argv)
     assert(ext2_unlink("/right/child") == 0);
     assert(ext2_rename("/left", "/right") == 0);
     assert(ext2_lookup_path("/left", &source) == -2);
-    assert(ext2_lookup_path("/right", &target) == 0 && target.type == LEONOS_FS_TYPE_DIR);
+    assert(ext2_lookup_path("/right", &target) == 0 && target.type == RELIEFOS_FS_TYPE_DIR);
     assert(ext2_write_file("/socket", "", 0) == 0);
     assert(ext2_lookup_path("/socket", &source) == 0);
     assert(ext2_mark_special("/socket", &source, LINUX_S_IFSOCK) == 0);
-    assert(ext2_lookup_path("/socket", &source) == 0 && source.type == LEONOS_FS_TYPE_SOCKET);
+    assert(ext2_lookup_path("/socket", &source) == 0 && source.type == RELIEFOS_FS_TYPE_SOCKET);
     assert(ext2_write_file("/replaced", "old", 3) == 0);
     assert(ext2_rename("/socket", "/replaced") == 0);
-    assert(ext2_lookup_path("/replaced", &target) == 0 && target.type == LEONOS_FS_TYPE_SOCKET);
+    assert(ext2_lookup_path("/replaced", &target) == 0 && target.type == RELIEFOS_FS_TYPE_SOCKET);
     assert(ext2_rename("/replaced", "/socket-persisted") == 0);
-    assert(ext2_lookup_path("/socket-persisted", &target) == 0 && target.type == LEONOS_FS_TYPE_SOCKET);
+    assert(ext2_lookup_path("/socket-persisted", &target) == 0 && target.type == RELIEFOS_FS_TYPE_SOCKET);
     assert(ext2_write_file("/deleted-socket", "", 0) == 0);
     assert(ext2_lookup_path("/deleted-socket", &source) == 0);
     assert(ext2_mark_special("/deleted-socket", &source, LINUX_S_IFSOCK) == 0 && ext2_unlink("/deleted-socket") == 0);

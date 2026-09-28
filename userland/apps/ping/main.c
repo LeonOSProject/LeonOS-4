@@ -1,12 +1,12 @@
-#include <leonos/gui.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/net_service.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/net_service.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 
 #define PING_W 500
 #define PING_H 238
@@ -18,7 +18,7 @@ static char input_ip[PING_INPUT_LEN] = "10.0.2.2";
 static char status_text[128] = "Ready";
 static char result_text[160] = "Press Ping to send one ICMP Echo request.";
 static char detail_text[160] = "Network configuration not loaded.";
-static struct leonos_ui_edit_state input_edit;
+static struct reliefos_ui_edit_state input_edit;
 
 static void copy_text(char *dst, uint32_t cap, const char *src)
 {
@@ -225,19 +225,19 @@ static void run_ping(void)
     }
 }
 
-static void draw_ping(struct leonos_ui_surface *ui)
+static void draw_ping(struct reliefos_ui_surface *ui)
 {
-    leonos_ui_rect(ui, 0, 0, PING_W, PING_H, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 20, 18, T("Target IPv4:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_edit_state_draw(ui, 116, 14, 236, &input_edit, 0);
-    leonos_ui_button(ui, 370, 14, 92, LEONOS_UI_BUTTON_H, T("Ping"), 0);
-    leonos_ui_text(ui, 20, 58, T("Network:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_text_clipped(ui, 96, 58, PING_W - 120, detail_text, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 20, 94, T("Result:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_text_clipped(ui, 96, 94, PING_W - 120, result_text, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 20, 126, T("Mode:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 96, 126, T("ARP + IPv4 + ICMP Echo over Intel e1000"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_statusbar(ui, PING_H - 28, 28, status_text);
+    reliefos_ui_rect(ui, 0, 0, PING_W, PING_H, RELIEFOS_UI_GRAY);
+    reliefos_ui_text(ui, 20, 18, T("Target IPv4:"), RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_edit_state_draw(ui, 116, 14, 236, &input_edit, 0);
+    reliefos_ui_button(ui, 370, 14, 92, RELIEFOS_UI_BUTTON_H, T("Ping"), 0);
+    reliefos_ui_text(ui, 20, 58, T("Network:"), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text_clipped(ui, 96, 58, PING_W - 120, detail_text, RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 20, 94, T("Result:"), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text_clipped(ui, 96, 94, PING_W - 120, result_text, RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 20, 126, T("Mode:"), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 96, 126, T("ARP + IPv4 + ICMP Echo over Intel e1000"), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_statusbar(ui, PING_H - 28, 28, status_text);
 }
 
 static int hit_rect(int32_t px, int32_t py, int32_t x, int32_t y,
@@ -250,10 +250,10 @@ static int hit_rect(int32_t px, int32_t py, int32_t x, int32_t y,
 int main(int argc, char **argv, char **envp)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
     (void)envp;
 
@@ -261,57 +261,57 @@ int main(int argc, char **argv, char **envp)
     if (argc > 1 && argv && argv[1] && argv[1][0]) {
         copy_text(input_ip, sizeof(input_ip), argv[1]);
     }
-    window_id = leonos_gui_create_app_window_ex(T("Ping"),
+    window_id = reliefos_gui_create_app_window_ex(T("Ping"),
                                                 T("ICMP Echo test"),
                                                 PING_W, PING_H,
-                                                LEONOS_GUI_WINDOW_NO_RESIZE);
+                                                RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[ping.elf] create window failed=%d\n", window_id);
         return 1;
     }
-    leonos_ui_bind(&ui, pixels, PING_W, PING_H, PING_W);
-    leonos_ui_edit_state_init(&input_edit, input_ip, sizeof(input_ip));
+    reliefos_ui_bind(&ui, pixels, PING_W, PING_H, PING_W);
+    reliefos_ui_edit_state_init(&input_edit, input_ip, sizeof(input_ip));
     input_edit.focused = 1;
     refresh_detail();
     draw_ping(&ui);
-    leonos_gui_present_window((uint32_t)window_id, PING_W, PING_H, PING_W, pixels);
+    reliefos_gui_present_window((uint32_t)window_id, PING_W, PING_H, PING_W, pixels);
 
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        while (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        while (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON) {
-                if (leonos_ui_edit_state_handle_mouse(&input_edit, event.x, event.y,
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON) {
+                if (reliefos_ui_edit_state_handle_mouse(&input_edit, event.x, event.y,
                                                       116, 14, 236, event.buttons)) {
                     draw_ping(&ui);
-                    leonos_gui_present_window((uint32_t)window_id, PING_W, PING_H, PING_W, pixels);
+                    reliefos_gui_present_window((uint32_t)window_id, PING_W, PING_H, PING_W, pixels);
                 }
                 if ((event.buttons & 1u) &&
-                    hit_rect(event.x, event.y, 370, 14, 92, LEONOS_UI_BUTTON_H)) {
+                    hit_rect(event.x, event.y, 370, 14, 92, RELIEFOS_UI_BUTTON_H)) {
                     run_ping();
                     draw_ping(&ui);
-                    leonos_gui_present_window((uint32_t)window_id, PING_W, PING_H, PING_W, pixels);
+                    reliefos_gui_present_window((uint32_t)window_id, PING_W, PING_H, PING_W, pixels);
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN ||
-                event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN ||
+                event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
                 if (event.pressed && event.keycode == 1) {
                     return 0;
                 }
-                if (event.pressed && event.keycode == LEONOS_KEY_ENTER) {
+                if (event.pressed && event.keycode == RELIEFOS_KEY_ENTER) {
                     run_ping();
-                } else if (!leonos_ui_edit_state_handle_key(&input_edit, event.keycode, event.pressed)) {
+                } else if (!reliefos_ui_edit_state_handle_key(&input_edit, event.keycode, event.pressed)) {
                     continue;
                 }
                 draw_ping(&ui);
-                leonos_gui_present_window((uint32_t)window_id, PING_W, PING_H, PING_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, PING_W, PING_H, PING_W, pixels);
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_FOCUS ||
-                event.type == LEONOS_GUI_APP_EVENT_RESIZE) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_FOCUS ||
+                event.type == RELIEFOS_GUI_APP_EVENT_RESIZE) {
                 draw_ping(&ui);
-                leonos_gui_present_window((uint32_t)window_id, PING_W, PING_H, PING_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, PING_W, PING_H, PING_W, pixels);
             }
         }
         sleep_ms(10);

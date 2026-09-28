@@ -71,7 +71,7 @@ static void command(const char *label, int success, ...)
           ((WEXITSTATUS(status) == 0) == success), label);
 }
 #define APK "/sbin/apk", "--repositories-file", "/dev/null"
-#define FIXTURE "/usr/lib/leonos/tests/apk"
+#define FIXTURE "/usr/lib/reliefos/tests/apk"
 static int configure_proxy(void)
 {
     int fd = open(FIXTURE "/proxy", O_RDONLY);
@@ -143,7 +143,7 @@ int main(void)
     command("HyFetch help", 1, "/usr/bin/hyfetch", "--help", NULL);
     check(contains("/tmp/apk-command.log", "Usage:"), "HyFetch help output");
     command("custom Fastfetch retained", 1, APK, "info", "--who-owns", "/usr/bin/fastfetch", NULL);
-    check(contains("/tmp/apk-command.log", "leonos-fastfetch-"), "custom Fastfetch still owns executable");
+    check(contains("/tmp/apk-command.log", "reliefos-fastfetch-"), "custom Fastfetch still owns executable");
     command("remove HyFetch", 1, "/sbin/apk", "--no-network", "del", "hyfetch", NULL);
     check(!contains("/etc/shells", "/bin/bash\n"), "Bash pre-deinstall removed shell");
     printf("[apk-probe] DONE failures=%u\n", failures);
@@ -155,11 +155,11 @@ int main(void)
 #endif
     command("version", 1, APK, "--version", NULL);
     command("file owner", 1, APK, "info", "--who-owns", "/usr/bin/fastfetch", NULL);
-    check(contains("/tmp/apk-command.log", "leonos-fastfetch-"), "real Fastfetch owner");
+    check(contains("/tmp/apk-command.log", "reliefos-fastfetch-"), "real Fastfetch owner");
     command("local signed index", 1, APK, "--repository",
-            "/usr/share/leonos/apk/repository/packages.adb", "update", NULL);
+            "/usr/share/reliefos/apk/repository/packages.adb", "update", NULL);
     command("signed install with scripts", 1, APK, "--repository", FIXTURE "/v1/packages.adb",
-            "add", "leonos-apk-probe", NULL);
+            "add", "reliefos-apk-probe", NULL);
     check(contains("/usr/share/apk-probe/value", "version one"), "extracted payload");
     check(contains("/tmp/apk-post-install", "post-install"), "post-install script ran");
     check(contains("/tmp/apk-trigger", "trigger"), "trigger script ran");
@@ -170,11 +170,11 @@ int main(void)
     check(fd >= 0 && write(fd, "administrator\n", 14) == 14, "edit configuration");
     if (fd >= 0) close(fd);
     command("signed upgrade", 1, APK, "--repository", FIXTURE "/v2/packages.adb",
-            "upgrade", "leonos-apk-probe", NULL);
+            "upgrade", "reliefos-apk-probe", NULL);
     check(contains("/usr/share/apk-probe/value", "version two"), "upgraded payload");
     check(contains("/etc/apk-probe.conf", "administrator") &&
           contains("/etc/apk-probe.conf.apk-new", "new default"), "preserved edited configuration");
-    command("remove", 1, APK, "del", "leonos-apk-probe", NULL);
+    command("remove", 1, APK, "del", "reliefos-apk-probe", NULL);
     check(access("/usr/share/apk-probe/value", F_OK) < 0, "removed owned file");
     command("Fastfetch conflict", 0, APK, "--repository", FIXTURE "/conflict/packages.adb",
             "add", "fastfetch", NULL);
@@ -182,7 +182,7 @@ int main(void)
     command("unsigned rejection", 0, APK, "--cache-dir", "/var/cache/apk", "add", FIXTURE "/unsigned.apk", NULL);
     check(contains("/tmp/apk-command.log", "UNTRUSTED"), "signature verification is active");
     command("Alpine zlib install", 1, APK, "--cache-dir", "/var/cache/apk", "add", FIXTURE "/zlib.apk", NULL);
-    command("Alpine library execution", 1, "/usr/lib/leonos/tests/apk-zlib.elf", NULL);
+    command("Alpine library execution", 1, "/usr/lib/reliefos/tests/apk-zlib.elf", NULL);
     command("Alpine zlib removal", 1, APK, "del", "zlib", NULL);
     if (configure_proxy() < 0) return 1;
     command("HTTPS signed Alpine indexes", 1, "/sbin/apk", "--timeout", "20", "update", NULL);
@@ -215,13 +215,13 @@ int main(void)
     check(!contains("/tmp/apk-command.log", "fetch ") &&
           !contains("/tmp/apk-command.log", "WARNING") && !contains("/tmp/apk-command.log", "ERROR"),
           "fresh indexes are reused without network");
-    command("downloaded Alpine library execution", 1, "/usr/lib/leonos/tests/apk-zlib.elf", NULL);
+    command("downloaded Alpine library execution", 1, "/usr/lib/reliefos/tests/apk-zlib.elf", NULL);
     command("named Alpine removal", 1, APK, "del", "zlib", NULL);
     command("tagged Alpine Fastfetch conflict", 0, "/sbin/apk", "--timeout", "20", "add", "fastfetch@alpine", NULL);
     check(contains("/tmp/apk-command.log", "!fastfetch"), "tagged repository cannot replace custom Fastfetch");
-    if (access("/usr/lib/leonos/tests/apk-cache", F_OK) == 0) {
+    if (access("/usr/lib/reliefos/tests/apk-cache", F_OK) == 0) {
         command("populate test package cache", 1, "/bin/busybox", "sh", "-c",
-                "cp /usr/lib/leonos/tests/apk-cache/*.apk /var/cache/apk/", NULL);
+                "cp /usr/lib/reliefos/tests/apk-cache/*.apk /var/cache/apk/", NULL);
         command("Alpine GCC installation", 1, "/sbin/apk", "--cache-dir", "/var/cache/apk",
                 "--no-network", "add", "gcc", NULL);
     } else {

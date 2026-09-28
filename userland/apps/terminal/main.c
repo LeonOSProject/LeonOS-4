@@ -1,13 +1,13 @@
-#include <leonos/gui.h>
-#include <leonos/environment.h>
-#include <leonos/launch.h>
+#include <reliefos/gui.h>
+#include <reliefos/environment.h>
+#include <reliefos/launch.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 #include <pty.h>
 #include <errno.h>
 #include <stdio.h>
@@ -26,7 +26,7 @@
 #define TERMINAL_HISTORY_ROWS 160U
 #define TERMINAL_TAB_ADD_W 28U
 #define TERMINAL_BODY_X 0U
-#define TERMINAL_MAX_COLUMNS (TERMINAL_MAX_W / LEONOS_FONT_W)
+#define TERMINAL_MAX_COLUMNS (TERMINAL_MAX_W / RELIEFOS_FONT_W)
 #define TERMINAL_CSI_PARAM_CAP 12U
 #define TERMINAL_OSC_CAP 64U
 #define TERMINAL_DEFAULT_FOREGROUND 0x00d7e3f4U
@@ -119,7 +119,7 @@ struct terminal_session {
 
 static struct terminal_session sessions[TERMINAL_MAX_SESSIONS];
 static struct terminal_session *active_session;
-static struct leonos_ui_tab_state tabs_state;
+static struct reliefos_ui_tab_state tabs_state;
 static uint32_t terminal_view_width = TERMINAL_DEFAULT_W;
 static uint32_t terminal_view_height = TERMINAL_DEFAULT_H;
 static const char *const terminal_tab_labels[TERMINAL_MAX_SESSIONS] = {
@@ -159,7 +159,7 @@ static uint32_t terminal_visible_rows(void);
 static uint32_t terminal_columns(void);
 static void terminal_flush_utf8(void);
 static int terminal_write_input(const char *buffer, uint32_t length);
-static uint32_t terminal_tab_items(struct leonos_ui_tab_item *items);
+static uint32_t terminal_tab_items(struct reliefos_ui_tab_item *items);
 static int terminal_close_session(uint32_t id);
 
 static const uint32_t ansi_normal[8] = {
@@ -292,7 +292,7 @@ static void terminal_reset_line(struct terminal_line *line)
 
 static uint32_t terminal_columns(void)
 {
-    uint32_t columns = terminal_view_width / LEONOS_FONT_W;
+    uint32_t columns = terminal_view_width / RELIEFOS_FONT_W;
     if (columns == 0) {
         return 1;
     }
@@ -319,12 +319,12 @@ static void terminal_normalize_cursor(void)
 
 static uint32_t terminal_visible_rows(void)
 {
-    uint32_t body_y = leonos_ui_tab_height();
+    uint32_t body_y = reliefos_ui_tab_height();
     uint32_t rows;
     if (terminal_view_height <= body_y) {
         return 1;
     }
-    rows = (terminal_view_height - body_y) / LEONOS_FONT_H;
+    rows = (terminal_view_height - body_y) / RELIEFOS_FONT_H;
     return rows ? rows : 1;
 }
 
@@ -1071,7 +1071,7 @@ static void terminal_put_text(const char *text)
     }
 }
 
-static void terminal_draw_monospace_glyph(struct leonos_ui_surface *ui,
+static void terminal_draw_monospace_glyph(struct reliefos_ui_surface *ui,
                                           uint32_t x, uint32_t y,
                                           uint32_t codepoint, uint32_t width,
                                           uint32_t foreground,
@@ -1079,18 +1079,18 @@ static void terminal_draw_monospace_glyph(struct leonos_ui_surface *ui,
 {
     const uint8_t *glyph;
     if (!ui || !ui->pixels || codepoint > 0xffU || width != 1U ||
-        x + LEONOS_FONT_W > ui->width || y + LEONOS_FONT_H > ui->height) {
-        leonos_ui_codepoint(ui, x, y, codepoint, width, foreground, background);
+        x + RELIEFOS_FONT_W > ui->width || y + RELIEFOS_FONT_H > ui->height) {
+        reliefos_ui_codepoint(ui, x, y, codepoint, width, foreground, background);
         return;
     }
 
     /* The embedded PSF font is an 8x16 bitmap, so every terminal cell has
      * the same advance regardless of the active desktop UI theme. */
-    glyph = leonos_psf_glyph((char)codepoint);
-    for (uint32_t row = 0; row < LEONOS_FONT_H; ++row) {
+    glyph = reliefos_psf_glyph((char)codepoint);
+    for (uint32_t row = 0; row < RELIEFOS_FONT_H; ++row) {
         uint8_t bits = glyph[row];
         uint32_t *pixels_row = ui->pixels + (uint64_t)(y + row) * ui->stride + x;
-        for (uint32_t column = 0; column < LEONOS_FONT_W; ++column) {
+        for (uint32_t column = 0; column < RELIEFOS_FONT_W; ++column) {
             if (bits & (uint8_t)(0x80U >> column)) {
                 pixels_row[column] = foreground;
             }
@@ -1098,14 +1098,14 @@ static void terminal_draw_monospace_glyph(struct leonos_ui_surface *ui,
     }
 }
 
-static void terminal_draw_line(struct leonos_ui_surface *ui, uint32_t y,
+static void terminal_draw_line(struct reliefos_ui_surface *ui, uint32_t y,
                                const struct terminal_line *line)
 {
     uint32_t column;
     for (column = 0; column < terminal_columns(); ++column) {
         const struct terminal_cell *cell = &line->cells[column];
         uint32_t width = 1;
-        uint32_t x = TERMINAL_BODY_X + column * LEONOS_FONT_W;
+        uint32_t x = TERMINAL_BODY_X + column * RELIEFOS_FONT_W;
         if (cell->codepoint == TERMINAL_CELL_CONTINUATION) {
             continue;
         }
@@ -1113,7 +1113,7 @@ static void terminal_draw_line(struct leonos_ui_surface *ui, uint32_t y,
             line->cells[column + 1U].codepoint == TERMINAL_CELL_CONTINUATION) {
             width = 2;
         }
-        leonos_ui_rect(ui, x, y, width * LEONOS_FONT_W, LEONOS_FONT_H,
+        reliefos_ui_rect(ui, x, y, width * RELIEFOS_FONT_W, RELIEFOS_FONT_H,
                        cell->background);
         if (cell->codepoint) {
             terminal_draw_monospace_glyph(ui, x, y, cell->codepoint, width,
@@ -1122,9 +1122,9 @@ static void terminal_draw_line(struct leonos_ui_surface *ui, uint32_t y,
     }
 }
 
-static void terminal_draw(struct leonos_ui_surface *ui)
+static void terminal_draw(struct reliefos_ui_surface *ui)
 {
-    struct leonos_ui_tab_item tab_items[TERMINAL_MAX_SESSIONS];
+    struct reliefos_ui_tab_item tab_items[TERMINAL_MAX_SESSIONS];
     uint32_t tab_count;
     uint32_t rows = terminal_visible_rows();
     uint32_t first_visible = history_count > rows ? history_count - rows : 0;
@@ -1133,28 +1133,28 @@ static void terminal_draw(struct leonos_ui_surface *ui)
 
     tab_count = terminal_tab_items(tab_items);
 
-    leonos_ui_rect(ui, 0, 0, terminal_view_width, terminal_view_height, 0x00000000U);
-    leonos_ui_rect(ui, 0, 0, terminal_view_width, leonos_ui_tab_height(), LEONOS_UI_GRAY);
-    leonos_ui_tab_control(ui, 0, 0, terminal_view_width - TERMINAL_TAB_ADD_W,
+    reliefos_ui_rect(ui, 0, 0, terminal_view_width, terminal_view_height, 0x00000000U);
+    reliefos_ui_rect(ui, 0, 0, terminal_view_width, reliefos_ui_tab_height(), RELIEFOS_UI_GRAY);
+    reliefos_ui_tab_control(ui, 0, 0, terminal_view_width - TERMINAL_TAB_ADD_W,
                           tab_items, tab_count, &tabs_state);
-    leonos_ui_button(ui, terminal_view_width - TERMINAL_TAB_ADD_W, 0,
-                     TERMINAL_TAB_ADD_W, leonos_ui_tab_height(), "+",
-                     tab_count < TERMINAL_MAX_SESSIONS ? 0 : LEONOS_UI_BUTTON_DISABLED);
+    reliefos_ui_button(ui, terminal_view_width - TERMINAL_TAB_ADD_W, 0,
+                     TERMINAL_TAB_ADD_W, reliefos_ui_tab_height(), "+",
+                     tab_count < TERMINAL_MAX_SESSIONS ? 0 : RELIEFOS_UI_BUTTON_DISABLED);
     for (row = 0; row < rows && first_visible + row < history_count; ++row) {
         uint32_t line_index = (history_first + first_visible + row) % TERMINAL_HISTORY_ROWS;
-        terminal_draw_line(ui, leonos_ui_tab_height() + row * LEONOS_FONT_H,
+        terminal_draw_line(ui, reliefos_ui_tab_height() + row * RELIEFOS_FONT_H,
                            &history[line_index]);
     }
     if (cursor_visible && active_visible >= first_visible &&
         active_visible < first_visible + rows &&
-        (leonos_uptime_ms() / 450UL) % 2UL == 0UL) {
+        (reliefos_uptime_ms() / 450UL) % 2UL == 0UL) {
         uint32_t cursor_x = TERMINAL_BODY_X +
                             (cursor_column < terminal_columns() ?
-                             cursor_column : terminal_columns() - 1U) * LEONOS_FONT_W;
-        uint32_t cursor_y = leonos_ui_tab_height() +
-                            (active_visible - first_visible) * LEONOS_FONT_H;
-        leonos_ui_rect(ui, cursor_x, cursor_y + LEONOS_FONT_H - 2U,
-                       LEONOS_FONT_W, 2, terminal_style_foreground());
+                             cursor_column : terminal_columns() - 1U) * RELIEFOS_FONT_W;
+        uint32_t cursor_y = reliefos_ui_tab_height() +
+                            (active_visible - first_visible) * RELIEFOS_FONT_H;
+        reliefos_ui_rect(ui, cursor_x, cursor_y + RELIEFOS_FONT_H - 2U,
+                       RELIEFOS_FONT_W, 2, terminal_style_foreground());
     }
 }
 
@@ -1243,18 +1243,18 @@ static int terminal_send_key(uint8_t keycode, uint8_t pressed,
     struct termios termios;
     int have_termios;
     int local_echo;
-    if (keycode == LEONOS_KEY_CAPS_LOCK) {
+    if (keycode == RELIEFOS_KEY_CAPS_LOCK) {
         return 0;
     }
-    if (keycode == LEONOS_KEY_LEFT_SHIFT || keycode == LEONOS_KEY_RIGHT_SHIFT) {
+    if (keycode == RELIEFOS_KEY_LEFT_SHIFT || keycode == RELIEFOS_KEY_RIGHT_SHIFT) {
         *shift_down = pressed ? 1 : 0;
         return 0;
     }
-    if (keycode == LEONOS_KEY_LEFT_CTRL || keycode == LEONOS_KEY_RIGHT_CTRL) {
+    if (keycode == RELIEFOS_KEY_LEFT_CTRL || keycode == RELIEFOS_KEY_RIGHT_CTRL) {
         *ctrl_down = pressed ? 1 : 0;
         return 0;
     }
-    if (keycode == LEONOS_KEY_LEFT_ALT || keycode == LEONOS_KEY_RIGHT_ALT) {
+    if (keycode == RELIEFOS_KEY_LEFT_ALT || keycode == RELIEFOS_KEY_RIGHT_ALT) {
         *alt_down = pressed ? 1 : 0;
         return 0;
     }
@@ -1262,42 +1262,42 @@ static int terminal_send_key(uint8_t keycode, uint8_t pressed,
         return 0;
     }
     have_termios = tcgetattr(active_pty_fd, &termios) == 0;
-    if (keycode == LEONOS_KEY_ESCAPE) {
+    if (keycode == RELIEFOS_KEY_ESCAPE) {
         sequence[0] = '\033';
         sequence_length = 1;
-    } else if (keycode == LEONOS_KEY_UP) {
+    } else if (keycode == RELIEFOS_KEY_UP) {
         sequence[0] = '\033'; sequence[1] = '['; sequence[2] = 'A'; sequence_length = 3;
-    } else if (keycode == LEONOS_KEY_DOWN) {
+    } else if (keycode == RELIEFOS_KEY_DOWN) {
         sequence[0] = '\033'; sequence[1] = '['; sequence[2] = 'B'; sequence_length = 3;
-    } else if (keycode == LEONOS_KEY_RIGHT) {
+    } else if (keycode == RELIEFOS_KEY_RIGHT) {
         sequence[0] = '\033'; sequence[1] = '['; sequence[2] = 'C'; sequence_length = 3;
-    } else if (keycode == LEONOS_KEY_LEFT) {
+    } else if (keycode == RELIEFOS_KEY_LEFT) {
         sequence[0] = '\033'; sequence[1] = '['; sequence[2] = 'D'; sequence_length = 3;
-    } else if (keycode == LEONOS_KEY_HOME) {
+    } else if (keycode == RELIEFOS_KEY_HOME) {
         sequence[0] = '\033'; sequence[1] = '['; sequence[2] = 'H'; sequence_length = 3;
-    } else if (keycode == LEONOS_KEY_END) {
+    } else if (keycode == RELIEFOS_KEY_END) {
         sequence[0] = '\033'; sequence[1] = '['; sequence[2] = 'F'; sequence_length = 3;
-    } else if (keycode == LEONOS_KEY_INSERT) {
+    } else if (keycode == RELIEFOS_KEY_INSERT) {
         sequence[0] = '\033'; sequence[1] = '['; sequence[2] = '2'; sequence[3] = '~'; sequence_length = 4;
-    } else if (keycode == LEONOS_KEY_DELETE) {
+    } else if (keycode == RELIEFOS_KEY_DELETE) {
         sequence[0] = '\033'; sequence[1] = '['; sequence[2] = '3'; sequence[3] = '~'; sequence_length = 4;
-    } else if (keycode == LEONOS_KEY_PAGE_UP) {
+    } else if (keycode == RELIEFOS_KEY_PAGE_UP) {
         sequence[0] = '\033'; sequence[1] = '['; sequence[2] = '5'; sequence[3] = '~'; sequence_length = 4;
-    } else if (keycode == LEONOS_KEY_PAGE_DOWN) {
+    } else if (keycode == RELIEFOS_KEY_PAGE_DOWN) {
         sequence[0] = '\033'; sequence[1] = '['; sequence[2] = '6'; sequence[3] = '~'; sequence_length = 4;
-    } else if (keycode == LEONOS_KEY_ENTER) {
+    } else if (keycode == RELIEFOS_KEY_ENTER) {
         /* A terminal Enter key emits CR.  Canonical PTYs translate it to LF
          * for shell input, while raw-mode programs such as nano receive ^M. */
         character = '\r';
-    } else if (keycode == LEONOS_KEY_BACKSPACE) {
+    } else if (keycode == RELIEFOS_KEY_BACKSPACE) {
         /* Send the configured erase byte.  The default is DEL (0x7f), which
          * lets the PTY remove it in ICANON mode and is also understood by
          * nano, BusyBox vi and other raw-mode editors. */
         character = have_termios && termios.c_cc[VERASE] ?
                     (char)termios.c_cc[VERASE] : '\177';
-    } else if (keycode == LEONOS_KEY_TAB) {
+    } else if (keycode == RELIEFOS_KEY_TAB) {
         character = '\t';
-    } else if (!leonos_ui_keycode_to_char_shift(keycode, *shift_down, &character)) {
+    } else if (!reliefos_ui_keycode_to_char_shift(keycode, *shift_down, &character)) {
         return 0;
     } else if (!terminal_control_character(character, *ctrl_down, &character)) {
         return 0;
@@ -1308,9 +1308,9 @@ static int terminal_send_key(uint8_t keycode, uint8_t pressed,
             sequence[1] = '[';
             /* BusyBox read_key understands the standard Ctrl-arrow form. */
             sequence[2] = '1'; sequence[3] = ';'; sequence[4] = '5';
-            sequence[5] = (char)(keycode == LEONOS_KEY_UP ? 'A' :
-                                  keycode == LEONOS_KEY_DOWN ? 'B' :
-                                  keycode == LEONOS_KEY_RIGHT ? 'C' : 'D');
+            sequence[5] = (char)(keycode == RELIEFOS_KEY_UP ? 'A' :
+                                  keycode == RELIEFOS_KEY_DOWN ? 'B' :
+                                  keycode == RELIEFOS_KEY_RIGHT ? 'C' : 'D');
             sequence_length = 6;
         }
         if (!terminal_write_input(sequence, sequence_length)) {
@@ -1330,12 +1330,12 @@ static int terminal_send_key(uint8_t keycode, uint8_t pressed,
     }
     /* Tab completion and raw-mode programs decide their own cursor movement.
      * Do not fake a four-column local echo; render only what the PTY produces. */
-    if (keycode == LEONOS_KEY_TAB) {
+    if (keycode == RELIEFOS_KEY_TAB) {
         return 1;
     }
     local_echo = !have_termios || (termios.c_lflag & ECHO) != 0;
     if (local_echo) {
-        if (keycode == LEONOS_KEY_BACKSPACE) {
+        if (keycode == RELIEFOS_KEY_BACKSPACE) {
             if (local_echoed_input_count) {
                 terminal_put_char('\b');
                 terminal_put_char(' ');
@@ -1369,7 +1369,7 @@ static int terminal_send_key(uint8_t keycode, uint8_t pressed,
     return 1;
 }
 
-static uint32_t terminal_tab_items(struct leonos_ui_tab_item *items)
+static uint32_t terminal_tab_items(struct reliefos_ui_tab_item *items)
 {
     uint32_t count = 0;
 
@@ -1380,7 +1380,7 @@ static uint32_t terminal_tab_items(struct leonos_ui_tab_item *items)
         if (items) {
             items[count].label = terminal_tab_labels[index];
             items[count].id = index + 1U;
-            items[count].flags = LEONOS_UI_TAB_CLOSABLE;
+            items[count].flags = RELIEFOS_UI_TAB_CLOSABLE;
         }
         ++count;
     }
@@ -1542,7 +1542,7 @@ static int terminal_handle_mouse(int32_t x, int32_t y, uint8_t buttons,
                                  const char *path, char *const command_argv[],
                                  char *const command_envp[])
 {
-    struct leonos_ui_tab_item tab_items[TERMINAL_MAX_SESSIONS];
+    struct reliefos_ui_tab_item tab_items[TERMINAL_MAX_SESSIONS];
     uint32_t tab_count;
     uint32_t closed_id = 0;
 
@@ -1550,7 +1550,7 @@ static int terminal_handle_mouse(int32_t x, int32_t y, uint8_t buttons,
         return 0;
     }
     tab_count = terminal_tab_items(tab_items);
-    if (leonos_ui_tab_control_handle_mouse_ex(&tabs_state, x, y, 0, 0,
+    if (reliefos_ui_tab_control_handle_mouse_ex(&tabs_state, x, y, 0, 0,
                                               terminal_view_width - TERMINAL_TAB_ADD_W,
                                               tab_items, tab_count, &closed_id)) {
         if (closed_id) {
@@ -1560,7 +1560,7 @@ static int terminal_handle_mouse(int32_t x, int32_t y, uint8_t buttons,
     }
     if (x >= (int32_t)(terminal_view_width - TERMINAL_TAB_ADD_W) &&
         x < (int32_t)terminal_view_width && y >= 0 &&
-        y < (int32_t)leonos_ui_tab_height()) {
+        y < (int32_t)reliefos_ui_tab_height()) {
         return terminal_open_session(path, command_argv, command_envp) != 0;
     }
     return 0;
@@ -1569,15 +1569,15 @@ static int terminal_handle_mouse(int32_t x, int32_t y, uint8_t buttons,
 int main(int argc, char **argv, char **envp)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     char *shell_argv[4];
     char shell_prompt[] = "PS1=\\w \\$ ";
     char shell_term[] = "TERM=xterm";
     char shell_terminfo[] = "TERMINFO_DIRS=/usr/share/terminfo:/etc/terminfo:/lib/terminfo";
-    char terminal_program[] = "TERM_PROGRAM=LeonOS Terminal";
+    char terminal_program[] = "TERM_PROGRAM=ReliefOS Terminal";
     char *terminal_envp[] = { shell_term, shell_terminfo, terminal_program, 0 };
     char *shell_envp[] = { shell_prompt, shell_term, shell_terminfo, terminal_program, 0 };
     char **command_env_owned = 0;
@@ -1606,77 +1606,77 @@ int main(int argc, char **argv, char **envp)
         command_envp = 0;
         environment_overrides = shell_envp;
     }
-    if (leonos_environment_build((char *const *)environment_overrides,
+    if (reliefos_environment_build((char *const *)environment_overrides,
                                  &command_env_owned) < 0) {
         printf("terminal: environment setup failed\n");
         return 1;
     }
     command_envp = command_env_owned;
-    window_id = leonos_gui_create_app_window_ex(T("Terminal"),
+    window_id = reliefos_gui_create_app_window_ex(T("Terminal"),
                                                 "", TERMINAL_DEFAULT_W,
                                                 TERMINAL_DEFAULT_H, 0);
     if (window_id <= 0) {
         printf("terminal: window creation failed (%d)\n", window_id);
-        leonos_environment_free(command_env_owned);
+        reliefos_environment_free(command_env_owned);
         return 1;
     }
-    leonos_ui_bind(&ui, pixels, terminal_view_width, terminal_view_height,
+    reliefos_ui_bind(&ui, pixels, terminal_view_width, terminal_view_height,
                    TERMINAL_MAX_W);
-    leonos_ui_tab_state_init(&tabs_state, 0);
+    reliefos_ui_tab_state_init(&tabs_state, 0);
     if (!terminal_open_session(command_path, command_argv, command_envp)) {
         printf("terminal: PTY creation failed\n");
-        leonos_environment_free(command_env_owned);
+        reliefos_environment_free(command_env_owned);
         return 1;
     }
     terminal_draw(&ui);
-    leonos_gui_present_window((uint32_t)window_id, terminal_view_width,
+    reliefos_gui_present_window((uint32_t)window_id, terminal_view_width,
                               terminal_view_height, TERMINAL_MAX_W, pixels);
     for (;;) {
         int redraw = terminal_pump_all_output();
-        uint8_t next_cursor_phase = (uint8_t)((leonos_uptime_ms() / 450UL) % 2UL);
+        uint8_t next_cursor_phase = (uint8_t)((reliefos_uptime_ms() / 450UL) % 2UL);
         if (next_cursor_phase != cursor_phase) {
             cursor_phase = next_cursor_phase;
             redraw = 1;
         }
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, 40U) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, 40U) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 terminal_close_all_sessions();
-                leonos_environment_free(command_env_owned);
+                reliefos_environment_free(command_env_owned);
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN) {
                 if (ctrl_down && shift_down && event.keycode == TERMINAL_KEY_T) {
                     redraw |= terminal_open_session(command_path, command_argv,
                                                     command_envp) != 0;
                 } else if (ctrl_down && shift_down && event.keycode == TERMINAL_KEY_W) {
                     int close_result = terminal_close_session(tabs_state.selected_id);
                     if (close_result < 0) {
-                        leonos_environment_free(command_env_owned);
+                        reliefos_environment_free(command_env_owned);
                         return 0;
                     }
                     redraw |= close_result;
-                } else if (ctrl_down && event.keycode == LEONOS_KEY_TAB) {
+                } else if (ctrl_down && event.keycode == RELIEFOS_KEY_TAB) {
                     redraw |= terminal_select_adjacent_tab(shift_down ? -1 : 1);
                 } else {
                     redraw |= terminal_send_key(event.keycode, 1, &shift_down,
                                                 &ctrl_down, &alt_down);
                 }
-            } else if (event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
+            } else if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
                 (void)terminal_send_key(event.keycode, 0, &shift_down,
                                         &ctrl_down, &alt_down);
-            } else if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON) {
+            } else if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON) {
                 int mouse_result = terminal_handle_mouse(event.x, event.y,
                                                          event.buttons,
                                                          command_path,
                                                          command_argv,
                                                          command_envp);
                 if (mouse_result < 0) {
-                    leonos_environment_free(command_env_owned);
+                    reliefos_environment_free(command_env_owned);
                     return 0;
                 }
                 redraw |= mouse_result;
-            } else if (event.type == LEONOS_GUI_APP_EVENT_RESIZE) {
+            } else if (event.type == RELIEFOS_GUI_APP_EVENT_RESIZE) {
                 /* Theme changes are translated to RESIZE by libc but carry
                  * no geometry. Preserve the current PTY size in that case. */
                 if (event.width && event.height) {
@@ -1684,17 +1684,17 @@ int main(int argc, char **argv, char **envp)
                 } else {
                     redraw = 1;
                 }
-            } else if (event.type == LEONOS_GUI_APP_EVENT_THEME_CHANGED ||
-                       event.type == LEONOS_GUI_APP_EVENT_FOCUS) {
+            } else if (event.type == RELIEFOS_GUI_APP_EVENT_THEME_CHANGED ||
+                       event.type == RELIEFOS_GUI_APP_EVENT_FOCUS) {
                 redraw = 1;
             }
         }
         if (redraw) {
             if (ui.width != terminal_view_width || ui.height != terminal_view_height)
-                leonos_ui_bind(&ui, pixels, terminal_view_width, terminal_view_height,
+                reliefos_ui_bind(&ui, pixels, terminal_view_width, terminal_view_height,
                                TERMINAL_MAX_W);
             terminal_draw(&ui);
-            leonos_gui_present_window((uint32_t)window_id, terminal_view_width,
+            reliefos_gui_present_window((uint32_t)window_id, terminal_view_width,
                                       terminal_view_height, TERMINAL_MAX_W, pixels);
         }
     }

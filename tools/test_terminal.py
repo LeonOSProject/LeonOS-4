@@ -11,13 +11,13 @@ ROOT = Path(__file__).resolve().parents[1]
 class TerminalTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tmp = tempfile.TemporaryDirectory(prefix="leonos-terminal-")
+        cls.tmp = tempfile.TemporaryDirectory(prefix="reliefos-terminal-")
         cls.addClassCleanup(cls.tmp.cleanup)
         cls.executable = str(Path(cls.tmp.name) / "terminal")
         subprocess.run([
             "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
             "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-            "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-idirafter", "userland/runtime/include",
+            "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-idirafter", "userland/runtime/include",
             "tools/tests/terminal_session_test.c", "-lutil",
             "-o", cls.executable,
         ], cwd=ROOT, check=True)

@@ -103,7 +103,7 @@ void desktop_reflow_after_display_change(void)
         }
         clamp_window(w);
         if (w->window_id) {
-            send_app_event(i, LEONOS_GUI_APP_EVENT_RESIZE, 0, 0, 0, 0, 0, 0, 0);
+            send_app_event(i, RELIEFOS_GUI_APP_EVENT_RESIZE, 0, 0, 0, 0, 0, 0, 0);
         }
     }
     if (cursor_x >= fb_w()) {
@@ -172,12 +172,12 @@ uint32_t window_body_height(const struct desktop_window *w)
 
 int window_is_fullscreen(const struct desktop_window *w)
 {
-    return w && (w->flags & LEONOS_GUI_WINDOW_FULLSCREEN) != 0;
+    return w && (w->flags & RELIEFOS_GUI_WINDOW_FULLSCREEN) != 0;
 }
 
 int window_is_borderless(const struct desktop_window *w)
 {
-    return w && (w->flags & LEONOS_GUI_WINDOW_BORDERLESS) != 0;
+    return w && (w->flags & RELIEFOS_GUI_WINDOW_BORDERLESS) != 0;
 }
 
 int active_window_is_fullscreen(void)
@@ -190,7 +190,7 @@ int active_window_is_fullscreen(void)
 int window_allows_resize(const struct desktop_window *w)
 {
     return w && !window_is_fullscreen(w) && !window_is_borderless(w) &&
-           (w->flags & LEONOS_GUI_WINDOW_NO_RESIZE) == 0;
+           (w->flags & RELIEFOS_GUI_WINDOW_NO_RESIZE) == 0;
 }
 
 void window_client_origin(const struct desktop_window *w, int *x, int *y)
@@ -283,18 +283,18 @@ static struct rect window_taskbar_target_rect(uint8_t slot)
     if (button_w > 0) {
         for (uint8_t i = 0; i < MAX_WINDOWS; ++i) {
             if (!windows[i].visible ||
-                (windows[i].flags & LEONOS_GUI_WINDOW_HIDE_TASKBAR) != 0) {
+                (windows[i].flags & RELIEFOS_GUI_WINDOW_HIDE_TASKBAR) != 0) {
                 continue;
             }
             if (i == slot) {
                 return rect_make((int)x, (int)tb_y + 5,
                                  (int)(button_w > 8 ? button_w - 8 : button_w),
-                                 LEONOS_UI_BUTTON_H);
+                                 RELIEFOS_UI_BUTTON_H);
             }
             x += button_w;
         }
     }
-    return rect_make(106, (int)tb_y + 5, 86, LEONOS_UI_BUTTON_H);
+    return rect_make(106, (int)tb_y + 5, 86, RELIEFOS_UI_BUTTON_H);
 }
 
 void begin_window_rect_animation(uint8_t slot, uint8_t anim,
@@ -305,7 +305,7 @@ void begin_window_rect_animation(uint8_t slot, uint8_t anim,
         return;
     }
     windows[slot].anim = anim;
-    windows[slot].anim_start_ms = leonos_uptime_ms();
+    windows[slot].anim_start_ms = reliefos_uptime_ms();
     windows[slot].anim_from_x = from_x;
     windows[slot].anim_from_y = from_y;
     windows[slot].anim_from_w = from_w;
@@ -399,7 +399,7 @@ void send_app_event_to_window(uint32_t window_id, uint32_t type,
                               uint32_t width, uint32_t height,
                               uint8_t buttons, uint8_t keycode, uint8_t pressed)
 {
-    struct leonos_gui_app_event event;
+    struct reliefos_gui_app_event event;
     if (!window_id) {
         return;
     }
@@ -414,8 +414,8 @@ void send_app_event_to_window(uint32_t window_id, uint32_t type,
     event.buttons = buttons;
     event.keycode = keycode;
     event.pressed = pressed;
-    event.modifiers = leonos_ui_keyboard_modifiers();
-    leonos_gui_send_app_event(&event);
+    event.modifiers = reliefos_ui_keyboard_modifiers();
+    reliefos_gui_send_app_event(&event);
 }
 
 void send_app_event(uint8_t slot, uint32_t type, int32_t x, int32_t y,
@@ -449,23 +449,23 @@ void invalidate_window_surface(uint8_t slot)
 
 static uint32_t desktop_map_legacy_ui_color(uint32_t color)
 {
-    if (leonos_ui_theme() != LEONOS_UI_THEME_METRO) {
+    if (reliefos_ui_theme() != RELIEFOS_UI_THEME_METRO) {
         return color;
     }
     if (color == 0x00c0c0c0u) {
-        return LEONOS_UI_GRAY;
+        return RELIEFOS_UI_GRAY;
     }
     if (color == 0x00dfdfdfu) {
-        return LEONOS_UI_LIGHT;
+        return RELIEFOS_UI_LIGHT;
     }
     if (color == 0x00808080u) {
-        return LEONOS_UI_DARK;
+        return RELIEFOS_UI_DARK;
     }
     if (color == 0x00000080u) {
-        return LEONOS_UI_ACTIVE_TITLE;
+        return RELIEFOS_UI_ACTIVE_TITLE;
     }
     if (color == 0x00008080u) {
-        return LEONOS_UI_DESKTOP;
+        return RELIEFOS_UI_DESKTOP;
     }
     return color;
 }
@@ -473,7 +473,7 @@ static uint32_t desktop_map_legacy_ui_color(uint32_t color)
 static void desktop_map_app_surface(uint32_t width, uint32_t height)
 {
     uint32_t y;
-    if (leonos_ui_theme() != LEONOS_UI_THEME_METRO) {
+    if (reliefos_ui_theme() != RELIEFOS_UI_THEME_METRO) {
         return;
     }
     if (width > APP_CLIENT_MAX_W) {
@@ -507,12 +507,12 @@ void draw_app_surface_i(uint8_t id, int body_x, int body_y,
     if (body_w == 0 || body_h == 0) {
         return;
     }
-    if (leonos_gui_fetch_window(windows[id].window_id, APP_CLIENT_MAX_W, APP_CLIENT_MAX_H,
+    if (reliefos_gui_fetch_window(windows[id].window_id, APP_CLIENT_MAX_W, APP_CLIENT_MAX_H,
                                 APP_CLIENT_MAX_W,
                                 app_client_scratch, &out_w, &out_h) <= 0) {
         text_draw_i(body_x + 16, body_y + 18,
                     windows[id].app_text ? windows[id].app_text : T("Application window"),
-                    LEONOS_UI_BLACK, windows[id].body_color);
+                    RELIEFOS_UI_BLACK, windows[id].body_color);
         return;
     }
     desktop_map_app_surface(out_w, out_h);

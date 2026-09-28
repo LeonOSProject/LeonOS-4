@@ -14,20 +14,21 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class LiveRootTests(unittest.TestCase):
     def test_root_has_runtime_shell_and_unmodified_vim(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-live-test-") as directory:
+        with tempfile.TemporaryDirectory(prefix="reliefos-live-test-") as directory:
             work = Path(directory)
             tree = work / "esp"
             for name, content in {
                 "EFI/BOOT/BOOTX64.EFI": b"boot",
                 "grub/grub.cfg": b"set root=(hd0,gpt1)",
                 "loader.elf": b"loader",
-                "leonos/kernel.sys": b"kernel",
-                "usr/lib/leonos/apps/desktop/desktop.elf": b"desktop",
-                "usr/lib/leonos/apps/terminal/terminal.elf": b"terminal",
+                "reliefos/loader.elf": b"loader",
+                "reliefos/kernel.sys": b"kernel",
+                "usr/lib/reliefos/apps/desktop/desktop.elf": b"desktop",
+                "usr/lib/reliefos/apps/terminal/terminal.elf": b"terminal",
                 "bin/busybox": b"shell",
                 "usr/bin/vim": b"unmodified Linux executable",
-                "usr/lib/leonos/apps/vim/vim.elf": b"unmodified Linux executable",
-                "usr/lib/leonos/apps/vim/manifest.ini": b"commands=vim\nterminal=1\n",
+                "usr/lib/reliefos/apps/vim/vim.elf": b"unmodified Linux executable",
+                "usr/lib/reliefos/apps/vim/manifest.ini": b"commands=vim\nterminal=1\n",
                 "usr/share/vim/vim91/defaults.vim": b"set nocompatible\n",
                 "usr/share/terminfo/x/xterm": b"terminfo",
                 "lib/ld-musl-x86_64.so.1": b"musl",
@@ -47,8 +48,9 @@ class LiveRootTests(unittest.TestCase):
             self.assertTrue((output / "bin/sh").is_symlink())
             self.assertTrue((output / "usr/share/vim/vim91/defaults.vim").is_file())
             self.assertEqual((output / "usr/share/terminfo/x/xterm").read_bytes(), b"terminfo")
-            self.assertTrue((output / "usr/lib/leonos/apps/terminal/terminal.elf").is_file())
+            self.assertTrue((output / "usr/lib/reliefos/apps/terminal/terminal.elf").is_file())
             self.assertFalse((output / "EFI").exists())
+            self.assertFalse((output / "reliefos").exists())
             self.assertFalse((output / "leonos").exists())
             self.assertEqual((output / "opt/python/bin/python3.14").read_bytes(), b"static Python executable")
             self.assertEqual((output / "opt/python/lib/python3.14/encodings/__init__.py").read_bytes(), b"encodings")
@@ -81,11 +83,12 @@ class LiveRootTests(unittest.TestCase):
     def test_grub_loads_the_root_from_cd_not_the_first_hard_disk(self):
         config = (ROOT / "boot/grub/live.cfg").read_text()
         self.assertNotIn("(hd", config)
+        self.assertIn("search --no-floppy --file /reliefos-installer-iso.marker --set=root", config)
         self.assertIn("search --no-floppy --file /leonos-installer-iso.marker --set=root", config)
         self.assertIn("mode=live", config)
         self.assertNotIn("startup=", config)
-        self.assertIn("module2 /install/root.fat leonos-installer-root", config)
-        self.assertIn("module2 /leonos/kernel.sys leonos-kernel", config)
+        self.assertIn("module2 /install/root.fat reliefos-installer-root", config)
+        self.assertIn("module2 /reliefos/kernel.sys reliefos-kernel", config)
 
 
 if __name__ == "__main__":

@@ -11,11 +11,11 @@ mkdir "$work/root" "$work/data" "$work/manifests"
 plan=$work/plan
 : > "$plan"
 # Plan columns: kind, source, guest path, mode, component, overlay policy and
-# the optional guest gid (decimal, default 0; see leonos-stage read_plan).
+# the optional guest gid (decimal, default 0; see reliefos-stage read_plan).
 record() { printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "$5" "$6" "${7:-0}" >> "$plan"; }
-file() { record f "$1" "/$2" "${3:-0644}" "${4:-leonos-base}" "${5:-unique}" "${6:-0}"; }
+file() { record f "$1" "/$2" "${3:-0644}" "${4:-reliefos-base}" "${5:-unique}" "${6:-0}"; }
 tree() { record t "$1" "/$2" 0755 "$3" "${4:-unique}"; }
-link() { record l "$2" "/$1" 0777 "${3:-leonos-base}" "${4:-unique}"; }
+link() { record l "$2" "/$1" 0777 "${3:-reliefos-base}" "${4:-unique}"; }
 enabled() { awk -F '\t' -v id="$1" '$1==id && $4==1 {found=1} END {exit !found}' "$metadata"; }
 # Independent upstream installations never share a destination during builds.
 for package in libmd libbsd util-linux sudo shadow e2fsprogs dosfstools exfatprogs; do
@@ -53,15 +53,16 @@ done
 file "$out/pam/root/sbin/unix_chkpwd" sbin/unix_chkpwd 4755 authentication override
 file "$out/sysroot/musl/lib/libc.so" lib/ld-musl-x86_64.so.1 0755 musl
 file "$out/sysroot/musl/lib/libc.so" lib/libc.so 0755 musl
-file "$out/sysroot/musl/lib/libmimalloc.so.3" lib/libmimalloc.so.3 0755 leonos-mimalloc
-file "$out/system/lib/libleonos.so.2" usr/lib/leonos/libleonos.so.2 0755 leonos-apps
+file "$out/sysroot/musl/lib/libmimalloc.so.3" lib/libmimalloc.so.3 0755 reliefos-mimalloc
+file "$out/system/lib/libreliefos.so.2" usr/lib/reliefos/libreliefos.so.2 0755 reliefos-apps
+file "$out/system/lib/libleonos.so.2" usr/lib/leonos/libleonos.so.2 0755 reliefos-apps
 for package in musl mimalloc; do tree "$out/sysroot/musl/share/licenses/$package" "usr/share/licenses/$package" "$package"; done
-printf '/lib:/usr/local/lib:/usr/lib:/usr/lib/leonos\n' > "$work/data/ld.path"
+printf '/lib:/usr/local/lib:/usr/lib:/usr/lib/reliefos:/usr/lib/leonos\n' > "$work/data/ld.path"
 file "$work/data/ld.path" etc/ld-musl-x86_64.path 0644 musl
-file "$out/generated/system/kerneldebug.sys" usr/lib/leonos/kerneldebug.sys 0755
-for driver in "$out/generated/drivers"/*.drv; do file "$driver" "usr/lib/leonos/drivers/${driver##*/}" 0755; done
-file "$out/userland/motd.elf" usr/lib/leonos/motd-status 0755 leonos-base
-file "$out/userland/dynlinkerror.elf" usr/lib/leonos/apps/dynlinkerror/dynlinkerror.elf 0755 leonos-apps
+file "$out/generated/system/kerneldebug.sys" usr/lib/reliefos/kerneldebug.sys 0755
+for driver in "$out/generated/drivers"/*.drv; do file "$driver" "usr/lib/reliefos/drivers/${driver##*/}" 0755; done
+file "$out/userland/motd.elf" usr/lib/reliefos/motd-status 0755 reliefos-base
+file "$out/userland/dynlinkerror.elf" usr/lib/reliefos/apps/dynlinkerror/dynlinkerror.elf 0755 reliefos-apps
 # awk reads TSV without collapsing empty label/extension fields. No data is
 # interpreted as a command; only validated component IDs are used in paths.
 awk -F '\t' -v dir="$work/manifests" -v src="$src" '
@@ -80,24 +81,24 @@ while read -r app entry; do
     # leonos-window-server/leonos-service): authority rides on the image gid.
     gid=0
     case $app in desktop) gid=60001 ;; windowd|imd) gid=60002 ;; esac
-    file "$out/userland/$app.elf" "usr/lib/leonos/apps/$app/$app.elf" 0755 "$app" unique "$gid"
-    file "$work/manifests/$app.ini" "usr/lib/leonos/apps/$app/manifest.ini" 0644 "$app"
+    file "$out/userland/$app.elf" "usr/lib/reliefos/apps/$app/$app.elf" 0755 "$app" unique "$gid"
+    file "$work/manifests/$app.ini" "usr/lib/reliefos/apps/$app/manifest.ini" 0644 "$app"
     if [ "$entry" = 1 ]; then
-        file "$src/resources/build-art/app-icons/$app.bmp" "usr/lib/leonos/apps/$app/$app.bmp" 0644 "$app"
+        file "$src/resources/build-art/app-icons/$app.bmp" "usr/lib/reliefos/apps/$app/$app.bmp" 0644 "$app"
         for ini in "$src/userland/apps/$app/$app.app.ini" "$src/userland/$app/$app.app.ini"; do
-            if [ -f "$ini" ]; then file "$ini" "usr/lib/leonos/apps/$app/$app.app.ini" 0644 "$app"; break; fi
+            if [ -f "$ini" ]; then file "$ini" "usr/lib/reliefos/apps/$app/$app.app.ini" 0644 "$app"; break; fi
         done
     fi
-    link "usr/bin/$app" "../lib/leonos/apps/$app/$app.elf" "$app"
+    link "usr/bin/$app" "../lib/reliefos/apps/$app/$app.elf" "$app"
 done < "$work/apps"
 # Tool executables keep their native locations; registry entries use a local
 # symlink so the registry's relative exec contract remains the same as apps.
 for app in busybox cmd sl; do
     if enabled "$app"; then
-        file "$work/manifests/$app.ini" "usr/lib/leonos/apps/$app/manifest.ini" 0644 "$app"
+        file "$work/manifests/$app.ini" "usr/lib/reliefos/apps/$app/manifest.ini" 0644 "$app"
         target=/usr/bin/$app
         [ "$app" != busybox ] || target=/bin/busybox
-        link "usr/lib/leonos/apps/$app/$app.elf" "$target" "$app"
+        link "usr/lib/reliefos/apps/$app/$app.elf" "$target" "$app"
     fi
 done
 for package in ncurses; do
@@ -134,48 +135,51 @@ for spec in 'busybox third_party/busybox/LICENSE' 'cmd third_party/cmd/LICENSE' 
     set -- $spec
     if enabled "$1"; then file "$src/$2" "usr/share/licenses/$1/${2##*/}" 0644 "$1" override; fi
 done
-for name in leonos-rpr-apkcheck leonos-rpr-ping leonos-kernel-update leonos-check-update leonos-grub-installer; do file "$src/userland/storage/$name" "usr/sbin/$name" 0755; done
+for name in leonos-rpr-apkcheck leonos-rpr-ping leonos-kernel-update leonos-check-update leonos-grub-installer; do file "$src/userland/storage/$name" "usr/sbin/$name" 0755 reliefos-apps; done
+for spec in 'reliefos-rpr-apkcheck leonos-rpr-apkcheck' 'reliefos-rpr-ping leonos-rpr-ping' 'reliefos-kernel-update leonos-kernel-update' 'reliefos-check-update leonos-check-update'; do
+    set -- $spec; link "usr/sbin/$1" "$2" reliefos-apps
+done
 sh "$src/tools/build/rpr-config.sh" "$config" > "$work/data/rpr.conf"
-file "$work/data/rpr.conf" etc/leonos/rpr.conf
-file "$config" etc/leonos/leonos.conf
+file "$work/data/rpr.conf" etc/reliefos/rpr.conf
+file "$config" etc/reliefos/leonos.conf
 for source in "$src/system/config"/*; do
-    [ "${source##*/}" = display.conf ] || file "$source" "etc/leonos/${source##*/}" 0644 product-policy override
+    [ "${source##*/}" = display.conf ] || file "$source" "etc/reliefos/${source##*/}" 0644 product-policy override
 done
 awk 'BEGIN{theme="metro";mode="fill"} /^CONFIG_VMDK_DEFAULT_THEME_WIN95=y$/{theme="win95"} /^CONFIG_VMDK_WALLPAPER_STRETCH=y$/{mode="stretch"} /^CONFIG_VMDK_WALLPAPER_CENTER=y$/{mode="center"} END{print "theme="theme;print "wallpaper.mode="mode}' "$config" > "$work/data/display.conf"
-file "$work/data/display.conf" etc/leonos/display.conf
-awk -F '\t' 'BEGIN{print "# Generated from component selection."} $4==1 && $5==0 && $2 ~ /-app$/ {print "hide=/usr/lib/leonos/apps/"$1"/"$1".elf"}' "$metadata" > "$work/data/desktop-entries.conf"
-file "$work/data/desktop-entries.conf" etc/leonos/desktop-entries.conf
+file "$work/data/display.conf" etc/reliefos/display.conf
+awk -F '\t' 'BEGIN{print "# Generated from component selection."} $4==1 && $5==0 && $2 ~ /-app$/ {print "hide=/usr/lib/reliefos/apps/"$1"/"$1".elf"}' "$metadata" > "$work/data/desktop-entries.conf"
+file "$work/data/desktop-entries.conf" etc/reliefos/desktop-entries.conf
 locale_name=$(awk -F= 'BEGIN{lang="zh_CN.UTF-8"} /^CONFIG_VMDK_DEFAULT_LANG=/{gsub(/"/,"",$2);lang=$2} END{print lang}' "$config")
 case $locale_name in *[!A-Za-z0-9._@-]*|'') echo 'rootfs-stage: invalid locale name' >&2; exit 2;; esac
 printf 'LANG=%s\nMUSL_LOCPATH=/usr/share/musl/locales\n' "$locale_name" > "$work/data/locale.conf"
-file "$work/data/locale.conf" etc/leonos/locale.conf 0644 product-policy override
+file "$work/data/locale.conf" etc/reliefos/locale.conf 0644 product-policy override
 for loc in $(cat "$src/configs/nls/LINGUAS"); do
-    file "$out/generated/nls/$loc/LC_MESSAGES/leonos.mo" "usr/share/locale/$loc/LC_MESSAGES/leonos.mo" 0644 leonos-nls
+    file "$out/generated/nls/$loc/LC_MESSAGES/leonos.mo" "usr/share/locale/$loc/LC_MESSAGES/leonos.mo" 0644 reliefos-nls
     if [ -f "$out/generated/musl-locales/$loc.UTF-8" ]; then
-        file "$out/generated/musl-locales/$loc.UTF-8" "usr/share/musl/locales/$loc.UTF-8" 0644 leonos-nls
+        file "$out/generated/musl-locales/$loc.UTF-8" "usr/share/musl/locales/$loc.UTF-8" 0644 reliefos-nls
     fi
 done
-for source in "$src/system/docs"/*.hlp; do file "$source" "usr/share/doc/leonos/${source##*/}"; done
+for source in "$src/system/docs"/*.hlp; do file "$source" "usr/share/doc/reliefos/${source##*/}"; done
 for loc in $(cat "$src/configs/nls/LINGUAS"); do
     for source in "$src/system/docs/$loc"/*.hlp; do
         test -f "$source" || continue
-        file "$source" "usr/share/doc/leonos/$loc/${source##*/}"
+        file "$source" "usr/share/doc/reliefos/$loc/${source##*/}"
     done
 done
-file "$src/logo.png" usr/share/leonos/resources/logo.png
-file "$src/system/resources/mouse.bmp" usr/share/leonos/resources/mouse.bmp
-file "$src/system/resources/wallpaper-metro.bmp" usr/share/leonos/resources/wallpaper-metro.bmp
+file "$src/logo.png" usr/share/reliefos/resources/logo.png
+file "$src/system/resources/mouse.bmp" usr/share/reliefos/resources/mouse.bmp
+file "$src/system/resources/wallpaper-metro.bmp" usr/share/reliefos/resources/wallpaper-metro.bmp
 file "$src/system/certs/cacert.pem" etc/ssl/certs/ca-certificates.crt
-file "$src/docs/APK_PREPARATION.md" usr/share/doc/leonos/APK_PREPARATION.md
-file "$src/configs/apk-ownership.json" usr/share/leonos/apk-ownership.json
-file "$src/third_party/portablegl/LICENSE" usr/share/doc/leonos/PORTABLEGL-LICENSE
-for name in leonos-metro.ttf leonos-win95.ttf; do file "$out/generated/fonts/$name" "usr/share/fonts/leonos/$name"; done
-for name in simsun.ttc system.psf; do file "$src/system/fonts/$name" "usr/share/fonts/leonos/$name"; done
-file "$src/system/fonts/times.ttf" usr/share/fonts/leonos/times-new-roman.ttf
-for source in "$src/resources/build-art/window-buttons"/*.bmp "$src/resources/build-art/minesweeper"/*.bmp; do file "$source" "usr/share/leonos/resources/${source##*/}"; done
+file "$src/docs/APK_PREPARATION.md" usr/share/doc/reliefos/APK_PREPARATION.md
+file "$src/configs/apk-ownership.json" usr/share/reliefos/apk-ownership.json
+file "$src/third_party/portablegl/LICENSE" usr/share/doc/reliefos/PORTABLEGL-LICENSE
+for name in leonos-metro.ttf leonos-win95.ttf; do file "$out/generated/fonts/$name" "usr/share/fonts/reliefos/$name"; done
+for name in simsun.ttc system.psf; do file "$src/system/fonts/$name" "usr/share/fonts/reliefos/$name"; done
+file "$src/system/fonts/times.ttf" usr/share/fonts/reliefos/times-new-roman.ttf
+for source in "$src/resources/build-art/window-buttons"/*.bmp "$src/resources/build-art/minesweeper"/*.bmp; do file "$source" "usr/share/reliefos/resources/${source##*/}"; done
 file "$src/test/test.mp3" test/test.mp3
 for app in leonmmcoset xiaobai; do
-    if enabled "$app"; then file "$src/userland/apps/$app/$app.png" "usr/lib/leonos/apps/$app/$app.png" 0644 "$app"; fi
+    if enabled "$app"; then file "$src/userland/apps/$app/$app.png" "usr/lib/reliefos/apps/$app/$app.png" 0644 "$app"; fi
 done
 if enabled stardusthello || enabled stardustlayout || enabled stardustshowcase; then
     for name in md3-light.theme.json md3-dark.theme.json green_light.theme.json green_dark.theme.json; do

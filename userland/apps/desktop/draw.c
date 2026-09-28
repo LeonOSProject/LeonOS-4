@@ -22,7 +22,7 @@ struct rect cursor_rect_at(uint32_t x, uint32_t y)
 struct rect cursor_rect_for_style(uint32_t x, uint32_t y, uint32_t style)
 {
     if (style >= CURSOR_STYLE_COUNT) {
-        style = LEONOS_GUI_CURSOR_ARROW;
+        style = RELIEFOS_GUI_CURSOR_ARROW;
     }
     return rect_make((int)x - cursor_hotspot_x[style],
                      (int)y - cursor_hotspot_y[style],
@@ -89,7 +89,7 @@ int rect_intersects(struct rect a, struct rect b)
 
 void put_pixel(uint32_t x, uint32_t y, uint32_t color)
 {
-    leonos_ui_pixel(&ui, x, y, color);
+    reliefos_ui_pixel(&ui, x, y, color);
 }
 
 void put_pixel_i(int x, int y, uint32_t color)
@@ -97,12 +97,12 @@ void put_pixel_i(int x, int y, uint32_t color)
     if (x < 0 || y < 0 || x >= (int)fb_w() || y >= (int)fb_h()) {
         return;
     }
-    leonos_ui_pixel(&ui, (uint32_t)x, (uint32_t)y, color);
+    reliefos_ui_pixel(&ui, (uint32_t)x, (uint32_t)y, color);
 }
 
 void rect_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color)
 {
-    leonos_ui_rect(&ui, x, y, w, h, color);
+    reliefos_ui_rect(&ui, x, y, w, h, color);
 }
 
 void rect_fill_i(int x, int y, int w, int h, uint32_t color)
@@ -114,15 +114,15 @@ void rect_fill_i(int x, int y, int w, int h, uint32_t color)
     if (r.w <= 0 || r.h <= 0) {
         return;
     }
-    leonos_ui_rect(&ui, (uint32_t)r.x, (uint32_t)r.y, (uint32_t)r.w, (uint32_t)r.h, color);
+    reliefos_ui_rect(&ui, (uint32_t)r.x, (uint32_t)r.y, (uint32_t)r.w, (uint32_t)r.h, color);
 }
 
 void bevel_i(int x, int y, int w, int h, uint32_t fill, uint32_t flags)
 {
-    if (leonos_ui_theme() == LEONOS_UI_THEME_METRO) {
-        uint32_t border = (flags & LEONOS_UI_BUTTON_PRESSED)
-                              ? LEONOS_UI_ACTIVE_TITLE
-                              : leonos_ui_color(LEONOS_UI_COLOR_BORDER);
+    if (reliefos_ui_theme() == RELIEFOS_UI_THEME_METRO) {
+        uint32_t border = (flags & RELIEFOS_UI_BUTTON_PRESSED)
+                              ? RELIEFOS_UI_ACTIVE_TITLE
+                              : reliefos_ui_color(RELIEFOS_UI_COLOR_BORDER);
         rect_fill_i(x, y, w, h, fill);
         rect_fill_i(x, y, w, 1, border);
         rect_fill_i(x, y, 1, h, border);
@@ -130,8 +130,8 @@ void bevel_i(int x, int y, int w, int h, uint32_t fill, uint32_t flags)
         rect_fill_i(x, y + h - 1, w, 1, border);
         return;
     }
-    uint32_t tl = (flags & LEONOS_UI_BUTTON_PRESSED) ? LEONOS_UI_DARK : LEONOS_UI_WHITE;
-    uint32_t br = (flags & LEONOS_UI_BUTTON_PRESSED) ? LEONOS_UI_WHITE : LEONOS_UI_DARK;
+    uint32_t tl = (flags & RELIEFOS_UI_BUTTON_PRESSED) ? RELIEFOS_UI_DARK : RELIEFOS_UI_WHITE;
+    uint32_t br = (flags & RELIEFOS_UI_BUTTON_PRESSED) ? RELIEFOS_UI_WHITE : RELIEFOS_UI_DARK;
     if (w <= 0 || h <= 0) {
         return;
     }
@@ -142,13 +142,13 @@ void bevel_i(int x, int y, int w, int h, uint32_t fill, uint32_t flags)
     rect_fill_i(x, y + h - 1, w, 1, br);
     if (w > 2 && h > 2) {
         rect_fill_i(x + 1, y + 1, w - 2, 1,
-                    (flags & LEONOS_UI_BUTTON_PRESSED) ? LEONOS_UI_BLACK : LEONOS_UI_LIGHT);
+                    (flags & RELIEFOS_UI_BUTTON_PRESSED) ? RELIEFOS_UI_BLACK : RELIEFOS_UI_LIGHT);
         rect_fill_i(x + 1, y + 1, 1, h - 2,
-                    (flags & LEONOS_UI_BUTTON_PRESSED) ? LEONOS_UI_BLACK : LEONOS_UI_LIGHT);
+                    (flags & RELIEFOS_UI_BUTTON_PRESSED) ? RELIEFOS_UI_BLACK : RELIEFOS_UI_LIGHT);
         rect_fill_i(x + w - 2, y + 1, 1, h - 2,
-                    (flags & LEONOS_UI_BUTTON_PRESSED) ? LEONOS_UI_LIGHT : LEONOS_UI_DARK);
+                    (flags & RELIEFOS_UI_BUTTON_PRESSED) ? RELIEFOS_UI_LIGHT : RELIEFOS_UI_DARK);
         rect_fill_i(x + 1, y + h - 2, w - 2, 1,
-                    (flags & LEONOS_UI_BUTTON_PRESSED) ? LEONOS_UI_LIGHT : LEONOS_UI_DARK);
+                    (flags & RELIEFOS_UI_BUTTON_PRESSED) ? RELIEFOS_UI_LIGHT : RELIEFOS_UI_DARK);
     }
 }
 
@@ -156,7 +156,7 @@ void bevel_i(int x, int y, int w, int h, uint32_t fill, uint32_t flags)
 
 struct app_icon_cache_entry {
     uint8_t used;
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     uint32_t width;
     uint32_t height;
     uint32_t pixels[APP_ICON_MAX_W * APP_ICON_MAX_H];
@@ -234,11 +234,11 @@ static void draw_fallback_app_icon(int x, int y, uint32_t w, uint32_t h)
     if (w < 8 || h < 8) {
         return;
     }
-    rect_fill_i(x, y, (int)w, (int)h, LEONOS_UI_GRAY);
-    rect_fill_i(x, y, (int)w, 1, LEONOS_UI_WHITE);
-    rect_fill_i(x, y, 1, (int)h, LEONOS_UI_WHITE);
-    rect_fill_i(x + (int)w - 1, y, 1, (int)h, LEONOS_UI_BLACK);
-    rect_fill_i(x, y + (int)h - 1, (int)w, 1, LEONOS_UI_BLACK);
+    rect_fill_i(x, y, (int)w, (int)h, RELIEFOS_UI_GRAY);
+    rect_fill_i(x, y, (int)w, 1, RELIEFOS_UI_WHITE);
+    rect_fill_i(x, y, 1, (int)h, RELIEFOS_UI_WHITE);
+    rect_fill_i(x + (int)w - 1, y, 1, (int)h, RELIEFOS_UI_BLACK);
+    rect_fill_i(x, y + (int)h - 1, (int)w, 1, RELIEFOS_UI_BLACK);
 
     doc_w = (int)w / 2;
     doc_h = (int)h * 5 / 8;
@@ -261,10 +261,10 @@ static void draw_fallback_app_icon(int x, int y, uint32_t w, uint32_t h)
         fold = 2;
     }
     rect_fill_i(doc_x, doc_y, doc_w, doc_h, 0x00ffffff);
-    rect_fill_i(doc_x, doc_y, doc_w, 1, LEONOS_UI_DARK);
-    rect_fill_i(doc_x, doc_y, 1, doc_h, LEONOS_UI_DARK);
-    rect_fill_i(doc_x + doc_w - 1, doc_y, 1, doc_h, LEONOS_UI_DARK);
-    rect_fill_i(doc_x, doc_y + doc_h - 1, doc_w, 1, LEONOS_UI_DARK);
+    rect_fill_i(doc_x, doc_y, doc_w, 1, RELIEFOS_UI_DARK);
+    rect_fill_i(doc_x, doc_y, 1, doc_h, RELIEFOS_UI_DARK);
+    rect_fill_i(doc_x + doc_w - 1, doc_y, 1, doc_h, RELIEFOS_UI_DARK);
+    rect_fill_i(doc_x, doc_y + doc_h - 1, doc_w, 1, RELIEFOS_UI_DARK);
     rect_fill_i(doc_x + doc_w - fold, doc_y + 1, fold - 1, fold - 1, 0x00d8d8d8);
     rect_fill_i(doc_x + 2, doc_y + doc_h / 3, doc_w - 4, 1, 0x00000080);
     rect_fill_i(doc_x + 2, doc_y + doc_h / 2, doc_w - 5, 1, 0x00000080);
@@ -291,25 +291,25 @@ void draw_app_icon_large(const char *icon_path, int x, int y)
 
 void text_draw(uint32_t x, uint32_t y, const char *text, uint32_t fg, uint32_t bg)
 {
-    leonos_ui_text(&ui, x, y, text, fg, bg);
+    reliefos_ui_text(&ui, x, y, text, fg, bg);
 }
 
 void text_draw_i(int x, int y, const char *text, uint32_t fg, uint32_t bg)
 {
     if (x >= 0 && y >= 0) {
-        leonos_ui_text(&ui, (uint32_t)x, (uint32_t)y, text, fg, bg);
+        reliefos_ui_text(&ui, (uint32_t)x, (uint32_t)y, text, fg, bg);
         return;
     }
     for (uint32_t i = 0; text && text[i]; ++i) {
-        int gx = x + (int)i * (int)LEONOS_FONT_W;
-        if (gx + (int)LEONOS_FONT_W <= 0 || gx >= (int)fb_w() ||
-            y + (int)LEONOS_FONT_H <= 0 || y >= (int)fb_h()) {
+        int gx = x + (int)i * (int)RELIEFOS_FONT_W;
+        if (gx + (int)RELIEFOS_FONT_W <= 0 || gx >= (int)fb_w() ||
+            y + (int)RELIEFOS_FONT_H <= 0 || y >= (int)fb_h()) {
             continue;
         }
-        for (uint32_t row = 0; row < LEONOS_FONT_H; ++row) {
-            for (uint32_t col = 0; col < LEONOS_FONT_W; ++col) {
+        for (uint32_t row = 0; row < RELIEFOS_FONT_H; ++row) {
+            for (uint32_t col = 0; col < RELIEFOS_FONT_W; ++col) {
                 uint32_t color = bg;
-                const uint8_t *glyph = leonos_psf_glyph(text[i]);
+                const uint8_t *glyph = reliefos_psf_glyph(text[i]);
                 if (glyph[row] & (uint8_t)(0x80u >> col)) {
                     color = fg;
                 }
@@ -322,18 +322,18 @@ void text_draw_i(int x, int y, const char *text, uint32_t fg, uint32_t bg)
 void text_draw_transparent_i(int x, int y, const char *text, uint32_t fg)
 {
     if (x >= 0 && y >= 0) {
-        leonos_ui_text_transparent(&ui, (uint32_t)x, (uint32_t)y, text, fg);
+        reliefos_ui_text_transparent(&ui, (uint32_t)x, (uint32_t)y, text, fg);
         return;
     }
     for (uint32_t i = 0; text && text[i]; ++i) {
-        int gx = x + (int)i * (int)LEONOS_FONT_W;
-        if (gx + (int)LEONOS_FONT_W <= 0 || gx >= (int)fb_w() ||
-            y + (int)LEONOS_FONT_H <= 0 || y >= (int)fb_h()) {
+        int gx = x + (int)i * (int)RELIEFOS_FONT_W;
+        if (gx + (int)RELIEFOS_FONT_W <= 0 || gx >= (int)fb_w() ||
+            y + (int)RELIEFOS_FONT_H <= 0 || y >= (int)fb_h()) {
             continue;
         }
-        const uint8_t *glyph = leonos_psf_glyph(text[i]);
-        for (uint32_t row = 0; row < LEONOS_FONT_H; ++row) {
-            for (uint32_t col = 0; col < LEONOS_FONT_W; ++col) {
+        const uint8_t *glyph = reliefos_psf_glyph(text[i]);
+        for (uint32_t row = 0; row < RELIEFOS_FONT_H; ++row) {
+            for (uint32_t col = 0; col < RELIEFOS_FONT_W; ++col) {
                 if (glyph[row] & (uint8_t)(0x80u >> col)) {
                     put_pixel_i(gx + (int)col, y + (int)row, fg);
                 }
@@ -433,14 +433,14 @@ static void draw_fallback_window_button_symbol(int x, int y, char label,
 
 void window_button_i(int x, int y, char label, uint32_t flags)
 {
-    int pressed = (flags & LEONOS_UI_BUTTON_PRESSED) != 0;
-    uint32_t icon_color = (flags & LEONOS_UI_BUTTON_DISABLED) ?
-        LEONOS_UI_DARK : LEONOS_UI_BLACK;
-    int icon_x = x + ((int)LEONOS_UI_WINDOW_BUTTON_W - WINDOW_BUTTON_ICON_W) / 2 + pressed;
-    int icon_y = y + ((int)LEONOS_UI_WINDOW_BUTTON_H - WINDOW_BUTTON_ICON_H) / 2 + pressed;
+    int pressed = (flags & RELIEFOS_UI_BUTTON_PRESSED) != 0;
+    uint32_t icon_color = (flags & RELIEFOS_UI_BUTTON_DISABLED) ?
+        RELIEFOS_UI_DARK : RELIEFOS_UI_BLACK;
+    int icon_x = x + ((int)RELIEFOS_UI_WINDOW_BUTTON_W - WINDOW_BUTTON_ICON_W) / 2 + pressed;
+    int icon_y = y + ((int)RELIEFOS_UI_WINDOW_BUTTON_H - WINDOW_BUTTON_ICON_H) / 2 + pressed;
     const char *icon_path = window_button_icon_path(label);
-    bevel_i(x, y, LEONOS_UI_WINDOW_BUTTON_W, LEONOS_UI_WINDOW_BUTTON_H,
-            LEONOS_UI_GRAY, flags);
+    bevel_i(x, y, RELIEFOS_UI_WINDOW_BUTTON_W, RELIEFOS_UI_WINDOW_BUTTON_H,
+            RELIEFOS_UI_GRAY, flags);
     if (!draw_window_button_icon(icon_path, icon_x, icon_y,
                                  WINDOW_BUTTON_ICON_W, WINDOW_BUTTON_ICON_H,
                                  icon_color)) {
@@ -495,7 +495,7 @@ static int load_bmp_argb(const char *path, uint32_t max_w, uint32_t max_h,
 {
     uint8_t *bmp = bmp_scratch;
     int fd;
-    struct leonos_stat st;
+    struct reliefos_stat st;
     uint32_t len = 0;
     uint32_t pixel_offset;
     uint32_t dib_size;
@@ -512,11 +512,11 @@ static int load_bmp_argb(const char *path, uint32_t max_w, uint32_t max_h,
         out_stride < max_w || max_bytes > sizeof(bmp_scratch)) {
         return 0;
     }
-    if (leonos_stat_legacy(path, &st) < 0 || st.type != LEONOS_FS_TYPE_FILE ||
+    if (reliefos_stat_legacy(path, &st) < 0 || st.type != RELIEFOS_FS_TYPE_FILE ||
         st.size < 54 || st.size > max_bytes) {
         return 0;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return 0;
     }
@@ -715,7 +715,7 @@ const char *task_kind_name(uint32_t kind)
     return kind == 1 ? T("user") : T("kern");
 }
 
-void task_line(char *buf, uint32_t cap, const struct leonos_task_info *task)
+void task_line(char *buf, uint32_t cap, const struct reliefos_task_info *task)
 {
     uint32_t pos = 0;
     buf[0] = 0;
@@ -736,9 +736,9 @@ void task_line(char *buf, uint32_t cap, const struct leonos_task_info *task)
 
 void refresh_task_snapshot(void)
 {
-    int count = leonos_task_snapshot(task_infos, LEONOS_TASK_MAX, &task_info_tick);
+    int count = reliefos_task_snapshot(task_infos, RELIEFOS_TASK_MAX, &task_info_tick);
     task_info_count = count > 0 ? (uint32_t)count : 0;
-    last_task_refresh = leonos_uptime_ms();
+    last_task_refresh = reliefos_uptime_ms();
 }
 
 uint32_t min_u32(uint32_t a, uint32_t b)

@@ -20,7 +20,7 @@ class ImageAccounts(unittest.TestCase):
         crypt = ctypes.CDLL(ctypes.util.find_library("crypt"))
         crypt.crypt.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
         crypt.crypt.restype = ctypes.c_char_p
-        with tempfile.TemporaryDirectory(prefix="leonos-image-accounts-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="reliefos-image-accounts-") as temporary:
             work = Path(temporary)
             source = work / "source"
             shutil.copytree(ROOT / "system/rootfs", source, symlinks=True)
@@ -47,7 +47,7 @@ class ImageAccounts(unittest.TestCase):
                     self.assertIn("wheel:x:10:test\n", (stage / "etc/group").read_text())
                     self.assertIn("wheel:!::test\n", (stage / "etc/gshadow").read_text())
                     self.assertIn("%wheel ALL=(ALL:ALL) ALL", (stage / "etc/sudoers").read_text().splitlines())
-                    self.assertTrue((stage / "etc/leonos/installed").is_file())
+                    self.assertTrue((stage / "etc/reliefos/installed").is_file())
                     self.assertEqual((stage / "etc/shadow").stat().st_mode & 0o777, 0o600)
                     self.assertEqual((stage / "home/test").stat().st_mode & 0o777, 0o700)
                     image = work / f"{kind}.ext2"
@@ -66,7 +66,7 @@ class ImageAccounts(unittest.TestCase):
                         self.assertIn(f"Mode:  {mode}", info)
             self.assertEqual((source / "etc/shadow").read_bytes(), original_shadow)
             self.assertFalse((source / "home/test").exists())
-            self.assertFalse((source / "etc/leonos/installed").exists())
+            self.assertFalse((source / "etc/reliefos/installed").exists())
             image = work / "installer-seed.ext2"
             with image.open("wb") as stream:
                 stream.truncate(32 << 20)

@@ -13,12 +13,12 @@ static void check(int ok, const char *what)
 }
 
 /* Lengths come from strlen so no case can silently read past the literal. */
-static int parse(const char *text, struct leonos_locale_setting *out)
+static int parse(const char *text, struct reliefos_locale_setting *out)
 {
-    return leonos_locale_parse(text, strlen(text), out, LEONOS_LOCALE_MAX);
+    return reliefos_locale_parse(text, strlen(text), out, RELIEFOS_LOCALE_MAX);
 }
 
-static const char *value_of(const struct leonos_locale_setting *s, int n,
+static const char *value_of(const struct reliefos_locale_setting *s, int n,
                             const char *name)
 {
     int i;
@@ -31,7 +31,7 @@ static const char *value_of(const struct leonos_locale_setting *s, int n,
 
 int main(void)
 {
-    struct leonos_locale_setting s[LEONOS_LOCALE_MAX];
+    struct reliefos_locale_setting s[RELIEFOS_LOCALE_MAX];
     int n;
 
     n = parse("LANG=zh_CN.UTF-8\n", s);
@@ -73,7 +73,7 @@ int main(void)
     check(n == 1 && strcmp(value_of(s, n, "LANG"), "zh_CN.UTF-8") == 0,
           "invalid quoting and legacy key cannot override LANG");
 
-    n = leonos_locale_parse("LANG=en\nLC_ALL=C\nLANG=zh\n", 25, s, 1);
+    n = reliefos_locale_parse("LANG=en\nLC_ALL=C\nLANG=zh\n", 25, s, 1);
     check(n == 1 && strcmp(value_of(s, n, "LANG"), "zh") == 0,
           "capacity limit still allows replacement");
 

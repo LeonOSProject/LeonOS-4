@@ -1,27 +1,27 @@
-#include <leonos/gui.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/launch.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/launch.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 #include <stdlib.h>
 
 #include "ui_internal.h"
 
 #define UI_T(s) gettext(s)
 
-void leonos_ui_dialog(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_dialog(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                       uint32_t w, uint32_t h, const char *title)
 {
-    leonos_ui_bevel(surface, x, y, w, h, LEONOS_UI_GRAY, 0);
-    leonos_ui_rect(surface, x + 4, y + 4, w > 8 ? w - 8 : 0, LEONOS_UI_TITLEBAR_H, LEONOS_UI_ACTIVE_TITLE);
-    leonos_ui_text_clipped(surface, x + 10, y + 9, w > 20 ? w - 20 : w, title, LEONOS_UI_WHITE, LEONOS_UI_ACTIVE_TITLE);
+    reliefos_ui_bevel(surface, x, y, w, h, RELIEFOS_UI_GRAY, 0);
+    reliefos_ui_rect(surface, x + 4, y + 4, w > 8 ? w - 8 : 0, RELIEFOS_UI_TITLEBAR_H, RELIEFOS_UI_ACTIVE_TITLE);
+    reliefos_ui_text_clipped(surface, x + 10, y + 9, w > 20 ? w - 20 : w, title, RELIEFOS_UI_WHITE, RELIEFOS_UI_ACTIVE_TITLE);
 }
 
 #define UI_MESSAGE_TEXT_TOP 18u
 #define UI_MESSAGE_BOTTOM_PAD 44u
-#define UI_MESSAGE_LINE_STEP (LEONOS_FONT_H + 2u)
+#define UI_MESSAGE_LINE_STEP (RELIEFOS_FONT_H + 2u)
 #define UI_MESSAGE_MIN_W 180u
 #define UI_MESSAGE_DEFAULT_W 360u
 #define UI_CONFIRM_DEFAULT_W 320u
@@ -35,7 +35,7 @@ static uint32_t ui_message_inner_width(uint32_t w)
 
 static uint32_t ui_message_max_cells(uint32_t w)
 {
-    uint32_t cells = leonos_ui_text_fit_chars(ui_message_inner_width(w));
+    uint32_t cells = reliefos_ui_text_fit_chars(ui_message_inner_width(w));
     return cells ? cells : 1u;
 }
 
@@ -149,7 +149,7 @@ static void ui_message_copy_line(char *line, uint32_t capacity,
     line[n < capacity ? n : capacity - 1] = 0;
 }
 
-static void ui_message_draw_wrapped(struct leonos_ui_surface *surface,
+static void ui_message_draw_wrapped(struct reliefos_ui_surface *surface,
                                     uint32_t x, uint32_t y, uint32_t w,
                                     uint32_t h, const char *message)
 {
@@ -162,8 +162,8 @@ static void ui_message_draw_wrapped(struct leonos_ui_surface *surface,
     uint32_t visible_lines = bottom > line_y ? (bottom - line_y) / UI_MESSAGE_LINE_STEP : 0;
     uint32_t drawn = 0;
     if (!message || !message[0]) {
-        leonos_ui_text_clipped(surface, x + 16, line_y, inner_w, "",
-                               LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+        reliefos_ui_text_clipped(surface, x + 16, line_y, inner_w, "",
+                               RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
         return;
     }
     while (pos < text_len && drawn < visible_lines) {
@@ -181,57 +181,57 @@ static void ui_message_draw_wrapped(struct leonos_ui_surface *surface,
         }
         truncated = (drawn + 1 >= visible_lines && next < text_len) ? 1 : 0;
         ui_message_copy_line(line, sizeof(line), message, start, end, max_cells, truncated);
-        leonos_ui_text_clipped(surface, x + 16, line_y, inner_w,
-                               line, LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+        reliefos_ui_text_clipped(surface, x + 16, line_y, inner_w,
+                               line, RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
         pos = next > pos ? next : pos + 1;
         line_y += UI_MESSAGE_LINE_STEP;
         ++drawn;
     }
 }
 
-void leonos_ui_message_box(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_message_box(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                            uint32_t w, uint32_t h, const char *title,
                            const char *message, const char *button)
 {
     (void)title;
-    leonos_ui_rect(surface, x, y, w, h, LEONOS_UI_GRAY);
+    reliefos_ui_rect(surface, x, y, w, h, RELIEFOS_UI_GRAY);
     ui_message_draw_wrapped(surface, x, y, w, h, message);
-    leonos_ui_button(surface, x + w / 2 - 36, y + h - 38, 72, LEONOS_UI_BUTTON_H, button ? button : "OK", 0);
+    reliefos_ui_button(surface, x + w / 2 - 36, y + h - 38, 72, RELIEFOS_UI_BUTTON_H, button ? button : "OK", 0);
 }
 
-void leonos_ui_confirm_dialog(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_confirm_dialog(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                               uint32_t w, uint32_t h, const char *title,
                               const char *message, uint32_t default_yes)
 {
     (void)title;
-    leonos_ui_rect(surface, x, y, w, h, LEONOS_UI_GRAY);
+    reliefos_ui_rect(surface, x, y, w, h, RELIEFOS_UI_GRAY);
     ui_message_draw_wrapped(surface, x, y, w, h, message);
-    leonos_ui_button(surface, x + w - 168, y + h - 38, 72, LEONOS_UI_BUTTON_H, "Yes",
-                     default_yes ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_button(surface, x + w - 88, y + h - 38, 72, LEONOS_UI_BUTTON_H, "No",
-                     default_yes ? 0 : LEONOS_UI_BUTTON_PRESSED);
+    reliefos_ui_button(surface, x + w - 168, y + h - 38, 72, RELIEFOS_UI_BUTTON_H, "Yes",
+                     default_yes ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_button(surface, x + w - 88, y + h - 38, 72, RELIEFOS_UI_BUTTON_H, "No",
+                     default_yes ? 0 : RELIEFOS_UI_BUTTON_PRESSED);
 }
 
-void leonos_ui_input_dialog(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_input_dialog(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                             uint32_t w, uint32_t h, const char *title,
                             const char *label, const char *value, uint32_t flags)
 {
     (void)title;
-    leonos_ui_rect(surface, x, y, w, h, LEONOS_UI_GRAY);
-    leonos_ui_text_clipped(surface, x + 16, y + 20, w > 32 ? w - 32 : w, label, LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_edit(surface, x + 16, y + 46, w > 32 ? w - 32 : w, value, ui_strlen(value), 0, flags);
-    leonos_ui_button(surface, x + w - 168, y + h - 38, 72, LEONOS_UI_BUTTON_H, "OK", 0);
-    leonos_ui_button(surface, x + w - 88, y + h - 38, 72, LEONOS_UI_BUTTON_H, "Cancel", 0);
+    reliefos_ui_rect(surface, x, y, w, h, RELIEFOS_UI_GRAY);
+    reliefos_ui_text_clipped(surface, x + 16, y + 20, w > 32 ? w - 32 : w, label, RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_edit(surface, x + 16, y + 46, w > 32 ? w - 32 : w, value, ui_strlen(value), 0, flags);
+    reliefos_ui_button(surface, x + w - 168, y + h - 38, 72, RELIEFOS_UI_BUTTON_H, "OK", 0);
+    reliefos_ui_button(surface, x + w - 88, y + h - 38, 72, RELIEFOS_UI_BUTTON_H, "Cancel", 0);
 }
 
-int leonos_ui_show_message_box(const char *title, const char *message,
+int reliefos_ui_show_message_box(const char *title, const char *message,
                                const char *button)
 {
     enum { MAX_W = UI_MESSAGE_DEFAULT_W, MAX_H = UI_MESSAGE_MAX_H };
     static uint32_t pixels[MAX_W * MAX_H];
-    struct leonos_ui_surface surface;
-    struct leonos_gui_app_event event;
-    struct leonos_display_state display;
+    struct reliefos_ui_surface surface;
+    struct reliefos_gui_app_event event;
+    struct reliefos_display_state display;
     uint32_t screen_w = 640;
     uint32_t screen_h = 480;
     uint32_t max_w;
@@ -241,7 +241,7 @@ int leonos_ui_show_message_box(const char *title, const char *message,
     uint32_t line_count;
     uint32_t needed_h;
     int result = 0;
-    if (leonos_display_get_state(&display) == 0 &&
+    if (reliefos_display_get_state(&display) == 0 &&
         display.logical_width && display.logical_height) {
         screen_w = display.logical_width;
         screen_h = display.logical_height;
@@ -270,48 +270,48 @@ int leonos_ui_show_message_box(const char *title, const char *message,
     if (h > max_h) {
         h = max_h;
     }
-    int window_id = leonos_gui_create_app_window_ex(title ? title : "Message",
+    int window_id = reliefos_gui_create_app_window_ex(title ? title : "Message",
                                                     message ? message : "",
-                                                    w, h, LEONOS_GUI_WINDOW_NO_RESIZE);
+                                                    w, h, RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         return window_id;
     }
-    leonos_ui_bind(&surface, pixels, w, h, MAX_W);
-    leonos_ui_rect(&surface, 0, 0, w, h, LEONOS_UI_GRAY);
-    leonos_ui_message_box(&surface, 0, 0, w, h, title ? title : "Message",
+    reliefos_ui_bind(&surface, pixels, w, h, MAX_W);
+    reliefos_ui_rect(&surface, 0, 0, w, h, RELIEFOS_UI_GRAY);
+    reliefos_ui_message_box(&surface, 0, 0, w, h, title ? title : "Message",
                           message ? message : "", button ? button : "OK");
-    leonos_gui_present_window((uint32_t)window_id, w, h, MAX_W, pixels);
+    reliefos_gui_present_window((uint32_t)window_id, w, h, MAX_W, pixels);
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 break;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN &&
-                (event.keycode == LEONOS_KEY_ENTER || event.keycode == 1)) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN &&
+                (event.keycode == RELIEFOS_KEY_ENTER || event.keycode == 1)) {
                 break;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u) &&
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u) &&
                 event.x >= (int32_t)(w / 2 - 36) && event.x < (int32_t)(w / 2 + 36) &&
-                event.y >= (int32_t)(h - 38) && event.y < (int32_t)(h - 38 + LEONOS_UI_BUTTON_H)) {
+                event.y >= (int32_t)(h - 38) && event.y < (int32_t)(h - 38 + RELIEFOS_UI_BUTTON_H)) {
                 break;
             }
         } else {
             sleep_ms(10);
         }
     }
-    leonos_gui_destroy_app_window((uint32_t)window_id);
+    reliefos_gui_destroy_app_window((uint32_t)window_id);
     return result;
 }
 
-int leonos_ui_show_confirm_dialog(const char *title, const char *message,
+int reliefos_ui_show_confirm_dialog(const char *title, const char *message,
                                   uint32_t default_yes)
 {
     enum { MAX_W = UI_CONFIRM_DEFAULT_W, MAX_H = UI_MESSAGE_MAX_H };
     static uint32_t pixels[MAX_W * MAX_H];
-    struct leonos_ui_surface surface;
-    struct leonos_gui_app_event event;
-    struct leonos_display_state display;
+    struct reliefos_ui_surface surface;
+    struct reliefos_gui_app_event event;
+    struct reliefos_display_state display;
     uint32_t screen_w = 640;
     uint32_t screen_h = 480;
     uint32_t max_w;
@@ -321,7 +321,7 @@ int leonos_ui_show_confirm_dialog(const char *title, const char *message,
     uint32_t line_count;
     uint32_t needed_h;
     int result = 0;
-    if (leonos_display_get_state(&display) == 0 &&
+    if (reliefos_display_get_state(&display) == 0 &&
         display.logical_width && display.logical_height) {
         screen_w = display.logical_width;
         screen_h = display.logical_height;
@@ -350,25 +350,25 @@ int leonos_ui_show_confirm_dialog(const char *title, const char *message,
     if (h > max_h) {
         h = max_h;
     }
-    int window_id = leonos_gui_create_app_window_ex(title ? title : "Confirm",
+    int window_id = reliefos_gui_create_app_window_ex(title ? title : "Confirm",
                                                     message ? message : "",
-                                                    w, h, LEONOS_GUI_WINDOW_NO_RESIZE);
+                                                    w, h, RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         return window_id;
     }
-    leonos_ui_bind(&surface, pixels, w, h, MAX_W);
-    leonos_ui_rect(&surface, 0, 0, w, h, LEONOS_UI_GRAY);
-    leonos_ui_confirm_dialog(&surface, 0, 0, w, h, title ? title : "Confirm",
+    reliefos_ui_bind(&surface, pixels, w, h, MAX_W);
+    reliefos_ui_rect(&surface, 0, 0, w, h, RELIEFOS_UI_GRAY);
+    reliefos_ui_confirm_dialog(&surface, 0, 0, w, h, title ? title : "Confirm",
                              message ? message : "", default_yes);
-    leonos_gui_present_window((uint32_t)window_id, w, h, MAX_W, pixels);
+    reliefos_gui_present_window((uint32_t)window_id, w, h, MAX_W, pixels);
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 break;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN || event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
-                if (event.pressed && event.keycode == LEONOS_KEY_ENTER) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN || event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
+                if (event.pressed && event.keycode == RELIEFOS_KEY_ENTER) {
                     result = default_yes ? 1 : 0;
                     break;
                 }
@@ -376,14 +376,14 @@ int leonos_ui_show_confirm_dialog(const char *title, const char *message,
                     break;
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u)) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u)) {
                 if (event.x >= (int32_t)(w - 168) && event.x < (int32_t)(w - 96) &&
-                    event.y >= (int32_t)(h - 38) && event.y < (int32_t)(h - 38 + LEONOS_UI_BUTTON_H)) {
+                    event.y >= (int32_t)(h - 38) && event.y < (int32_t)(h - 38 + RELIEFOS_UI_BUTTON_H)) {
                     result = 1;
                     break;
                 }
                 if (event.x >= (int32_t)(w - 88) && event.x < (int32_t)(w - 16) &&
-                    event.y >= (int32_t)(h - 38) && event.y < (int32_t)(h - 38 + LEONOS_UI_BUTTON_H)) {
+                    event.y >= (int32_t)(h - 38) && event.y < (int32_t)(h - 38 + RELIEFOS_UI_BUTTON_H)) {
                     break;
                 }
             }
@@ -391,18 +391,18 @@ int leonos_ui_show_confirm_dialog(const char *title, const char *message,
             sleep_ms(10);
         }
     }
-    leonos_gui_destroy_app_window((uint32_t)window_id);
+    reliefos_gui_destroy_app_window((uint32_t)window_id);
     return result;
 }
 
-int leonos_ui_show_input_dialog(const char *title, const char *label,
+int reliefos_ui_show_input_dialog(const char *title, const char *label,
                                 char *value, uint32_t capacity)
 {
     enum { W = 360, H = 172 };
     static uint32_t pixels[W * H];
-    struct leonos_ui_surface surface;
-    struct leonos_gui_app_event event;
-    struct leonos_ui_edit_state edit;
+    struct reliefos_ui_surface surface;
+    struct reliefos_gui_app_event event;
+    struct reliefos_ui_edit_state edit;
     char original[128];
     int result = 0;
     int window_id;
@@ -415,55 +415,55 @@ int leonos_ui_show_input_dialog(const char *title, const char *label,
     for (uint32_t i = 0; i + 1 < sizeof(original) && i + 1 < capacity && value[i]; ++i) {
         original[i] = value[i];
     }
-    window_id = leonos_gui_create_app_window_ex(title ? title : "Input",
+    window_id = reliefos_gui_create_app_window_ex(title ? title : "Input",
                                                 label ? label : "",
-                                                W, H, LEONOS_GUI_WINDOW_NO_RESIZE);
+                                                W, H, RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         return window_id;
     }
-    leonos_ui_bind(&surface, pixels, W, H, W);
-    leonos_ui_edit_state_init(&edit, value, capacity);
+    reliefos_ui_bind(&surface, pixels, W, H, W);
+    reliefos_ui_edit_state_init(&edit, value, capacity);
     edit.focused = 1;
     for (;;) {
-        leonos_ui_rect(&surface, 0, 0, W, H, LEONOS_UI_GRAY);
-        leonos_ui_text_clipped(&surface, 16, 20, W - 32, label ? label : "",
-                               LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-        leonos_ui_edit_state_draw(&surface, 16, 46, W - 32, &edit, 0);
-        leonos_ui_button(&surface, W - 168, H - 38, 72, LEONOS_UI_BUTTON_H, "OK", 0);
-        leonos_ui_button(&surface, W - 88, H - 38, 72, LEONOS_UI_BUTTON_H, "Cancel", 0);
-        leonos_gui_present_window((uint32_t)window_id, W, H, W, pixels);
+        reliefos_ui_rect(&surface, 0, 0, W, H, RELIEFOS_UI_GRAY);
+        reliefos_ui_text_clipped(&surface, 16, 20, W - 32, label ? label : "",
+                               RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+        reliefos_ui_edit_state_draw(&surface, 16, 46, W - 32, &edit, 0);
+        reliefos_ui_button(&surface, W - 168, H - 38, 72, RELIEFOS_UI_BUTTON_H, "OK", 0);
+        reliefos_ui_button(&surface, W - 88, H - 38, 72, RELIEFOS_UI_BUTTON_H, "Cancel", 0);
+        reliefos_gui_present_window((uint32_t)window_id, W, H, W, pixels);
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 break;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN || event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
-                if (event.pressed && event.keycode == LEONOS_KEY_ENTER) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN || event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
+                if (event.pressed && event.keycode == RELIEFOS_KEY_ENTER) {
                     result = 1;
                     break;
                 }
                 if (event.pressed && event.keycode == 1) {
                     break;
                 }
-                leonos_ui_edit_state_handle_key(&edit, event.keycode, event.pressed);
+                reliefos_ui_edit_state_handle_key(&edit, event.keycode, event.pressed);
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u)) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u)) {
                 if (event.x >= (int32_t)(W - 168) && event.x < (int32_t)(W - 96) &&
-                    event.y >= (int32_t)(H - 38) && event.y < (int32_t)(H - 38 + LEONOS_UI_BUTTON_H)) {
+                    event.y >= (int32_t)(H - 38) && event.y < (int32_t)(H - 38 + RELIEFOS_UI_BUTTON_H)) {
                     result = 1;
                     break;
                 }
                 if (event.x >= (int32_t)(W - 88) && event.x < (int32_t)(W - 16) &&
-                    event.y >= (int32_t)(H - 38) && event.y < (int32_t)(H - 38 + LEONOS_UI_BUTTON_H)) {
+                    event.y >= (int32_t)(H - 38) && event.y < (int32_t)(H - 38 + RELIEFOS_UI_BUTTON_H)) {
                     break;
                 }
-                leonos_ui_edit_state_handle_mouse(&edit, event.x, event.y, 16, 46, W - 32, event.buttons);
+                reliefos_ui_edit_state_handle_mouse(&edit, event.x, event.y, 16, 46, W - 32, event.buttons);
             }
         } else {
             sleep_ms(10);
         }
     }
-    leonos_gui_destroy_app_window((uint32_t)window_id);
+    reliefos_gui_destroy_app_window((uint32_t)window_id);
     if (!result) {
         uint32_t i = 0;
         while (i + 1 < capacity && i + 1 < sizeof(original) && original[i]) {
@@ -475,15 +475,15 @@ int leonos_ui_show_input_dialog(const char *title, const char *label,
     return result;
 }
 
-int leonos_ui_show_password_dialog(const char *title, const char *label,
+int reliefos_ui_show_password_dialog(const char *title, const char *label,
                                    char *value, uint32_t capacity)
 {
     enum { W = 360, H = 172 };
     static uint32_t pixels[W * H];
-    struct leonos_ui_surface surface;
-    struct leonos_gui_app_event event;
-    struct leonos_ui_edit_state edit;
-    struct leonos_ui_edit_state shown;
+    struct reliefos_ui_surface surface;
+    struct reliefos_gui_app_event event;
+    struct reliefos_ui_edit_state edit;
+    struct reliefos_ui_edit_state shown;
     char original[128];
     char masked[128];
     int result = 0;
@@ -498,15 +498,15 @@ int leonos_ui_show_password_dialog(const char *title, const char *label,
                          i + 1 < capacity && value[i]; ++i) {
         original[i] = value[i];
     }
-    window_id = leonos_gui_create_app_window_ex(title ? title : UI_T("Password"),
+    window_id = reliefos_gui_create_app_window_ex(title ? title : UI_T("Password"),
                                                  label ? label : "",
                                                  W, H,
-                                                 LEONOS_GUI_WINDOW_NO_RESIZE);
+                                                 RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         return window_id;
     }
-    leonos_ui_bind(&surface, pixels, W, H, W);
-    leonos_ui_edit_state_init(&edit, value, capacity);
+    reliefos_ui_bind(&surface, pixels, W, H, W);
+    reliefos_ui_edit_state_init(&edit, value, capacity);
     edit.focused = 1;
     for (;;) {
         uint32_t mask_len = edit.length < sizeof(masked) - 1U
@@ -519,49 +519,49 @@ int leonos_ui_show_password_dialog(const char *title, const char *label,
         shown.buffer = masked;
         shown.capacity = sizeof(masked);
         shown.length = mask_len;
-        leonos_ui_rect(&surface, 0, 0, W, H, LEONOS_UI_GRAY);
-        leonos_ui_text_clipped(&surface, 16, 20, W - 32, label ? label : "",
-                               LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-        leonos_ui_edit_state_draw(&surface, 16, 46, W - 32, &shown,
-                                  LEONOS_UI_EDIT_SECURE);
-        leonos_ui_button(&surface, W - 168, H - 38, 72, LEONOS_UI_BUTTON_H,
+        reliefos_ui_rect(&surface, 0, 0, W, H, RELIEFOS_UI_GRAY);
+        reliefos_ui_text_clipped(&surface, 16, 20, W - 32, label ? label : "",
+                               RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+        reliefos_ui_edit_state_draw(&surface, 16, 46, W - 32, &shown,
+                                  RELIEFOS_UI_EDIT_SECURE);
+        reliefos_ui_button(&surface, W - 168, H - 38, 72, RELIEFOS_UI_BUTTON_H,
                          UI_T("OK"), 0);
-        leonos_ui_button(&surface, W - 88, H - 38, 72, LEONOS_UI_BUTTON_H,
+        reliefos_ui_button(&surface, W - 88, H - 38, 72, RELIEFOS_UI_BUTTON_H,
                          UI_T("Cancel"), 0);
-        leonos_gui_present_window((uint32_t)window_id, W, H, W, pixels);
+        reliefos_gui_present_window((uint32_t)window_id, W, H, W, pixels);
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 break;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN ||
-                event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
-                if (event.pressed && event.keycode == LEONOS_KEY_ENTER) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN ||
+                event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
+                if (event.pressed && event.keycode == RELIEFOS_KEY_ENTER) {
                     result = 1;
                     break;
                 }
                 if (event.pressed && event.keycode == 1) {
                     break;
                 }
-                leonos_ui_edit_state_handle_key(&edit, event.keycode,
+                reliefos_ui_edit_state_handle_key(&edit, event.keycode,
                                                 event.pressed);
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON &&
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON &&
                 (event.buttons & 1u)) {
                 if (event.x >= (int32_t)(W - 168) &&
                     event.x < (int32_t)(W - 96) &&
                     event.y >= (int32_t)(H - 38) &&
-                    event.y < (int32_t)(H - 38 + LEONOS_UI_BUTTON_H)) {
+                    event.y < (int32_t)(H - 38 + RELIEFOS_UI_BUTTON_H)) {
                     result = 1;
                     break;
                 }
                 if (event.x >= (int32_t)(W - 88) &&
                     event.x < (int32_t)(W - 16) &&
                     event.y >= (int32_t)(H - 38) &&
-                    event.y < (int32_t)(H - 38 + LEONOS_UI_BUTTON_H)) {
+                    event.y < (int32_t)(H - 38 + RELIEFOS_UI_BUTTON_H)) {
                     break;
                 }
-                leonos_ui_edit_state_handle_mouse(&edit, event.x, event.y,
+                reliefos_ui_edit_state_handle_mouse(&edit, event.x, event.y,
                                                    16, 46, W - 32,
                                                    event.buttons);
             }
@@ -569,7 +569,7 @@ int leonos_ui_show_password_dialog(const char *title, const char *label,
             sleep_ms(10);
         }
     }
-    leonos_gui_destroy_app_window((uint32_t)window_id);
+    reliefos_gui_destroy_app_window((uint32_t)window_id);
     if (!result) {
         uint32_t i = 0;
         while (i + 1 < capacity && i + 1 < sizeof(original) && original[i]) {
@@ -585,19 +585,19 @@ int leonos_ui_show_password_dialog(const char *title, const char *label,
 }
 
 struct ui_file_dialog_entry {
-    struct leonos_dir_entry dir_entry;
-    char display[LEONOS_FS_NAME_LEN + 4];
+    struct reliefos_dir_entry dir_entry;
+    char display[RELIEFOS_FS_NAME_LEN + 4];
 };
 
 struct ui_file_dialog_filter {
-    struct leonos_ui_dropdown_item item;
+    struct reliefos_ui_dropdown_item item;
     const char *extension;
 };
 
 enum {
     UI_FILE_DIALOG_W = 520,
     UI_FILE_DIALOG_H = 404,
-    UI_FILE_DIALOG_MAX_H = UI_FILE_DIALOG_H + LEONOS_UI_FILE_DIALOG_MAX_INPUTS * 28,
+    UI_FILE_DIALOG_MAX_H = UI_FILE_DIALOG_H + RELIEFOS_UI_FILE_DIALOG_MAX_INPUTS * 28,
     UI_FILE_DIALOG_MAX_ENTRIES = 64,
     UI_FILE_DIALOG_MARGIN = 16,
     UI_FILE_DIALOG_NAV_BUTTON_X = UI_FILE_DIALOG_W - 78,
@@ -607,7 +607,7 @@ enum {
     UI_FILE_DIALOG_LIST_X = 16,
     UI_FILE_DIALOG_LIST_Y = 70,
     UI_FILE_DIALOG_LIST_ROWS = 8,
-    UI_FILE_DIALOG_ROW_H = LEONOS_FONT_H + 4,
+    UI_FILE_DIALOG_ROW_H = RELIEFOS_FONT_H + 4,
     UI_FILE_DIALOG_LIST_BODY_X = UI_FILE_DIALOG_LIST_X + 2,
     UI_FILE_DIALOG_LIST_BODY_Y = UI_FILE_DIALOG_LIST_Y + 2,
     UI_FILE_DIALOG_LIST_BODY_W = 404,
@@ -631,8 +631,8 @@ enum {
 
 static uint32_t ui_file_dialog_height(uint32_t input_count)
 {
-    if (input_count > LEONOS_UI_FILE_DIALOG_MAX_INPUTS) {
-        input_count = LEONOS_UI_FILE_DIALOG_MAX_INPUTS;
+    if (input_count > RELIEFOS_UI_FILE_DIALOG_MAX_INPUTS) {
+        input_count = RELIEFOS_UI_FILE_DIALOG_MAX_INPUTS;
     }
     return UI_FILE_DIALOG_H + input_count * 28;
 }
@@ -642,23 +642,23 @@ static uint32_t ui_file_dialog_status_y(uint32_t input_count)
     return UI_FILE_DIALOG_STATUS_Y + input_count * 28;
 }
 
-static int ui_file_dialog_options_valid(const struct leonos_ui_file_dialog_options *options)
+static int ui_file_dialog_options_valid(const struct reliefos_ui_file_dialog_options *options)
 {
     if (!options) {
         return 0;
     }
-    if (options->input_count > LEONOS_UI_FILE_DIALOG_MAX_INPUTS ||
+    if (options->input_count > RELIEFOS_UI_FILE_DIALOG_MAX_INPUTS ||
         (options->input_count && !options->inputs)) {
         return -1;
     }
     for (uint32_t index = 0; index < options->input_count; ++index) {
-        const struct leonos_ui_file_dialog_input *input = &options->inputs[index];
+        const struct reliefos_ui_file_dialog_input *input = &options->inputs[index];
         if (!input->value ||
-            (input->type != LEONOS_UI_FILE_DIALOG_INPUT_CHECKBOX &&
-             input->type != LEONOS_UI_FILE_DIALOG_INPUT_DROPDOWN)) {
+            (input->type != RELIEFOS_UI_FILE_DIALOG_INPUT_CHECKBOX &&
+             input->type != RELIEFOS_UI_FILE_DIALOG_INPUT_DROPDOWN)) {
             return -1;
         }
-        if (input->type == LEONOS_UI_FILE_DIALOG_INPUT_DROPDOWN &&
+        if (input->type == RELIEFOS_UI_FILE_DIALOG_INPUT_DROPDOWN &&
             (!input->items || input->item_count == 0)) {
             return -1;
         }
@@ -667,24 +667,24 @@ static int ui_file_dialog_options_valid(const struct leonos_ui_file_dialog_optio
 }
 
 static uint32_t ui_file_dialog_input_initial(
-    const struct leonos_ui_file_dialog_input *input)
+    const struct reliefos_ui_file_dialog_input *input)
 {
     if (!input || !input->value) {
         return 0;
     }
-    if (input->type == LEONOS_UI_FILE_DIALOG_INPUT_CHECKBOX) {
+    if (input->type == RELIEFOS_UI_FILE_DIALOG_INPUT_CHECKBOX) {
         return *input->value ? 1U : 0U;
     }
     for (uint32_t index = 0; index < input->item_count; ++index) {
         if (input->items[index].id == *input->value &&
-            !(input->items[index].flags & (LEONOS_UI_MENU_DISABLED |
-                                            LEONOS_UI_MENU_SEPARATOR))) {
+            !(input->items[index].flags & (RELIEFOS_UI_MENU_DISABLED |
+                                            RELIEFOS_UI_MENU_SEPARATOR))) {
             return *input->value;
         }
     }
     for (uint32_t index = 0; index < input->item_count; ++index) {
-        if (!(input->items[index].flags & (LEONOS_UI_MENU_DISABLED |
-                                            LEONOS_UI_MENU_SEPARATOR))) {
+        if (!(input->items[index].flags & (RELIEFOS_UI_MENU_DISABLED |
+                                            RELIEFOS_UI_MENU_SEPARATOR))) {
             return input->items[index].id;
         }
     }
@@ -692,11 +692,11 @@ static uint32_t ui_file_dialog_input_initial(
 }
 
 static int ui_file_dialog_input_disabled(
-    const struct leonos_ui_file_dialog_input *input)
+    const struct reliefos_ui_file_dialog_input *input)
 {
-    return input && (input->flags & (LEONOS_UI_INPUT_DISABLED |
-                                     LEONOS_UI_BUTTON_DISABLED |
-                                     LEONOS_UI_EDIT_DISABLED));
+    return input && (input->flags & (RELIEFOS_UI_INPUT_DISABLED |
+                                     RELIEFOS_UI_BUTTON_DISABLED |
+                                     RELIEFOS_UI_EDIT_DISABLED));
 }
 
 static uint32_t ui_file_dialog_build_filters(
@@ -875,7 +875,7 @@ static void ui_file_dialog_entry_text(struct ui_file_dialog_entry *entry)
 {
     uint32_t pos = 0;
     entry->display[0] = 0;
-    if (entry->dir_entry.type == LEONOS_FS_TYPE_DIR) {
+    if (entry->dir_entry.type == RELIEFOS_FS_TYPE_DIR) {
         ui_append_text(entry->display, &pos, sizeof(entry->display), "[");
         ui_append_text(entry->display, &pos, sizeof(entry->display), entry->dir_entry.name);
         ui_append_text(entry->display, &pos, sizeof(entry->display), "]");
@@ -901,7 +901,7 @@ static int ui_file_dialog_load_entries(const char *path,
         return fd;
     }
     while (count < capacity) {
-        int ret = leonos_readdir(fd, &entries[count].dir_entry);
+        int ret = reliefos_readdir(fd, &entries[count].dir_entry);
         if (ret < 0) {
             close(fd);
             return ret;
@@ -909,7 +909,7 @@ static int ui_file_dialog_load_entries(const char *path,
         if (ret == 0) {
             break;
         }
-        if (entries[count].dir_entry.type == LEONOS_FS_TYPE_FILE &&
+        if (entries[count].dir_entry.type == RELIEFOS_FS_TYPE_FILE &&
             !ui_path_extension_matches(entries[count].dir_entry.name, filter_ext)) {
             continue;
         }
@@ -941,19 +941,19 @@ static void ui_file_dialog_select_entry(const char *dir_path,
     if (!entry || !filename || filename_cap == 0) {
         return;
     }
-    if (entry->dir_entry.type == LEONOS_FS_TYPE_FILE) {
+    if (entry->dir_entry.type == RELIEFOS_FS_TYPE_FILE) {
         ui_copy_text(filename, filename_cap, entry->dir_entry.name);
     } else {
         ui_copy_text(filename, filename_cap, "");
     }
 }
 
-static void ui_file_dialog_sync_name_edit(struct leonos_ui_edit_state *state)
+static void ui_file_dialog_sync_name_edit(struct reliefos_ui_edit_state *state)
 {
     if (!state) {
         return;
     }
-    leonos_ui_edit_state_sync(state);
+    reliefos_ui_edit_state_sync(state);
     state->cursor = state->length;
     state->selection_anchor = state->cursor;
     state->scroll = 0;
@@ -966,12 +966,12 @@ static int ui_file_dialog_activate(const char *title, int save_mode,
                                    struct ui_file_dialog_entry *entries,
                                    uint32_t entry_cap,
                                    uint32_t *entry_count,
-                                   struct leonos_ui_listview_state *list_state,
+                                   struct reliefos_ui_listview_state *list_state,
                                    const char *filter_ext,
                                    char *status, uint32_t status_cap)
 {
-    char full_path[LEONOS_FS_PATH_LEN];
-    struct leonos_stat st;
+    char full_path[RELIEFOS_FS_PATH_LEN];
+    struct reliefos_stat st;
     int ret;
     if (!save_mode) {
         if (list_state->selected < 0 || (uint32_t)list_state->selected >= *entry_count) {
@@ -979,7 +979,7 @@ static int ui_file_dialog_activate(const char *title, int save_mode,
                                   UI_T("Select a file in "), dir_path);
             return 0;
         }
-        if (entries[list_state->selected].dir_entry.type == LEONOS_FS_TYPE_DIR) {
+        if (entries[list_state->selected].dir_entry.type == RELIEFOS_FS_TYPE_DIR) {
             ui_build_child_path(full_path, sizeof(full_path), dir_path,
                                 entries[list_state->selected].dir_entry.name);
             ui_copy_text(dir_path, dir_cap, full_path);
@@ -991,7 +991,7 @@ static int ui_file_dialog_activate(const char *title, int save_mode,
                                       UI_T("Open dir failed "), dir_path);
                 return 0;
             }
-            leonos_ui_listview_state_set_count(list_state, *entry_count);
+            reliefos_ui_listview_state_set_count(list_state, *entry_count);
             list_state->selected = *entry_count ? 0 : -1;
             list_state->scroll = 0;
             ui_file_dialog_status(status, status_cap,
@@ -999,7 +999,7 @@ static int ui_file_dialog_activate(const char *title, int save_mode,
             return 0;
         }
         ui_build_child_path(full_path, sizeof(full_path), dir_path, filename);
-        if (leonos_stat_legacy(full_path, &st) < 0 || st.type != LEONOS_FS_TYPE_FILE) {
+        if (reliefos_stat_legacy(full_path, &st) < 0 || st.type != RELIEFOS_FS_TYPE_FILE) {
             ui_file_dialog_status(status, status_cap,
                                   UI_T("File not found "), full_path);
             return 0;
@@ -1023,8 +1023,8 @@ static int ui_file_dialog_activate(const char *title, int save_mode,
     } else {
         ui_build_child_path(full_path, sizeof(full_path), dir_path, filename);
     }
-    if (leonos_stat_legacy(full_path, &st) == 0 && st.type == LEONOS_FS_TYPE_FILE) {
-        if (!leonos_ui_show_confirm_dialog(title ? title : UI_T("Save As"),
+    if (reliefos_stat_legacy(full_path, &st) == 0 && st.type == RELIEFOS_FS_TYPE_FILE) {
+        if (!reliefos_ui_show_confirm_dialog(title ? title : UI_T("Save As"),
                                            UI_T("This file already exists. Replace it?"),
                                            0)) {
             ui_file_dialog_status(status, status_cap,
@@ -1042,9 +1042,9 @@ static uint32_t ui_file_dialog_input_y(uint32_t index)
 }
 
 static const char *ui_file_dialog_input_label(
-    const struct leonos_ui_file_dialog_input *input, uint32_t value)
+    const struct reliefos_ui_file_dialog_input *input, uint32_t value)
 {
-    if (!input || input->type != LEONOS_UI_FILE_DIALOG_INPUT_DROPDOWN) {
+    if (!input || input->type != RELIEFOS_UI_FILE_DIALOG_INPUT_DROPDOWN) {
         return "";
     }
     for (uint32_t index = 0; index < input->item_count; ++index) {
@@ -1055,7 +1055,7 @@ static const char *ui_file_dialog_input_label(
     return "";
 }
 
-static void ui_file_dialog_draw(struct leonos_ui_surface *surface,
+static void ui_file_dialog_draw(struct reliefos_ui_surface *surface,
                                 uint32_t dialog_h, const char *title,
                                 int save_mode, const char *dir_path,
                                 const struct ui_file_dialog_filter *filters,
@@ -1065,16 +1065,16 @@ static void ui_file_dialog_draw(struct leonos_ui_surface *surface,
                                 const char *status,
                                 struct ui_file_dialog_entry *entries,
                                 uint32_t entry_count,
-                                struct leonos_ui_listview_state *list_state,
-                                struct leonos_ui_edit_state *name_edit,
-                                const struct leonos_ui_file_dialog_options *options,
+                                struct reliefos_ui_listview_state *list_state,
+                                struct reliefos_ui_edit_state *name_edit,
+                                const struct reliefos_ui_file_dialog_options *options,
                                 const uint32_t *input_values,
                                 uint32_t input_dropdown_open)
 {
     uint32_t input_count = options ? options->input_count : 0;
-    struct leonos_ui_dropdown_item filter_items[2];
+    struct reliefos_ui_dropdown_item filter_items[2];
     const char *look_in_label = UI_T("Look in:");
-    uint32_t path_edit_x = UI_FILE_DIALOG_MARGIN + leonos_ui_text_width(look_in_label) + 8U;
+    uint32_t path_edit_x = UI_FILE_DIALOG_MARGIN + reliefos_ui_text_width(look_in_label) + 8U;
     uint32_t path_edit_w = UI_FILE_DIALOG_NAV_BUTTON_X > path_edit_x + 8U
                                ? UI_FILE_DIALOG_NAV_BUTTON_X - path_edit_x - 8U
                                : 0;
@@ -1086,94 +1086,94 @@ static void ui_file_dialog_draw(struct leonos_ui_surface *surface,
         filter_items[index] = filters[index].item;
     }
     (void)title;
-    leonos_ui_rect(surface, 0, 0, UI_FILE_DIALOG_W, dialog_h, LEONOS_UI_GRAY);
-    leonos_ui_text(surface, UI_FILE_DIALOG_MARGIN, 18, look_in_label,
-                   LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_edit(surface, path_edit_x, 14, path_edit_w, dir_path, ui_strlen(dir_path),
-                   0, LEONOS_UI_EDIT_READONLY);
-    leonos_ui_text(surface, 16, 44, UI_T("Files:"),
-                   LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_scroll_view_frame(surface, UI_FILE_DIALOG_LIST_X, UI_FILE_DIALOG_LIST_Y,
+    reliefos_ui_rect(surface, 0, 0, UI_FILE_DIALOG_W, dialog_h, RELIEFOS_UI_GRAY);
+    reliefos_ui_text(surface, UI_FILE_DIALOG_MARGIN, 18, look_in_label,
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_edit(surface, path_edit_x, 14, path_edit_w, dir_path, ui_strlen(dir_path),
+                   0, RELIEFOS_UI_EDIT_READONLY);
+    reliefos_ui_text(surface, 16, 44, UI_T("Files:"),
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_scroll_view_frame(surface, UI_FILE_DIALOG_LIST_X, UI_FILE_DIALOG_LIST_Y,
                                 UI_FILE_DIALOG_LIST_FRAME_W, UI_FILE_DIALOG_LIST_H);
     for (uint32_t row = 0; row < list_state->visible_rows; ++row) {
         uint32_t index = list_state->scroll + row;
         if (index >= entry_count) {
             break;
         }
-        leonos_ui_list_row(surface, UI_FILE_DIALOG_LIST_BODY_X,
+        reliefos_ui_list_row(surface, UI_FILE_DIALOG_LIST_BODY_X,
                            UI_FILE_DIALOG_LIST_BODY_Y + row * list_state->row_height,
                            UI_FILE_DIALOG_LIST_BODY_W, entries[index].display,
-                           list_state->selected == (int32_t)index ? LEONOS_UI_MENU_SELECTED : 0);
+                           list_state->selected == (int32_t)index ? RELIEFOS_UI_MENU_SELECTED : 0);
     }
-    leonos_ui_vscrollbar(surface, UI_FILE_DIALOG_SCROLL_X, UI_FILE_DIALOG_LIST_Y,
+    reliefos_ui_vscrollbar(surface, UI_FILE_DIALOG_SCROLL_X, UI_FILE_DIALOG_LIST_Y,
                          UI_FILE_DIALOG_SCROLL_W, UI_FILE_DIALOG_LIST_H,
                          list_state->scroll,
                          entry_count > list_state->visible_rows ? entry_count : list_state->visible_rows,
                          list_state->visible_rows,
-                         entry_count <= list_state->visible_rows ? LEONOS_UI_SCROLLBAR_DISABLED : 0);
-    leonos_ui_button(surface, UI_FILE_DIALOG_NAV_BUTTON_X, UI_FILE_DIALOG_UP_Y,
-                     UI_FILE_DIALOG_NAV_BUTTON_W, LEONOS_UI_BUTTON_H,
+                         entry_count <= list_state->visible_rows ? RELIEFOS_UI_SCROLLBAR_DISABLED : 0);
+    reliefos_ui_button(surface, UI_FILE_DIALOG_NAV_BUTTON_X, UI_FILE_DIALOG_UP_Y,
+                     UI_FILE_DIALOG_NAV_BUTTON_W, RELIEFOS_UI_BUTTON_H,
                      UI_T("Up"), 0);
-    leonos_ui_button(surface, UI_FILE_DIALOG_NAV_BUTTON_X, UI_FILE_DIALOG_ROOT_Y,
-                     UI_FILE_DIALOG_NAV_BUTTON_W, LEONOS_UI_BUTTON_H,
+    reliefos_ui_button(surface, UI_FILE_DIALOG_NAV_BUTTON_X, UI_FILE_DIALOG_ROOT_Y,
+                     UI_FILE_DIALOG_NAV_BUTTON_W, RELIEFOS_UI_BUTTON_H,
                      UI_T("Root"), 0);
-    leonos_ui_text(surface, 16, UI_FILE_DIALOG_NAME_LABEL_Y,
+    reliefos_ui_text(surface, 16, UI_FILE_DIALOG_NAME_LABEL_Y,
                    save_mode ? UI_T("File name:")
                              : UI_T("Selection:"),
-                   LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_edit_state_draw(surface, UI_FILE_DIALOG_NAME_EDIT_X,
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_edit_state_draw(surface, UI_FILE_DIALOG_NAME_EDIT_X,
                               UI_FILE_DIALOG_NAME_EDIT_Y,
                               UI_FILE_DIALOG_NAME_EDIT_W, name_edit, 0);
-    leonos_ui_text(surface, 16, UI_FILE_DIALOG_TYPE_LABEL_Y,
+    reliefos_ui_text(surface, 16, UI_FILE_DIALOG_TYPE_LABEL_Y,
                    UI_T("Files of type:"),
-                   LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_combobox(surface, UI_FILE_DIALOG_TYPE_EDIT_X, UI_FILE_DIALOG_TYPE_EDIT_Y,
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_combobox(surface, UI_FILE_DIALOG_TYPE_EDIT_X, UI_FILE_DIALOG_TYPE_EDIT_Y,
                        UI_FILE_DIALOG_TYPE_EDIT_W,
                        selected_filter ? selected_filter->item.label : "",
                        filter_dropdown_open, 0);
     for (uint32_t index = 0; index < input_count; ++index) {
-        const struct leonos_ui_file_dialog_input *input = &options->inputs[index];
+        const struct reliefos_ui_file_dialog_input *input = &options->inputs[index];
         uint32_t input_y = ui_file_dialog_input_y(index);
-        uint32_t input_flags = input->flags & (LEONOS_UI_BUTTON_DISABLED |
-                                                LEONOS_UI_EDIT_DISABLED);
-        if (input->flags & LEONOS_UI_INPUT_DISABLED) {
-            input_flags |= LEONOS_UI_BUTTON_DISABLED | LEONOS_UI_EDIT_DISABLED;
+        uint32_t input_flags = input->flags & (RELIEFOS_UI_BUTTON_DISABLED |
+                                                RELIEFOS_UI_EDIT_DISABLED);
+        if (input->flags & RELIEFOS_UI_INPUT_DISABLED) {
+            input_flags |= RELIEFOS_UI_BUTTON_DISABLED | RELIEFOS_UI_EDIT_DISABLED;
         }
-        if (input->type == LEONOS_UI_FILE_DIALOG_INPUT_CHECKBOX) {
-            leonos_ui_checkbox(surface, 16, input_y + 4, input->label,
+        if (input->type == RELIEFOS_UI_FILE_DIALOG_INPUT_CHECKBOX) {
+            reliefos_ui_checkbox(surface, 16, input_y + 4, input->label,
                                input_values[index] != 0, input_flags);
         } else {
-            leonos_ui_text(surface, 16, input_y + 4, input->label,
-                           LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-            leonos_ui_combobox(surface, UI_FILE_DIALOG_TYPE_EDIT_X, input_y,
+            reliefos_ui_text(surface, 16, input_y + 4, input->label,
+                           RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+            reliefos_ui_combobox(surface, UI_FILE_DIALOG_TYPE_EDIT_X, input_y,
                                UI_FILE_DIALOG_TYPE_EDIT_W,
                                ui_file_dialog_input_label(input, input_values[index]),
                                input_dropdown_open == index + 1U, input_flags);
         }
     }
-    leonos_ui_statusbar(surface, status_y, UI_FILE_DIALOG_STATUS_H, status);
-    leonos_ui_button(surface, UI_FILE_DIALOG_W - 180, button_y,
-                     UI_FILE_DIALOG_BUTTON_W, LEONOS_UI_BUTTON_H,
+    reliefos_ui_statusbar(surface, status_y, UI_FILE_DIALOG_STATUS_H, status);
+    reliefos_ui_button(surface, UI_FILE_DIALOG_W - 180, button_y,
+                     UI_FILE_DIALOG_BUTTON_W, RELIEFOS_UI_BUTTON_H,
                      save_mode ? UI_T("Save") : UI_T("Open"), 0);
-    leonos_ui_button(surface, UI_FILE_DIALOG_W - 94, button_y,
-                     UI_FILE_DIALOG_BUTTON_W, LEONOS_UI_BUTTON_H,
+    reliefos_ui_button(surface, UI_FILE_DIALOG_W - 94, button_y,
+                     UI_FILE_DIALOG_BUTTON_W, RELIEFOS_UI_BUTTON_H,
                      UI_T("Cancel"), 0);
     if (filter_dropdown_open) {
-        leonos_ui_dropdown(surface, UI_FILE_DIALOG_TYPE_EDIT_X,
-                           UI_FILE_DIALOG_TYPE_EDIT_Y + LEONOS_UI_BUTTON_H,
+        reliefos_ui_dropdown(surface, UI_FILE_DIALOG_TYPE_EDIT_X,
+                           UI_FILE_DIALOG_TYPE_EDIT_Y + RELIEFOS_UI_BUTTON_H,
                            UI_FILE_DIALOG_TYPE_EDIT_W, filter_items,
                            filter_count, selected_filter_id,
-                           LEONOS_FONT_H + 8, 1000);
+                           RELIEFOS_FONT_H + 8, 1000);
     }
     for (uint32_t index = 0; index < input_count; ++index) {
-        const struct leonos_ui_file_dialog_input *input = &options->inputs[index];
-        if (input->type == LEONOS_UI_FILE_DIALOG_INPUT_DROPDOWN &&
+        const struct reliefos_ui_file_dialog_input *input = &options->inputs[index];
+        if (input->type == RELIEFOS_UI_FILE_DIALOG_INPUT_DROPDOWN &&
             input_dropdown_open == index + 1U) {
-            leonos_ui_dropdown(surface, UI_FILE_DIALOG_TYPE_EDIT_X,
-                               ui_file_dialog_input_y(index) + LEONOS_UI_BUTTON_H,
+            reliefos_ui_dropdown(surface, UI_FILE_DIALOG_TYPE_EDIT_X,
+                               ui_file_dialog_input_y(index) + RELIEFOS_UI_BUTTON_H,
                                UI_FILE_DIALOG_TYPE_EDIT_W, input->items,
                                input->item_count, input_values[index],
-                               LEONOS_FONT_H + 8, 1000);
+                               RELIEFOS_FONT_H + 8, 1000);
         }
     }
 }
@@ -1182,20 +1182,20 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                                       char *path, uint32_t capacity,
                                       const char *filter_label,
                                       const char *filter_ext,
-                                      const struct leonos_ui_file_dialog_options *options)
+                                      const struct reliefos_ui_file_dialog_options *options)
 {
     static uint32_t pixels[UI_FILE_DIALOG_W * UI_FILE_DIALOG_MAX_H];
-    struct leonos_ui_surface surface;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface surface;
+    struct reliefos_gui_app_event event;
     struct ui_file_dialog_entry entries[UI_FILE_DIALOG_MAX_ENTRIES];
     struct ui_file_dialog_filter filters[2];
-    struct leonos_ui_listview_state list_state;
-    struct leonos_ui_edit_state name_edit;
-    char original[LEONOS_FS_PATH_LEN];
-    char dir_path[LEONOS_FS_PATH_LEN];
-    char file_name[LEONOS_FS_PATH_LEN];
+    struct reliefos_ui_listview_state list_state;
+    struct reliefos_ui_edit_state name_edit;
+    char original[RELIEFOS_FS_PATH_LEN];
+    char dir_path[RELIEFOS_FS_PATH_LEN];
+    char file_name[RELIEFOS_FS_PATH_LEN];
     char status[128];
-    uint32_t input_values[LEONOS_UI_FILE_DIALOG_MAX_INPUTS] = {0};
+    uint32_t input_values[RELIEFOS_UI_FILE_DIALOG_MAX_INPUTS] = {0};
     uint32_t filter_count;
     uint32_t selected_filter_id;
     uint32_t filter_dropdown_open = 0;
@@ -1227,21 +1227,21 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
         ui_copy_text(dir_path, sizeof(dir_path), "/");
         ui_copy_text(file_name, sizeof(file_name), path);
     }
-    window_id = leonos_gui_create_app_window_ex(
+    window_id = reliefos_gui_create_app_window_ex(
                                                 title ? title : (save_mode
                                                                     ? UI_T("Save As")
                                                                     : UI_T("Open")),
                                                 dir_path, UI_FILE_DIALOG_W, dialog_h,
-                                                LEONOS_GUI_WINDOW_NO_RESIZE);
+                                                RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         return window_id;
     }
-    leonos_ui_bind(&surface, pixels, UI_FILE_DIALOG_W, dialog_h,
+    reliefos_ui_bind(&surface, pixels, UI_FILE_DIALOG_W, dialog_h,
                    UI_FILE_DIALOG_W);
-    leonos_ui_listview_state_init(&list_state, UI_FILE_DIALOG_LIST_ROWS,
+    reliefos_ui_listview_state_init(&list_state, UI_FILE_DIALOG_LIST_ROWS,
                                   UI_FILE_DIALOG_ROW_H);
     list_state.focused = 1;
-    leonos_ui_edit_state_init(&name_edit, file_name, sizeof(file_name));
+    reliefos_ui_edit_state_init(&name_edit, file_name, sizeof(file_name));
     name_edit.focused = save_mode ? 1 : 0;
     ui_file_dialog_sync_name_edit(&name_edit);
     load_ret = ui_file_dialog_load_entries(dir_path, entries, UI_FILE_DIALOG_MAX_ENTRIES,
@@ -1253,7 +1253,7 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
         ui_file_dialog_status(status, sizeof(status),
                               UI_T("Ready in "), dir_path);
     }
-    leonos_ui_listview_state_set_count(&list_state, entry_count);
+    reliefos_ui_listview_state_set_count(&list_state, entry_count);
     list_state.selected = entry_count ? 0 : -1;
     if (!save_mode && list_state.selected >= 0) {
         ui_file_dialog_select_entry(dir_path, &entries[list_state.selected],
@@ -1266,16 +1266,16 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                             filter_dropdown_open, status, entries, entry_count,
                             &list_state, &name_edit, options, input_values,
                             input_dropdown_open);
-        leonos_gui_present_window((uint32_t)window_id, UI_FILE_DIALOG_W,
+        reliefos_gui_present_window((uint32_t)window_id, UI_FILE_DIALOG_W,
                                   dialog_h, UI_FILE_DIALOG_W, pixels);
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 break;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN || event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN || event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
                 uint32_t activated = 0;
-                if (event.pressed && event.keycode == LEONOS_KEY_ESCAPE) {
+                if (event.pressed && event.keycode == RELIEFOS_KEY_ESCAPE) {
                     if (filter_dropdown_open || input_dropdown_open) {
                         filter_dropdown_open = 0;
                         input_dropdown_open = 0;
@@ -1283,7 +1283,7 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                     }
                     break;
                 }
-                if (event.pressed && event.keycode == LEONOS_KEY_TAB) {
+                if (event.pressed && event.keycode == RELIEFOS_KEY_TAB) {
                     if (filter_dropdown_open || input_dropdown_open) {
                         filter_dropdown_open = 0;
                         input_dropdown_open = 0;
@@ -1304,7 +1304,7 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                     }
                     continue;
                 }
-                if (event.pressed && event.keycode == LEONOS_KEY_ENTER) {
+                if (event.pressed && event.keycode == RELIEFOS_KEY_ENTER) {
                     if (filter_dropdown_open || input_dropdown_open) {
                         filter_dropdown_open = 0;
                         input_dropdown_open = 0;
@@ -1312,7 +1312,7 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                     }
                     if (focused_input > 0 && focused_input <= input_count &&
                         options->inputs[focused_input - 1U].type ==
-                            LEONOS_UI_FILE_DIALOG_INPUT_DROPDOWN &&
+                            RELIEFOS_UI_FILE_DIALOG_INPUT_DROPDOWN &&
                         !ui_file_dialog_input_disabled(&options->inputs[focused_input - 1U])) {
                         input_dropdown_open = focused_input;
                         continue;
@@ -1330,20 +1330,20 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                         break;
                     }
                     ui_file_dialog_sync_name_edit(&name_edit);
-                    leonos_ui_listview_state_set_count(&list_state, entry_count);
+                    reliefos_ui_listview_state_set_count(&list_state, entry_count);
                     continue;
                 }
                 if (event.pressed && focused_input > 0 && focused_input <= input_count) {
-                    const struct leonos_ui_file_dialog_input *input =
+                    const struct reliefos_ui_file_dialog_input *input =
                         &options->inputs[focused_input - 1U];
                     if (!ui_file_dialog_input_disabled(input)) {
-                        if (input->type == LEONOS_UI_FILE_DIALOG_INPUT_CHECKBOX &&
-                            event.keycode == LEONOS_KEY_SPACE) {
+                        if (input->type == RELIEFOS_UI_FILE_DIALOG_INPUT_CHECKBOX &&
+                            event.keycode == RELIEFOS_KEY_SPACE) {
                             input_values[focused_input - 1U] =
                                 input_values[focused_input - 1U] ? 0 : 1;
-                        } else if (input->type == LEONOS_UI_FILE_DIALOG_INPUT_DROPDOWN &&
-                                   (event.keycode == LEONOS_KEY_UP ||
-                                    event.keycode == LEONOS_KEY_DOWN)) {
+                        } else if (input->type == RELIEFOS_UI_FILE_DIALOG_INPUT_DROPDOWN &&
+                                   (event.keycode == RELIEFOS_KEY_UP ||
+                                    event.keycode == RELIEFOS_KEY_DOWN)) {
                             uint32_t current = input_values[focused_input - 1U];
                             uint32_t selected = 0;
                             for (uint32_t item_index = 0; item_index < input->item_count;
@@ -1354,13 +1354,13 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                                 }
                             }
                             for (uint32_t step = 0; step < input->item_count; ++step) {
-                                if (event.keycode == LEONOS_KEY_UP) {
+                                if (event.keycode == RELIEFOS_KEY_UP) {
                                     selected = selected ? selected - 1U : input->item_count - 1U;
                                 } else {
                                     selected = (selected + 1U) % input->item_count;
                                 }
                                 if (!(input->items[selected].flags &
-                                      (LEONOS_UI_MENU_DISABLED | LEONOS_UI_MENU_SEPARATOR))) {
+                                      (RELIEFOS_UI_MENU_DISABLED | RELIEFOS_UI_MENU_SEPARATOR))) {
                                     input_values[focused_input - 1U] = input->items[selected].id;
                                     break;
                                 }
@@ -1370,9 +1370,9 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                     continue;
                 }
                 if (name_edit.focused) {
-                    leonos_ui_edit_state_handle_key(&name_edit, event.keycode, event.pressed);
+                    reliefos_ui_edit_state_handle_key(&name_edit, event.keycode, event.pressed);
                 } else if (list_state.focused &&
-                           leonos_ui_listview_state_handle_key(&list_state, event.keycode,
+                           reliefos_ui_listview_state_handle_key(&list_state, event.keycode,
                                                                &activated)) {
                     if (list_state.selected >= 0 && (uint32_t)list_state.selected < entry_count) {
                         ui_file_dialog_select_entry(dir_path, &entries[list_state.selected],
@@ -1393,25 +1393,25 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                         break;
                     }
                     ui_file_dialog_sync_name_edit(&name_edit);
-                    leonos_ui_listview_state_set_count(&list_state, entry_count);
+                    reliefos_ui_listview_state_set_count(&list_state, entry_count);
                 }
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u)) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u)) {
                 uint32_t activated = 0;
                 uint32_t button_y = dialog_h - 38;
                 uint32_t filter_id = 0;
 
                 if (filter_dropdown_open) {
-                    struct leonos_ui_dropdown_item filter_items[2];
+                    struct reliefos_ui_dropdown_item filter_items[2];
                     for (uint32_t index = 0; index < filter_count; ++index) {
                         filter_items[index] = filters[index].item;
                     }
-                    if (leonos_ui_dropdown_hit(event.x, event.y,
+                    if (reliefos_ui_dropdown_hit(event.x, event.y,
                                                UI_FILE_DIALOG_TYPE_EDIT_X,
-                                               UI_FILE_DIALOG_TYPE_EDIT_Y + LEONOS_UI_BUTTON_H,
+                                               UI_FILE_DIALOG_TYPE_EDIT_Y + RELIEFOS_UI_BUTTON_H,
                                                UI_FILE_DIALOG_TYPE_EDIT_W, filter_items,
-                                               filter_count, LEONOS_FONT_H + 8, 1000,
+                                               filter_count, RELIEFOS_FONT_H + 8, 1000,
                                                &filter_id)) {
                         filter_dropdown_open = 0;
                         if (filter_id) {
@@ -1431,7 +1431,7 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                                 ui_file_dialog_status(status, sizeof(status),
                                                        UI_T("Opened "), dir_path);
                             }
-                            leonos_ui_listview_state_set_count(&list_state, entry_count);
+                            reliefos_ui_listview_state_set_count(&list_state, entry_count);
                             list_state.selected = entry_count ? 0 : -1;
                             list_state.scroll = 0;
                             if (!save_mode && list_state.selected >= 0) {
@@ -1451,14 +1451,14 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                 if (input_dropdown_open) {
                     uint32_t index = input_dropdown_open - 1U;
                     uint32_t input_id = 0;
-                    const struct leonos_ui_file_dialog_input *input =
+                    const struct reliefos_ui_file_dialog_input *input =
                         index < input_count ? &options->inputs[index] : 0;
-                    if (input && input->type == LEONOS_UI_FILE_DIALOG_INPUT_DROPDOWN &&
-                        leonos_ui_dropdown_hit(event.x, event.y,
+                    if (input && input->type == RELIEFOS_UI_FILE_DIALOG_INPUT_DROPDOWN &&
+                        reliefos_ui_dropdown_hit(event.x, event.y,
                                                UI_FILE_DIALOG_TYPE_EDIT_X,
-                                               ui_file_dialog_input_y(index) + LEONOS_UI_BUTTON_H,
+                                               ui_file_dialog_input_y(index) + RELIEFOS_UI_BUTTON_H,
                                                UI_FILE_DIALOG_TYPE_EDIT_W, input->items,
-                                               input->item_count, LEONOS_FONT_H + 8, 1000,
+                                               input->item_count, RELIEFOS_FONT_H + 8, 1000,
                                                &input_id)) {
                         if (input_id) {
                             input_values[index] = input_id;
@@ -1469,11 +1469,11 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                     input_dropdown_open = 0;
                     continue;
                 }
-                if (leonos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
+                if (reliefos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
                                   UI_FILE_DIALOG_TYPE_EDIT_X,
                                   UI_FILE_DIALOG_TYPE_EDIT_Y,
                                   UI_FILE_DIALOG_TYPE_EDIT_W,
-                                  LEONOS_FONT_H + 8)) {
+                                  RELIEFOS_FONT_H + 8)) {
                     filter_dropdown_open = 1;
                     focused_input = 0;
                     name_edit.focused = 0;
@@ -1481,24 +1481,24 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                     continue;
                 }
                 for (uint32_t index = 0; index < input_count; ++index) {
-                    const struct leonos_ui_file_dialog_input *input = &options->inputs[index];
+                    const struct reliefos_ui_file_dialog_input *input = &options->inputs[index];
                     uint32_t input_y = ui_file_dialog_input_y(index);
                     if (ui_file_dialog_input_disabled(input)) {
                         continue;
                     }
-                    if (input->type == LEONOS_UI_FILE_DIALOG_INPUT_CHECKBOX &&
-                        leonos_ui_hit((uint32_t)event.x, (uint32_t)event.y, 16, input_y + 4,
-                                      UI_FILE_DIALOG_W - 32, LEONOS_FONT_H + 8)) {
+                    if (input->type == RELIEFOS_UI_FILE_DIALOG_INPUT_CHECKBOX &&
+                        reliefos_ui_hit((uint32_t)event.x, (uint32_t)event.y, 16, input_y + 4,
+                                      UI_FILE_DIALOG_W - 32, RELIEFOS_FONT_H + 8)) {
                         input_values[index] = input_values[index] ? 0 : 1;
                         focused_input = index + 1U;
                         name_edit.focused = 0;
                         list_state.focused = 0;
                         continue;
                     }
-                    if (input->type == LEONOS_UI_FILE_DIALOG_INPUT_DROPDOWN &&
-                        leonos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
+                    if (input->type == RELIEFOS_UI_FILE_DIALOG_INPUT_DROPDOWN &&
+                        reliefos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
                                       UI_FILE_DIALOG_TYPE_EDIT_X, input_y,
-                                      UI_FILE_DIALOG_TYPE_EDIT_W, LEONOS_FONT_H + 8)) {
+                                      UI_FILE_DIALOG_TYPE_EDIT_W, RELIEFOS_FONT_H + 8)) {
                         input_dropdown_open = index + 1U;
                         focused_input = index + 1U;
                         name_edit.focused = 0;
@@ -1509,7 +1509,7 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                 if (event.x >= (int32_t)(UI_FILE_DIALOG_W - 180) &&
                     event.x < (int32_t)(UI_FILE_DIALOG_W - 102) &&
                     event.y >= (int32_t)button_y &&
-                    event.y < (int32_t)(button_y + LEONOS_UI_BUTTON_H)) {
+                    event.y < (int32_t)(button_y + RELIEFOS_UI_BUTTON_H)) {
                     if (ui_file_dialog_activate(title, save_mode, dir_path, sizeof(dir_path),
                                                 file_name, sizeof(file_name), entries,
                                                 UI_FILE_DIALOG_MAX_ENTRIES,
@@ -1523,19 +1523,19 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                         break;
                     }
                     ui_file_dialog_sync_name_edit(&name_edit);
-                    leonos_ui_listview_state_set_count(&list_state, entry_count);
+                    reliefos_ui_listview_state_set_count(&list_state, entry_count);
                     continue;
                 }
                 if (event.x >= (int32_t)(UI_FILE_DIALOG_W - 94) &&
                     event.x < (int32_t)(UI_FILE_DIALOG_W - 16) &&
                     event.y >= (int32_t)button_y &&
-                    event.y < (int32_t)(button_y + LEONOS_UI_BUTTON_H)) {
+                    event.y < (int32_t)(button_y + RELIEFOS_UI_BUTTON_H)) {
                     break;
                 }
                 if (event.x >= (int32_t)UI_FILE_DIALOG_NAV_BUTTON_X &&
                     event.x < (int32_t)(UI_FILE_DIALOG_NAV_BUTTON_X + UI_FILE_DIALOG_NAV_BUTTON_W) &&
                     event.y >= (int32_t)UI_FILE_DIALOG_UP_Y &&
-                    event.y < (int32_t)(UI_FILE_DIALOG_UP_Y + LEONOS_UI_BUTTON_H)) {
+                    event.y < (int32_t)(UI_FILE_DIALOG_UP_Y + RELIEFOS_UI_BUTTON_H)) {
                     ui_build_parent_path(dir_path, sizeof(dir_path), dir_path);
                     ui_copy_text(file_name, sizeof(file_name), "");
                     ui_file_dialog_sync_name_edit(&name_edit);
@@ -1549,7 +1549,7 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                         ui_file_dialog_status(status, sizeof(status),
                                                UI_T("Opened "), dir_path);
                     }
-                    leonos_ui_listview_state_set_count(&list_state, entry_count);
+                    reliefos_ui_listview_state_set_count(&list_state, entry_count);
                     list_state.selected = entry_count ? 0 : -1;
                     list_state.scroll = 0;
                     continue;
@@ -1557,7 +1557,7 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                 if (event.x >= (int32_t)UI_FILE_DIALOG_NAV_BUTTON_X &&
                     event.x < (int32_t)(UI_FILE_DIALOG_NAV_BUTTON_X + UI_FILE_DIALOG_NAV_BUTTON_W) &&
                     event.y >= (int32_t)UI_FILE_DIALOG_ROOT_Y &&
-                    event.y < (int32_t)(UI_FILE_DIALOG_ROOT_Y + LEONOS_UI_BUTTON_H)) {
+                    event.y < (int32_t)(UI_FILE_DIALOG_ROOT_Y + RELIEFOS_UI_BUTTON_H)) {
                     ui_copy_text(dir_path, sizeof(dir_path), "/");
                     ui_copy_text(file_name, sizeof(file_name), "");
                     ui_file_dialog_sync_name_edit(&name_edit);
@@ -1571,17 +1571,17 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                         ui_file_dialog_status(status, sizeof(status),
                                                UI_T("Opened "), dir_path);
                     }
-                    leonos_ui_listview_state_set_count(&list_state, entry_count);
+                    reliefos_ui_listview_state_set_count(&list_state, entry_count);
                     list_state.selected = entry_count ? 0 : -1;
                     list_state.scroll = 0;
                     continue;
                 }
-                if (leonos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
+                if (reliefos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
                                   UI_FILE_DIALOG_NAME_EDIT_X,
                                   UI_FILE_DIALOG_NAME_EDIT_Y,
                                   UI_FILE_DIALOG_NAME_EDIT_W,
-                                  LEONOS_FONT_H + 8) &&
-                    leonos_ui_edit_state_handle_mouse(&name_edit, event.x, event.y,
+                                  RELIEFOS_FONT_H + 8) &&
+                    reliefos_ui_edit_state_handle_mouse(&name_edit, event.x, event.y,
                                                       UI_FILE_DIALOG_NAME_EDIT_X,
                                                       UI_FILE_DIALOG_NAME_EDIT_Y,
                                                       UI_FILE_DIALOG_NAME_EDIT_W,
@@ -1595,7 +1595,7 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                     event.x < (int32_t)(UI_FILE_DIALOG_SCROLL_X + UI_FILE_DIALOG_SCROLL_W) &&
                     event.y >= (int32_t)UI_FILE_DIALOG_LIST_Y &&
                     event.y < (int32_t)(UI_FILE_DIALOG_LIST_Y + UI_FILE_DIALOG_LIST_H)) {
-                    leonos_ui_vscrollbar_handle_mouse(&list_state.scroll,
+                    reliefos_ui_vscrollbar_handle_mouse(&list_state.scroll,
                                                        entry_count > list_state.visible_rows ? entry_count : list_state.visible_rows,
                                                        list_state.visible_rows,
                                                        UI_FILE_DIALOG_SCROLL_X,
@@ -1605,7 +1605,7 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                                                        event.x, event.y);
                     continue;
                 }
-                if (leonos_ui_listview_state_handle_mouse(&list_state, event.x, event.y,
+                if (reliefos_ui_listview_state_handle_mouse(&list_state, event.x, event.y,
                                                           UI_FILE_DIALOG_LIST_BODY_X,
                                                           UI_FILE_DIALOG_LIST_BODY_Y,
                                                           UI_FILE_DIALOG_LIST_BODY_W,
@@ -1632,21 +1632,21 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
                         break;
                     }
                     ui_file_dialog_sync_name_edit(&name_edit);
-                    leonos_ui_listview_state_set_count(&list_state, entry_count);
+                    reliefos_ui_listview_state_set_count(&list_state, entry_count);
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_WHEEL) {
-                if (leonos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_WHEEL) {
+                if (reliefos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
                                   UI_FILE_DIALOG_LIST_BODY_X,
                                   UI_FILE_DIALOG_LIST_BODY_Y,
                                   UI_FILE_DIALOG_LIST_BODY_W,
                                   UI_FILE_DIALOG_LIST_ROWS * UI_FILE_DIALOG_ROW_H) ||
-                    leonos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
+                    reliefos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
                                   UI_FILE_DIALOG_SCROLL_X,
                                   UI_FILE_DIALOG_LIST_Y,
                                   UI_FILE_DIALOG_SCROLL_W,
                                   UI_FILE_DIALOG_LIST_H)) {
-                    if (leonos_ui_listview_state_handle_wheel(&list_state, event.dy)) {
+                    if (reliefos_ui_listview_state_handle_wheel(&list_state, event.dy)) {
                         list_state.focused = 1;
                         name_edit.focused = 0;
                     }
@@ -1656,24 +1656,24 @@ static int ui_show_file_dialog_common(const char *title, int save_mode,
             sleep_ms(10);
         }
     }
-    leonos_gui_destroy_app_window((uint32_t)window_id);
+    reliefos_gui_destroy_app_window((uint32_t)window_id);
     if (!result) {
         ui_copy_text(path, capacity, original);
     }
     return result;
 }
 
-int leonos_ui_show_open_dialog(const char *title, char *path, uint32_t capacity,
+int reliefos_ui_show_open_dialog(const char *title, char *path, uint32_t capacity,
                                const char *filter_label, const char *filter_ext)
 {
-    return leonos_ui_show_open_dialog_with_options(title, path, capacity,
+    return reliefos_ui_show_open_dialog_with_options(title, path, capacity,
                                                    filter_label, filter_ext, 0);
 }
 
-int leonos_ui_show_open_dialog_with_options(
+int reliefos_ui_show_open_dialog_with_options(
     const char *title, char *path, uint32_t capacity,
     const char *filter_label, const char *filter_ext,
-    const struct leonos_ui_file_dialog_options *options)
+    const struct reliefos_ui_file_dialog_options *options)
 {
     return ui_show_file_dialog_common(title ? title : UI_T("Open"), 0,
                                       path, capacity, filter_label, filter_ext,
@@ -1695,8 +1695,8 @@ enum {
     UI_OPEN_WITH_BUTTON_Y = UI_OPEN_WITH_H - 38
 };
 
-static const struct leonos_launch_assoc_app *ui_open_with_find_app(
-    const struct leonos_launch_assoc_app *apps,
+static const struct reliefos_launch_assoc_app *ui_open_with_find_app(
+    const struct reliefos_launch_assoc_app *apps,
     uint32_t app_count,
     const char *program_path)
 {
@@ -1708,7 +1708,7 @@ static const struct leonos_launch_assoc_app *ui_open_with_find_app(
     return 0;
 }
 
-static int ui_open_with_find_index(const struct leonos_launch_assoc_app *apps,
+static int ui_open_with_find_index(const struct reliefos_launch_assoc_app *apps,
                                    uint32_t app_count,
                                    const char *program_path)
 {
@@ -1720,13 +1720,13 @@ static int ui_open_with_find_index(const struct leonos_launch_assoc_app *apps,
     return -1;
 }
 
-static const char *ui_open_with_app_label(const struct leonos_launch_assoc_app *apps,
+static const char *ui_open_with_app_label(const struct reliefos_launch_assoc_app *apps,
                                           uint32_t app_count,
                                           const char *program_path,
                                           char *buffer,
                                           uint32_t capacity)
 {
-    const struct leonos_launch_assoc_app *app =
+    const struct reliefos_launch_assoc_app *app =
         ui_open_with_find_app(apps, app_count, program_path);
     if (app) {
         return app->name;
@@ -1738,14 +1738,14 @@ static const char *ui_open_with_app_label(const struct leonos_launch_assoc_app *
     return buffer;
 }
 
-static void ui_open_with_draw(struct leonos_ui_surface *surface,
+static void ui_open_with_draw(struct reliefos_ui_surface *surface,
                               const char *title,
                               const char *path,
                               const char *extension,
                               const char *default_label,
-                              const struct leonos_launch_assoc_app *apps,
+                              const struct reliefos_launch_assoc_app *apps,
                               uint32_t app_count,
-                              const struct leonos_ui_listview_state *list_state,
+                              const struct reliefos_ui_listview_state *list_state,
                               uint32_t remember,
                               uint32_t can_remember,
                               uint32_t set_default_mode)
@@ -1753,36 +1753,36 @@ static void ui_open_with_draw(struct leonos_ui_surface *surface,
     uint32_t list_h = list_state->visible_rows * UI_OPEN_WITH_ROW_H + 8;
     uint32_t scrollbar_x = UI_OPEN_WITH_LIST_X + UI_OPEN_WITH_LIST_W - UI_OPEN_WITH_SCROLL_W;
     (void)title;
-    leonos_ui_rect(surface, 0, 0, UI_OPEN_WITH_W, UI_OPEN_WITH_H, LEONOS_UI_GRAY);
-    leonos_ui_text_clipped(surface, 16, 20, UI_OPEN_WITH_W - 32,
+    reliefos_ui_rect(surface, 0, 0, UI_OPEN_WITH_W, UI_OPEN_WITH_H, RELIEFOS_UI_GRAY);
+    reliefos_ui_text_clipped(surface, 16, 20, UI_OPEN_WITH_W - 32,
                            set_default_mode
                                ? UI_T("Choose a default program for this file type:")
                                : UI_T("Choose a program to open this file:"),
-                           LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_text(surface, 16, 44, UI_T("File:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_edit(surface, 58, 40, UI_OPEN_WITH_W - 74, path ? path : "",
-                   ui_strlen(path), 0, LEONOS_UI_EDIT_READONLY);
-    leonos_ui_text(surface, 16, 68, UI_T("Extension:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_edit(surface, 82, 64, 84,
+                           RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_text(surface, 16, 44, UI_T("File:"), RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_edit(surface, 58, 40, UI_OPEN_WITH_W - 74, path ? path : "",
+                   ui_strlen(path), 0, RELIEFOS_UI_EDIT_READONLY);
+    reliefos_ui_text(surface, 16, 68, UI_T("Extension:"), RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_edit(surface, 82, 64, 84,
                    extension && extension[0] ? extension : UI_T("(none)"),
                    ui_strlen(extension && extension[0] ? extension : UI_T("(none)")),
-                   0, LEONOS_UI_EDIT_READONLY);
-    leonos_ui_text(surface, 180, 68, UI_T("Default:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_edit(surface, 244, 64, UI_OPEN_WITH_W - 260,
+                   0, RELIEFOS_UI_EDIT_READONLY);
+    reliefos_ui_text(surface, 180, 68, UI_T("Default:"), RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_edit(surface, 244, 64, UI_OPEN_WITH_W - 260,
                    default_label ? default_label : UI_T("None"),
                    ui_strlen(default_label ? default_label : UI_T("None")),
-                   0, LEONOS_UI_EDIT_READONLY);
+                   0, RELIEFOS_UI_EDIT_READONLY);
     if (set_default_mode) {
-        leonos_ui_checkbox(surface, 16, 94, UI_T("Update default program"), 1,
-                           LEONOS_UI_BUTTON_DISABLED);
+        reliefos_ui_checkbox(surface, 16, 94, UI_T("Update default program"), 1,
+                           RELIEFOS_UI_BUTTON_DISABLED);
     } else {
-        leonos_ui_checkbox(surface, 16, 94, UI_T("Always use this app"),
+        reliefos_ui_checkbox(surface, 16, 94, UI_T("Always use this app"),
                            can_remember ? (int)remember : 0,
-                           can_remember ? 0 : LEONOS_UI_BUTTON_DISABLED);
+                           can_remember ? 0 : RELIEFOS_UI_BUTTON_DISABLED);
     }
-    leonos_ui_text(surface, 16, 120, UI_T("Programs:"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_inset(surface, UI_OPEN_WITH_LIST_X, UI_OPEN_WITH_LIST_Y,
-                    UI_OPEN_WITH_LIST_W, list_h, LEONOS_UI_WHITE);
+    reliefos_ui_text(surface, 16, 120, UI_T("Programs:"), RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_inset(surface, UI_OPEN_WITH_LIST_X, UI_OPEN_WITH_LIST_Y,
+                    UI_OPEN_WITH_LIST_W, list_h, RELIEFOS_UI_WHITE);
     for (uint32_t row = 0; row < list_state->visible_rows; ++row) {
         uint32_t i = list_state->scroll + row;
         uint32_t row_x = UI_OPEN_WITH_LIST_X + 4;
@@ -1795,48 +1795,48 @@ static void ui_open_with_draw(struct leonos_ui_surface *surface,
             break;
         }
         selected = list_state->selected == (int32_t)i;
-        bg = selected ? LEONOS_UI_ACTIVE_TITLE : LEONOS_UI_WHITE;
-        fg = selected ? LEONOS_UI_WHITE : LEONOS_UI_BLACK;
-        detail_fg = selected ? LEONOS_UI_LIGHT : LEONOS_UI_DARK;
-        leonos_ui_rect(surface, row_x, row_y, UI_OPEN_WITH_ROW_W,
+        bg = selected ? RELIEFOS_UI_ACTIVE_TITLE : RELIEFOS_UI_WHITE;
+        fg = selected ? RELIEFOS_UI_WHITE : RELIEFOS_UI_BLACK;
+        detail_fg = selected ? RELIEFOS_UI_LIGHT : RELIEFOS_UI_DARK;
+        reliefos_ui_rect(surface, row_x, row_y, UI_OPEN_WITH_ROW_W,
                        UI_OPEN_WITH_ROW_H, bg);
-        leonos_ui_text_clipped(surface, row_x + 8, row_y + 3,
+        reliefos_ui_text_clipped(surface, row_x + 8, row_y + 3,
                                UI_OPEN_WITH_ROW_W - 16, apps[i].name, fg, bg);
-        leonos_ui_text_clipped(surface, row_x + 8, row_y + 18,
+        reliefos_ui_text_clipped(surface, row_x + 8, row_y + 18,
                                UI_OPEN_WITH_ROW_W - 16, apps[i].detail,
                                detail_fg, bg);
     }
-    leonos_ui_vscrollbar(surface, scrollbar_x, UI_OPEN_WITH_LIST_Y,
+    reliefos_ui_vscrollbar(surface, scrollbar_x, UI_OPEN_WITH_LIST_Y,
                          UI_OPEN_WITH_SCROLL_W, list_h,
                          list_state->scroll,
                          ui_max_u32(app_count, list_state->visible_rows),
                          list_state->visible_rows,
                          app_count <= list_state->visible_rows
-                             ? LEONOS_UI_SCROLLBAR_DISABLED
+                             ? RELIEFOS_UI_SCROLLBAR_DISABLED
                              : 0);
-    leonos_ui_button(surface, UI_OPEN_WITH_W - 194, UI_OPEN_WITH_BUTTON_Y,
-                     96, LEONOS_UI_BUTTON_H,
+    reliefos_ui_button(surface, UI_OPEN_WITH_W - 194, UI_OPEN_WITH_BUTTON_Y,
+                     96, RELIEFOS_UI_BUTTON_H,
                      set_default_mode ? UI_T("Set Default") : UI_T("Open"), 0);
-    leonos_ui_button(surface, UI_OPEN_WITH_W - 88, UI_OPEN_WITH_BUTTON_Y,
-                     72, LEONOS_UI_BUTTON_H, UI_T("Cancel"), 0);
+    reliefos_ui_button(surface, UI_OPEN_WITH_W - 88, UI_OPEN_WITH_BUTTON_Y,
+                     72, RELIEFOS_UI_BUTTON_H, UI_T("Cancel"), 0);
 }
 
-int leonos_ui_show_open_with_dialog(const char *title, const char *path,
+int reliefos_ui_show_open_with_dialog(const char *title, const char *path,
                                     char *program_path, uint32_t capacity,
                                     uint32_t *remember, uint32_t flags)
 {
     static uint32_t pixels[UI_OPEN_WITH_W * UI_OPEN_WITH_H];
-    struct leonos_ui_surface surface;
-    struct leonos_gui_app_event event;
-    struct leonos_ui_listview_state list_state;
-    const struct leonos_launch_assoc_app *apps;
+    struct reliefos_ui_surface surface;
+    struct reliefos_gui_app_event event;
+    struct reliefos_ui_listview_state list_state;
+    const struct reliefos_launch_assoc_app *apps;
     uint32_t app_count = 0;
     uint32_t remember_value = remember ? *remember : 0;
-    uint32_t set_default_mode = (flags & LEONOS_UI_OPEN_WITH_SET_DEFAULT) != 0;
+    uint32_t set_default_mode = (flags & RELIEFOS_UI_OPEN_WITH_SET_DEFAULT) != 0;
     uint32_t can_remember;
     char extension[16];
-    char default_program[LEONOS_FS_PATH_LEN];
-    char default_label_buf[LEONOS_FS_PATH_LEN];
+    char default_program[RELIEFOS_FS_PATH_LEN];
+    char default_label_buf[RELIEFOS_FS_PATH_LEN];
     const char *default_program_ptr;
     const char *default_label;
     int selected = 0;
@@ -1846,15 +1846,15 @@ int leonos_ui_show_open_with_dialog(const char *title, const char *path,
     if (!path || !path[0] || !program_path || capacity == 0) {
         return -1;
     }
-    apps = leonos_launch_assoc_apps(&app_count);
+    apps = reliefos_launch_assoc_apps(&app_count);
     if (!apps || app_count == 0) {
         return -1;
     }
     extension[0] = 0;
-    can_remember = leonos_launch_get_extension_for_path(path, extension,
+    can_remember = reliefos_launch_get_extension_for_path(path, extension,
                                                         sizeof(extension)) != 0;
     default_program[0] = 0;
-    default_program_ptr = leonos_launch_resolve_default_app_for_path(path);
+    default_program_ptr = reliefos_launch_resolve_default_app_for_path(path);
     if (default_program_ptr) {
         ui_copy_text(default_program, sizeof(default_program), default_program_ptr);
         selected = ui_open_with_find_index(apps, app_count, default_program);
@@ -1868,23 +1868,23 @@ int leonos_ui_show_open_with_dialog(const char *title, const char *path,
     if (!can_remember) {
         remember_value = 0;
     }
-    leonos_ui_listview_state_init(&list_state,
+    reliefos_ui_listview_state_init(&list_state,
                                   app_count > UI_OPEN_WITH_VISIBLE_ROWS
                                       ? UI_OPEN_WITH_VISIBLE_ROWS
                                       : app_count,
                                   UI_OPEN_WITH_ROW_H);
-    leonos_ui_listview_state_set_count(&list_state, app_count);
+    reliefos_ui_listview_state_set_count(&list_state, app_count);
     list_state.selected = selected;
     list_state.focused = 1;
 
-    window_id = leonos_gui_create_app_window_ex(title ? title : UI_T("Open With"),
+    window_id = reliefos_gui_create_app_window_ex(title ? title : UI_T("Open With"),
                                                 path,
                                                 UI_OPEN_WITH_W, UI_OPEN_WITH_H,
-                                                LEONOS_GUI_WINDOW_NO_RESIZE);
+                                                RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         return window_id;
     }
-    leonos_ui_bind(&surface, pixels, UI_OPEN_WITH_W, UI_OPEN_WITH_H,
+    reliefos_ui_bind(&surface, pixels, UI_OPEN_WITH_W, UI_OPEN_WITH_H,
                    UI_OPEN_WITH_W);
     for (;;) {
         uint32_t activated = 0;
@@ -1892,28 +1892,28 @@ int leonos_ui_show_open_with_dialog(const char *title, const char *path,
                           extension, default_label, apps, app_count,
                           &list_state, remember_value, can_remember,
                           set_default_mode);
-        leonos_gui_present_window((uint32_t)window_id, UI_OPEN_WITH_W,
+        reliefos_gui_present_window((uint32_t)window_id, UI_OPEN_WITH_W,
                                   UI_OPEN_WITH_H, UI_OPEN_WITH_W, pixels);
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 break;
             }
-            if ((event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN ||
-                 event.type == LEONOS_GUI_APP_EVENT_KEY_UP) && event.pressed) {
-                if (event.keycode == LEONOS_KEY_ENTER) {
+            if ((event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN ||
+                 event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) && event.pressed) {
+                if (event.keycode == RELIEFOS_KEY_ENTER) {
                     result = 1;
                     break;
                 }
                 if (event.keycode == 1) {
                     break;
                 }
-                if (event.keycode == LEONOS_KEY_SPACE &&
+                if (event.keycode == RELIEFOS_KEY_SPACE &&
                     !set_default_mode && can_remember) {
                     remember_value = remember_value ? 0 : 1;
                     continue;
                 }
-                if (leonos_ui_listview_state_handle_key(&list_state,
+                if (reliefos_ui_listview_state_handle_key(&list_state,
                                                         event.keycode,
                                                         &activated)) {
                     if (activated) {
@@ -1923,7 +1923,7 @@ int leonos_ui_show_open_with_dialog(const char *title, const char *path,
                     continue;
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON &&
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON &&
                 (event.buttons & 1u)) {
                 uint32_t list_h = list_state.visible_rows * UI_OPEN_WITH_ROW_H + 8;
                 uint32_t scrollbar_x = UI_OPEN_WITH_LIST_X +
@@ -1932,26 +1932,26 @@ int leonos_ui_show_open_with_dialog(const char *title, const char *path,
                 if (event.x >= (int32_t)(UI_OPEN_WITH_W - 194) &&
                     event.x < (int32_t)(UI_OPEN_WITH_W - 98) &&
                     event.y >= (int32_t)UI_OPEN_WITH_BUTTON_Y &&
-                    event.y < (int32_t)(UI_OPEN_WITH_BUTTON_Y + LEONOS_UI_BUTTON_H)) {
+                    event.y < (int32_t)(UI_OPEN_WITH_BUTTON_Y + RELIEFOS_UI_BUTTON_H)) {
                     result = 1;
                     break;
                 }
                 if (event.x >= (int32_t)(UI_OPEN_WITH_W - 88) &&
                     event.x < (int32_t)(UI_OPEN_WITH_W - 16) &&
                     event.y >= (int32_t)UI_OPEN_WITH_BUTTON_Y &&
-                    event.y < (int32_t)(UI_OPEN_WITH_BUTTON_Y + LEONOS_UI_BUTTON_H)) {
+                    event.y < (int32_t)(UI_OPEN_WITH_BUTTON_Y + RELIEFOS_UI_BUTTON_H)) {
                     break;
                 }
                 if (!set_default_mode && can_remember &&
-                    leonos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
-                                  16, 94, 180, LEONOS_FONT_H + 8)) {
+                    reliefos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
+                                  16, 94, 180, RELIEFOS_FONT_H + 8)) {
                     remember_value = remember_value ? 0 : 1;
                     continue;
                 }
-                if (leonos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
+                if (reliefos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
                                   scrollbar_x, UI_OPEN_WITH_LIST_Y,
                                   UI_OPEN_WITH_SCROLL_W, list_h)) {
-                    leonos_ui_vscrollbar_handle_mouse(&list_state.scroll,
+                    reliefos_ui_vscrollbar_handle_mouse(&list_state.scroll,
                                                        ui_max_u32(app_count,
                                                                   list_state.visible_rows),
                                                        list_state.visible_rows,
@@ -1962,10 +1962,10 @@ int leonos_ui_show_open_with_dialog(const char *title, const char *path,
                                                        event.x, event.y);
                     continue;
                 }
-                if (leonos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
+                if (reliefos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
                                   UI_OPEN_WITH_LIST_X, UI_OPEN_WITH_LIST_Y,
                                   UI_OPEN_WITH_LIST_W, list_h)) {
-                    if (leonos_ui_listview_state_handle_mouse(&list_state,
+                    if (reliefos_ui_listview_state_handle_mouse(&list_state,
                                                               event.x, event.y,
                                                               UI_OPEN_WITH_LIST_X + 4,
                                                               UI_OPEN_WITH_LIST_Y + 4,
@@ -1978,18 +1978,18 @@ int leonos_ui_show_open_with_dialog(const char *title, const char *path,
                     continue;
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_WHEEL) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_WHEEL) {
                 uint32_t list_h = list_state.visible_rows * UI_OPEN_WITH_ROW_H + 8;
                 uint32_t scrollbar_x = UI_OPEN_WITH_LIST_X +
                                        UI_OPEN_WITH_LIST_W -
                                        UI_OPEN_WITH_SCROLL_W;
-                if (leonos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
+                if (reliefos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
                                   UI_OPEN_WITH_LIST_X, UI_OPEN_WITH_LIST_Y,
                                   UI_OPEN_WITH_LIST_W, list_h) ||
-                    leonos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
+                    reliefos_ui_hit((uint32_t)event.x, (uint32_t)event.y,
                                   scrollbar_x, UI_OPEN_WITH_LIST_Y,
                                   UI_OPEN_WITH_SCROLL_W, list_h)) {
-                    leonos_ui_listview_state_handle_wheel(&list_state, event.dy);
+                    reliefos_ui_listview_state_handle_wheel(&list_state, event.dy);
                     continue;
                 }
             }
@@ -1997,7 +1997,7 @@ int leonos_ui_show_open_with_dialog(const char *title, const char *path,
             sleep_ms(10);
         }
     }
-    leonos_gui_destroy_app_window((uint32_t)window_id);
+    reliefos_gui_destroy_app_window((uint32_t)window_id);
     if (!result) {
         return 0;
     }
@@ -2011,44 +2011,44 @@ int leonos_ui_show_open_with_dialog(const char *title, const char *path,
     return 1;
 }
 
-int leonos_ui_show_save_dialog_ex(const char *title, char *value, uint32_t capacity,
+int reliefos_ui_show_save_dialog_ex(const char *title, char *value, uint32_t capacity,
                                   const char *filter_label, const char *filter_ext)
 {
-    return leonos_ui_show_save_dialog_with_options(title, value, capacity,
+    return reliefos_ui_show_save_dialog_with_options(title, value, capacity,
                                                    filter_label, filter_ext, 0);
 }
 
-int leonos_ui_show_save_dialog_with_options(
+int reliefos_ui_show_save_dialog_with_options(
     const char *title, char *value, uint32_t capacity,
     const char *filter_label, const char *filter_ext,
-    const struct leonos_ui_file_dialog_options *options)
+    const struct reliefos_ui_file_dialog_options *options)
 {
     return ui_show_file_dialog_common(title ? title : UI_T("Save As"), 1,
                                       value, capacity, filter_label, filter_ext,
                                       options);
 }
 
-int leonos_ui_show_save_dialog(const char *title, char *value, uint32_t capacity)
+int reliefos_ui_show_save_dialog(const char *title, char *value, uint32_t capacity)
 {
-    return leonos_ui_show_save_dialog_ex(title ? title : UI_T("Save As"),
+    return reliefos_ui_show_save_dialog_ex(title ? title : UI_T("Save As"),
                                          value,
                                          capacity,
                                          UI_T("All files (*.*)"),
                                          0);
 }
 
-void leonos_ui_combobox(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_combobox(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                         uint32_t w, const char *text, uint32_t open, uint32_t flags)
 {
-    uint32_t h = LEONOS_FONT_H + 8;
-    leonos_ui_edit(surface, x, y, w, text, ui_strlen(text), 0,
-                   (flags & LEONOS_UI_EDIT_DISABLED) ? LEONOS_UI_EDIT_DISABLED : 0);
-    leonos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w, h,
-                            (flags & LEONOS_UI_EDIT_DISABLED)
-                                ? LEONOS_GUI_CURSOR_NO : LEONOS_GUI_CURSOR_HAND,
-                            (flags & LEONOS_UI_EDIT_DISABLED)
-                                ? LEONOS_GUI_CURSOR_REGION_DISABLED : 0);
-    leonos_ui_button(surface, x + w - h, y, h, h, open ? "^" : "v", flags & LEONOS_UI_EDIT_DISABLED ? LEONOS_UI_BUTTON_DISABLED : 0);
+    uint32_t h = RELIEFOS_FONT_H + 8;
+    reliefos_ui_edit(surface, x, y, w, text, ui_strlen(text), 0,
+                   (flags & RELIEFOS_UI_EDIT_DISABLED) ? RELIEFOS_UI_EDIT_DISABLED : 0);
+    reliefos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w, h,
+                            (flags & RELIEFOS_UI_EDIT_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_NO : RELIEFOS_GUI_CURSOR_HAND,
+                            (flags & RELIEFOS_UI_EDIT_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_REGION_DISABLED : 0);
+    reliefos_ui_button(surface, x + w - h, y, h, h, open ? "^" : "v", flags & RELIEFOS_UI_EDIT_DISABLED ? RELIEFOS_UI_BUTTON_DISABLED : 0);
 }
 
 /* Popup placement is remembered between the draw and input passes.  Most
@@ -2071,7 +2071,7 @@ struct ui_popup_cache {
 static struct ui_popup_cache ui_dropdown_cache;
 static struct ui_popup_cache ui_menu_cache;
 
-static void ui_popup_place(const struct leonos_ui_surface *surface,
+static void ui_popup_place(const struct reliefos_ui_surface *surface,
                            int32_t requested_x, int32_t requested_y,
                            uint32_t w, uint32_t h, int32_t *out_x,
                            int32_t *out_y)
@@ -2118,13 +2118,13 @@ static int ui_popup_cache_matches(const struct ui_popup_cache *cache,
            cache->row_h == row_h;
 }
 
-uint32_t leonos_ui_dropdown_height(uint32_t count, uint32_t row_h,
+uint32_t reliefos_ui_dropdown_height(uint32_t count, uint32_t row_h,
                                    uint32_t progress)
 {
     uint32_t full_h;
     uint32_t eased;
-    if (row_h < LEONOS_FONT_H + 8) {
-        row_h = LEONOS_FONT_H + 8;
+    if (row_h < RELIEFOS_FONT_H + 8) {
+        row_h = RELIEFOS_FONT_H + 8;
     }
     full_h = 8 + count * row_h;
     if (progress > 1000) {
@@ -2133,22 +2133,22 @@ uint32_t leonos_ui_dropdown_height(uint32_t count, uint32_t row_h,
     if (progress == 0 || full_h == 0) {
         return 0;
     }
-    eased = leonos_ui_anim_ease_out(progress);
+    eased = reliefos_ui_anim_ease_out(progress);
     return (full_h * eased + 999) / 1000;
 }
 
-void leonos_ui_dropdown(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
-                        uint32_t w, const struct leonos_ui_dropdown_item *items,
+void reliefos_ui_dropdown(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
+                        uint32_t w, const struct reliefos_ui_dropdown_item *items,
                         uint32_t count, uint32_t selected_id, uint32_t row_h,
                         uint32_t progress)
 {
-    leonos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w,
-                            LEONOS_UI_BUTTON_H, LEONOS_GUI_CURSOR_HAND, 0);
-    uint32_t visible_h = leonos_ui_dropdown_height(count, row_h, progress);
+    reliefos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w,
+                            RELIEFOS_UI_BUTTON_H, RELIEFOS_GUI_CURSOR_HAND, 0);
+    uint32_t visible_h = reliefos_ui_dropdown_height(count, row_h, progress);
     int32_t popup_x;
     int32_t popup_y;
-    if (row_h < LEONOS_FONT_H + 8) {
-        row_h = LEONOS_FONT_H + 8;
+    if (row_h < RELIEFOS_FONT_H + 8) {
+        row_h = RELIEFOS_FONT_H + 8;
     }
     if (!visible_h || !w) {
         ui_dropdown_cache.valid = 0;
@@ -2169,14 +2169,14 @@ void leonos_ui_dropdown(struct leonos_ui_surface *surface, uint32_t x, uint32_t 
     ui_dropdown_cache.progress = progress;
     ui_dropdown_cache.x = popup_x;
     ui_dropdown_cache.y = popup_y;
-    leonos_ui_bevel(surface, (uint32_t)popup_x, (uint32_t)popup_y, w, visible_h,
-                    LEONOS_UI_WHITE, 0);
+    reliefos_ui_bevel(surface, (uint32_t)popup_x, (uint32_t)popup_y, w, visible_h,
+                    RELIEFOS_UI_WHITE, 0);
     if (visible_h <= 8) {
         return;
     }
     for (uint32_t i = 0; i < count; ++i) {
         uint32_t row_y = (uint32_t)popup_y + 4 + i * row_h;
-        uint32_t flags = items ? items[i].flags : LEONOS_UI_MENU_DISABLED;
+        uint32_t flags = items ? items[i].flags : RELIEFOS_UI_MENU_DISABLED;
         const char *label = items ? items[i].label : "";
         uint32_t row_bottom = row_y + row_h;
         if (row_y >= (uint32_t)popup_y + visible_h - 3) {
@@ -2185,50 +2185,50 @@ void leonos_ui_dropdown(struct leonos_ui_surface *surface, uint32_t x, uint32_t 
         if (row_bottom > (uint32_t)popup_y + visible_h - 3) {
             continue;
         }
-        if (flags & LEONOS_UI_MENU_SEPARATOR) {
-            leonos_ui_rect(surface, (uint32_t)popup_x + 4, row_y + row_h / 2,
-                           w > 8 ? w - 8 : w, 1, LEONOS_UI_DARK);
-            leonos_ui_rect(surface, (uint32_t)popup_x + 4, row_y + row_h / 2 + 1,
-                           w > 8 ? w - 8 : w, 1, LEONOS_UI_WHITE);
+        if (flags & RELIEFOS_UI_MENU_SEPARATOR) {
+            reliefos_ui_rect(surface, (uint32_t)popup_x + 4, row_y + row_h / 2,
+                           w > 8 ? w - 8 : w, 1, RELIEFOS_UI_DARK);
+            reliefos_ui_rect(surface, (uint32_t)popup_x + 4, row_y + row_h / 2 + 1,
+                           w > 8 ? w - 8 : w, 1, RELIEFOS_UI_WHITE);
             continue;
         }
-        leonos_ui_cursor_region(surface, popup_x, (int32_t)row_y, w, row_h,
-                                (flags & LEONOS_UI_MENU_DISABLED)
-                                    ? LEONOS_GUI_CURSOR_NO : LEONOS_GUI_CURSOR_HAND,
-                                (flags & LEONOS_UI_MENU_DISABLED)
-                                    ? LEONOS_GUI_CURSOR_REGION_DISABLED : 0);
-        if (items && items[i].id == selected_id && !(flags & LEONOS_UI_MENU_DISABLED)) {
-            leonos_ui_rect(surface, (uint32_t)popup_x + 3, row_y, w > 6 ? w - 6 : w,
-                           row_h, LEONOS_UI_ACTIVE_TITLE);
-            leonos_ui_text_transparent_clipped(surface, (uint32_t)popup_x + 8, row_y + 4,
+        reliefos_ui_cursor_region(surface, popup_x, (int32_t)row_y, w, row_h,
+                                (flags & RELIEFOS_UI_MENU_DISABLED)
+                                    ? RELIEFOS_GUI_CURSOR_NO : RELIEFOS_GUI_CURSOR_HAND,
+                                (flags & RELIEFOS_UI_MENU_DISABLED)
+                                    ? RELIEFOS_GUI_CURSOR_REGION_DISABLED : 0);
+        if (items && items[i].id == selected_id && !(flags & RELIEFOS_UI_MENU_DISABLED)) {
+            reliefos_ui_rect(surface, (uint32_t)popup_x + 3, row_y, w > 6 ? w - 6 : w,
+                           row_h, RELIEFOS_UI_ACTIVE_TITLE);
+            reliefos_ui_text_transparent_clipped(surface, (uint32_t)popup_x + 8, row_y + 4,
                                                w > 16 ? w - 16 : w,
                                                label ? label : "",
-                                               LEONOS_UI_WHITE);
+                                               RELIEFOS_UI_WHITE);
         } else {
-            leonos_ui_text_transparent_clipped(surface, (uint32_t)popup_x + 8, row_y + 4,
+            reliefos_ui_text_transparent_clipped(surface, (uint32_t)popup_x + 8, row_y + 4,
                                                w > 16 ? w - 16 : w,
                                                label ? label : "",
-                                               (flags & LEONOS_UI_MENU_DISABLED)
-                                                   ? LEONOS_UI_DARK
-                                                   : LEONOS_UI_BLACK);
+                                               (flags & RELIEFOS_UI_MENU_DISABLED)
+                                                   ? RELIEFOS_UI_DARK
+                                                   : RELIEFOS_UI_BLACK);
         }
     }
 }
 
-int leonos_ui_dropdown_hit(int32_t px, int32_t py, uint32_t x, uint32_t y,
-                           uint32_t w, const struct leonos_ui_dropdown_item *items,
+int reliefos_ui_dropdown_hit(int32_t px, int32_t py, uint32_t x, uint32_t y,
+                           uint32_t w, const struct reliefos_ui_dropdown_item *items,
                            uint32_t count, uint32_t row_h, uint32_t progress,
                            uint32_t *out_id)
 {
-    uint32_t visible_h = leonos_ui_dropdown_height(count, row_h, progress);
+    uint32_t visible_h = reliefos_ui_dropdown_height(count, row_h, progress);
     int32_t popup_x = (int32_t)x;
     int32_t popup_y = (int32_t)y;
     uint32_t index;
     if (out_id) {
         *out_id = 0;
     }
-    if (row_h < LEONOS_FONT_H + 8) {
-        row_h = LEONOS_FONT_H + 8;
+    if (row_h < RELIEFOS_FONT_H + 8) {
+        row_h = RELIEFOS_FONT_H + 8;
     }
     if (ui_popup_cache_matches(&ui_dropdown_cache, (int32_t)x, (int32_t)y,
                                w, count, row_h, progress)) {
@@ -2240,14 +2240,14 @@ int leonos_ui_dropdown_hit(int32_t px, int32_t py, uint32_t x, uint32_t y,
         popup_y = (int32_t)y - (int32_t)visible_h - 2;
     }
     if (!visible_h ||
-        !leonos_ui_hit((uint32_t)px, (uint32_t)py, popup_x, popup_y,
+        !reliefos_ui_hit((uint32_t)px, (uint32_t)py, popup_x, popup_y,
                        w, visible_h) ||
         py < popup_y + 4) {
         return 0;
     }
     index = ((uint32_t)(py - popup_y) - 4) / row_h;
     if (!items || index >= count ||
-        (items[index].flags & (LEONOS_UI_MENU_SEPARATOR | LEONOS_UI_MENU_DISABLED))) {
+        (items[index].flags & (RELIEFOS_UI_MENU_SEPARATOR | RELIEFOS_UI_MENU_DISABLED))) {
         return 1;
     }
     if (out_id) {
@@ -2256,103 +2256,103 @@ int leonos_ui_dropdown_hit(int32_t px, int32_t py, uint32_t x, uint32_t y,
     return 1;
 }
 
-void leonos_ui_radio(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_radio(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                      const char *label, int checked, uint32_t flags)
 {
-    uint32_t disabled = flags & LEONOS_UI_BUTTON_DISABLED;
-    leonos_ui_cursor_region(surface, (int32_t)x, (int32_t)y,
-                            22 + leonos_ui_text_width(label), 18,
-                            disabled ? LEONOS_GUI_CURSOR_NO : LEONOS_GUI_CURSOR_HAND,
-                            disabled ? LEONOS_GUI_CURSOR_REGION_DISABLED : 0);
-    uint32_t fg = (flags & LEONOS_UI_BUTTON_DISABLED) ? LEONOS_UI_DARK : LEONOS_UI_BLACK;
-    leonos_ui_rect(surface, x + 3, y + 2, 8, 1, fg);
-    leonos_ui_rect(surface, x + 2, y + 3, 10, 1, fg);
-    leonos_ui_rect(surface, x + 1, y + 4, 12, 8, fg);
-    leonos_ui_rect(surface, x + 2, y + 5, 10, 6, LEONOS_UI_WHITE);
+    uint32_t disabled = flags & RELIEFOS_UI_BUTTON_DISABLED;
+    reliefos_ui_cursor_region(surface, (int32_t)x, (int32_t)y,
+                            22 + reliefos_ui_text_width(label), 18,
+                            disabled ? RELIEFOS_GUI_CURSOR_NO : RELIEFOS_GUI_CURSOR_HAND,
+                            disabled ? RELIEFOS_GUI_CURSOR_REGION_DISABLED : 0);
+    uint32_t fg = (flags & RELIEFOS_UI_BUTTON_DISABLED) ? RELIEFOS_UI_DARK : RELIEFOS_UI_BLACK;
+    reliefos_ui_rect(surface, x + 3, y + 2, 8, 1, fg);
+    reliefos_ui_rect(surface, x + 2, y + 3, 10, 1, fg);
+    reliefos_ui_rect(surface, x + 1, y + 4, 12, 8, fg);
+    reliefos_ui_rect(surface, x + 2, y + 5, 10, 6, RELIEFOS_UI_WHITE);
     if (checked) {
-        leonos_ui_rect(surface, x + 5, y + 7, 4, 2, fg);
+        reliefos_ui_rect(surface, x + 5, y + 7, 4, 2, fg);
     }
-    leonos_ui_text_transparent(surface, x + 22, y, label, fg);
+    reliefos_ui_text_transparent(surface, x + 22, y, label, fg);
 }
 
-void leonos_ui_groupbox(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_groupbox(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                         uint32_t w, uint32_t h, const char *title)
 {
-    leonos_ui_rect(surface, x, y + 8, w, 1, LEONOS_UI_DARK);
-    leonos_ui_rect(surface, x, y + h - 1, w, 1, LEONOS_UI_WHITE);
-    leonos_ui_rect(surface, x, y + 8, 1, h - 8, LEONOS_UI_DARK);
-    leonos_ui_rect(surface, x + w - 1, y + 8, 1, h - 8, LEONOS_UI_WHITE);
-    leonos_ui_rect(surface, x + 8, y, leonos_ui_text_width(title) + 8, LEONOS_FONT_H, LEONOS_UI_WHITE);
-    leonos_ui_text_transparent(surface, x + 12, y, title, LEONOS_UI_BLACK);
+    reliefos_ui_rect(surface, x, y + 8, w, 1, RELIEFOS_UI_DARK);
+    reliefos_ui_rect(surface, x, y + h - 1, w, 1, RELIEFOS_UI_WHITE);
+    reliefos_ui_rect(surface, x, y + 8, 1, h - 8, RELIEFOS_UI_DARK);
+    reliefos_ui_rect(surface, x + w - 1, y + 8, 1, h - 8, RELIEFOS_UI_WHITE);
+    reliefos_ui_rect(surface, x + 8, y, reliefos_ui_text_width(title) + 8, RELIEFOS_FONT_H, RELIEFOS_UI_WHITE);
+    reliefos_ui_text_transparent(surface, x + 12, y, title, RELIEFOS_UI_BLACK);
 }
 
-void leonos_ui_statusbar(struct leonos_ui_surface *surface, uint32_t y, uint32_t h,
+void reliefos_ui_statusbar(struct reliefos_ui_surface *surface, uint32_t y, uint32_t h,
                          const char *text)
 {
     uint32_t w = surface ? surface->width : 0;
-    leonos_ui_bevel(surface, 0, y, w, h, LEONOS_UI_GRAY, 0);
-    leonos_ui_text_transparent_clipped(surface, 8, y + (h > LEONOS_FONT_H ? (h - LEONOS_FONT_H) / 2 : 0),
-                                       w > 16 ? w - 16 : w, text, LEONOS_UI_BLACK);
+    reliefos_ui_bevel(surface, 0, y, w, h, RELIEFOS_UI_GRAY, 0);
+    reliefos_ui_text_transparent_clipped(surface, 8, y + (h > RELIEFOS_FONT_H ? (h - RELIEFOS_FONT_H) / 2 : 0),
+                                       w > 16 ? w - 16 : w, text, RELIEFOS_UI_BLACK);
 }
 
-void leonos_ui_toolbar(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_toolbar(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                        uint32_t w, uint32_t h)
 {
-    leonos_ui_rect(surface, x, y, w, h, LEONOS_UI_GRAY);
-    leonos_ui_rect(surface, x, y + h - 2, w, 1, LEONOS_UI_DARK);
-    leonos_ui_rect(surface, x, y + h - 1, w, 1, LEONOS_UI_WHITE);
+    reliefos_ui_rect(surface, x, y, w, h, RELIEFOS_UI_GRAY);
+    reliefos_ui_rect(surface, x, y + h - 2, w, 1, RELIEFOS_UI_DARK);
+    reliefos_ui_rect(surface, x, y + h - 1, w, 1, RELIEFOS_UI_WHITE);
 }
 
-void leonos_ui_toolbar_button(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_toolbar_button(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                               uint32_t w, const char *label, uint32_t flags)
 {
-    leonos_ui_button(surface, x, y, w, LEONOS_UI_BUTTON_H, label, flags);
+    reliefos_ui_button(surface, x, y, w, RELIEFOS_UI_BUTTON_H, label, flags);
 }
 
-void leonos_ui_splitter(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_splitter(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                         uint32_t w, uint32_t h, uint32_t vertical)
 {
-    leonos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w, h,
-                            LEONOS_GUI_CURSOR_MOVE, 0);
-    leonos_ui_rect(surface, x, y, w, h, LEONOS_UI_GRAY);
+    reliefos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w, h,
+                            RELIEFOS_GUI_CURSOR_MOVE, 0);
+    reliefos_ui_rect(surface, x, y, w, h, RELIEFOS_UI_GRAY);
     if (vertical) {
-        leonos_ui_rect(surface, x, y, 1, h, LEONOS_UI_DARK);
-        leonos_ui_rect(surface, x + w - 1, y, 1, h, LEONOS_UI_WHITE);
+        reliefos_ui_rect(surface, x, y, 1, h, RELIEFOS_UI_DARK);
+        reliefos_ui_rect(surface, x + w - 1, y, 1, h, RELIEFOS_UI_WHITE);
     } else {
-        leonos_ui_rect(surface, x, y, w, 1, LEONOS_UI_DARK);
-        leonos_ui_rect(surface, x, y + h - 1, w, 1, LEONOS_UI_WHITE);
+        reliefos_ui_rect(surface, x, y, w, 1, RELIEFOS_UI_DARK);
+        reliefos_ui_rect(surface, x, y + h - 1, w, 1, RELIEFOS_UI_WHITE);
     }
 }
 
-void leonos_ui_menubar(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_menubar(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                        uint32_t w)
 {
-    leonos_ui_rect(surface, x, y, w, LEONOS_FONT_H + 8, LEONOS_UI_GRAY);
-    leonos_ui_rect(surface, x, y + LEONOS_FONT_H + 7, w, 1, LEONOS_UI_DARK);
+    reliefos_ui_rect(surface, x, y, w, RELIEFOS_FONT_H + 8, RELIEFOS_UI_GRAY);
+    reliefos_ui_rect(surface, x, y + RELIEFOS_FONT_H + 7, w, 1, RELIEFOS_UI_DARK);
 }
 
-void leonos_ui_menubar_item(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_menubar_item(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                             uint32_t w, const char *label, uint32_t active)
 {
-    leonos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w,
-                            LEONOS_FONT_H + 8, LEONOS_GUI_CURSOR_HAND, 0);
+    reliefos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w,
+                            RELIEFOS_FONT_H + 8, RELIEFOS_GUI_CURSOR_HAND, 0);
     if (active) {
-        leonos_ui_bevel(surface, x, y + 2, w, LEONOS_FONT_H + 4, LEONOS_UI_LIGHT, LEONOS_UI_BUTTON_PRESSED);
+        reliefos_ui_bevel(surface, x, y + 2, w, RELIEFOS_FONT_H + 4, RELIEFOS_UI_LIGHT, RELIEFOS_UI_BUTTON_PRESSED);
     }
-    leonos_ui_text_transparent_clipped(surface, x + 8, y + 4, w > 16 ? w - 16 : w, label, LEONOS_UI_BLACK);
+    reliefos_ui_text_transparent_clipped(surface, x + 8, y + 4, w > 16 ? w - 16 : w, label, RELIEFOS_UI_BLACK);
 }
 
 static uint32_t ui_menubar_h(void)
 {
-    return LEONOS_FONT_H + 8;
+    return RELIEFOS_FONT_H + 8;
 }
 
 static uint32_t ui_menu_row_h(void)
 {
-    return LEONOS_FONT_H + 8;
+    return RELIEFOS_FONT_H + 8;
 }
 
-static uint32_t ui_menubar_item_w(const struct leonos_ui_menubar_item *item)
+static uint32_t ui_menubar_item_w(const struct reliefos_ui_menubar_item *item)
 {
     uint32_t w;
     if (!item) {
@@ -2361,43 +2361,43 @@ static uint32_t ui_menubar_item_w(const struct leonos_ui_menubar_item *item)
     if (item->width) {
         return item->width;
     }
-    w = leonos_ui_text_width(item->label ? item->label : "") + 18;
+    w = reliefos_ui_text_width(item->label ? item->label : "") + 18;
     return w < 36 ? 36 : w;
 }
 
-void leonos_ui_menubar_draw(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
-                            uint32_t w, const struct leonos_ui_menubar_item *items,
+void reliefos_ui_menubar_draw(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
+                            uint32_t w, const struct reliefos_ui_menubar_item *items,
                             uint32_t count, uint32_t active_id)
 {
     uint32_t item_x = x + 6;
-    leonos_ui_menubar(surface, x, y, w);
+    reliefos_ui_menubar(surface, x, y, w);
     for (uint32_t i = 0; i < count; ++i) {
         uint32_t iw = ui_menubar_item_w(items ? &items[i] : 0);
-        uint32_t flags = items ? items[i].flags : LEONOS_UI_MENU_DISABLED;
+        uint32_t flags = items ? items[i].flags : RELIEFOS_UI_MENU_DISABLED;
         if (!iw || item_x >= x + w) {
             break;
         }
         if (item_x + iw > x + w) {
             iw = x + w - item_x;
         }
-        leonos_ui_menubar_item(surface, item_x, y, iw,
+        reliefos_ui_menubar_item(surface, item_x, y, iw,
                                items ? items[i].label : "",
                                items && items[i].id == active_id);
-        if (flags & LEONOS_UI_MENU_DISABLED) {
-            leonos_ui_cursor_region(surface, (int32_t)item_x, (int32_t)y, iw,
-                                    ui_menubar_h(), LEONOS_GUI_CURSOR_NO,
-                                    LEONOS_GUI_CURSOR_REGION_DISABLED);
-            leonos_ui_text_transparent_clipped(surface, item_x + 8, y + 4,
+        if (flags & RELIEFOS_UI_MENU_DISABLED) {
+            reliefos_ui_cursor_region(surface, (int32_t)item_x, (int32_t)y, iw,
+                                    ui_menubar_h(), RELIEFOS_GUI_CURSOR_NO,
+                                    RELIEFOS_GUI_CURSOR_REGION_DISABLED);
+            reliefos_ui_text_transparent_clipped(surface, item_x + 8, y + 4,
                                                iw > 16 ? iw - 16 : iw,
                                                items ? items[i].label : "",
-                                               LEONOS_UI_DARK);
+                                               RELIEFOS_UI_DARK);
         }
         item_x += iw + 2;
     }
 }
 
-int leonos_ui_menubar_hit(int32_t px, int32_t py, uint32_t x, uint32_t y,
-                          const struct leonos_ui_menubar_item *items,
+int reliefos_ui_menubar_hit(int32_t px, int32_t py, uint32_t x, uint32_t y,
+                          const struct reliefos_ui_menubar_item *items,
                           uint32_t count, uint32_t *out_id)
 {
     uint32_t item_x = x + 6;
@@ -2414,7 +2414,7 @@ int leonos_ui_menubar_hit(int32_t px, int32_t py, uint32_t x, uint32_t y,
             break;
         }
         if ((uint32_t)px >= item_x && (uint32_t)px < item_x + iw) {
-            if (items && !(items[i].flags & LEONOS_UI_MENU_DISABLED) && out_id) {
+            if (items && !(items[i].flags & RELIEFOS_UI_MENU_DISABLED) && out_id) {
                 *out_id = items[i].id;
             }
             return 1;
@@ -2424,10 +2424,10 @@ int leonos_ui_menubar_hit(int32_t px, int32_t py, uint32_t x, uint32_t y,
     return 1;
 }
 
-int leonos_ui_menubar_item_rect(uint32_t x, uint32_t y,
-                                const struct leonos_ui_menubar_item *items,
+int reliefos_ui_menubar_item_rect(uint32_t x, uint32_t y,
+                                const struct reliefos_ui_menubar_item *items,
                                 uint32_t count, uint32_t id,
-                                struct leonos_ui_rect *out_rect)
+                                struct reliefos_ui_rect *out_rect)
 {
     uint32_t item_x = x + 6;
     for (uint32_t i = 0; i < count; ++i) {
@@ -2437,29 +2437,29 @@ int leonos_ui_menubar_item_rect(uint32_t x, uint32_t y,
         }
         if (items && items[i].id == id) {
             if (out_rect) {
-                *out_rect = (struct leonos_ui_rect){(int32_t)item_x, (int32_t)y, iw, ui_menubar_h()};
+                *out_rect = (struct reliefos_ui_rect){(int32_t)item_x, (int32_t)y, iw, ui_menubar_h()};
             }
             return 1;
         }
         item_x += iw + 2;
     }
     if (out_rect) {
-        *out_rect = (struct leonos_ui_rect){(int32_t)x, (int32_t)y, 0, 0};
+        *out_rect = (struct reliefos_ui_rect){(int32_t)x, (int32_t)y, 0, 0};
     }
     return 0;
 }
 
-uint32_t leonos_ui_menu_popup_height(uint32_t count)
+uint32_t reliefos_ui_menu_popup_height(uint32_t count)
 {
     return 8 + count * ui_menu_row_h();
 }
 
-void leonos_ui_menu_popup(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
-                          uint32_t w, const struct leonos_ui_context_menu_item *items,
+void reliefos_ui_menu_popup(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
+                          uint32_t w, const struct reliefos_ui_context_menu_item *items,
                           uint32_t count, uint32_t selected_id)
 {
     uint32_t row_h = ui_menu_row_h();
-    uint32_t h = leonos_ui_menu_popup_height(count);
+    uint32_t h = reliefos_ui_menu_popup_height(count);
     int32_t popup_x;
     int32_t popup_y;
     ui_popup_place(surface, (int32_t)x, (int32_t)y, w, h, &popup_x, &popup_y);
@@ -2473,30 +2473,30 @@ void leonos_ui_menu_popup(struct leonos_ui_surface *surface, uint32_t x, uint32_
     ui_menu_cache.progress = 0;
     ui_menu_cache.x = popup_x;
     ui_menu_cache.y = popup_y;
-    leonos_ui_menu(surface, (uint32_t)popup_x, (uint32_t)popup_y, w, h);
+    reliefos_ui_menu(surface, (uint32_t)popup_x, (uint32_t)popup_y, w, h);
     for (uint32_t i = 0; i < count; ++i) {
         uint32_t row_y = (uint32_t)popup_y + 4 + i * row_h;
-        uint32_t flags = items ? items[i].flags : LEONOS_UI_MENU_DISABLED;
-        if (items && items[i].id == selected_id && !(flags & LEONOS_UI_MENU_DISABLED)) {
-            flags |= LEONOS_UI_MENU_SELECTED;
+        uint32_t flags = items ? items[i].flags : RELIEFOS_UI_MENU_DISABLED;
+        if (items && items[i].id == selected_id && !(flags & RELIEFOS_UI_MENU_DISABLED)) {
+            flags |= RELIEFOS_UI_MENU_SELECTED;
         }
-        leonos_ui_menu_item(surface, (uint32_t)popup_x + 34, row_y, w > 42 ? w - 42 : w,
+        reliefos_ui_menu_item(surface, (uint32_t)popup_x + 34, row_y, w > 42 ? w - 42 : w,
                             items ? items[i].label : "", flags);
-        leonos_ui_cursor_region(surface, popup_x + 4, (int32_t)row_y,
+        reliefos_ui_cursor_region(surface, popup_x + 4, (int32_t)row_y,
                                 w > 8 ? w - 8 : w, row_h,
-                                (flags & LEONOS_UI_MENU_DISABLED)
-                                    ? LEONOS_GUI_CURSOR_NO : LEONOS_GUI_CURSOR_HAND,
-                                (flags & LEONOS_UI_MENU_DISABLED)
-                                    ? LEONOS_GUI_CURSOR_REGION_DISABLED : 0);
+                                (flags & RELIEFOS_UI_MENU_DISABLED)
+                                    ? RELIEFOS_GUI_CURSOR_NO : RELIEFOS_GUI_CURSOR_HAND,
+                                (flags & RELIEFOS_UI_MENU_DISABLED)
+                                    ? RELIEFOS_GUI_CURSOR_REGION_DISABLED : 0);
     }
 }
 
-int leonos_ui_menu_popup_hit(int32_t px, int32_t py, uint32_t x, uint32_t y,
-                             uint32_t w, const struct leonos_ui_context_menu_item *items,
+int reliefos_ui_menu_popup_hit(int32_t px, int32_t py, uint32_t x, uint32_t y,
+                             uint32_t w, const struct reliefos_ui_context_menu_item *items,
                              uint32_t count, uint32_t *out_id)
 {
     uint32_t row_h = ui_menu_row_h();
-    uint32_t h = leonos_ui_menu_popup_height(count);
+    uint32_t h = reliefos_ui_menu_popup_height(count);
     int32_t popup_x = (int32_t)x;
     int32_t popup_y = (int32_t)y;
     uint32_t index;
@@ -2511,7 +2511,7 @@ int leonos_ui_menu_popup_hit(int32_t px, int32_t py, uint32_t x, uint32_t y,
         h = ui_menu_cache.h;
     }
     if (px < 0 || py < 0 ||
-        !leonos_ui_hit((uint32_t)px, (uint32_t)py, popup_x, popup_y, w, h)) {
+        !reliefos_ui_hit((uint32_t)px, (uint32_t)py, popup_x, popup_y, w, h)) {
         return 0;
     }
     if (py < popup_y + 4) {
@@ -2519,7 +2519,7 @@ int leonos_ui_menu_popup_hit(int32_t px, int32_t py, uint32_t x, uint32_t y,
     }
     index = ((uint32_t)(py - popup_y) - 4) / row_h;
     if (!items || index >= count ||
-        (items[index].flags & (LEONOS_UI_MENU_SEPARATOR | LEONOS_UI_MENU_DISABLED))) {
+        (items[index].flags & (RELIEFOS_UI_MENU_SEPARATOR | RELIEFOS_UI_MENU_DISABLED))) {
         return 1;
     }
     if (out_id) {
@@ -2528,13 +2528,13 @@ int leonos_ui_menu_popup_hit(int32_t px, int32_t py, uint32_t x, uint32_t y,
     return 1;
 }
 
-void leonos_ui_property_grid(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
-                             uint32_t w, const struct leonos_ui_property_item *items,
+void reliefos_ui_property_grid(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
+                             uint32_t w, const struct reliefos_ui_property_item *items,
                              uint32_t count, uint32_t label_w, uint32_t row_h)
 {
     uint32_t h;
-    if (row_h < LEONOS_FONT_H + 8) {
-        row_h = LEONOS_FONT_H + 8;
+    if (row_h < RELIEFOS_FONT_H + 8) {
+        row_h = RELIEFOS_FONT_H + 8;
     }
     if (label_w < 48) {
         label_w = 48;
@@ -2543,28 +2543,28 @@ void leonos_ui_property_grid(struct leonos_ui_surface *surface, uint32_t x, uint
         label_w = w > 16 ? w - 16 : w;
     }
     h = count * row_h + 4;
-    leonos_ui_inset(surface, x, y, w, h, LEONOS_UI_WHITE);
+    reliefos_ui_inset(surface, x, y, w, h, RELIEFOS_UI_WHITE);
     for (uint32_t i = 0; i < count; ++i) {
         uint32_t row_y = y + 2 + i * row_h;
         uint32_t value_x = x + 2 + label_w;
         uint32_t value_w = w > label_w + 4 ? w - label_w - 4 : 0;
-        uint32_t fill = (i & 1u) ? 0x00f7f7f7u : LEONOS_UI_WHITE;
-        leonos_ui_rect(surface, x + 2, row_y, w > 4 ? w - 4 : w, row_h, fill);
-        leonos_ui_rect(surface, value_x, row_y, 1, row_h, LEONOS_UI_LIGHT);
-        leonos_ui_text_transparent_clipped(surface, x + 8, row_y + 4,
+        uint32_t fill = (i & 1u) ? 0x00f7f7f7u : RELIEFOS_UI_WHITE;
+        reliefos_ui_rect(surface, x + 2, row_y, w > 4 ? w - 4 : w, row_h, fill);
+        reliefos_ui_rect(surface, value_x, row_y, 1, row_h, RELIEFOS_UI_LIGHT);
+        reliefos_ui_text_transparent_clipped(surface, x + 8, row_y + 4,
                                            label_w > 12 ? label_w - 12 : label_w,
                                            items ? items[i].label : "",
-                                           LEONOS_UI_DARK);
-        leonos_ui_text_transparent_clipped(surface, value_x + 8, row_y + 4,
+                                           RELIEFOS_UI_DARK);
+        reliefos_ui_text_transparent_clipped(surface, value_x + 8, row_y + 4,
                                            value_w > 12 ? value_w - 12 : value_w,
                                            items ? items[i].value : "",
-                                           items && (items[i].flags & LEONOS_UI_MENU_DISABLED)
-                                               ? LEONOS_UI_DARK
-                                               : LEONOS_UI_BLACK);
+                                           items && (items[i].flags & RELIEFOS_UI_MENU_DISABLED)
+                                               ? RELIEFOS_UI_DARK
+                                               : RELIEFOS_UI_BLACK);
     }
 }
 
-void leonos_ui_split_pane_init(struct leonos_ui_split_pane_state *state,
+void reliefos_ui_split_pane_init(struct reliefos_ui_split_pane_state *state,
                                uint32_t vertical, uint32_t split,
                                uint32_t min_first, uint32_t min_second)
 {
@@ -2577,9 +2577,9 @@ void leonos_ui_split_pane_init(struct leonos_ui_split_pane_state *state,
     state->min_second = min_second;
     state->splitter_size = 6;
     state->dragging = 0;
-    state->first = (struct leonos_ui_rect){0, 0, 0, 0};
-    state->splitter = (struct leonos_ui_rect){0, 0, 0, 0};
-    state->second = (struct leonos_ui_rect){0, 0, 0, 0};
+    state->first = (struct reliefos_ui_rect){0, 0, 0, 0};
+    state->splitter = (struct reliefos_ui_rect){0, 0, 0, 0};
+    state->second = (struct reliefos_ui_rect){0, 0, 0, 0};
 }
 
 static uint32_t ui_split_clamp(uint32_t value, uint32_t total,
@@ -2603,7 +2603,7 @@ static uint32_t ui_split_clamp(uint32_t value, uint32_t total,
     return value;
 }
 
-void leonos_ui_split_pane_layout(struct leonos_ui_split_pane_state *state,
+void reliefos_ui_split_pane_layout(struct reliefos_ui_split_pane_state *state,
                                  uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 {
     uint32_t splitter;
@@ -2618,10 +2618,10 @@ void leonos_ui_split_pane_layout(struct leonos_ui_split_pane_state *state,
         split = ui_split_clamp(state->split, total, splitter,
                                state->min_first, state->min_second);
         state->split = split;
-        state->first = (struct leonos_ui_rect){(int32_t)x, (int32_t)y, split, h};
-        state->splitter = (struct leonos_ui_rect){(int32_t)(x + split), (int32_t)y,
+        state->first = (struct reliefos_ui_rect){(int32_t)x, (int32_t)y, split, h};
+        state->splitter = (struct reliefos_ui_rect){(int32_t)(x + split), (int32_t)y,
                                                   splitter, h};
-        state->second = (struct leonos_ui_rect){(int32_t)(x + split + splitter),
+        state->second = (struct reliefos_ui_rect){(int32_t)(x + split + splitter),
                                                 (int32_t)y,
                                                 w > split + splitter ? w - split - splitter : 0,
                                                 h};
@@ -2630,28 +2630,28 @@ void leonos_ui_split_pane_layout(struct leonos_ui_split_pane_state *state,
         split = ui_split_clamp(state->split, total, splitter,
                                state->min_first, state->min_second);
         state->split = split;
-        state->first = (struct leonos_ui_rect){(int32_t)x, (int32_t)y, w, split};
-        state->splitter = (struct leonos_ui_rect){(int32_t)x, (int32_t)(y + split),
+        state->first = (struct reliefos_ui_rect){(int32_t)x, (int32_t)y, w, split};
+        state->splitter = (struct reliefos_ui_rect){(int32_t)x, (int32_t)(y + split),
                                                   w, splitter};
-        state->second = (struct leonos_ui_rect){(int32_t)x,
+        state->second = (struct reliefos_ui_rect){(int32_t)x,
                                                 (int32_t)(y + split + splitter),
                                                 w,
                                                 h > split + splitter ? h - split - splitter : 0};
     }
 }
 
-void leonos_ui_split_pane_draw(struct leonos_ui_surface *surface,
-                               const struct leonos_ui_split_pane_state *state)
+void reliefos_ui_split_pane_draw(struct reliefos_ui_surface *surface,
+                               const struct reliefos_ui_split_pane_state *state)
 {
     if (!state) {
         return;
     }
-    leonos_ui_splitter(surface, (uint32_t)state->splitter.x,
+    reliefos_ui_splitter(surface, (uint32_t)state->splitter.x,
                        (uint32_t)state->splitter.y, state->splitter.w,
                        state->splitter.h, state->vertical);
 }
 
-int leonos_ui_split_pane_handle_mouse(struct leonos_ui_split_pane_state *state,
+int reliefos_ui_split_pane_handle_mouse(struct reliefos_ui_split_pane_state *state,
                                       int32_t px, int32_t py, uint32_t buttons)
 {
     uint32_t new_split;
@@ -2666,7 +2666,7 @@ int leonos_ui_split_pane_handle_mouse(struct leonos_ui_split_pane_state *state,
         return 0;
     }
     if (!state->dragging &&
-        !leonos_ui_hit((uint32_t)px, (uint32_t)py, state->splitter.x,
+        !reliefos_ui_hit((uint32_t)px, (uint32_t)py, state->splitter.x,
                        state->splitter.y, state->splitter.w, state->splitter.h)) {
         return 0;
     }
@@ -2687,20 +2687,20 @@ int leonos_ui_split_pane_handle_mouse(struct leonos_ui_split_pane_state *state,
     return 1;
 }
 
-void leonos_ui_slider(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_slider(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                       uint32_t w, uint32_t h, uint32_t value, uint32_t max,
                       uint32_t flags)
 {
-    leonos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w, h,
-                            (flags & LEONOS_UI_BUTTON_DISABLED)
-                                ? LEONOS_GUI_CURSOR_NO : LEONOS_GUI_CURSOR_HAND,
-                            (flags & LEONOS_UI_BUTTON_DISABLED)
-                                ? LEONOS_GUI_CURSOR_REGION_DISABLED : 0);
+    reliefos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w, h,
+                            (flags & RELIEFOS_UI_BUTTON_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_NO : RELIEFOS_GUI_CURSOR_HAND,
+                            (flags & RELIEFOS_UI_BUTTON_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_REGION_DISABLED : 0);
     uint32_t track_y;
     uint32_t thumb_w = 10;
     uint32_t usable;
     uint32_t thumb_x;
-    uint32_t disabled = flags & LEONOS_UI_BUTTON_DISABLED;
+    uint32_t disabled = flags & RELIEFOS_UI_BUTTON_DISABLED;
     if (h < 16) {
         h = 16;
     }
@@ -2713,13 +2713,13 @@ void leonos_ui_slider(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
     track_y = y + h / 2;
     usable = w > thumb_w ? w - thumb_w : 0;
     thumb_x = x + (max ? (usable * value) / max : 0);
-    leonos_ui_inset(surface, x, track_y, w, 4, disabled ? LEONOS_UI_LIGHT : LEONOS_UI_WHITE);
-    leonos_ui_bevel(surface, thumb_x, y + 2, thumb_w, h > 4 ? h - 4 : h,
-                    disabled ? LEONOS_UI_LIGHT : LEONOS_UI_GRAY,
-                    disabled ? LEONOS_UI_BUTTON_DISABLED : 0);
+    reliefos_ui_inset(surface, x, track_y, w, 4, disabled ? RELIEFOS_UI_LIGHT : RELIEFOS_UI_WHITE);
+    reliefos_ui_bevel(surface, thumb_x, y + 2, thumb_w, h > 4 ? h - 4 : h,
+                    disabled ? RELIEFOS_UI_LIGHT : RELIEFOS_UI_GRAY,
+                    disabled ? RELIEFOS_UI_BUTTON_DISABLED : 0);
 }
 
-int leonos_ui_slider_handle_mouse(uint32_t *value, uint32_t max,
+int reliefos_ui_slider_handle_mouse(uint32_t *value, uint32_t max,
                                   uint32_t x, uint32_t y, uint32_t w, uint32_t h,
                                   int32_t px, int32_t py)
 {
@@ -2727,7 +2727,7 @@ int leonos_ui_slider_handle_mouse(uint32_t *value, uint32_t max,
     uint32_t usable;
     uint32_t rel;
     if (!value || max == 0 || px < 0 || py < 0 ||
-        !leonos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)x, (int32_t)y, w, h)) {
+        !reliefos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)x, (int32_t)y, w, h)) {
         return 0;
     }
     usable = w > thumb_w ? w - thumb_w : 1;
@@ -2772,14 +2772,14 @@ static void ui_format_i32(char *buf, uint32_t cap, int32_t value)
     buf[pos < cap ? pos : cap - 1] = 0;
 }
 
-void leonos_ui_stepper(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_stepper(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                        uint32_t w, uint32_t h, int32_t value, int32_t min,
                        int32_t max, uint32_t flags)
 {
     char text[24];
     uint32_t button_w = h;
     uint32_t edit_w = w > button_w * 2 ? w - button_w * 2 : w / 2;
-    uint32_t disabled = flags & LEONOS_UI_BUTTON_DISABLED;
+    uint32_t disabled = flags & RELIEFOS_UI_BUTTON_DISABLED;
     if (value < min) {
         value = min;
     }
@@ -2787,28 +2787,28 @@ void leonos_ui_stepper(struct leonos_ui_surface *surface, uint32_t x, uint32_t y
         value = max;
     }
     ui_format_i32(text, sizeof(text), value);
-    leonos_ui_edit(surface, x, y, edit_w, text, ui_strlen(text), 0,
-                   disabled ? LEONOS_UI_EDIT_DISABLED : LEONOS_UI_EDIT_READONLY);
-    leonos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, edit_w, h,
-                            disabled ? LEONOS_GUI_CURSOR_NO : LEONOS_GUI_CURSOR_ARROW,
-                            disabled ? LEONOS_GUI_CURSOR_REGION_DISABLED : 0);
-    leonos_ui_button(surface, x + edit_w, y, button_w, h, "-",
-                     disabled || value <= min ? LEONOS_UI_BUTTON_DISABLED : 0);
-    leonos_ui_button(surface, x + edit_w + button_w, y, button_w, h, "+",
-                     disabled || value >= max ? LEONOS_UI_BUTTON_DISABLED : 0);
+    reliefos_ui_edit(surface, x, y, edit_w, text, ui_strlen(text), 0,
+                   disabled ? RELIEFOS_UI_EDIT_DISABLED : RELIEFOS_UI_EDIT_READONLY);
+    reliefos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, edit_w, h,
+                            disabled ? RELIEFOS_GUI_CURSOR_NO : RELIEFOS_GUI_CURSOR_ARROW,
+                            disabled ? RELIEFOS_GUI_CURSOR_REGION_DISABLED : 0);
+    reliefos_ui_button(surface, x + edit_w, y, button_w, h, "-",
+                     disabled || value <= min ? RELIEFOS_UI_BUTTON_DISABLED : 0);
+    reliefos_ui_button(surface, x + edit_w + button_w, y, button_w, h, "+",
+                     disabled || value >= max ? RELIEFOS_UI_BUTTON_DISABLED : 0);
 }
 
-int leonos_ui_stepper_handle_mouse(int32_t *value, int32_t min, int32_t max,
+int reliefos_ui_stepper_handle_mouse(int32_t *value, int32_t min, int32_t max,
                                    int32_t step, uint32_t x, uint32_t y,
                                    uint32_t w, uint32_t h, int32_t px, int32_t py)
 {
     uint32_t button_w = h;
     uint32_t edit_w = w > button_w * 2 ? w - button_w * 2 : w / 2;
     if (!value || step <= 0 || px < 0 || py < 0 ||
-        !leonos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)x, (int32_t)y, w, h)) {
+        !reliefos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)x, (int32_t)y, w, h)) {
         return 0;
     }
-    if (leonos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)(x + edit_w),
+    if (reliefos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)(x + edit_w),
                       (int32_t)y, button_w, h)) {
         *value -= step;
         if (*value < min) {
@@ -2816,7 +2816,7 @@ int leonos_ui_stepper_handle_mouse(int32_t *value, int32_t min, int32_t max,
         }
         return 1;
     }
-    if (leonos_ui_hit((uint32_t)px, (uint32_t)py,
+    if (reliefos_ui_hit((uint32_t)px, (uint32_t)py,
                       (int32_t)(x + edit_w + button_w), (int32_t)y,
                       button_w, h)) {
         *value += step;
@@ -2828,7 +2828,7 @@ int leonos_ui_stepper_handle_mouse(int32_t *value, int32_t min, int32_t max,
     return 0;
 }
 
-void leonos_ui_toast_show(struct leonos_ui_toast_state *state, const char *message,
+void reliefos_ui_toast_show(struct reliefos_ui_toast_state *state, const char *message,
                           unsigned long now, uint32_t duration_ms, uint32_t kind)
 {
     uint32_t i = 0;
@@ -2846,7 +2846,7 @@ void leonos_ui_toast_show(struct leonos_ui_toast_state *state, const char *messa
     state->active = 1;
 }
 
-void leonos_ui_toast_clear(struct leonos_ui_toast_state *state)
+void reliefos_ui_toast_clear(struct reliefos_ui_toast_state *state)
 {
     if (!state) {
         return;
@@ -2855,7 +2855,7 @@ void leonos_ui_toast_clear(struct leonos_ui_toast_state *state)
     state->message[0] = 0;
 }
 
-int leonos_ui_toast_active(struct leonos_ui_toast_state *state, unsigned long now)
+int reliefos_ui_toast_active(struct reliefos_ui_toast_state *state, unsigned long now)
 {
     if (!state || !state->active) {
         return 0;
@@ -2867,20 +2867,20 @@ int leonos_ui_toast_active(struct leonos_ui_toast_state *state, unsigned long no
     return 1;
 }
 
-void leonos_ui_toast_draw(struct leonos_ui_surface *surface,
-                          struct leonos_ui_toast_state *state,
+void reliefos_ui_toast_draw(struct reliefos_ui_surface *surface,
+                          struct reliefos_ui_toast_state *state,
                           unsigned long now)
 {
     uint32_t text_w;
     uint32_t w;
-    uint32_t h = LEONOS_FONT_H + 16;
+    uint32_t h = RELIEFOS_FONT_H + 16;
     uint32_t x;
     uint32_t y;
     uint32_t stripe;
-    if (!surface || !leonos_ui_toast_active(state, now) || !state->message[0]) {
+    if (!surface || !reliefos_ui_toast_active(state, now) || !state->message[0]) {
         return;
     }
-    text_w = leonos_ui_text_width(state->message);
+    text_w = reliefos_ui_text_width(state->message);
     w = text_w + 34;
     if (w < 180) {
         w = 180;
@@ -2890,17 +2890,63 @@ void leonos_ui_toast_draw(struct leonos_ui_surface *surface,
     }
     x = surface->width > w + 12 ? surface->width - w - 12 : 4;
     y = surface->height > h + 40 ? surface->height - h - 40 : 8;
-    stripe = LEONOS_UI_ACTIVE_TITLE;
-    if (state->kind == LEONOS_UI_TOAST_SUCCESS) {
+    stripe = RELIEFOS_UI_ACTIVE_TITLE;
+    if (state->kind == RELIEFOS_UI_TOAST_SUCCESS) {
         stripe = 0x00008000u;
-    } else if (state->kind == LEONOS_UI_TOAST_WARNING) {
+    } else if (state->kind == RELIEFOS_UI_TOAST_WARNING) {
         stripe = 0x000080c0u;
-    } else if (state->kind == LEONOS_UI_TOAST_ERROR) {
+    } else if (state->kind == RELIEFOS_UI_TOAST_ERROR) {
         stripe = 0x000000c0u;
     }
-    leonos_ui_bevel(surface, x, y, w, h, LEONOS_UI_LIGHT, 0);
-    leonos_ui_rect(surface, x + 4, y + 4, 6, h > 8 ? h - 8 : h, stripe);
-    leonos_ui_text_transparent_clipped(surface, x + 16, y + 8,
+    reliefos_ui_bevel(surface, x, y, w, h, RELIEFOS_UI_LIGHT, 0);
+    reliefos_ui_rect(surface, x + 4, y + 4, 6, h > 8 ? h - 8 : h, stripe);
+    reliefos_ui_text_transparent_clipped(surface, x + 16, y + 8,
                                        w > 24 ? w - 24 : w,
-                                       state->message, LEONOS_UI_BLACK);
+                                       state->message, RELIEFOS_UI_BLACK);
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_ui_combobox) leonos_ui_combobox __attribute__((alias("reliefos_ui_combobox")));
+extern __typeof__(reliefos_ui_confirm_dialog) leonos_ui_confirm_dialog __attribute__((alias("reliefos_ui_confirm_dialog")));
+extern __typeof__(reliefos_ui_dialog) leonos_ui_dialog __attribute__((alias("reliefos_ui_dialog")));
+extern __typeof__(reliefos_ui_dropdown) leonos_ui_dropdown __attribute__((alias("reliefos_ui_dropdown")));
+extern __typeof__(reliefos_ui_dropdown_height) leonos_ui_dropdown_height __attribute__((alias("reliefos_ui_dropdown_height")));
+extern __typeof__(reliefos_ui_dropdown_hit) leonos_ui_dropdown_hit __attribute__((alias("reliefos_ui_dropdown_hit")));
+extern __typeof__(reliefos_ui_groupbox) leonos_ui_groupbox __attribute__((alias("reliefos_ui_groupbox")));
+extern __typeof__(reliefos_ui_input_dialog) leonos_ui_input_dialog __attribute__((alias("reliefos_ui_input_dialog")));
+extern __typeof__(reliefos_ui_menu_popup) leonos_ui_menu_popup __attribute__((alias("reliefos_ui_menu_popup")));
+extern __typeof__(reliefos_ui_menu_popup_height) leonos_ui_menu_popup_height __attribute__((alias("reliefos_ui_menu_popup_height")));
+extern __typeof__(reliefos_ui_menu_popup_hit) leonos_ui_menu_popup_hit __attribute__((alias("reliefos_ui_menu_popup_hit")));
+extern __typeof__(reliefos_ui_menubar) leonos_ui_menubar __attribute__((alias("reliefos_ui_menubar")));
+extern __typeof__(reliefos_ui_menubar_draw) leonos_ui_menubar_draw __attribute__((alias("reliefos_ui_menubar_draw")));
+extern __typeof__(reliefos_ui_menubar_hit) leonos_ui_menubar_hit __attribute__((alias("reliefos_ui_menubar_hit")));
+extern __typeof__(reliefos_ui_menubar_item) leonos_ui_menubar_item __attribute__((alias("reliefos_ui_menubar_item")));
+extern __typeof__(reliefos_ui_menubar_item_rect) leonos_ui_menubar_item_rect __attribute__((alias("reliefos_ui_menubar_item_rect")));
+extern __typeof__(reliefos_ui_message_box) leonos_ui_message_box __attribute__((alias("reliefos_ui_message_box")));
+extern __typeof__(reliefos_ui_property_grid) leonos_ui_property_grid __attribute__((alias("reliefos_ui_property_grid")));
+extern __typeof__(reliefos_ui_radio) leonos_ui_radio __attribute__((alias("reliefos_ui_radio")));
+extern __typeof__(reliefos_ui_show_confirm_dialog) leonos_ui_show_confirm_dialog __attribute__((alias("reliefos_ui_show_confirm_dialog")));
+extern __typeof__(reliefos_ui_show_input_dialog) leonos_ui_show_input_dialog __attribute__((alias("reliefos_ui_show_input_dialog")));
+extern __typeof__(reliefos_ui_show_message_box) leonos_ui_show_message_box __attribute__((alias("reliefos_ui_show_message_box")));
+extern __typeof__(reliefos_ui_show_open_dialog) leonos_ui_show_open_dialog __attribute__((alias("reliefos_ui_show_open_dialog")));
+extern __typeof__(reliefos_ui_show_open_dialog_with_options) leonos_ui_show_open_dialog_with_options __attribute__((alias("reliefos_ui_show_open_dialog_with_options")));
+extern __typeof__(reliefos_ui_show_open_with_dialog) leonos_ui_show_open_with_dialog __attribute__((alias("reliefos_ui_show_open_with_dialog")));
+extern __typeof__(reliefos_ui_show_password_dialog) leonos_ui_show_password_dialog __attribute__((alias("reliefos_ui_show_password_dialog")));
+extern __typeof__(reliefos_ui_show_save_dialog) leonos_ui_show_save_dialog __attribute__((alias("reliefos_ui_show_save_dialog")));
+extern __typeof__(reliefos_ui_show_save_dialog_ex) leonos_ui_show_save_dialog_ex __attribute__((alias("reliefos_ui_show_save_dialog_ex")));
+extern __typeof__(reliefos_ui_show_save_dialog_with_options) leonos_ui_show_save_dialog_with_options __attribute__((alias("reliefos_ui_show_save_dialog_with_options")));
+extern __typeof__(reliefos_ui_slider) leonos_ui_slider __attribute__((alias("reliefos_ui_slider")));
+extern __typeof__(reliefos_ui_slider_handle_mouse) leonos_ui_slider_handle_mouse __attribute__((alias("reliefos_ui_slider_handle_mouse")));
+extern __typeof__(reliefos_ui_split_pane_draw) leonos_ui_split_pane_draw __attribute__((alias("reliefos_ui_split_pane_draw")));
+extern __typeof__(reliefos_ui_split_pane_handle_mouse) leonos_ui_split_pane_handle_mouse __attribute__((alias("reliefos_ui_split_pane_handle_mouse")));
+extern __typeof__(reliefos_ui_split_pane_init) leonos_ui_split_pane_init __attribute__((alias("reliefos_ui_split_pane_init")));
+extern __typeof__(reliefos_ui_split_pane_layout) leonos_ui_split_pane_layout __attribute__((alias("reliefos_ui_split_pane_layout")));
+extern __typeof__(reliefos_ui_splitter) leonos_ui_splitter __attribute__((alias("reliefos_ui_splitter")));
+extern __typeof__(reliefos_ui_statusbar) leonos_ui_statusbar __attribute__((alias("reliefos_ui_statusbar")));
+extern __typeof__(reliefos_ui_stepper) leonos_ui_stepper __attribute__((alias("reliefos_ui_stepper")));
+extern __typeof__(reliefos_ui_stepper_handle_mouse) leonos_ui_stepper_handle_mouse __attribute__((alias("reliefos_ui_stepper_handle_mouse")));
+extern __typeof__(reliefos_ui_toast_active) leonos_ui_toast_active __attribute__((alias("reliefos_ui_toast_active")));
+extern __typeof__(reliefos_ui_toast_clear) leonos_ui_toast_clear __attribute__((alias("reliefos_ui_toast_clear")));
+extern __typeof__(reliefos_ui_toast_draw) leonos_ui_toast_draw __attribute__((alias("reliefos_ui_toast_draw")));
+extern __typeof__(reliefos_ui_toast_show) leonos_ui_toast_show __attribute__((alias("reliefos_ui_toast_show")));
+extern __typeof__(reliefos_ui_toolbar) leonos_ui_toolbar __attribute__((alias("reliefos_ui_toolbar")));
+extern __typeof__(reliefos_ui_toolbar_button) leonos_ui_toolbar_button __attribute__((alias("reliefos_ui_toolbar_button")));

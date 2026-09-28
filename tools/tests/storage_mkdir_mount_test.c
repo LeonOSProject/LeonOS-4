@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../kernel/ntclks/drivers/bootstrap/storage.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage.c"
 
 static int test_fail_cache_alloc;
 void *kernel_malloc(size_t size) { return malloc(size); }
@@ -36,8 +36,8 @@ uint16_t x86_64_inw(uint16_t port) { (void)port; abort(); }
 void x86_64_outb(uint8_t value, uint16_t port) { (void)value; (void)port; abort(); }
 void x86_64_outw(uint16_t value, uint16_t port) { (void)value; (void)port; abort(); }
 uint64_t time_ticks(void) { abort(); }
-int time_wall_clock(struct leonos_time_info *info)
-{ *info = (struct leonos_time_info){.unix_seconds = 1800000000}; return 0; }
+int time_wall_clock(struct reliefos_time_info *info)
+{ *info = (struct reliefos_time_info){.unix_seconds = 1800000000}; return 0; }
 static void load_volume(const char *image, unsigned id, const char *mount_path)
 {
     FILE *file = fopen(image, "rb");
@@ -72,7 +72,7 @@ int main(int argc, char **argv)
     assert(storage_mkdir("/") == -17);
     storage_task_io_owner = 2;
     storage_set_io_async_context(true);
-    assert(storage_mkdir("/target") == -LEONOS_EAGAIN);
+    assert(storage_mkdir("/target") == -RELIEFOS_EAGAIN);
     storage_release_task_io(2);
     storage_set_io_async_context(false);
     assert(storage_mkdir("/target/boot") == 0);

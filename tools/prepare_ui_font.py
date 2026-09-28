@@ -256,7 +256,7 @@ def build_win95_font(source: Path, pixel_source: Path, target: Path) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Prepare LeonOS Metro and Win95 TrueType UI fonts")
+    parser = argparse.ArgumentParser(description="Prepare ReliefOS Metro and Win95 TrueType UI fonts")
     parser.add_argument("--metro-out", required=True)
     parser.add_argument("--win95-out", required=True)
     parser.add_argument("--font", default=str(DEFAULT_FONT))

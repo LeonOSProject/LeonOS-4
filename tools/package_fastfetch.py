@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Download, verify and stage the static musl Fastfetch release for LeonOS."""
+"""Download, verify and stage the static musl Fastfetch release for ReliefOS."""
 
 from __future__ import annotations
 

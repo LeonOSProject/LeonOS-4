@@ -1,14 +1,14 @@
-#include <leonos/auth.h>
-#include <leonos/pam_session.h>
-#include <leonos/gui.h>
+#include <reliefos/auth.h>
+#include <reliefos/pam_session.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/text_input.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/text_input.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 #include <termios.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -23,24 +23,24 @@
 #define LOGIN_MAX_H 1080
 #define LOGIN_INITIAL_W 800
 #define LOGIN_INITIAL_H 600
-#define LOGIN_WINDOW_TITLE "LeonOS Login"
+#define LOGIN_WINDOW_TITLE "ReliefOS Login"
 #define LOGIN_WINDOW_TEXT "Sign in"
 #define LOGIN_KEY_ESCAPE 1U
 #define LOGIN_KEY_UP 72U
 #define LOGIN_KEY_DOWN 80U
-#define LOGIN_LIST_HEADER_H (LEONOS_FONT_H + 8U)
-#define LOGIN_USER_ROW_H (LEONOS_FONT_H + 4U)
+#define LOGIN_LIST_HEADER_H (RELIEFOS_FONT_H + 8U)
+#define LOGIN_USER_ROW_H (RELIEFOS_FONT_H + 4U)
 #define LOGIN_VISIBLE_USERS 5U
 #define T(s) gettext(s)
 
 static uint32_t pixels[LOGIN_MAX_W * LOGIN_MAX_H];
 static uint32_t surface_w = LOGIN_INITIAL_W;
 static uint32_t surface_h = LOGIN_INITIAL_H;
-static struct leonos_user_info *users;
+static struct reliefos_user_info *users;
 static uint32_t user_count;
 static uint32_t selected_user;
-static char password[LEONOS_AUTH_PASSWORD_LEN];
-static struct leonos_ui_edit_state password_edit;
+static char password[RELIEFOS_AUTH_PASSWORD_LEN];
+static struct reliefos_ui_edit_state password_edit;
 static char status_text[128] = "Select an account";
 
 static int hit_rect_i(int32_t x, int32_t y, int32_t rx, int32_t ry,
@@ -78,8 +78,8 @@ static void update_surface_size(uint32_t width, uint32_t height)
 
 static void update_surface_size_from_framebuffer(void)
 {
-    struct leonos_fb_info fb;
-    if (leonos_fb_info(&fb) >= 0) {
+    struct reliefos_fb_info fb;
+    if (reliefos_fb_info(&fb) >= 0) {
         update_surface_size(fb.width, fb.height);
     }
 }
@@ -87,7 +87,7 @@ static void update_surface_size_from_framebuffer(void)
 static void refresh_users(void)
 {
     uint32_t count = 0;
-    if (leonos_auth_users_alloc(&users, 0, &count) < 0) {
+    if (reliefos_auth_users_alloc(&users, 0, &count) < 0) {
         count = 0;
     }
     user_count = count;
@@ -106,7 +106,7 @@ static void password_mask(char *dst, uint32_t cap)
     dst[i] = 0;
 }
 
-static void draw_login(struct leonos_ui_surface *ui)
+static void draw_login(struct reliefos_ui_surface *ui)
 {
     uint32_t panel_w = surface_w > 620 ? 520 : surface_w > 48 ? surface_w - 40 : surface_w;
     uint32_t panel_h = 360;
@@ -115,53 +115,53 @@ static void draw_login(struct leonos_ui_surface *ui)
     uint32_t list_x = panel_x + 24;
     uint32_t list_y = panel_y + 112;
     uint32_t list_w = panel_w - 48;
-    char masked[LEONOS_AUTH_PASSWORD_LEN];
+    char masked[RELIEFOS_AUTH_PASSWORD_LEN];
 
-    leonos_ui_rect(ui, 0, 0, surface_w, surface_h, LEONOS_UI_DESKTOP);
-    leonos_ui_panel(ui, panel_x, panel_y, panel_w, panel_h, LEONOS_UI_LIGHT);
-    leonos_ui_text(ui, panel_x + 24, panel_y + 24, "LeonOS 4", LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
-    leonos_ui_text(ui, panel_x + 24, panel_y + 50, T("Sign in"), LEONOS_UI_DARK, LEONOS_UI_LIGHT);
-    leonos_ui_list_header(ui, list_x, list_y - LOGIN_LIST_HEADER_H, list_w, T("Users"));
+    reliefos_ui_rect(ui, 0, 0, surface_w, surface_h, RELIEFOS_UI_DESKTOP);
+    reliefos_ui_panel(ui, panel_x, panel_y, panel_w, panel_h, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text(ui, panel_x + 24, panel_y + 24, "ReliefOS", RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text(ui, panel_x + 24, panel_y + 50, T("Sign in"), RELIEFOS_UI_DARK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_list_header(ui, list_x, list_y - LOGIN_LIST_HEADER_H, list_w, T("Users"));
     if (user_count == 0) {
-        leonos_ui_text(ui, list_x + 8, list_y + 8,
+        reliefos_ui_text(ui, list_x + 8, list_y + 8,
                        T("No enabled accounts"),
-                       LEONOS_UI_DARK, LEONOS_UI_LIGHT);
+                       RELIEFOS_UI_DARK, RELIEFOS_UI_LIGHT);
     }
     uint32_t first_user = (selected_user / LOGIN_VISIBLE_USERS) * LOGIN_VISIBLE_USERS;
     for (uint32_t i = 0; first_user + i < user_count && i < LOGIN_VISIBLE_USERS; ++i) {
-        uint32_t flags = first_user + i == selected_user ? LEONOS_UI_MENU_SELECTED : 0;
-        leonos_ui_list_row(ui, list_x, list_y + i * LOGIN_USER_ROW_H, list_w,
+        uint32_t flags = first_user + i == selected_user ? RELIEFOS_UI_MENU_SELECTED : 0;
+        reliefos_ui_list_row(ui, list_x, list_y + i * LOGIN_USER_ROW_H, list_w,
                            users[first_user + i].username, flags);
     }
-    leonos_ui_text(ui, list_x, panel_y + 238, T("Password"),
-                   LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
+    reliefos_ui_text(ui, list_x, panel_y + 238, T("Password"),
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
     password_mask(masked, sizeof(masked));
-    leonos_ui_edit(ui, list_x + 92, panel_y + 232, list_w - 92,
+    reliefos_ui_edit(ui, list_x + 92, panel_y + 232, list_w - 92,
                    masked, password_edit.cursor, password_edit.scroll,
-                   LEONOS_UI_EDIT_FOCUSED);
-    leonos_ui_button(ui, panel_x + panel_w - 124, panel_y + panel_h - 54,
-                     96, LEONOS_UI_BUTTON_H, T("Sign in"),
-                     user_count ? 0 : LEONOS_UI_BUTTON_DISABLED);
-    leonos_ui_text_clipped(ui, panel_x + 24, panel_y + panel_h - 48,
+                   RELIEFOS_UI_EDIT_FOCUSED);
+    reliefos_ui_button(ui, panel_x + panel_w - 124, panel_y + panel_h - 54,
+                     96, RELIEFOS_UI_BUTTON_H, T("Sign in"),
+                     user_count ? 0 : RELIEFOS_UI_BUTTON_DISABLED);
+    reliefos_ui_text_clipped(ui, panel_x + 24, panel_y + panel_h - 48,
                            panel_w - 160, status_text,
-                           LEONOS_UI_DARK, LEONOS_UI_LIGHT);
+                           RELIEFOS_UI_DARK, RELIEFOS_UI_LIGHT);
 }
 
 static int try_login(void)
 {
-    struct leonos_user_info user;
+    struct reliefos_user_info user;
     if (user_count == 0) {
         copy_text(status_text, sizeof(status_text), T("No account available"));
         return 0;
     }
-    int result = leonos_pam_login(users[selected_user].username, password, &user);
+    int result = reliefos_pam_login(users[selected_user].username, password, &user);
     explicit_bzero(password, sizeof(password));
     if (result == 0) {
         copy_text(status_text, sizeof(status_text), T("Signed in"));
         return 1;
     }
     password[0] = 0;
-    leonos_ui_edit_state_init(&password_edit, password, sizeof(password));
+    reliefos_ui_edit_state_init(&password_edit, password, sizeof(password));
     copy_text(status_text, sizeof(status_text),
               errno == EKEYEXPIRED ? T("Account expired") :
               errno == ECANCELED ? T("Authentication canceled") :
@@ -183,7 +183,7 @@ static int take_console_terminal(void)
 
 static int tty_login_main(void)
 {
-    if (leonos_session_initialize() < 0) { perror("Initialize accounts"); return 1; }
+    if (reliefos_session_initialize() < 0) { perror("Initialize accounts"); return 1; }
     if (take_console_terminal() < 0) return 1;
     execl("/bin/login", "login", (char *)0);
     perror("Start login");
@@ -192,7 +192,7 @@ static int tty_login_main(void)
 
 static int installer_shell_main(void)
 {
-    if (geteuid() != 0 || access("/etc/leonos/installer-runtime", F_OK) < 0) {
+    if (geteuid() != 0 || access("/etc/reliefos/installer-runtime", F_OK) < 0) {
         errno = EPERM;
         perror("Start installer shell");
         return 1;
@@ -211,7 +211,7 @@ static int graphical_session_main(void)
         perror("Activate graphical terminal");
         return 1;
     }
-    execl("/usr/lib/leonos/apps/desktop/desktop.elf", "desktop.elf", (char *)0);
+    execl("/usr/lib/reliefos/apps/desktop/desktop.elf", "desktop.elf", (char *)0);
     perror("Start desktop session");
     (void)ioctl(STDIN_FILENO, KDSETMODE, KD_TEXT);
     return 1;
@@ -220,10 +220,10 @@ static int graphical_session_main(void)
 int main(int argc, char **argv)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
     int installer_shell = argc == 2 && strcmp(argv[1], "--installer-shell") == 0;
     int graphical_session = argc == 2 && strcmp(argv[1], "--graphical-session") == 0;
@@ -247,10 +247,10 @@ int main(int argc, char **argv)
     puts("[login.elf] starting login UI");
     update_surface_size_from_framebuffer();
     refresh_users();
-    leonos_ui_edit_state_init(&password_edit, password, sizeof(password));
-    window_id = leonos_gui_create_app_window_ex(LOGIN_WINDOW_TITLE, LOGIN_WINDOW_TEXT,
+    reliefos_ui_edit_state_init(&password_edit, password, sizeof(password));
+    window_id = reliefos_gui_create_app_window_ex(LOGIN_WINDOW_TITLE, LOGIN_WINDOW_TEXT,
                                                 surface_w, surface_h,
-                                                LEONOS_GUI_WINDOW_FULLSCREEN);
+                                                RELIEFOS_GUI_WINDOW_FULLSCREEN);
     if (window_id <= 0) {
         printf("[login.elf] create window failed=%d\n", window_id);
         return 1;
@@ -262,41 +262,41 @@ int main(int argc, char **argv)
         };
         (void)text_input_set_context(&context);
     }
-    leonos_ui_bind(&ui, pixels, surface_w, surface_h, LOGIN_MAX_W);
+    reliefos_ui_bind(&ui, pixels, surface_w, surface_h, LOGIN_MAX_W);
     for (;;) {
         draw_login(&ui);
-        leonos_gui_present_window((uint32_t)window_id, surface_w, surface_h,
+        reliefos_gui_present_window((uint32_t)window_id, surface_w, surface_h,
                                   LOGIN_MAX_W, pixels);
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_RESIZE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_RESIZE) {
                 update_surface_size(event.width, event.height);
-                leonos_ui_bind(&ui, pixels, surface_w, surface_h, LOGIN_MAX_W);
+                reliefos_ui_bind(&ui, pixels, surface_w, surface_h, LOGIN_MAX_W);
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN && event.pressed) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN && event.pressed) {
                 if (event.keycode == LOGIN_KEY_UP && selected_user > 0) {
                     --selected_user;
                     password[0] = 0;
-                    leonos_ui_edit_state_init(&password_edit, password, sizeof(password));
+                    reliefos_ui_edit_state_init(&password_edit, password, sizeof(password));
                 } else if (event.keycode == LOGIN_KEY_DOWN && selected_user + 1 < user_count) {
                     ++selected_user;
                     password[0] = 0;
-                    leonos_ui_edit_state_init(&password_edit, password, sizeof(password));
-                } else if (event.keycode == LEONOS_KEY_ENTER) {
+                    reliefos_ui_edit_state_init(&password_edit, password, sizeof(password));
+                } else if (event.keycode == RELIEFOS_KEY_ENTER) {
                     if (try_login()) {
                         break;
                     }
                 } else if (event.keycode != LOGIN_KEY_ESCAPE) {
-                    (void)leonos_ui_edit_state_handle_key(&password_edit,
+                    (void)reliefos_ui_edit_state_handle_key(&password_edit,
                                                           event.keycode,
                                                           event.pressed);
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
-                (void)leonos_ui_edit_state_handle_key(&password_edit, event.keycode, 0);
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
+                (void)reliefos_ui_edit_state_handle_key(&password_edit, event.keycode, 0);
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u)) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u)) {
                 uint32_t panel_w = surface_w > 620 ? 520 : surface_w > 48 ? surface_w - 40 : surface_w;
                 uint32_t panel_h = 360;
                 uint32_t panel_x = surface_w > panel_w ? (surface_w - panel_w) / 2 : 0;
@@ -311,12 +311,12 @@ int main(int argc, char **argv)
                                    (int32_t)list_w, (int32_t)LOGIN_USER_ROW_H)) {
                         selected_user = first_user + i;
                         password[0] = 0;
-                        leonos_ui_edit_state_init(&password_edit, password, sizeof(password));
+                        reliefos_ui_edit_state_init(&password_edit, password, sizeof(password));
                     }
                 }
                 if (hit_rect_i(event.x, event.y, (int32_t)(panel_x + panel_w - 124),
                                (int32_t)(panel_y + panel_h - 54), 96,
-                               LEONOS_UI_BUTTON_H) && try_login()) {
+                               RELIEFOS_UI_BUTTON_H) && try_login()) {
                     break;
                 }
             }
@@ -324,7 +324,7 @@ int main(int argc, char **argv)
             sleep_ms(20);
         }
     }
-    leonos_gui_destroy_app_window((uint32_t)window_id);
+    reliefos_gui_destroy_app_window((uint32_t)window_id);
     explicit_bzero(password, sizeof(password));
-    return leonos_pam_session_wait() < 0 ? 1 : 0;
+    return reliefos_pam_session_wait() < 0 ? 1 : 0;
 }

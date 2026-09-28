@@ -21,13 +21,13 @@ fail=
 report() { printf 'verify-pages: %s\n' "$1" >&2; fail="yes"; }
 
 # --- expected files ---------------------------------------------------------
-for f in index.html download/index.html download/leonos4-installer.iso download/SHA256SUMS \
-         css/leonos.css .nojekyll \
+for f in index.html download/index.html download/reliefos-installer.iso download/SHA256SUMS \
+         css/reliefos.css .nojekyll \
          rpr/index.html rpr/packages/index.html rpr/kernel/index.html \
          rpr/apk/index.html \
          rpr/manifest.json rpr/health.txt \
-         rpr/css/leonos.css \
-         rpr/apk/packages.adb rpr/apk/repository.json rpr/apk/leonos-rpr.rsa.pub rpr/apk/SHA256SUMS \
+         rpr/css/reliefos.css \
+         rpr/apk/packages.adb rpr/apk/repository.json rpr/apk/reliefos-rpr.rsa.pub rpr/apk/leonos-rpr.rsa.pub rpr/apk/SHA256SUMS \
          rpr/kernel/kernel.sys rpr/kernel/loader.elf \
          rpr/kernel/release.txt rpr/kernel/release.json rpr/kernel/SHA256SUMS; do
     [ -e "$site/$f" ] || report "missing $f"
@@ -67,14 +67,14 @@ fi
 if [ -f "$site/rpr/apk/repository.json" ]; then
     awk -F '"' '
         $0 ~ /"packages"/ { inlist=1 }
-        inlist { for (i=1;i<=NF;i++) if ($i ~ /^leonos-.*\.apk$/) print $i }
+        inlist { for (i=1;i<=NF;i++) if ($i ~ /^reliefos-.*\.apk$/) print $i }
     ' "$site/rpr/apk/repository.json" | while IFS= read -r pkg; do
         [ -n "$pkg" ] || continue
         [ -f "$site/rpr/apk/$pkg" ] || report "repository.json references missing APK $pkg"
     done
 fi
 if [ -f "$site/rpr/apk/SHA256SUMS" ]; then
-    for apk in "$site"/rpr/apk/leonos-*.apk; do
+    for apk in "$site"/rpr/apk/reliefos-*.apk; do
         [ -f "$apk" ] || continue
         name=${apk##*/}
         awk -v n="$name" '$2==n {found=1} END{exit !found}' "$site/rpr/apk/SHA256SUMS" \
@@ -83,7 +83,7 @@ if [ -f "$site/rpr/apk/SHA256SUMS" ]; then
 fi
 
 # --- ISO hash consistency ---------------------------------------------------
-if [ -f "$site/download/SHA256SUMS" ] && [ -s "$site/download/leonos4-installer.iso" ]; then
+if [ -f "$site/download/SHA256SUMS" ] && [ -s "$site/download/reliefos-installer.iso" ]; then
     ( cd "$site/download" && sha256sum -c SHA256SUMS >/dev/null 2>&1 ) \
         || report "installer ISO does not match download/SHA256SUMS"
 fi
@@ -91,7 +91,7 @@ fi
 # --- HTML links resolve to something inside the tree ------------------------
 # All href values except external http(s) URLs must exist relative to the
 # containing HTML file. This guards against a broken base path (plan §25).
-linkfails=$(mktemp "${TMPDIR:-/tmp}/leonos-links.XXXXXX")
+linkfails=$(mktemp "${TMPDIR:-/tmp}/reliefos-links.XXXXXX")
 trap 'rm -f "$linkfails"' EXIT HUP INT TERM
 for page in $(find "$site" -name '*.html' -print); do
     dir=$(dirname "$page")

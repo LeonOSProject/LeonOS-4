@@ -2,7 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <leonos/http.h>
+#include <reliefos/http.h>
 
 static void usage(const char *program)
 {
@@ -11,7 +11,7 @@ static void usage(const char *program)
 
 int main(int argc, char **argv)
 {
-    struct leonos_http_response response;
+    struct reliefos_http_response response;
 
     if (argc != 3) {
         usage(argv[0]);
@@ -26,7 +26,7 @@ int main(int argc, char **argv)
         return 2;
     }
     memset(&response, 0, sizeof(response));
-    if (leonos_http_download(argv[1], argv[2], 30000, NULL, NULL,
+    if (reliefos_http_download(argv[1], argv[2], 30000, NULL, NULL,
                              &response) < 0) {
         fprintf(stderr,
                 "rprfetch: download failed (network status %u, HTTP %u)\n",

@@ -5,8 +5,8 @@ Host stage (always runs, no virtual machine):
   * Linux UAPI header checks and dispatch-contract checks for the kernel
     source that answers ioctl(FIOCLEX/FIONCLEX),
   * the kernel descriptor-table unit test, built from the real
-    kernel/ntclks/kernel/ntclks/syscall.c with ASan/UBSan,
-  * the raw-syscall probe built with the LeonOS musl SDK and executed on the
+    kernel/reliefnt/kernel/reliefnt/syscall.c with ASan/UBSan,
+  * the raw-syscall probe built with the ReliefOS musl SDK and executed on the
     host Linux kernel, which is the reference implementation of the ABI.
 
 Guest stage (--guest): stage the same probe plus the unmodified static musl
@@ -29,7 +29,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 LINUX_V612 = {
-    # kernel/ntclks/include/uapi/asm-generic/ioctls.h, Linux v6.12
+    # kernel/reliefnt/include/uapi/asm-generic/ioctls.h, Linux v6.12
     "FIOCLEX": 0x5451,
     "FIONCLEX": 0x5450,
 }
@@ -55,8 +55,8 @@ def run(command: list[str], **kwargs) -> subprocess.CompletedProcess:
 # --------------------------------------------------------------------------- #
 
 def test_linux_headers() -> None:
-    tty = read("kernel/ntclks/include/uapi/linux/tty.h")
-    fcntl = read("kernel/ntclks/include/uapi/linux/fcntl.h")
+    tty = read("kernel/reliefnt/include/uapi/linux/tty.h")
+    fcntl = read("kernel/reliefnt/include/uapi/linux/fcntl.h")
     assert macro(tty, "FIOCLEX") == LINUX_V612["FIOCLEX"], "FIOCLEX must match Linux v6.12"
     assert macro(tty, "FIONCLEX") == LINUX_V612["FIONCLEX"], "FIONCLEX must match Linux v6.12"
     assert macro(fcntl, "LINUX_FD_CLOEXEC") == 1
@@ -70,8 +70,8 @@ def test_linux_headers() -> None:
 
 
 def test_kernel_dispatch_contract() -> None:
-    syscall_c = read("kernel/ntclks/kernel/ntclks/syscall.c")
-    sched_h = read("kernel/ntclks/kernel/ntclks/include/ntclks/sched.h")
+    syscall_c = read("kernel/reliefnt/kernel/reliefnt/syscall.c")
+    sched_h = read("kernel/reliefnt/kernel/reliefnt/include/reliefnt/sched.h")
     # The generic requests must be resolved before any category/device routing.
     dispatch = syscall_c.index("static int64_t syscall_dispatch_regs(uint64_t number")
     generic = syscall_c.index("syscall_ioctl_descriptor_flags(sched_current_task(), a0")
@@ -80,7 +80,7 @@ def test_kernel_dispatch_contract() -> None:
     path_rule = syscall_c.index("syscall_ioctl_resolve_fd(sched_current_task(), a0)")
     assert dispatch < path_rule < generic, "the O_PATH rule must run before generic ioctls"
     # Unknown requests keep the Linux generic error instead of ENOSYS.
-    assert "return -LEONOS_ENOTTY;\n    }\n\n    return -LEONOS_ENOSYS;" in syscall_c
+    assert "return -RELIEFOS_ENOTTY;\n    }\n\n    return -RELIEFOS_ENOSYS;" in syscall_c
     # The signalfd branch must no longer carry a private implementation: the
     # generic handler answers FIOCLEX/FIONCLEX for it like for every other fd.
     signalfd = syscall_c.rindex("if (file && file->kind == TASK_FILE_KIND_SIGNALFD)")
@@ -119,16 +119,16 @@ def test_kernel_descriptor_table(directory: Path) -> None:
     binary = directory / "ioctl-cloexec-table"
     sources = [
         "tools/tests/ioctl_cloexec_table_test.c",
-        "kernel/ntclks/kernel/ntclks/sched/sched.c",
-        "kernel/ntclks/kernel/ntclks/wait.c",
-        "kernel/ntclks/kernel/ntclks/syscall_sysv_msg.c",
-        "kernel/ntclks/kernel/ntclks/syscall_sysv_sem.c",
-        "kernel/ntclks/kernel/ntclks/syscall_locks.c",
+        "kernel/reliefnt/kernel/reliefnt/sched/sched.c",
+        "kernel/reliefnt/kernel/reliefnt/wait.c",
+        "kernel/reliefnt/kernel/reliefnt/syscall_sysv_msg.c",
+        "kernel/reliefnt/kernel/reliefnt/syscall_sysv_sem.c",
+        "kernel/reliefnt/kernel/reliefnt/syscall_locks.c",
     ]
     run([
         "clang", "-std=c11", "-g", "-O1", "-ffunction-sections", "-fdata-sections",
         "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
-        "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include", "-Wl,--gc-sections",
+        "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ikernel/reliefnt/kernel/reliefnt/include", "-Wl,--gc-sections",
         *sources, "-o", str(binary),
     ])
     result = subprocess.run([str(binary)], cwd=ROOT, check=True, timeout=60,
@@ -142,7 +142,7 @@ def test_kernel_descriptor_table(directory: Path) -> None:
 # --------------------------------------------------------------------------- #
 
 def sdk_compiler() -> Path:
-    compiler = ROOT / "out/x86_64/release/sdk/leonos-musl-sdk/bin/leonos-musl-cc"
+    compiler = ROOT / "out/x86_64/release/sdk/reliefos-musl-sdk/bin/reliefos-musl-cc"
     if not compiler.is_file():
         raise SystemExit("missing SDK; run: make -j8 sdk")
     return compiler
@@ -188,7 +188,7 @@ serial --unit=0 --speed=115200
 terminal_input console serial
 terminal_output gfxterm serial
 
-menuentry "LeonOS 4 ioctl CLOEXEC regression" {
+menuentry "ReliefOS ioctl CLOEXEC regression" {
     multiboot2 /loader.elf root=/ log=serial mode=live syscall-trace=/opt/python/ autospawn=ioctlcloexec autospawn=python315
     module2 /leonos/kernel.sys leonos-kernel
     module2 /install/root.fat leonos-installer-root
@@ -196,10 +196,10 @@ menuentry "LeonOS 4 ioctl CLOEXEC regression" {
 }
 """
 
-PROBE_GUEST_PATH = "/usr/lib/leonos/tests/linux-ioctl-cloexec.elf"
+PROBE_GUEST_PATH = "/usr/lib/reliefos/tests/linux-ioctl-cloexec.elf"
 PYTHON_GUEST_PATH = "/opt/python/bin/python3.15"
 PYTHON_EXPECTED = (
-    "Hello from Python 3 on LeonOS!",
+    "Hello from Python 3 on ReliefOS!",
     "Numbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]",
     "Sum: 55",
     "Fibonacci: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]",
@@ -222,12 +222,12 @@ def stage_root(base: Path, probe: Path, image: Path) -> None:
                              check=True, stdout=subprocess.PIPE, text=True).stdout
     assert "python3.15" in listing, f"{base} has no /opt/python/bin/python3.15"
     debugfs(image, "mkdir /usr/lib/leonos")
-    debugfs(image, "mkdir /usr/lib/leonos/tests")
+    debugfs(image, "mkdir /usr/lib/reliefos/tests")
     debugfs(image, f"write {probe} {PROBE_GUEST_PATH}")
     debugfs(image, f"set_inode_field {PROBE_GUEST_PATH} mode 0100755")
     debugfs(image, f"set_inode_field {PROBE_GUEST_PATH} uid 0")
     debugfs(image, f"set_inode_field {PROBE_GUEST_PATH} gid 0")
-    listing = subprocess.run(["debugfs", "-R", "stat /usr/lib/leonos/tests/linux-ioctl-cloexec.elf",
+    listing = subprocess.run(["debugfs", "-R", "stat /usr/lib/reliefos/tests/linux-ioctl-cloexec.elf",
                               str(image)], check=True, stdout=subprocess.PIPE, text=True).stdout
     assert "Mode:  0755" in listing, listing
     print(f"  staged {PROBE_GUEST_PATH} and the CPython 3.15 tree in {image}")
@@ -333,7 +333,7 @@ def boot_guest(iso: Path, serial: Path, timeout: float, terminal: bool = False) 
         raise SystemExit(f"missing {ovmf}; install the edk2 x86_64 firmware package")
     serial.parent.mkdir(parents=True, exist_ok=True)
     serial.write_text("")
-    with tempfile.TemporaryDirectory(prefix="leonos-ioctl-clex-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-ioctl-clex-") as directory:
         qmp = Path(directory) / "qmp.sock"
         command = [
             "qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-machine", "q35",
@@ -378,7 +378,7 @@ def test_guest_iso(args: argparse.Namespace) -> None:
     root = args.root if args.root.is_absolute() else ROOT / args.root
     image = work / "root.ext2"
     stage_root(root, probe, image)
-    iso = build_iso(image, work / "leonos4-ioctl-cloexec.iso", work / "grub-ioctl-cloexec.cfg", work)
+    iso = build_iso(image, work / "reliefos-ioctl-cloexec.iso", work / "grub-ioctl-cloexec.cfg", work)
     serial = work / "guest-serial.log"
     text = boot_guest(iso, serial, args.timeout, args.terminal)
 
@@ -505,7 +505,7 @@ def main() -> int:
     print(f"ioctl close-on-exec regression ({FORMAT})")
     test_linux_headers()
     test_kernel_dispatch_contract()
-    with tempfile.TemporaryDirectory(prefix="leonos-ioctl-cloexec-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-ioctl-cloexec-") as directory:
         test_kernel_descriptor_table(Path(directory))
         probe = build_probe(ROOT / "build/ioctl-cloexec/linux-ioctl-cloexec.elf")
         host_output = subprocess.run([str(probe)], cwd=ROOT, stdout=subprocess.PIPE,

@@ -1,12 +1,12 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_internal.h"
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_state.c"
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_ext2_cache.c"
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_ide.c"
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_ahci.c"
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_nvme.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_internal.h"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_state.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext2_cache.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ide.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ahci.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_nvme.c"
 
 static uint8_t media[32768];
 static unsigned commands, reject_batch, fail_sector;
@@ -34,7 +34,7 @@ static int fake_ahci_write(struct ahci_hba_port *port, uint64_t lba,
 }
 #define ahci_write_lba_retry fake_ahci_write
 #define ahci_read_lba_retry fake_ahci_read
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_block.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_block.c"
 #undef ahci_write_lba_retry
 #undef ahci_read_lba_retry
 
@@ -67,8 +67,8 @@ int main(void)
     assert(!memcmp(data, media, sizeof(data)) && commands == 65);
     fail_sector = 1;
     assert(storage_write_sectors(100, 64, data) == -5);
-    read_result = -LEONOS_EAGAIN;
-    assert(storage_read_device(&g_storage, 100, 8, data) == -LEONOS_EAGAIN);
+    read_result = -RELIEFOS_EAGAIN;
+    assert(storage_read_device(&g_storage, 100, 8, data) == -RELIEFOS_EAGAIN);
     assert(read_failures == 0);
     read_result = 0;
     assert(storage_read_device(&g_storage, 100, 8, data) == 0);

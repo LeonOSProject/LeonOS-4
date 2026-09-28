@@ -1,4 +1,4 @@
-#include <leonos/pam_session.h>
+#include <reliefos/pam_session.h>
 #include "desktop.h"
 
 #define DESKTOP_INPUTM_CONFIG_MAX 2048U
@@ -32,9 +32,9 @@ static int inputm_state_changed(const text_input_state_t *left,
 
 static int inputm_config_path(char *path, uint32_t capacity, uint32_t *out_uid)
 {
-    struct leonos_user_info user = {0};
+    struct reliefos_user_info user = {0};
     uint32_t len;
-    if (!path || capacity == 0 || leonos_session_current(&user) < 0 ||
+    if (!path || capacity == 0 || reliefos_session_current(&user) < 0 ||
         !user.home[0]) {
         return 0;
     }
@@ -180,9 +180,9 @@ static void desktop_inputm_sort_entries(void)
 
 void desktop_inputm_load_config(void)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     char config[DESKTOP_INPUTM_CONFIG_MAX];
-    char value[LEONOS_FS_PATH_LEN];
+    char value[RELIEFOS_FS_PATH_LEN];
     int fd;
     long got;
     uint32_t uid;
@@ -190,7 +190,7 @@ void desktop_inputm_load_config(void)
     if (!inputm_config_path(path, sizeof(path), &uid)) {
         return;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return;
     }
@@ -303,7 +303,7 @@ static void desktop_inputm_start_entry(uint32_t index)
 
 static void desktop_inputm_activate_index(uint32_t index)
 {
-    char config_path[LEONOS_FS_PATH_LEN];
+    char config_path[RELIEFOS_FS_PATH_LEN];
     uint32_t uid;
     if (index >= desktop_inputm_entry_count || !desktop_inputm_entries[index].enabled ||
         !inputm_config_path(config_path, sizeof(config_path), &uid)) {
@@ -323,7 +323,7 @@ static void desktop_inputm_activate_index(uint32_t index)
 
 void desktop_inputm_refresh(void)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     uint32_t uid;
     text_input_state_t previous = desktop_inputm_state;
     if (!inputm_config_path(path, sizeof(path), &uid)) {
@@ -405,7 +405,7 @@ int desktop_inputm_handle_click(uint32_t x, uint32_t y)
                           ? fb_w() - DESKTOP_INPUTM_MENU_W - 4U : 0U;
     uint32_t menu_y = tb_y > menu_h + 4U ? tb_y - menu_h - 4U : 0U;
     if (hit_rect(x, y, (int)icon_x, (int)tb_y + 5, TASKBAR_INPUTM_W - 4U,
-                 LEONOS_UI_BUTTON_H)) {
+                 RELIEFOS_UI_BUTTON_H)) {
         desktop_inputm_menu_open = desktop_inputm_menu_open ? 0 : 1;
         full_redraw_pending = 1;
         return 1;
@@ -445,26 +445,26 @@ uint32_t desktop_inputm_cursor_style(uint32_t x, uint32_t y)
     uint32_t menu_y = tb_y > menu_h + 4U ? tb_y - menu_h - 4U : 0U;
 
     if (hit_rect(x, y, (int)icon_x, (int)tb_y + 5,
-                 TASKBAR_INPUTM_W - 4U, LEONOS_UI_BUTTON_H)) {
-        return LEONOS_GUI_CURSOR_HAND;
+                 TASKBAR_INPUTM_W - 4U, RELIEFOS_UI_BUTTON_H)) {
+        return RELIEFOS_GUI_CURSOR_HAND;
     }
     if (!desktop_inputm_menu_open ||
         !hit_rect(x, y, (int)menu_x, (int)menu_y, DESKTOP_INPUTM_MENU_W, menu_h)) {
-        return LEONOS_GUI_CURSOR_ARROW;
+        return RELIEFOS_GUI_CURSOR_ARROW;
     }
     if (y >= menu_y + 8U &&
         y < menu_y + 8U + desktop_inputm_entry_count * DESKTOP_INPUTM_MENU_ROW_H) {
         uint32_t index = (y - menu_y - 8U) / DESKTOP_INPUTM_MENU_ROW_H;
         if (index < desktop_inputm_entry_count) {
             return desktop_inputm_entries[index].enabled
-                       ? LEONOS_GUI_CURSOR_HAND : LEONOS_GUI_CURSOR_NO;
+                       ? RELIEFOS_GUI_CURSOR_HAND : RELIEFOS_GUI_CURSOR_NO;
         }
     }
     if (y >= menu_y + 8U + desktop_inputm_entry_count * DESKTOP_INPUTM_MENU_ROW_H &&
         y < menu_y + 8U + rows * DESKTOP_INPUTM_MENU_ROW_H) {
-        return LEONOS_GUI_CURSOR_HAND;
+        return RELIEFOS_GUI_CURSOR_HAND;
     }
-    return LEONOS_GUI_CURSOR_ARROW;
+    return RELIEFOS_GUI_CURSOR_ARROW;
 }
 
 void draw_inputm_overlay(void)
@@ -479,8 +479,8 @@ void draw_inputm_overlay(void)
         menu_x = fb_w() > DESKTOP_INPUTM_MENU_W + 4U
                      ? fb_w() - DESKTOP_INPUTM_MENU_W - 4U : 0U;
         menu_y = taskbar_y() > menu_h + 4U ? taskbar_y() - menu_h - 4U : 0U;
-        leonos_ui_panel(&ui, menu_x, menu_y, DESKTOP_INPUTM_MENU_W, menu_h,
-                        LEONOS_UI_LIGHT);
+        reliefos_ui_panel(&ui, menu_x, menu_y, DESKTOP_INPUTM_MENU_W, menu_h,
+                        RELIEFOS_UI_LIGHT);
         for (uint32_t i = 0; i < desktop_inputm_entry_count; ++i) {
             char line[96];
             uint32_t pos = 0;
@@ -492,16 +492,16 @@ void draw_inputm_overlay(void)
                 !text_eq(desktop_inputm_entries[i].id, "en")) {
                 append_text(line, &pos, sizeof(line), "  (start)");
             }
-            leonos_ui_menu_item(&ui, menu_x + 6U,
+            reliefos_ui_menu_item(&ui, menu_x + 6U,
                                 menu_y + 8U + i * DESKTOP_INPUTM_MENU_ROW_H,
                                 DESKTOP_INPUTM_MENU_W - 12U, line,
                                 text_eq(desktop_inputm_entries[i].id,
                                         desktop_inputm_state.active_id)
-                                    ? LEONOS_UI_MENU_SELECTED
+                                    ? RELIEFOS_UI_MENU_SELECTED
                                     : (!desktop_inputm_entries[i].enabled
-                                           ? LEONOS_UI_MENU_DISABLED : 0));
+                                           ? RELIEFOS_UI_MENU_DISABLED : 0));
         }
-        leonos_ui_menu_item(&ui, menu_x + 6U,
+        reliefos_ui_menu_item(&ui, menu_x + 6U,
                             menu_y + 8U + desktop_inputm_entry_count *
                                 DESKTOP_INPUTM_MENU_ROW_H,
                             DESKTOP_INPUTM_MENU_W - 12U,
@@ -511,7 +511,7 @@ void draw_inputm_overlay(void)
         !(desktop_inputm_state.render_flags & TEXT_INPUT_RENDER_PIXELS)) {
         uint32_t width = 320U;
         uint32_t height = 34U + desktop_inputm_state.candidate_count *
-                          (LEONOS_FONT_H + 4U);
+                          (RELIEFOS_FONT_H + 4U);
         uint32_t x = cursor_x + 16U;
         uint32_t y = cursor_y + 18U;
         for (uint32_t i = 0; i < MAX_WINDOWS; ++i) {
@@ -535,10 +535,10 @@ void draw_inputm_overlay(void)
         if (y + height > taskbar_y()) {
             y = taskbar_y() > height ? taskbar_y() - height : 0;
         }
-        leonos_ui_panel(&ui, x, y, width, height, LEONOS_UI_LIGHT);
-        leonos_ui_text_clipped(&ui, x + 8U, y + 7U, width > 16U ? width - 16U : width,
+        reliefos_ui_panel(&ui, x, y, width, height, RELIEFOS_UI_LIGHT);
+        reliefos_ui_text_clipped(&ui, x + 8U, y + 7U, width > 16U ? width - 16U : width,
                                desktop_inputm_state.composition,
-                               LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
+                               RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
         for (uint32_t i = 0; i < desktop_inputm_state.candidate_count &&
                              i < TEXT_INPUT_MAX_CANDIDATES; ++i) {
             char line[TEXT_INPUT_TEXT_LEN + 8U];
@@ -547,10 +547,10 @@ void draw_inputm_overlay(void)
             append_dec(line, &pos, sizeof(line), i + 1U);
             append_text(line, &pos, sizeof(line), ". ");
             append_text(line, &pos, sizeof(line), desktop_inputm_state.candidates[i]);
-            leonos_ui_menu_item(&ui, x + 6U, y + 28U + i * (LEONOS_FONT_H + 4U),
+            reliefos_ui_menu_item(&ui, x + 6U, y + 28U + i * (RELIEFOS_FONT_H + 4U),
                                 width > 12U ? width - 12U : width, line,
                                 i == desktop_inputm_state.selected_candidate
-                                    ? LEONOS_UI_MENU_SELECTED : 0);
+                                    ? RELIEFOS_UI_MENU_SELECTED : 0);
         }
     }
 }

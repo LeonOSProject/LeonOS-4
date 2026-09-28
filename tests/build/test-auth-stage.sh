@@ -13,12 +13,12 @@ export LC_ALL
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 
-deps=${LEONOS_DEPS:-$repo_root/tools/host/gen/leonos-deps}
-[ -x "$deps" ] || deps=$(find "$repo_root/out" -path '*/host/bin/leonos-deps' -type f | head -n 1)
+deps=${RELIEFOS_DEPS:-${LEONOS_DEPS:-$repo_root/tools/host/gen/reliefos-deps}}
+[ -x "$deps" ] || deps=$(find "$repo_root/out" -path '*/host/bin/reliefos-deps' -type f | head -n 1)
 lock=$repo_root/configs/dependencies.lock.json
 auth_script=$repo_root/tools/build/auth-upstream.sh
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-auth.XXXXXX") || exit 1
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-auth.XXXXXX") || exit 1
 O="$work/out"
 failures=0
 checks=0
@@ -209,11 +209,11 @@ fi
 
 # `make clean` is only safe because of the ownership marker, and only useful if a
 # build goal actually writes it: a tree that clean refuses to delete is a leak.
-if [ -f "$O/.leonos-out" ]; then
+if [ -f "$O/.reliefos-out" ]; then
     pass 'a build goal leaves the ownership marker clean needs to recognise the tree'
 else
     fail 'a build goal leaves the ownership marker clean needs to recognise the tree' \
-        'missing .leonos-out'
+        'missing .reliefos-out'
 fi
 make -s O="$O" clean >"$work/clean.log" 2>&1
 clean_status=$?

@@ -32,6 +32,6 @@ if [ -n "$tag" ]; then
     wait "$formatter" || { [ "$status" != 0 ] || status=1; }
 fi
 if [ -n "$tag" ] && [ "$status" != 0 ]; then
-    leonos_log ERROR "$tag exited $status; raw log: $log" >&2
+    reliefos_log ERROR "$tag exited $status; raw log: $log" >&2
 fi
 exit "$status"

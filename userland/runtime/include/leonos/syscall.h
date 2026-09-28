@@ -1,57 +1,136 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/syscall.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_SYSCALL_H
 #define LEONOS_SYSCALL_H
+#include <reliefos/syscall.h>
 
-#include <leonos/fs.h>
-#include <leonos/auth.h>
-#include <leonos/startup.h>
-#include <leonos/syscall_abi.h>
-#include <linux/mman.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <sys/syscall.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/utsname.h>
-#include <sys/reboot.h>
-#include <sys/wait.h>
-#include <sched.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-
-#define SYS_send SYS_sendto
-#define SYS_recv SYS_recvfrom
-#define SYS_nice LEONOS_SYS_NICE
-
-#define LEONOS_PROT_READ LINUX_PROT_READ
-#define LEONOS_PROT_WRITE LINUX_PROT_WRITE
-#define LEONOS_PROT_EXEC LINUX_PROT_EXEC
-
-#define LEONOS_MAP_PRIVATE LINUX_MAP_PRIVATE
-#define LEONOS_MAP_FIXED LINUX_MAP_FIXED
-#define LEONOS_MAP_ANONYMOUS LINUX_MAP_ANONYMOUS
-#define LEONOS_MAP_FAILED ((void *)-1)
-
-#define LEONOS_EPERM 1
-#define LEONOS_EACCES 13
-#define LEONOS_EBUSY 16
-#define LEONOS_EIO 5
-#define LEONOS_EAGAIN 11
-#define LEONOS_EEXIST 17
-#define LEONOS_EPIPE 32
-
-long syscall0(long n);
-long syscall1(long n, long a0);
-long syscall2(long n, long a0, long a1);
-long syscall3(long n, long a0, long a1, long a2);
-long syscall6(long n, long a0, long a1, long a2, long a3, long a4, long a5);
-
-
-int sleep_ms(unsigned long ms);
-int leonos_stat_legacy(const char *path, struct leonos_stat *st);
-int leonos_fstat_legacy(int fd, struct leonos_stat *st);
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_AUTH_H RELIEFOS_AUTH_H
+#define LEONOS_AUTH_HOME_LEN RELIEFOS_AUTH_HOME_LEN
+#define LEONOS_AUTH_PASSWORD_LEN RELIEFOS_AUTH_PASSWORD_LEN
+#define LEONOS_AUTH_PASSWORD_MAX_CHARS RELIEFOS_AUTH_PASSWORD_MAX_CHARS
+#define LEONOS_AUTH_PASSWORD_MIN_CHARS RELIEFOS_AUTH_PASSWORD_MIN_CHARS
+#define LEONOS_AUTH_ROLE_ADMIN RELIEFOS_AUTH_ROLE_ADMIN
+#define LEONOS_AUTH_ROLE_NONE RELIEFOS_AUTH_ROLE_NONE
+#define LEONOS_AUTH_ROLE_USER RELIEFOS_AUTH_ROLE_USER
+#define LEONOS_AUTH_UPDATE_FLAGS RELIEFOS_AUTH_UPDATE_FLAGS
+#define LEONOS_AUTH_UPDATE_ROLE RELIEFOS_AUTH_UPDATE_ROLE
+#define LEONOS_AUTH_USERNAME_LEN RELIEFOS_AUTH_USERNAME_LEN
+#define LEONOS_AUTH_USER_DISABLED RELIEFOS_AUTH_USER_DISABLED
+#define LEONOS_EACCES RELIEFOS_EACCES
+#define LEONOS_EAGAIN RELIEFOS_EAGAIN
+#define LEONOS_EBUSY RELIEFOS_EBUSY
+#define LEONOS_EEXIST RELIEFOS_EEXIST
+#define LEONOS_EIO RELIEFOS_EIO
+#define LEONOS_EPERM RELIEFOS_EPERM
+#define LEONOS_EPIPE RELIEFOS_EPIPE
+#define LEONOS_FS_ACL_ACE_INHERITED RELIEFOS_FS_ACL_ACE_INHERITED
+#define LEONOS_FS_ACL_FLAG_CORRUPT RELIEFOS_FS_ACL_FLAG_CORRUPT
+#define LEONOS_FS_ACL_FLAG_SYNTHETIC RELIEFOS_FS_ACL_FLAG_SYNTHETIC
+#define LEONOS_FS_ACL_MAX_ACE RELIEFOS_FS_ACL_MAX_ACE
+#define LEONOS_FS_ACL_PRINCIPAL_ADMINISTRATORS RELIEFOS_FS_ACL_PRINCIPAL_ADMINISTRATORS
+#define LEONOS_FS_ACL_PRINCIPAL_EVERYONE RELIEFOS_FS_ACL_PRINCIPAL_EVERYONE
+#define LEONOS_FS_ACL_PRINCIPAL_GROUP RELIEFOS_FS_ACL_PRINCIPAL_GROUP
+#define LEONOS_FS_ACL_PRINCIPAL_OWNER RELIEFOS_FS_ACL_PRINCIPAL_OWNER
+#define LEONOS_FS_ACL_PRINCIPAL_SYSTEM RELIEFOS_FS_ACL_PRINCIPAL_SYSTEM
+#define LEONOS_FS_ACL_PRINCIPAL_USERS RELIEFOS_FS_ACL_PRINCIPAL_USERS
+#define LEONOS_FS_ACL_VERSION RELIEFOS_FS_ACL_VERSION
+#define LEONOS_FS_FILE_WRITE_SLICE_BYTES RELIEFOS_FS_FILE_WRITE_SLICE_BYTES
+#define LEONOS_FS_H RELIEFOS_FS_H
+#define LEONOS_FS_IO_SLICE_BYTES RELIEFOS_FS_IO_SLICE_BYTES
+#define LEONOS_FS_MAX_ENTRIES RELIEFOS_FS_MAX_ENTRIES
+#define LEONOS_FS_NAME_LEN RELIEFOS_FS_NAME_LEN
+#define LEONOS_FS_PATH_LEN RELIEFOS_FS_PATH_LEN
+#define LEONOS_FS_PERM_DELETE RELIEFOS_FS_PERM_DELETE
+#define LEONOS_FS_PERM_EXEC RELIEFOS_FS_PERM_EXEC
+#define LEONOS_FS_PERM_FULL RELIEFOS_FS_PERM_FULL
+#define LEONOS_FS_PERM_MANAGE RELIEFOS_FS_PERM_MANAGE
+#define LEONOS_FS_PERM_READ RELIEFOS_FS_PERM_READ
+#define LEONOS_FS_PERM_WRITE RELIEFOS_FS_PERM_WRITE
+#define LEONOS_FS_READ_SLICE_BYTES RELIEFOS_FS_READ_SLICE_BYTES
+#define LEONOS_FS_TYPE_DEVICE RELIEFOS_FS_TYPE_DEVICE
+#define LEONOS_FS_TYPE_DIR RELIEFOS_FS_TYPE_DIR
+#define LEONOS_FS_TYPE_FIFO RELIEFOS_FS_TYPE_FIFO
+#define LEONOS_FS_TYPE_FILE RELIEFOS_FS_TYPE_FILE
+#define LEONOS_FS_TYPE_SOCKET RELIEFOS_FS_TYPE_SOCKET
+#define LEONOS_FS_TYPE_SYMLINK RELIEFOS_FS_TYPE_SYMLINK
+#define LEONOS_MAP_ANONYMOUS RELIEFOS_MAP_ANONYMOUS
+#define LEONOS_MAP_FAILED RELIEFOS_MAP_FAILED
+#define LEONOS_MAP_FIXED RELIEFOS_MAP_FIXED
+#define LEONOS_MAP_PRIVATE RELIEFOS_MAP_PRIVATE
+#define LEONOS_O_ACCMODE RELIEFOS_O_ACCMODE
+#define LEONOS_O_APPEND RELIEFOS_O_APPEND
+#define LEONOS_O_CLOEXEC RELIEFOS_O_CLOEXEC
+#define LEONOS_O_CREAT RELIEFOS_O_CREAT
+#define LEONOS_O_DIRECTORY RELIEFOS_O_DIRECTORY
+#define LEONOS_O_EXCL RELIEFOS_O_EXCL
+#define LEONOS_O_NOFOLLOW RELIEFOS_O_NOFOLLOW
+#define LEONOS_O_NONBLOCK RELIEFOS_O_NONBLOCK
+#define LEONOS_O_RDONLY RELIEFOS_O_RDONLY
+#define LEONOS_O_RDWR RELIEFOS_O_RDWR
+#define LEONOS_O_TRUNC RELIEFOS_O_TRUNC
+#define LEONOS_O_WRONLY RELIEFOS_O_WRONLY
+#define LEONOS_PROT_EXEC RELIEFOS_PROT_EXEC
+#define LEONOS_PROT_READ RELIEFOS_PROT_READ
+#define LEONOS_PROT_WRITE RELIEFOS_PROT_WRITE
+#define LEONOS_SEEK_CUR RELIEFOS_SEEK_CUR
+#define LEONOS_SEEK_END RELIEFOS_SEEK_END
+#define LEONOS_SEEK_SET RELIEFOS_SEEK_SET
+#define LEONOS_STARTUP_ARG_LEN RELIEFOS_STARTUP_ARG_LEN
+#define LEONOS_STARTUP_DECISION_ALLOW RELIEFOS_STARTUP_DECISION_ALLOW
+#define LEONOS_STARTUP_DECISION_DENY RELIEFOS_STARTUP_DECISION_DENY
+#define LEONOS_STARTUP_DECISION_DENY_REMEMBERED RELIEFOS_STARTUP_DECISION_DENY_REMEMBERED
+#define LEONOS_STARTUP_H RELIEFOS_STARTUP_H
+#define LEONOS_STARTUP_MAX_ARGS RELIEFOS_STARTUP_MAX_ARGS
+#define LEONOS_STARTUP_MAX_ENTRIES RELIEFOS_STARTUP_MAX_ENTRIES
+#define LEONOS_STARTUP_STATUS_APPROVED RELIEFOS_STARTUP_STATUS_APPROVED
+#define LEONOS_STARTUP_STATUS_CANCELLED RELIEFOS_STARTUP_STATUS_CANCELLED
+#define LEONOS_STARTUP_STATUS_DENIED RELIEFOS_STARTUP_STATUS_DENIED
+#define LEONOS_STARTUP_STATUS_DENIED_REMEMBERED RELIEFOS_STARTUP_STATUS_DENIED_REMEMBERED
+#define LEONOS_STARTUP_STATUS_EXISTS RELIEFOS_STARTUP_STATUS_EXISTS
+#define LEONOS_STARTUP_STATUS_FAILED RELIEFOS_STARTUP_STATUS_FAILED
+#define LEONOS_STARTUP_STATUS_PENDING RELIEFOS_STARTUP_STATUS_PENDING
+#define LEONOS_SYS_NICE RELIEFOS_SYS_NICE
+#define LEONOS_UAPI_AUTH_ABI_H RELIEFOS_UAPI_AUTH_ABI_H
+#define LEONOS_UAPI_AUTH_USER_H RELIEFOS_UAPI_AUTH_USER_H
+#define LEONOS_UAPI_FS_ABI_H RELIEFOS_UAPI_FS_ABI_H
+#define LEONOS_UAPI_STARTUP_ABI_H RELIEFOS_UAPI_STARTUP_ABI_H
+#define LEONOS_UAPI_SYSCALL_ABI_H RELIEFOS_UAPI_SYSCALL_ABI_H
+#define leonos_auth_create_user reliefos_auth_create_user
+#define leonos_auth_current reliefos_auth_current
+#define leonos_auth_list_users reliefos_auth_list_users
+#define leonos_auth_logout reliefos_auth_logout
+#define leonos_auth_password_valid reliefos_auth_password_valid
+#define leonos_auth_request_power reliefos_auth_request_power
+#define leonos_auth_status reliefos_auth_status
+#define leonos_auth_update_user reliefos_auth_update_user
+#define leonos_auth_users_alloc reliefos_auth_users_alloc
+#define leonos_dir_entry reliefos_dir_entry
+#define leonos_dir_list reliefos_dir_list
+#define leonos_fs_acl reliefos_fs_acl
+#define leonos_fs_acl_ace reliefos_fs_acl_ace
+#define leonos_fs_acl_get reliefos_fs_acl_get
+#define leonos_fs_acl_repair reliefos_fs_acl_repair
+#define leonos_fs_acl_set reliefos_fs_acl_set
+#define leonos_fs_acl_take_ownership reliefos_fs_acl_take_ownership
+#define leonos_fstat_legacy reliefos_fstat_legacy
+#define leonos_list_dir reliefos_list_dir
+#define leonos_readdir reliefos_readdir
+#define leonos_startup_command reliefos_startup_command
+#define leonos_startup_dialog_get reliefos_startup_dialog_get
+#define leonos_startup_dialog_request reliefos_startup_dialog_request
+#define leonos_startup_dialog_resolution reliefos_startup_dialog_resolution
+#define leonos_startup_dialog_resolve reliefos_startup_dialog_resolve
+#define leonos_startup_entry reliefos_startup_entry
+#define leonos_startup_launch_current_user reliefos_startup_launch_current_user
+#define leonos_startup_list reliefos_startup_list
+#define leonos_startup_remove reliefos_startup_remove
+#define leonos_startup_request reliefos_startup_request
+#define leonos_startup_request_status reliefos_startup_request_status
+#define leonos_startup_set_enabled reliefos_startup_set_enabled
+#define leonos_startup_update reliefos_startup_update
+#define leonos_stat reliefos_stat
+#define leonos_stat_legacy reliefos_stat_legacy
+#define leonos_user_info reliefos_user_info
+#endif /* LEONOS_SYSCALL_H */

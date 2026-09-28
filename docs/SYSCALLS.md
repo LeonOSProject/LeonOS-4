@@ -1,6 +1,6 @@
 # Syscalls
 
-LeonOS targets the native Linux v6.12 x86-64 user ABI. The current full
+ReliefOS targets the native Linux v6.12 x86-64 user ABI. The current full
 status is recorded in `LINUX_ABI_SYSCALLS_2026-09-07.csv` and
 `LINUX_ABI_PROGRESS_2026-09-08.md`. The tables below are an extension reference
 and historical subset, not a complete compatibility claim.
@@ -20,7 +20,7 @@ state. Memory percentage is allocated physical RAM (`totalram - freeram`);
 root usage excludes blocks reserved from ordinary users, like `df`.
 
 `/etc/motd` and `/etc/motd.zh_CN` hold the short, editable link footer.
-`/usr/lib/leonos/motd` honors the PAM user's `.hushlogin` before running the
+`/usr/lib/reliefos/motd` honors the PAM user's `.hushlogin` before running the
 standard-interface helper `motd-status`. It selects one language using
 `LC_ALL`, `LC_MESSAGES`, then `LANG`. Versions, times and state are read at
 login; unavailable measurements are labelled rather than invented. UTF-8
@@ -28,7 +28,7 @@ cell widths determine aligned 3/2/1-column layouts and wrapping.
 
 ## Entry Convention
 
-musl enters the kernel with the native `syscall` instruction. The LeonOS
+musl enters the kernel with the native `syscall` instruction. The ReliefOS
 extension assembly helpers in
 `userland/runtime/src/syscall.S` translate C call arguments into the syscall ABI:
 
@@ -44,12 +44,12 @@ Return values follow the kernel convention:
 
 The public userland numbers and wrappers are in:
 
-- `userland/runtime/include/leonos/syscall.h`
+- `userland/runtime/include/reliefos/syscall.h` (the old `leonos/` header forwards to it)
 - `userland/runtime/src/libc.c`
 
 The kernel-side numbers and errno constants are in:
 
-- `kernel/ntclks/kernel/ntclks/include/ntclks/syscall.h`
+- `kernel/reliefnt/kernel/reliefnt/include/reliefnt/syscall.h`
 
 ## Implemented Syscall Table
 
@@ -95,7 +95,7 @@ Only the creator can use a render handle. See [SVGA3D.md](SVGA3D.md) for details
 
 ## File and Directory Calls
 
-Paths use Unix syntax such as `/usr/lib/leonos/apps/desktop/desktop.elf`. Relative
+Paths use Unix syntax such as `/usr/lib/reliefos/apps/desktop/desktop.elf`. Relative
 paths are resolved against the task current directory by
 `fs_permissions_resolve()` in the kernel, which also checks directory search
 permission on every component it walks. Inputs containing `:`
@@ -191,14 +191,14 @@ implementation.
 ## Ioctl Groups
 
 `ioctl(fd, request, arg)` is the extension point for device ABIs. The
-private LeonOS ioctl multiplexers (auth, GUI windows, appearance, system info,
+private ReliefOS ioctl multiplexers (auth, GUI windows, appearance, system info,
 device list, audio, network sockets, text layout, PTY, signal) have been
 removed; those services now use Linux UAPI device ioctls, standard syscalls,
 or AF_UNIX service protocols. What the kernel still accepts, keyed by the
 `/dev` node the descriptor was opened on:
 
 - `/dev/fb0`: Linux fbdev `FBIOGET_VSCREENINFO`, `FBIOGET_FSCREENINFO`,
-  `FBIOPUT_VSCREENINFO`, `FBIOPAN_DISPLAY`, plus the LeonOS presentation
+  `FBIOPUT_VSCREENINFO`, `FBIOPAN_DISPLAY`, plus the ReliefOS presentation
   extensions `LEONOS_FBIOGET_CAPABILITIES`, `LEONOS_FBIOUPDATE_REGION`, and
   `LEONOS_FBIOBLIT` (the blit request windowd uses to compose; it is
   restricted to the active graphical VT owner).
@@ -260,17 +260,17 @@ The kernel supports a polling Intel e1000 MMIO driver, ARP, IPv4,
 ICMP Echo, UDP transmit/receive for DNS, DNS A record lookups, a small ARP
 cache, and active-open TCP client sockets over standard socket syscalls. At
 boot the kernel brings the interface up with no address; IPv4 configuration
-comes exclusively from the userspace `leonos-dhcp` OpenRC service (BusyBox
+comes exclusively from the userspace `reliefos-dhcp` OpenRC service (BusyBox
 `udhcpc -f -i eth0`). Its hook applies the address with `ifconfig`/`route`
 (the kernel records it through the standard `SIOCSIF*` ioctls) and publishes
-the lease atomically at `/run/leonos/dhcp-lease`; libc merges that file into
+the lease atomically at `/run/reliefos/dhcp-lease`; libc merges that file into
 `leonos_net_config()` results as the DHCP source. If DHCP never succeeds the
 interface simply stays unconfigured. QEMU user-network guests normally
 receive `10.0.2.15/24` with gateway `10.0.2.2` from the built-in lease
 server.
 
 `netctl.elf` can still request a renew after the desktop is
-running; `leonos_net_dhcp_renew()` restarts the `leonos-dhcp` service through
+running; `leonos_net_dhcp_renew()` restarts the `reliefos-dhcp` service through
 `rcctl.elf`, which the libc elevates via the sudo path for non-root callers.
 Non-admin users may read network status and use DNS/HTTP/socket APIs. The
 kernel-side `LEONOS_NET_CONTROL_DHCP` operation returns `EOPNOTSUPP` (the
@@ -281,10 +281,10 @@ sockets in `SYN_SENT`, `ESTABLISHED`, `TIME_WAIT`, or `CLOSED`. Administrators
 and trusted service tasks see the full socket table; normal users see only
 connections owned by their uid.
 
-Background DHCP is handled by the OpenRC service `leonos-dhcp` (root-owned
+Background DHCP is handled by the OpenRC service `reliefos-dhcp` (root-owned
 udhcpc); `leonos_net_dhcp_renew()` restarts it via `rcctl`-style
-`leonos_openrc_run("leonos-dhcp", "restart")` and then reads the lease the
-hook publishes at `/run/leonos/dhcp-lease`. The legacy `serviced.elf`
+`reliefos_openrc_run("reliefos-dhcp", "restart")` and then reads the lease the
+hook publishes at `/run/reliefos/dhcp-lease`. The legacy `serviced.elf`
 background retry loop and `/run/leonos/services.state` are gone; the desktop
 `servicemgr` surfaces service state instead.
 
@@ -335,7 +335,7 @@ task and inherited by child applications. Logout clears the session identity and
 kills ordinary user tasks in the session, then desktop returns to `login.elf`.
 
 The kernel makes every file, task-kill, user-management, and installer-storage
-decision itself in `kernel/ntclks/fs/permissions.c`, against the permissions the
+decision itself in `kernel/reliefnt/fs/permissions.c`, against the permissions the
 storage layer reports: the `LEONACL.SYS` sidecar on exFAT and FAT32, native
 inode fields on ext2 and tmpfs, and fixed modes for PTY and device nodes. The
 mapping is:
@@ -368,7 +368,7 @@ errors, lifecycle and concurrency cases remain itemized in the ABI ledger.
   at fork; other resources and complete enforcement remain incomplete.
 - File access enforces owner/group/other Unix DAC with mode, UID and GID.
   chmod/chown work for the verified subset. ext2 stores native metadata;
-  FAT/exFAT use LeonOS metadata records. Full inode lifetime and special-bit
+  FAT/exFAT use ReliefOS metadata records. Full inode lifetime and special-bit
   behavior remain outstanding.
 - File-backed mappings, INET servers/UDP/IPv6, PTY lock/hangup, event APIs and
   all remaining audit rows are still in scope. AP user scheduling is disabled;

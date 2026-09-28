@@ -1,4 +1,4 @@
-# LeonOS 4 build entry point.
+# ReliefOS build entry point.
 #
 # GNU Make owns the dependency graph, the parallel schedule and the incremental
 # decisions. C helpers under tools/host/ perform data transforms only; short
@@ -9,13 +9,13 @@
 
 # --- GNU Make version ------------------------------------------------------
 # Grouped targets ('&:') and the $(file) function both need 4.3.
-leonos_make_min := $(shell printf '4.3\n$(MAKE_VERSION)\n' | LC_ALL=C sort -V | head -n1)
-ifeq ($(leonos_make_min),4.3)
+reliefos_make_min := $(shell printf '4.3\n$(MAKE_VERSION)\n' | LC_ALL=C sort -V | head -n1)
+ifeq ($(reliefos_make_min),4.3)
 else
 $(error GNU Make >= 4.3 is required, this is $(MAKE_VERSION))
 endif
 
-LEONOS_SRC := $(patsubst %/,%,$(dir $(realpath $(firstword $(MAKEFILE_LIST)))))
+RELIEFOS_SRC := $(patsubst %/,%,$(dir $(realpath $(firstword $(MAKEFILE_LIST)))))
 
 # --- user-facing variables --------------------------------------------------
 # ARCH, PROFILE and O may come from the command line or from these defaults
@@ -28,14 +28,14 @@ ifeq ($(origin PROFILE),undefined)
 PROFILE := release
 endif
 ifeq ($(origin O),undefined)
-O := $(LEONOS_SRC)/out/$(ARCH)/$(PROFILE)
+O := $(RELIEFOS_SRC)/out/$(ARCH)/$(PROFILE)
 endif
 
 V ?= 0
 CPUS ?=
 MEMORY ?=
-SOURCE_DATE_EPOCH ?= $(shell git -C $(LEONOS_SRC) show -s --format=%ct HEAD 2>/dev/null || echo 0)
-TOOLCHAIN ?= $(LEONOS_SRC)/configs/toolchains/llvm-x86_64.mk
+SOURCE_DATE_EPOCH ?= $(shell git -C $(RELIEFOS_SRC) show -s --format=%ct HEAD 2>/dev/null || echo 0)
+TOOLCHAIN ?= $(RELIEFOS_SRC)/configs/toolchains/llvm-x86_64.mk
 
 O := $(patsubst %/,%,$(O))
 
@@ -43,7 +43,7 @@ O := $(patsubst %/,%,$(O))
 # The supported character set is enumerated rather than promising arbitrary
 # paths: Make word splitting, shell quoting and the generated manifests all break
 # on the rejected set, so failing here is far cheaper than failing mid-build.
-LEONOS_ALLOWED_CHARS := a b c d e f g h i j k l m n o p q r s t u v w x y z \
+RELIEFOS_ALLOWED_CHARS := a b c d e f g h i j k l m n o p q r s t u v w x y z \
 	A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \
 	0 1 2 3 4 5 6 7 8 9 . _ / -
 
@@ -56,17 +56,17 @@ endif
 ifneq ($(words $(O)),1)
 $(error O='$(O)' is unsupported: whitespace and newlines are not accepted in an output path)
 endif
-leonos_O_residual := $(call strip_allowed,$(O),$(LEONOS_ALLOWED_CHARS))
-ifneq ($(leonos_O_residual),)
-$(error O='$(O)' is unsupported: offending characters are [$(leonos_O_residual)]; accepted are A-Z a-z 0-9 . _ / -)
+reliefos_O_residual := $(call strip_allowed,$(O),$(RELIEFOS_ALLOWED_CHARS))
+ifneq ($(reliefos_O_residual),)
+$(error O='$(O)' is unsupported: offending characters are [$(reliefos_O_residual)]; accepted are A-Z a-z 0-9 . _ / -)
 endif
 # Compare absolute paths: `O=.` and `O=<src>` are the same refusal. O has already
 # been restricted to a safe character set above, so quoting here cannot be escaped.
-leonos_O_absolute := $(shell realpath -m -- '$(O)' 2>/dev/null || printf '%s' '$(O)')
-ifeq ($(leonos_O_absolute),/)
+reliefos_O_absolute := $(shell realpath -m -- '$(O)' 2>/dev/null || printf '%s' '$(O)')
+ifeq ($(reliefos_O_absolute),/)
 $(error refusing / as the output directory)
 endif
-ifeq ($(leonos_O_absolute),$(LEONOS_SRC))
+ifeq ($(reliefos_O_absolute),$(RELIEFOS_SRC))
 $(error refusing the source root as the output directory (O='$(O)'))
 endif
 ifneq ($(filter $(ARCH),x86_64),)
@@ -102,11 +102,20 @@ O_AUTH := $(O)/auth
 
 # Shared download cache: deliberately outside O because it is profile
 # independent and `distclean` must not throw it away.
-LEONOS_CACHE := $(LEONOS_SRC)/cache/downloads
+RELIEFOS_CACHE ?= $(if $(strip $(LEONOS_CACHE)),$(LEONOS_CACHE),$(RELIEFOS_SRC)/cache/downloads)
 
 # Written when an output tree is created and re-checked before anything is
 # deleted, so `clean` can never operate on a directory it does not own.
-LEONOS_O_MARKER := $(O)/.leonos-out
+RELIEFOS_O_MARKER := $(O)/.reliefos-out
+
+# Older wrappers may still pass the lock ownership token under its former
+# name. The ReliefOS spelling wins whenever both are supplied.
+ifeq ($(origin RELIEFOS_BUILD_OWNER),undefined)
+ifneq ($(strip $(LEONOS_BUILD_OWNER)),)
+RELIEFOS_BUILD_OWNER := $(LEONOS_BUILD_OWNER)
+endif
+endif
+export RELIEFOS_BUILD_OWNER
 
 # --- same-output-directory mutual exclusion ---------------------------------
 # Two top-level makes sharing one O would race on objects, generated headers and
@@ -114,7 +123,7 @@ LEONOS_O_MARKER := $(O)/.leonos-out
 # Different O directories are independent and may build concurrently.
 #
 # The owner is the make process that acquired the lock, and the token names the
-# output directory it owns: LEONOS_BUILD_OWNER is "<pid>.<start ticks>:<absolute O>".
+# output directory it owns: RELIEFOS_BUILD_OWNER is "<pid>.<start ticks>:<absolute O>".
 # A nested make for that same directory inherits it, so recursive build
 # invocations do not refuse their own outer build. A nested
 # make for a different directory acquires its own lock, so a test suite that
@@ -124,50 +133,50 @@ LEONOS_O_MARKER := $(O)/.leonos-out
 # and refusing them would make `make -n` depend on unrelated builds), and goals
 # that write nothing at all -- a bare `make` and `make help` must keep working
 # while a build is running elsewhere, and must not create the output tree.
-leonos_read_only_goals := help doctor
-leonos_lock_not_needed :=
+reliefos_read_only_goals := help doctor
+reliefos_lock_not_needed :=
 ifeq ($(MAKECMDGOALS),)
-leonos_lock_not_needed := 1
-else ifeq ($(words $(filter $(leonos_read_only_goals),$(MAKECMDGOALS))),$(words $(MAKECMDGOALS)))
-leonos_lock_not_needed := 1
+reliefos_lock_not_needed := 1
+else ifeq ($(words $(filter $(reliefos_read_only_goals),$(MAKECMDGOALS))),$(words $(MAKECMDGOALS)))
+reliefos_lock_not_needed := 1
 endif
-leonos_lock_dir := $(O)/.build-lock
-leonos_lock_skip := \
+reliefos_lock_dir := $(O)/.build-lock
+reliefos_lock_skip := \
 	$(if $(findstring n,$(firstword -$(MAKEFLAGS))),1)\
 	$(if $(findstring q,$(firstword -$(MAKEFLAGS))),1)\
-	$(leonos_lock_not_needed)
-ifeq ($(strip $(leonos_lock_skip)),)
-LEONOS_BUILD_OWNER := $(shell sh $(LEONOS_SRC)/scripts/build-lock.sh acquire \
-	$(leonos_lock_dir) $(leonos_O_absolute))
-ifeq ($(LEONOS_BUILD_OWNER),)
+	$(reliefos_lock_not_needed)
+ifeq ($(strip $(reliefos_lock_skip)),)
+RELIEFOS_BUILD_OWNER := $(shell sh $(RELIEFOS_SRC)/scripts/build-lock.sh acquire \
+	$(reliefos_lock_dir) $(reliefos_O_absolute))
+ifeq ($(RELIEFOS_BUILD_OWNER),)
 $(error refusing to build: '$(O)' is already being built by another make)
 endif
-export LEONOS_BUILD_OWNER
+export RELIEFOS_BUILD_OWNER
 endif
 
 # --- fragment includes ------------------------------------------------------
-include $(LEONOS_SRC)/mk/logging.mk
-include $(LEONOS_SRC)/mk/host.mk
-include $(LEONOS_SRC)/mk/toolchain.mk
-include $(LEONOS_SRC)/mk/config.mk
-include $(LEONOS_SRC)/mk/kernel.mk
-include $(LEONOS_SRC)/mk/headers.mk
-include $(LEONOS_SRC)/mk/boot.mk
-include $(LEONOS_SRC)/mk/third-party.mk
-include $(LEONOS_SRC)/mk/pam.mk
-include $(LEONOS_SRC)/mk/runtime.mk
-include $(LEONOS_SRC)/mk/upstream.mk
-include $(LEONOS_SRC)/mk/userland.mk
-include $(LEONOS_SRC)/mk/resources.mk
-include $(LEONOS_SRC)/mk/nls.mk
-include $(LEONOS_SRC)/mk/sdk.mk
-include $(LEONOS_SRC)/mk/rootfs.mk
-include $(LEONOS_SRC)/mk/apk.mk
-include $(LEONOS_SRC)/mk/images.mk
-include $(LEONOS_SRC)/mk/rpr.mk
-include $(LEONOS_SRC)/mk/site.mk
-include $(LEONOS_SRC)/mk/run.mk
-include $(LEONOS_SRC)/mk/tests.mk
+include $(RELIEFOS_SRC)/mk/logging.mk
+include $(RELIEFOS_SRC)/mk/host.mk
+include $(RELIEFOS_SRC)/mk/toolchain.mk
+include $(RELIEFOS_SRC)/mk/config.mk
+include $(RELIEFOS_SRC)/mk/kernel.mk
+include $(RELIEFOS_SRC)/mk/headers.mk
+include $(RELIEFOS_SRC)/mk/boot.mk
+include $(RELIEFOS_SRC)/mk/third-party.mk
+include $(RELIEFOS_SRC)/mk/pam.mk
+include $(RELIEFOS_SRC)/mk/runtime.mk
+include $(RELIEFOS_SRC)/mk/upstream.mk
+include $(RELIEFOS_SRC)/mk/userland.mk
+include $(RELIEFOS_SRC)/mk/resources.mk
+include $(RELIEFOS_SRC)/mk/nls.mk
+include $(RELIEFOS_SRC)/mk/sdk.mk
+include $(RELIEFOS_SRC)/mk/rootfs.mk
+include $(RELIEFOS_SRC)/mk/apk.mk
+include $(RELIEFOS_SRC)/mk/images.mk
+include $(RELIEFOS_SRC)/mk/rpr.mk
+include $(RELIEFOS_SRC)/mk/site.mk
+include $(RELIEFOS_SRC)/mk/run.mk
+include $(RELIEFOS_SRC)/mk/tests.mk
 
 # --- public goals -----------------------------------------------------------
 .DEFAULT_GOAL := help
@@ -178,46 +187,57 @@ include $(LEONOS_SRC)/mk/tests.mk
 	kernel userland runtime sdk rootfs apk-repo image-vmdk iso installer all \
 	pages site download-page \
 	run run-iso run-installer test test-tools test-build test-long test-smoke \
-	test-legacy clean distclean
+	test-legacy clean distclean migrate-config regen-component-kconfig
 
 help:
 	@V='$(V)' O='$(O)' ARCH='$(ARCH)' PROFILE='$(PROFILE)' CPUS='$(CPUS)' \
-	TOOLCHAIN='$(TOOLCHAIN)' SRC='$(LEONOS_SRC)' CACHE='$(LEONOS_CACHE)' \
-	LOCK='$(LEONOS_LOCK)' sh $(LEONOS_SRC)/scripts/help.sh
+	TOOLCHAIN='$(TOOLCHAIN)' SRC='$(RELIEFOS_SRC)' CACHE='$(RELIEFOS_CACHE)' \
+	LOCK='$(RELIEFOS_LOCK)' sh $(RELIEFOS_SRC)/scripts/help.sh
 
 doctor:
-	@SRC='$(LEONOS_SRC)' O='$(O)' ARCH='$(ARCH)' PROFILE='$(PROFILE)' \
+	@SRC='$(RELIEFOS_SRC)' O='$(O)' ARCH='$(ARCH)' PROFILE='$(PROFILE)' \
 	TOOLCHAIN='$(TOOLCHAIN)' HOSTCC='$(HOSTCC)' \
 	TARGET_CC='$(TARGET_CC)' TARGET_LD='$(TARGET_LD)' TARGET_AR='$(TARGET_AR)' \
 	TARGET_OBJCOPY='$(TARGET_OBJCOPY)' TARGET_STRIP='$(TARGET_STRIP)' \
 	TARGET_TRIPLE_KERNEL='$(TRIPLE_KERNEL)' \
 	TARGET_TRIPLE_USER='$(TRIPLE_USER)' \
-	DEPS='$(LEONOS_DEPS_TOOL)' LOCK='$(LEONOS_LOCK)' CACHE='$(LEONOS_CACHE)' \
-	sh $(LEONOS_SRC)/scripts/doctor.sh
+	DEPS='$(RELIEFOS_DEPS_TOOL)' LOCK='$(RELIEFOS_LOCK)' CACHE='$(RELIEFOS_CACHE)' \
+	sh $(RELIEFOS_SRC)/scripts/doctor.sh
 
-defconfig olddefconfig menuconfig: $(LEONOS_O_MARKER) $(KCONFIG_CONF) $(KCONFIG_MCONF) | $(O_CONFIG)
-	$(Q)sh $(LEONOS_SRC)/tools/build/kconfig-frontends.sh run \
+defconfig olddefconfig menuconfig: $(RELIEFOS_O_MARKER) $(KCONFIG_CONF) $(KCONFIG_MCONF) | $(O_CONFIG)
+	$(Q)sh $(RELIEFOS_SRC)/tools/build/kconfig-frontends.sh run \
 		--conf $(abspath $(KCONFIG_CONF)) --mconf $(abspath $(KCONFIG_MCONF)) \
-		--kconfig $(KCONFIG_ROOT) --config $(abspath $(LEONOS_CONFIG_FILE)) \
+		--kconfig $(KCONFIG_ROOT) --config $(abspath $(RELIEFOS_CONFIG_FILE)) \
 		--seed $(KCONFIG_SEED) --mode $@
 
-tools: $(LEONOS_HOST_TOOLS)
+# Existing component selections change only when the maintainer requests it.
+.PHONY: migrate-config
+migrate-config:
+	@test -f '$(RELIEFOS_CONFIG_FILE)' || { \
+	    echo 'config-migrate: no existing $(RELIEFOS_CONFIG_FILE)' >&2; exit 1; }
+	@sh $(RELIEFOS_SRC)/tools/build/reliefos-config-migrate.sh --in-place '$(RELIEFOS_CONFIG_FILE)'
 
-kernel: $(LEONOS_KERNEL_SYS) $(LEONOS_KERNEL_DEBUG)
+# Explicit maintenance entry point; normal build paths never invoke Python.
+regen-component-kconfig:
+	@python3 $(RELIEFOS_SRC)/tools/generate_component_kconfig.py
+
+tools: $(RELIEFOS_HOST_TOOLS)
+
+kernel: $(RELIEFOS_KERNEL_SYS) $(RELIEFOS_KERNEL_DEBUG)
 
 test: test-tools test-build
 
 clean:
-	@O='$(O)' SRC='$(LEONOS_SRC)' KEEP_CONFIG=1 sh $(LEONOS_SRC)/scripts/clean.sh
+	@O='$(O)' SRC='$(RELIEFOS_SRC)' KEEP_CONFIG=1 sh $(RELIEFOS_SRC)/scripts/clean.sh
 
 distclean:
-	@O='$(O)' SRC='$(LEONOS_SRC)' KEEP_CONFIG=0 sh $(LEONOS_SRC)/scripts/clean.sh
+	@O='$(O)' SRC='$(RELIEFOS_SRC)' KEEP_CONFIG=0 sh $(RELIEFOS_SRC)/scripts/clean.sh
 
 test-smoke: image-vmdk iso installer
-	@QEMU='$(QEMU)' sh $(LEONOS_SRC)/scripts/test-smoke.sh $(O_IMAGES) $(O_LOGS) '$(QEMU_FIRMWARE)'
+	@QEMU='$(QEMU)' sh $(RELIEFOS_SRC)/scripts/test-smoke.sh $(O_IMAGES) $(O_LOGS) '$(QEMU_FIRMWARE)'
 
 test-legacy:
-	@sh $(LEONOS_SRC)/scripts/test-legacy.sh $(LEONOS_SRC)
+	@sh $(RELIEFOS_SRC)/scripts/test-legacy.sh $(RELIEFOS_SRC)
 
 rootfs: apk-repo
 
@@ -225,9 +245,9 @@ all: kernel userland runtime sdk apk-repo image-vmdk iso installer
 
 .PHONY: image-iso release config-sync build-info test-all
 image-iso: iso
-# `release` is gated by the ntclks release guard (mk/rpr.mk): release builds
-# must come from a clean kernel/ntclks submodule at the committed gitlink.
-release: ntclks-release-guard all pages
-config-sync: $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(LEONOS_COMPONENT_MK)
+# `release` is gated by the ReliefNT release guard (mk/rpr.mk): release builds
+# must come from a clean kernel/reliefnt submodule at the committed gitlink.
+release: reliefnt-release-guard all pages
+config-sync: $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(RELIEFOS_COMPONENT_MK)
 build-info: $(BUILD_INFO_HEADER)
 test-all: test test-long test-legacy test-smoke

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise raw epoll/PTYS, Alpine HyFetch's wizard and LeonOS defaults in Terminal."""
+"""Exercise Alpine HyFetch's wizard and ReliefOS defaults with the legacy logo alias."""
 import argparse
 from pathlib import Path
 import shutil
@@ -17,7 +17,7 @@ WORK = ROOT / "build/hyfetch-qemu"
 def prepare(cache):
     WORK.mkdir(parents=True, exist_ok=True)
     probe = WORK / "epoll-pty.elf"
-    run([ROOT / "build/musl/sdk/bin/leonos-musl-cc", "-static", "-O2", "-Wall", "-Wextra",
+    run([ROOT / "build/musl/sdk/bin/reliefos-musl-cc", "-static", "-O2", "-Wall", "-Wextra",
          ROOT / "tools/tests/linux_epoll_pty_test.c", "-o", probe])
     run([probe], timeout=10)
     with tempfile.TemporaryDirectory(prefix="stage-", dir=WORK) as directory:
@@ -28,14 +28,14 @@ def prepare(cache):
             assert config.read_bytes() == (stage / "etc/skel/.config/hyfetch.json").read_bytes()
         assert (stage / "usr/share/fastfetch/leonos-ascii.txt").is_file()
         # Exercise the Live desktop path; PAM login is a separate regression.
-        (stage / "etc/leonos/installed").unlink()
+        (stage / "etc/reliefos/installed").unlink()
         command = ["unshare", "-Ur", bootstrap(), "--root", stage]
         if cache:
             command += ["--no-network", "--cache-dir", cache.resolve()]
         run([*command, "add", "hyfetch@testing"], timeout=180)
         shutil.copy2(ROOT / "build/userland/terminal.elf",
-                     stage / "usr/lib/leonos/apps/terminal/terminal.elf")
-        tests = stage / "usr/lib/leonos/tests"
+                     stage / "usr/lib/reliefos/apps/terminal/terminal.elf")
+        tests = stage / "usr/lib/reliefos/tests"
         tests.mkdir(parents=True, exist_ok=True)
         shutil.copy2(probe, tests / "linux-inventory.elf")
         (tests / "hyfetch.sh").write_text(
@@ -85,11 +85,11 @@ def guest():
         value = json.loads(config[1])
         assert value["light_dark"] == "dark" and value["auto_detect_light_dark"] is True, value
         default = re.search(r"\[hyfetch\] DEFAULT (\{[^\n]+\})", text)
-        assert default, "default LeonOS configuration was not installed"
+        assert default, "default ReliefOS HyFetch configuration was not installed"
         assert json.loads(default[1])["custom_ascii_path"] == "/usr/share/fastfetch/leonos-ascii.txt"
         with Image.open(ROOT / "build/images/hyfetch-qmp-smoke.ppm") as frame:
             frame.save(WORK / "terminal-hyfetch.png")
-        print("PASS raw epoll/PTYS, sudo hyfetch wizard, detected background and default LeonOS logo run")
+        print("PASS raw epoll/PTYS, sudo hyfetch wizard, ReliefOS identity and legacy logo alias")
         print(f"Evidence: {WORK}")
 
 

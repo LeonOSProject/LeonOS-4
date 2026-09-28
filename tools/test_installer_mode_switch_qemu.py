@@ -40,7 +40,7 @@ def wait_page(probe, process, text, timeout=90):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--disk", type=Path, required=True)
-    parser.add_argument("--iso", type=Path, default=ROOT / "build/images/leonos4-installer.iso")
+    parser.add_argument("--iso", type=Path, default=ROOT / "build/images/reliefos-installer.iso")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     output = args.output.resolve()

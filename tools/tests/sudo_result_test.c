@@ -3,13 +3,14 @@
 #undef main
 #include "../../userland/apps/authd/authd_sudo.c"
 #include <assert.h>
+#include "host_tmp.h"
 
 static int collected = -1;
 static int result_send(void *context, uint32_t type, const void *payload, uint32_t length, int fd)
 {
-    const struct leonos_authd_wait_ack *ack = payload;
+    const struct reliefos_authd_wait_ack *ack = payload;
     (void)context;
-    assert(type == LEONOS_AUTHD_MSG_WAIT && length == sizeof(*ack) && ack->code == 0);
+    assert(type == RELIEFOS_AUTHD_MSG_WAIT && length == sizeof(*ack) && ack->code == 0);
     collected = dup(fd);
     assert(collected >= 0);
     return 0;
@@ -17,7 +18,8 @@ static int result_send(void *context, uint32_t type, const void *payload, uint32
 
 int main(void)
 {
-    char path[] = "/tmp/leonos-sudo-result-XXXXXX";
+    char path[256];
+    host_tmp_path(path, sizeof(path), "sudo-result-XXXXXX");
     int fd = mkstemp(path);
     assert(fd >= 0 && write(fd, "result", 6) == 6);
     close(fd);
@@ -28,7 +30,7 @@ int main(void)
     slot->result_path_used = 1;
     strcpy(slot->result_path, path);
     struct authd_sudo_channel channel = {.send = channel_send, .send_fd = result_send, .owner_pid = 43};
-    struct leonos_authd_wait request = {.child_pid = 1234};
+    struct reliefos_authd_wait request = {.child_pid = 1234};
     assert(authd_sudo_wait_from_peer(1000, (const uint8_t *)&request, sizeof(request), &channel) == -ESRCH);
     assert(collected == -1 && access(path, F_OK) == 0);
     channel.owner_pid = 42;
@@ -43,12 +45,12 @@ int main(void)
     slot = authd_sudo_alloc_slot((uint32_t)child, 1000);
     assert(slot);
     slot->owner_pid = 42;
-    struct leonos_authd_run_signal signal_request = {(uint32_t)child, SIGTERM};
+    struct reliefos_authd_run_signal signal_request = {(uint32_t)child, SIGTERM};
     channel.owner_pid = 43;
     reset_logs();
     assert(authd_sudo_signal_from_peer(1000, (const uint8_t *)&signal_request,
                                       sizeof(signal_request), &channel) == 0);
-    struct leonos_authd_ack ack;
+    struct reliefos_authd_ack ack;
     memcpy(&ack, last_reply(NULL, NULL), sizeof(ack));
     assert(ack.code == -ESRCH && kill(child, 0) == 0);
     channel.owner_pid = 42;

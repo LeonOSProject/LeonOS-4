@@ -26,11 +26,11 @@ int getrlimit(int resource, struct rlimit *limit)
     return syscall(SYS_prlimit64, 0, resource, NULL, limit);
 }
 
-int leonos_ui_show_password_dialog(const char *title, const char *label, char *value, uint32_t size)
+int reliefos_ui_show_password_dialog(const char *title, const char *label, char *value, uint32_t size)
 { (void)title; (void)label; (void)value; (void)size; ++dialogs; return 0; }
-int leonos_ui_show_input_dialog(const char *title, const char *label, char *value, uint32_t size)
+int reliefos_ui_show_input_dialog(const char *title, const char *label, char *value, uint32_t size)
 { (void)title; (void)label; (void)value; (void)size; ++dialogs; return 0; }
-int leonos_ui_show_message_box(const char *title, const char *message, const char *button)
+int reliefos_ui_show_message_box(const char *title, const char *message, const char *button)
 { (void)title; (void)message; (void)button; ++dialogs; return 1; }
 
 static void write_file(const char *path, const char *text)
@@ -47,10 +47,10 @@ static void run_case(const char *label, const char *secret, const char *limits, 
         fault = resource_error;
         resource_calls = 0;
         write_file("/etc/security/limits.conf", limits);
-        struct leonos_user_info user;
+        struct reliefos_user_info user;
         char password[64];
         snprintf(password, sizeof(password), "%s", secret);
-        int result = leonos_pam_login("root", password, &user);
+        int result = reliefos_pam_login("root", password, &user);
         int actual = result < 0 ? errno : 0;
         fprintf(stderr, "[pam-login-case] %s result=%d errno=%d expected=%d\n", label, result, actual, error);
         assert(actual == error && password[0] == 0 && dialogs == 0);
@@ -60,8 +60,8 @@ static void run_case(const char *label, const char *secret, const char *limits, 
                 struct rlimit current;
                 assert(getrlimit(RLIMIT_NOFILE, &current) == 0 && current.rlim_cur == 64);
             }
-            assert(leonos_auth_logout() == 0);
-            assert(leonos_pam_session_wait() == 0);
+            assert(reliefos_auth_logout() == 0);
+            assert(reliefos_pam_session_wait() == 0);
         } else assert(access(SESSION, F_OK) == -1 && errno == ENOENT);
         _exit(0);
     }
@@ -84,7 +84,7 @@ int main(void)
     dialogs = 0;
     assert(mkdir("/etc/pam.d", 0755) == 0);
     assert(mkdir("/etc/security", 0755) == 0);
-    assert(mkdir("/run/leonos", 0755) == 0);
+    assert(mkdir("/run/reliefos", 0755) == 0);
     write_file("/etc/passwd", "root:x:0:0:root:/root:/bin/sh\n");
     write_file("/etc/group", "root:x:0:\n");
     char salt[CRYPT_GENSALT_OUTPUT_SIZE], text[512];
@@ -94,7 +94,7 @@ int main(void)
     assert(hash && *hash == '$');
     snprintf(text, sizeof(text), "root:%s:20000:0:99999:7:::\n", hash);
     write_file("/etc/shadow", text);
-    write_file("/etc/pam.d/leonos-gui",
+    write_file("/etc/pam.d/reliefos-gui",
                "auth required pam_unix.so\naccount required pam_unix.so\n"
                "session required pam_limits.so\n");
     run_case("wrong lowercase", "abc123!", "", EACCES, ENOSYS);

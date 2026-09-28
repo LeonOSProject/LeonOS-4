@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build the pinned musl and mimalloc sysroot the LeonOS userland links against.
+# Build the pinned musl and mimalloc sysroot the ReliefOS userland links against.
 #
 # This is the whole of the musl port: verify the pinned commits, unpack them
 # into a copy owned by this configuration, apply the audited patches, then let
@@ -117,7 +117,7 @@ if [ -f "$key_file" ] && cmp -s "$key_file" "$key_file.new"; then
 else
     # A different compiler, flag set or patch digest invalidates whatever
     # upstream's configure already probed: start the build directory over.
-    leonos_log RESET "$work/build"
+    reliefos_log RESET "$work/build"
     rm -rf "$work/build" "$work/src"
     mv "$key_file.new" "$key_file"
 fi
@@ -137,7 +137,7 @@ if [ ! -f "$tree/.leonos-unpacked" ]; then
     # repository root, so the archive cannot name a file outside $tree.
     git -C "$musl_source" archive "$musl_commit" | tar -x -C "$tree"
     : >"$tree/.leonos-unpacked"
-    leonos_log PATCH "$musl_directory"
+    reliefos_log PATCH "$musl_directory"
     printf '%s\n' "$patch_lines" | while IFS='	' read -r digest path; do
         [ -n "$digest" ] || continue
         actual=$(sha256sum "$src/$path" | cut -d' ' -f1)
@@ -230,4 +230,4 @@ printf '%s\n' "$patch_lines" | awk -F'\t' \
      }' >"$stamp.tmp"
 mv "$stamp.tmp" "$stamp"
 
-leonos_log SYSROOT "$sysroot"
+reliefos_log SYSROOT "$sysroot"

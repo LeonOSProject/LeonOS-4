@@ -1,23 +1,23 @@
-#include <leonos/admin.h>
-#include <leonos/app.h>
-#include <leonos/api.h>
-#include <leonos/auth.h>
-#include <leonos/fs.h>
-#include <leonos/ini.h>
-#include <leonos/launch.h>
-#include <leonos/startup.h>
-#include <leonos/syscall.h>
-#include <leonos/tar.h>
+#include <reliefos/admin.h>
+#include <reliefos/app.h>
+#include <reliefos/api.h>
+#include <reliefos/auth.h>
+#include <reliefos/fs.h>
+#include <reliefos/ini.h>
+#include <reliefos/launch.h>
+#include <reliefos/startup.h>
+#include <reliefos/syscall.h>
+#include <reliefos/tar.h>
 #include <string.h>
 
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 
 #define API_TEMP_PREFIX "/tmp/api_install_"
 #define API_INI_PATH "install.ini"
 #define API_PACKAGE_FORMAT "leonos-api"
 #define API_PACKAGE_VERSION "1"
-#define API_PROGRAM_DIR LEONOS_LAYOUT_LEONOS_APPS
-#define API_PROGRAM_ROOT LEONOS_LAYOUT_LEONOS_APPS "/"
+#define API_PROGRAM_DIR RELIEFOS_LAYOUT_RELIEFOS_APPS
+#define API_PROGRAM_ROOT RELIEFOS_LAYOUT_RELIEFOS_APPS "/"
 #define API_OPT_ROOT "/opt/"
 
 static uint32_t api_temp_sequence;
@@ -187,17 +187,17 @@ static int api_parent_path(const char *path, char *parent, uint32_t capacity)
 
 static int api_ensure_dir(const char *path)
 {
-    struct leonos_stat st;
-    char clean[LEONOS_API_PATH_MAX];
-    char parent[LEONOS_API_PATH_MAX];
+    struct reliefos_stat st;
+    char clean[RELIEFOS_API_PATH_MAX];
+    char parent[RELIEFOS_API_PATH_MAX];
     if (!api_copy_trim_path(clean, sizeof(clean), path)) {
         return 0;
     }
     if (api_is_root_path(clean)) {
         return 1;
     }
-    if (leonos_stat_legacy(clean, &st) == 0) {
-        return st.type == LEONOS_FS_TYPE_DIR ? 1 : 0;
+    if (reliefos_stat_legacy(clean, &st) == 0) {
+        return st.type == RELIEFOS_FS_TYPE_DIR ? 1 : 0;
     }
     if (api_parent_path(clean, parent, sizeof(parent)) &&
         !api_ensure_dir(parent)) {
@@ -206,7 +206,7 @@ static int api_ensure_dir(const char *path)
     if (mkdir(clean, 0777) == 0) {
         return 1;
     }
-    return leonos_stat_legacy(clean, &st) == 0 && st.type == LEONOS_FS_TYPE_DIR;
+    return reliefos_stat_legacy(clean, &st) == 0 && st.type == RELIEFOS_FS_TYPE_DIR;
 }
 
 static int api_component_path_is_safe(const char *path, uint32_t start)
@@ -301,7 +301,7 @@ static int api_install_path_requires_admin(const char *path)
 static int api_bool_value(const char *key, uint32_t *out)
 {
     char val[8];
-    if (!out || !leonos_ini_get("app", key, val, sizeof(val))) {
+    if (!out || !reliefos_ini_get("app", key, val, sizeof(val))) {
         return 0;
     }
     if (api_text_eq(val, "0")) {
@@ -319,7 +319,7 @@ static int api_bool_value_in_section(const char *section, const char *key,
                                      uint32_t *out)
 {
     char val[8];
-    if (!section || !key || !out || !leonos_ini_get(section, key, val, sizeof(val))) {
+    if (!section || !key || !out || !reliefos_ini_get(section, key, val, sizeof(val))) {
         return 0;
     }
     if (api_text_eq(val, "0")) {
@@ -333,10 +333,10 @@ static int api_bool_value_in_section(const char *section, const char *key,
     return 0;
 }
 
-static int api_write_app_manifest(const struct leonos_api_info *info,
+static int api_write_app_manifest(const struct reliefos_api_info *info,
                                   const char *install_root)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     char manifest[1200];
     uint32_t pos = 0;
     int fd;
@@ -370,7 +370,7 @@ static int api_write_app_manifest(const struct leonos_api_info *info,
     api_append_text(manifest, &pos, sizeof(manifest), "\nextensions=");
     api_append_text(manifest, &pos, sizeof(manifest), info->extensions);
     api_append_text(manifest, &pos, sizeof(manifest), "\n");
-    fd = open(path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
+    fd = open(path, RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0666);
     if (fd < 0) {
         return 0;
     }
@@ -394,7 +394,7 @@ static int api_input_method_id_is_safe(const char *id)
             return 0;
         }
     }
-    return i < LEONOS_INPUTM_ID_LEN;
+    return i < RELIEFOS_INPUTM_ID_LEN;
 }
 
 static int api_app_id_is_safe(const char *id)
@@ -411,10 +411,10 @@ static int api_app_id_is_safe(const char *id)
             return 0;
         }
     }
-    return i < sizeof(((struct leonos_api_info *)0)->id);
+    return i < sizeof(((struct reliefos_api_info *)0)->id);
 }
 
-static int api_validate_info(struct leonos_api_info *info)
+static int api_validate_info(struct reliefos_api_info *info)
 {
     if (!info || !info->name[0] || !info->version[0] ||
         !info->main_exe[0] || !info->default_path[0]) {
@@ -442,7 +442,7 @@ static int api_validate_info(struct leonos_api_info *info)
     if (info->input_method &&
         (!api_input_method_id_is_safe(info->input_method_id) ||
          !info->input_method_abbreviation[0] ||
-         info->input_method_startup_mode > LEONOS_INPUTM_START_ON_DEMAND ||
+         info->input_method_startup_mode > RELIEFOS_INPUTM_START_ON_DEMAND ||
          (info->input_method_settings[0] &&
           !api_relative_path_is_safe(info->input_method_settings)) ||
          (info->input_method_settings_app[0] &&
@@ -472,27 +472,27 @@ static int api_build_temp_dir(char *out, uint32_t capacity)
     return out[0] && pos + 1U < capacity ? 1 : 0;
 }
 
-int leonos_api_parse_info(const char *api_path, struct leonos_api_info *info)
+int reliefos_api_parse_info(const char *api_path, struct reliefos_api_info *info)
 {
-    char temp_dir[LEONOS_API_PATH_MAX];
-    char ini_path[LEONOS_API_PATH_MAX];
+    char temp_dir[RELIEFOS_API_PATH_MAX];
+    char ini_path[RELIEFOS_API_PATH_MAX];
     char format[32];
     char package_version[16];
-    char id_value[LEONOS_INI_VALUE_LEN];
-    char name_value[LEONOS_INI_VALUE_LEN];
-    char version_value[LEONOS_INI_VALUE_LEN];
-    char category_value[LEONOS_INI_VALUE_LEN];
-    char main_exe_value[LEONOS_INI_VALUE_LEN];
-    char default_path_value[LEONOS_INI_VALUE_LEN];
-    char icon_value[LEONOS_INI_VALUE_LEN];
-    char commands_value[LEONOS_INI_VALUE_LEN];
-    char extensions_value[LEONOS_INI_VALUE_LEN];
+    char id_value[RELIEFOS_INI_VALUE_LEN];
+    char name_value[RELIEFOS_INI_VALUE_LEN];
+    char version_value[RELIEFOS_INI_VALUE_LEN];
+    char category_value[RELIEFOS_INI_VALUE_LEN];
+    char main_exe_value[RELIEFOS_INI_VALUE_LEN];
+    char default_path_value[RELIEFOS_INI_VALUE_LEN];
+    char icon_value[RELIEFOS_INI_VALUE_LEN];
+    char commands_value[RELIEFOS_INI_VALUE_LEN];
+    char extensions_value[RELIEFOS_INI_VALUE_LEN];
     char input_type[32];
-    char input_id[LEONOS_INI_VALUE_LEN];
-    char input_abbreviation[LEONOS_INI_VALUE_LEN];
+    char input_id[RELIEFOS_INI_VALUE_LEN];
+    char input_abbreviation[RELIEFOS_INI_VALUE_LEN];
     char input_startup[16];
-    char input_settings[LEONOS_INI_VALUE_LEN];
-    char input_settings_app[LEONOS_INI_VALUE_LEN];
+    char input_settings[RELIEFOS_INI_VALUE_LEN];
+    char input_settings_app[RELIEFOS_INI_VALUE_LEN];
     int ok = 0;
     if (!api_path || !info) {
         return 0;
@@ -503,15 +503,15 @@ int leonos_api_parse_info(const char *api_path, struct leonos_api_info *info)
         !api_ensure_dir(temp_dir)) {
         return 0;
     }
-    if (!leonos_tar_extract_file(api_path, API_INI_PATH, ini_path)) {
+    if (!reliefos_tar_extract_file(api_path, API_INI_PATH, ini_path)) {
         goto cleanup;
     }
-    if (!leonos_ini_load_strict(ini_path)) {
+    if (!reliefos_ini_load_strict(ini_path)) {
         goto cleanup;
     }
-    if (!leonos_ini_get("package", "format", format, sizeof(format)) ||
+    if (!reliefos_ini_get("package", "format", format, sizeof(format)) ||
         !api_text_eq(format, API_PACKAGE_FORMAT) ||
-        !leonos_ini_get("package", "version", package_version,
+        !reliefos_ini_get("package", "version", package_version,
                         sizeof(package_version)) ||
         !api_text_eq(package_version, API_PACKAGE_VERSION)) {
         goto cleanup;
@@ -521,22 +521,22 @@ int leonos_api_parse_info(const char *api_path, struct leonos_api_info *info)
     commands_value[0] = 0;
     extensions_value[0] = 0;
     icon_value[0] = 0;
-    if (!leonos_ini_get("app", "name", name_value, sizeof(name_value)) ||
-        !leonos_ini_get("app", "version", version_value,
+    if (!reliefos_ini_get("app", "name", name_value, sizeof(name_value)) ||
+        !reliefos_ini_get("app", "version", version_value,
                         sizeof(version_value)) ||
-        !leonos_ini_get("app", "main_exe", main_exe_value,
+        !reliefos_ini_get("app", "main_exe", main_exe_value,
                         sizeof(main_exe_value)) ||
-        !leonos_ini_get("app", "default_path", default_path_value,
+        !reliefos_ini_get("app", "default_path", default_path_value,
                         sizeof(default_path_value)) ||
         !api_bool_value("requires_admin", &info->requires_admin) ||
         !api_bool_value("desktop_shortcut", &info->desktop_shortcut)) {
         goto cleanup;
     }
-    (void)leonos_ini_get("app", "icon", icon_value, sizeof(icon_value));
-    (void)leonos_ini_get("app", "id", id_value, sizeof(id_value));
-    (void)leonos_ini_get("app", "category", category_value, sizeof(category_value));
-    (void)leonos_ini_get("app", "commands", commands_value, sizeof(commands_value));
-    (void)leonos_ini_get("app", "extensions", extensions_value, sizeof(extensions_value));
+    (void)reliefos_ini_get("app", "icon", icon_value, sizeof(icon_value));
+    (void)reliefos_ini_get("app", "id", id_value, sizeof(id_value));
+    (void)reliefos_ini_get("app", "category", category_value, sizeof(category_value));
+    (void)reliefos_ini_get("app", "commands", commands_value, sizeof(commands_value));
+    (void)reliefos_ini_get("app", "extensions", extensions_value, sizeof(extensions_value));
     (void)api_bool_value("terminal", &info->terminal);
     (void)api_bool_value("hidden", &info->hidden);
     (void)api_bool_value("open_with", &info->open_with);
@@ -562,12 +562,12 @@ int leonos_api_parse_info(const char *api_path, struct leonos_api_info *info)
     (void)api_copy_field(info->commands, sizeof(info->commands), commands_value);
     (void)api_copy_field(info->extensions, sizeof(info->extensions), extensions_value);
     input_type[0] = 0;
-    if (leonos_ini_get("input_method", "type", input_type, sizeof(input_type))) {
+    if (reliefos_ini_get("input_method", "type", input_type, sizeof(input_type))) {
         if (!api_text_eq(input_type, "input-method") ||
-            !leonos_ini_get("input_method", "id", input_id, sizeof(input_id)) ||
-            !leonos_ini_get("input_method", "abbreviation", input_abbreviation,
+            !reliefos_ini_get("input_method", "id", input_id, sizeof(input_id)) ||
+            !reliefos_ini_get("input_method", "abbreviation", input_abbreviation,
                             sizeof(input_abbreviation)) ||
-            !leonos_ini_get("input_method", "startup_mode", input_startup,
+            !reliefos_ini_get("input_method", "startup_mode", input_startup,
                             sizeof(input_startup)) ||
             !api_bool_value_in_section("input_method", "launch_after_install",
                                        &info->input_method_launch_after_install)) {
@@ -575,17 +575,17 @@ int leonos_api_parse_info(const char *api_path, struct leonos_api_info *info)
         }
         input_settings[0] = 0;
         input_settings_app[0] = 0;
-        (void)leonos_ini_get("input_method", "settings_schema", input_settings,
+        (void)reliefos_ini_get("input_method", "settings_schema", input_settings,
                              sizeof(input_settings));
-        (void)leonos_ini_get("input_method", "settings_app", input_settings_app,
+        (void)reliefos_ini_get("input_method", "settings_app", input_settings_app,
                              sizeof(input_settings_app));
         info->input_method = 1;
         if (api_text_eq(input_startup, "manual")) {
-            info->input_method_startup_mode = LEONOS_INPUTM_START_MANUAL;
+            info->input_method_startup_mode = RELIEFOS_INPUTM_START_MANUAL;
         } else if (api_text_eq(input_startup, "login")) {
-            info->input_method_startup_mode = LEONOS_INPUTM_START_LOGIN;
+            info->input_method_startup_mode = RELIEFOS_INPUTM_START_LOGIN;
         } else if (api_text_eq(input_startup, "on-demand")) {
-            info->input_method_startup_mode = LEONOS_INPUTM_START_ON_DEMAND;
+            info->input_method_startup_mode = RELIEFOS_INPUTM_START_ON_DEMAND;
         } else {
             goto cleanup;
         }
@@ -685,17 +685,17 @@ static void api_inputm_provider_key(char *key, uint32_t capacity,
     api_append_text(key, &pos, capacity, field);
 }
 
-static int api_append_input_method_config(const struct leonos_api_info *info,
+static int api_append_input_method_config(const struct reliefos_api_info *info,
                                           const char *exe_path)
 {
-    struct leonos_user_info user = {0};
-    char path[LEONOS_FS_PATH_LEN];
+    struct reliefos_user_info user = {0};
+    char path[RELIEFOS_FS_PATH_LEN];
     char config[2048];
-    char line[LEONOS_FS_PATH_LEN * 3U + 256U];
-    char value[LEONOS_FS_PATH_LEN];
-    char settings_path[LEONOS_FS_PATH_LEN];
-    char settings_app_path[LEONOS_FS_PATH_LEN];
-    char install_dir[LEONOS_FS_PATH_LEN];
+    char line[RELIEFOS_FS_PATH_LEN * 3U + 256U];
+    char value[RELIEFOS_FS_PATH_LEN];
+    char settings_path[RELIEFOS_FS_PATH_LEN];
+    char settings_app_path[RELIEFOS_FS_PATH_LEN];
+    char install_dir[RELIEFOS_FS_PATH_LEN];
     uint32_t home_len;
     uint32_t count = 0;
     uint32_t index;
@@ -703,7 +703,7 @@ static int api_append_input_method_config(const struct leonos_api_info *info,
     int fd;
     long got;
     if (!info || !info->input_method || !exe_path ||
-        leonos_auth_current(&user) != 0 || !user.uid || !user.home[0]) {
+        reliefos_auth_current(&user) != 0 || !user.uid || !user.home[0]) {
         return 0;
     }
     home_len = (uint32_t)strlen(user.home);
@@ -713,7 +713,7 @@ static int api_append_input_method_config(const struct leonos_api_info *info,
     memcpy(path, user.home, home_len);
     memcpy(path + home_len, "/.inputm.conf", 14U);
     config[0] = 0;
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd >= 0) {
         got = read(fd, config, sizeof(config) - 1U);
         close(fd);
@@ -724,7 +724,7 @@ static int api_append_input_method_config(const struct leonos_api_info *info,
         }
     }
     if (api_config_get(config, "provider_count", value, sizeof(value))) {
-        count = api_parse_u32(value, LEONOS_INPUTM_MAX_PROVIDERS);
+        count = api_parse_u32(value, RELIEFOS_INPUTM_MAX_PROVIDERS);
     }
     line[0] = 0;
     for (uint32_t i = 0; i < count; ++i) {
@@ -736,7 +736,7 @@ static int api_append_input_method_config(const struct leonos_api_info *info,
             goto append_provider;
         }
     }
-    if (count >= LEONOS_INPUTM_MAX_PROVIDERS) {
+    if (count >= RELIEFOS_INPUTM_MAX_PROVIDERS) {
         return 0;
     }
     index = count;
@@ -794,7 +794,7 @@ append_provider:
     if (pos == 0 || pos + 1U >= sizeof(line)) {
         return 0;
     }
-    fd = open(path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_APPEND, 0666);
+    fd = open(path, RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_APPEND, 0666);
     if (fd < 0) {
         return 0;
     }
@@ -803,44 +803,44 @@ append_provider:
     return got == (long)pos;
 }
 
-static int api_install_input_method(const struct leonos_api_info *info,
+static int api_install_input_method(const struct reliefos_api_info *info,
                                     const char *exe_path)
 {
-    struct leonos_user_info user = {0};
+    struct reliefos_user_info user = {0};
     char *argv[2];
     if (!info || !info->input_method ||
         !api_append_input_method_config(info, exe_path)) {
         return 0;
     }
-    if (leonos_auth_current(&user) == 0 && user.uid) {
-        (void)leonos_inputm_notify_config(user.uid);
+    if (reliefos_auth_current(&user) == 0 && user.uid) {
+        (void)reliefos_inputm_notify_config(user.uid);
     }
-    if (info->input_method_startup_mode == LEONOS_INPUTM_START_LOGIN) {
-        struct leonos_startup_command command = {0};
+    if (info->input_method_startup_mode == RELIEFOS_INPUTM_START_LOGIN) {
+        struct reliefos_startup_command command = {0};
         uint32_t request_id;
         if (strlen(exe_path) >= sizeof(command.path)) {
             return 0;
         }
         memcpy(command.path, exe_path, strlen(exe_path) + 1U);
-        (void)leonos_startup_request(&command, &request_id);
+        (void)reliefos_startup_request(&command, &request_id);
     }
     if (!info->input_method_launch_after_install) {
         return 1;
     }
     argv[0] = (char *)exe_path;
     argv[1] = 0;
-    return leonos_spawn_argv(exe_path, argv) > 0;
+    return reliefos_spawn_argv(exe_path, argv) > 0;
 }
 
 static int api_extract_tar(const char *api_path, const char *dest_dir,
-                           leonos_api_progress_fn progress, void *context)
+                           reliefos_api_progress_fn progress, void *context)
 {
-    char manifest_path[LEONOS_API_PATH_MAX];
+    char manifest_path[RELIEFOS_API_PATH_MAX];
     int ok;
     if (!api_path || !dest_dir) {
         return 0;
     }
-    ok = leonos_tar_extract_all_with_progress(api_path, dest_dir, progress,
+    ok = reliefos_tar_extract_all_with_progress(api_path, dest_dir, progress,
                                               context);
     if (ok && api_join_path(manifest_path, sizeof(manifest_path), dest_dir,
                             API_INI_PATH)) {
@@ -849,14 +849,14 @@ static int api_extract_tar(const char *api_path, const char *dest_dir,
     return ok;
 }
 
-int leonos_api_extract_files(const char *api_path, const char *dest_dir)
+int reliefos_api_extract_files(const char *api_path, const char *dest_dir)
 {
-    struct leonos_api_info info;
-    char install_root[LEONOS_API_PATH_MAX];
+    struct reliefos_api_info info;
+    char install_root[RELIEFOS_API_PATH_MAX];
     if (!api_path || !dest_dir || !dest_dir[0]) {
         return 0;
     }
-    if (!leonos_api_parse_info(api_path, &info)) {
+    if (!reliefos_api_parse_info(api_path, &info)) {
         return 0;
     }
     if (!api_copy_trim_path(install_root, sizeof(install_root), dest_dir) ||
@@ -864,7 +864,7 @@ int leonos_api_extract_files(const char *api_path, const char *dest_dir)
         return 0;
     }
     if ((info.requires_admin || api_install_path_requires_admin(install_root)) &&
-        !leonos_admin_elevate()) {
+        !reliefos_admin_elevate()) {
         return 0;
     }
     if (!api_ensure_dir(install_root)) {
@@ -873,21 +873,21 @@ int leonos_api_extract_files(const char *api_path, const char *dest_dir)
     return api_extract_tar(api_path, install_root, 0, 0);
 }
 
-int leonos_api_install_with_progress(const char *api_path, const char *dest_dir,
+int reliefos_api_install_with_progress(const char *api_path, const char *dest_dir,
                                      uint32_t create_shortcut,
-                                     leonos_api_progress_fn progress,
+                                     reliefos_api_progress_fn progress,
                                      void *context)
 {
-    struct leonos_api_info info;
-    struct leonos_user_info user;
-    struct leonos_stat exe_stat;
-    char install_root[LEONOS_API_PATH_MAX];
-    char exe_path[LEONOS_API_PATH_MAX];
-    char shortcut_name[LEONOS_FS_PATH_LEN];
+    struct reliefos_api_info info;
+    struct reliefos_user_info user;
+    struct reliefos_stat exe_stat;
+    char install_root[RELIEFOS_API_PATH_MAX];
+    char exe_path[RELIEFOS_API_PATH_MAX];
+    char shortcut_name[RELIEFOS_FS_PATH_LEN];
     if (!api_path || !dest_dir || !dest_dir[0]) {
         return 0;
     }
-    if (!leonos_api_parse_info(api_path, &info)) {
+    if (!reliefos_api_parse_info(api_path, &info)) {
         return 0;
     }
     if (!api_copy_trim_path(install_root, sizeof(install_root), dest_dir) ||
@@ -895,7 +895,7 @@ int leonos_api_install_with_progress(const char *api_path, const char *dest_dir,
         return 0;
     }
     if ((info.requires_admin || api_install_path_requires_admin(install_root)) &&
-        !leonos_admin_elevate()) {
+        !reliefos_admin_elevate()) {
         return 0;
     }
     if (!api_ensure_dir(install_root)) {
@@ -906,26 +906,26 @@ int leonos_api_install_with_progress(const char *api_path, const char *dest_dir,
     }
     if (!api_join_path(exe_path, sizeof(exe_path), install_root,
                        info.main_exe) ||
-        leonos_stat_legacy(exe_path, &exe_stat) != 0 ||
-        exe_stat.type != LEONOS_FS_TYPE_FILE) {
+        reliefos_stat_legacy(exe_path, &exe_stat) != 0 ||
+        exe_stat.type != RELIEFOS_FS_TYPE_FILE) {
         return 0;
     }
     if (!api_write_app_manifest(&info, install_root)) {
         return 0;
     }
-    (void)leonos_app_registry_refresh();
+    (void)reliefos_app_registry_refresh();
     if (info.input_method && !api_install_input_method(&info, exe_path)) {
         return 0;
     }
     if (create_shortcut && info.main_exe[0]) {
-        if (leonos_auth_current(&user) == 0 && user.uid && user.home[0]) {
-            char desktop_dir[LEONOS_FS_PATH_LEN];
+        if (reliefos_auth_current(&user) == 0 && user.uid && user.home[0]) {
+            char desktop_dir[RELIEFOS_FS_PATH_LEN];
             uint32_t hlen = (uint32_t)strlen(user.home);
             if (hlen + 8U < sizeof(desktop_dir)) {
                 memcpy(desktop_dir, user.home, hlen);
                 memcpy(desktop_dir + hlen, "/desktop", 9U);
                 api_ensure_dir(desktop_dir);
-                if (leonos_launch_create_shortcut_in_dir(
+                if (reliefos_launch_create_shortcut_in_dir(
                         desktop_dir, exe_path,
                         shortcut_name,
                         sizeof(shortcut_name)) < 0) {
@@ -937,9 +937,14 @@ int leonos_api_install_with_progress(const char *api_path, const char *dest_dir,
     return 1;
 }
 
-int leonos_api_install(const char *api_path, const char *dest_dir,
+int reliefos_api_install(const char *api_path, const char *dest_dir,
                        uint32_t create_shortcut)
 {
-    return leonos_api_install_with_progress(api_path, dest_dir,
+    return reliefos_api_install_with_progress(api_path, dest_dir,
                                             create_shortcut, 0, 0);
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_api_extract_files) leonos_api_extract_files __attribute__((alias("reliefos_api_extract_files")));
+extern __typeof__(reliefos_api_install) leonos_api_install __attribute__((alias("reliefos_api_install")));
+extern __typeof__(reliefos_api_install_with_progress) leonos_api_install_with_progress __attribute__((alias("reliefos_api_install_with_progress")));
+extern __typeof__(reliefos_api_parse_info) leonos_api_parse_info __attribute__((alias("reliefos_api_parse_info")));

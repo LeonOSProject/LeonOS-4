@@ -18,7 +18,8 @@ def patch_kernel(disk, kernel):
     table = json.loads(subprocess.check_output(["sfdisk", "--json", str(disk)]))["partitiontable"]
     offset = table["partitions"][0]["start"] * table["sectorsize"]
     image = f"{disk}@@{offset}"
-    subprocess.run(["mcopy", "-o", "-i", image, str(kernel), "::/leonos/kernel.sys"], check=True)
+    for namespace in ("reliefos", "leonos"):
+        subprocess.run(["mcopy", "-o", "-i", image, str(kernel), f"::/{namespace}/kernel.sys"], check=True)
     embedded = subprocess.check_output(["mtype", "-i", image, "::/leonos/kernel.sys"])
     assert embedded == kernel.read_bytes(), "scratch ESP kernel does not match the tested build"
     return hashlib.sha256(embedded).hexdigest()
@@ -93,7 +94,7 @@ def login_case(output, disk, wrong_password=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--iso", type=Path, default=ROOT / "build/images/leonos4-installer.iso")
+    parser.add_argument("--iso", type=Path, default=ROOT / "build/images/reliefos-installer.iso")
     parser.add_argument("--kernel", type=Path, default=ROOT / "build/system/kernel.sys")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()

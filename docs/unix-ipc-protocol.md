@@ -1,7 +1,9 @@
-# LeonOS Unix IPC protocol
+# ReliefOS Unix IPC protocol
 
-This document is the normative wire contract for the LeonOS service sockets.
-All paths live below `/run/leonos/`. Every service uses an AF_UNIX
+This document is the normative wire contract for the ReliefOS service sockets.
+Published socket path values remain below `/run/leonos/` for compatibility;
+`reliefos-runtime` exposes that directory through the canonical `/run/reliefos`
+run directory. Every service uses an AF_UNIX
 SOCK_STREAM connection and the length-prefixed framing described below.
 
 ## Framing
@@ -32,10 +34,10 @@ or the connection is rejected with `ERROR{code=EPERM}`.
 | 6 | fd-3 removal and cleanup | n/a | implemented |
 
 The four daemons run as independent OpenRC services
-(`system/rootfs/etc/init.d/leonos-{windowd,imd,session,device}`). There is no
+(`system/rootfs/etc/init.d/reliefos-{windowd,imd,session,device}`). There is no
 `netmand` or `authd` socket service: network control is a kernel ioctl on AF_INET
 fds (`LEONOS_NET_CONTROL_IOCTL`) with DHCP/NTP lifecycle owned by the
-`leonos-dhcp`/`leonos-ntp` OpenRC services, and accounts are standard
+`reliefos-dhcp`/`reliefos-ntp` OpenRC services, and accounts are standard
 `/etc/passwd` + `/etc/shadow` files authenticated through PAM.
 
 ## Common message set
@@ -79,7 +81,7 @@ Authentication has no AF_UNIX protocol. Accounts are standard
 password change, and elevation run through the PAM stack: `login.elf` calls
 `leonos_pam_login()`, `su`/`sudo` use the upstream binaries with
 sudoers/PAM policy (the `sudod.elf` askpass helper supports the legacy
-`leonos_sudo_*` libc API), and `pam_leonos_password` is the LeonOS-specific
+`leonos_sudo_*` libc API), and `pam_leonos_password` is the ReliefOS-specific
 verifier module. The `leonos_auth_*` libc wrappers in
 `userland/runtime/src/auth_accounts.c` read the passwd database directly with
 `getpwuid`-style calls; mutating operations run the standard tools as root
@@ -114,7 +116,7 @@ or require the caller's own uid.
 * Remaining ioctls are device-UAPI only: TTY termios/winsize, evdev, OSS,
   block BLK*, fbdev FBIO*, and `/dev/gpu` GPU commands.
 * ACL compatibility is expressed through `chmod`/`chown`; kernel-debug state
-  uses `/var/lib/leonos/kernel-debug`.
+  uses `/var/lib/reliefos/kernel-debug`.
 
 ## procfs (kernel, read-only)
 
@@ -126,11 +128,11 @@ served through a private ioctl.
 ## Networking (no socket service)
 
 There is no netmand daemon. Read-only network status queries use the kernel's
-`LEONOS_NET_CONTROL_IOCTL` (`kernel/ntclks/include/uapi/leonos/net_control.h`) on an
+`LEONOS_NET_CONTROL_IOCTL` (`kernel/reliefnt/include/uapi/reliefos/net_control.h`) on an
 `AF_INET` socket fd, credential-checked in the kernel. Configuration changes
-are lifecycle operations of the OpenRC services `leonos-dhcp` (udhcpc, hook
-publishes `/run/leonos/dhcp-lease`) and `leonos-ntp` (hook publishes
-`/run/leonos/ntp-state`); the `leonos_net_dhcp_renew()`/
+are lifecycle operations of the OpenRC services `reliefos-dhcp` (udhcpc, hook
+publishes `/run/reliefos/dhcp-lease`) and `reliefos-ntp` (hook publishes
+`/run/reliefos/ntp-state`); the `leonos_net_dhcp_renew()`/
 `leonos_time_ntp_sync()` libc helpers restart those services and validate the
 published files.
 
@@ -150,7 +152,7 @@ published files.
 
 ## Phase 0 verification
 
-Run `/usr/lib/leonos/apps/ipctest/ipctest.elf` on the target. It covers blocking
+Run `/usr/lib/reliefos/apps/ipctest/ipctest.elf` on the target. It covers blocking
 socketpair reads, SCM_RIGHTS passing of a `/dev/shm0` descriptor, shared mmap,
 credential syscalls, `uname`, and an AF_INET connect probe.
 

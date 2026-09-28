@@ -28,7 +28,7 @@ class StorageRuntimeTests(unittest.TestCase):
     def test_filesystem_roundtrips_and_real_corruption_detection(self):
         for fs, kind, mkfs_args in (("ext2", "ext2", ("-F", "-q")),
                                    ("fat", "vfat", ("-F", "32")), ("exfat", "exfat", ())):
-            with self.subTest(fs=fs), tempfile.TemporaryDirectory(prefix="leonos-fs-") as directory:
+            with self.subTest(fs=fs), tempfile.TemporaryDirectory(prefix="reliefos-fs-") as directory:
                 disk = Path(directory) / "filesystem.img"
                 with disk.open("wb") as stream:
                     stream.truncate(128 << 20)
@@ -60,7 +60,7 @@ class StorageRuntimeTests(unittest.TestCase):
         self.assertIsInstance(json.loads(result.stdout)["blockdevices"], list)
 
     def test_fsck_dry_run_resolves_a_filesystem_checker(self):
-        result = self.tool(UTIL, "usr/sbin/fsck", "-N", "-t", "ext2", "/dev/nonexistent-leonos-test")
+        result = self.tool(UTIL, "usr/sbin/fsck", "-N", "-t", "ext2", "/dev/nonexistent-reliefos-test")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("fsck.ext2", result.stdout)
 

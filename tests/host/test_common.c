@@ -274,11 +274,11 @@ static void test_run_process_reports_signals(void)
 
 static void test_run_process_missing_program_fails_with_errno(void)
 {
-    char *argv[] = { (char *)"/nonexistent/leonos-host-tool-test-binary", NULL };
+    char *argv[] = { (char *)"/nonexistent/reliefos-host-tool-test-binary", NULL };
     int child_status = -1;
 
     errno = 0;
-    TEST_ASSERT_EQ(-1, run_process("/nonexistent/leonos-host-tool-test-binary",
+    TEST_ASSERT_EQ(-1, run_process("/nonexistent/reliefos-host-tool-test-binary",
         argv, NULL, &child_status));
     TEST_ASSERT(errno != 0);
 }
@@ -290,7 +290,7 @@ static void test_run_process_rejects_unusable_working_directory(void)
 
     errno = 0;
     TEST_ASSERT_EQ(-1, run_process("/bin/true", argv,
-        "/nonexistent-directory-for-leonos-test", &child_status));
+        "/nonexistent-directory-for-reliefos-test", &child_status));
     TEST_ASSERT(errno != 0);
 }
 
@@ -310,5 +310,5 @@ int main(void)
     test_run_process_reports_signals();
     test_run_process_missing_program_fails_with_errno();
     test_run_process_rejects_unusable_working_directory();
-    return leonos_test_report("host/common");
+    return reliefos_test_report("host/common");
 }

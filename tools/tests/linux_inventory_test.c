@@ -1,18 +1,18 @@
 /* Execute the real inventory parsers and namespace against hardware fixtures. */
 #define TEST_REAL_INVENTORY
-#include "../../kernel/ntclks/arch/x86_64/cpuinfo.c"
-#include "../../kernel/ntclks/arch/x86_64/platform.c"
-#include "../../kernel/ntclks/fs/sysfs.c"
+#include "../../kernel/reliefnt/arch/x86_64/cpuinfo.c"
+#include "../../kernel/reliefnt/arch/x86_64/platform.c"
+#include "../../kernel/reliefnt/fs/sysfs.c"
 #define main proc_fixture_main
 #include "procfs_directories_test.c"
 #undef main
 #include <stdarg.h>
 
 static unsigned fixture_cpus=1;
-int storage_install_list_disks(struct leonos_install_disk *disks, uint32_t capacity, uint32_t *count)
+int storage_install_list_disks(struct reliefos_install_disk *disks, uint32_t capacity, uint32_t *count)
 {
     *count = 1;
-    if (capacity) *disks = (struct leonos_install_disk){.id=0, .sector_size=512, .sector_count=131072};
+    if (capacity) *disks = (struct reliefos_install_disk){.id=0, .sector_size=512, .sector_count=131072};
     return 0;
 }
 int storage_disk_block_info(uint32_t disk, int32_t part, uint64_t *start, uint64_t *count)
@@ -68,16 +68,16 @@ static void walk(const char *path, unsigned depth)
 {
     assert(depth < 12);
     uint64_t offset = 0;
-    struct leonos_dir_entry entry;
+    struct reliefos_dir_entry entry;
     int ret;
     while ((ret = proc_readdir(path, &offset, &entry)) > 0) {
         char child[256], value[16384];
         struct storage_node node;
         snprintf(child, sizeof(child), "%s/%s", path, entry.name);
         assert(proc_lookup(child, &node) == 0 && node.type == entry.type);
-        if (node.type == LEONOS_FS_TYPE_DIR)
+        if (node.type == RELIEFOS_FS_TYPE_DIR)
             walk(child, depth + 1);
-        else if (node.type == LEONOS_FS_TYPE_FILE)
+        else if (node.type == RELIEFOS_FS_TYPE_FILE)
             read_value(child, value, sizeof(value));
         else
             assert(proc_readlink(child, value, sizeof(value)) > 0);
@@ -89,7 +89,7 @@ int main(void)
     cpu_inventory_capture(0);
     char value[16384];
     struct storage_node node;
-    assert(proc_lookup("/sys/dev/block", &node) == 0 && node.type == LEONOS_FS_TYPE_DIR);
+    assert(proc_lookup("/sys/dev/block", &node) == 0 && node.type == RELIEFOS_FS_TYPE_DIR);
     read_value("/sys/devices/platform/leonos-block/disk0/dev", value, sizeof(value));
     assert(!strcmp(value, "259:0\n"));
     read_value("/sys/devices/platform/leonos-block/disk0/disk0p1/partition", value, sizeof(value));
@@ -100,13 +100,13 @@ int main(void)
     assert(!strcmp(value, "MAJOR=259\nMINOR=0\nDEVNAME=disk0\nDEVTYPE=disk\n"));
     assert(proc_readlink("/sys/dev/block/259:1", value, sizeof(value)) > 0);
     read_value("/proc/sys/kernel/ostype", value, sizeof(value));
-    assert(!strcmp(value, "Linux\n"));
+    assert(!strcmp(value, "ReliefNT\n"));
     read_value("/proc/sys/kernel/osrelease", value, sizeof(value));
     assert(!strcmp(value, "9.8.7-0123\n"));
     read_value("/proc/sys/kernel/version", value, sizeof(value));
     assert(!strcmp(value, "2026-09-11 01:02:03\n"));
     read_value("/proc/version", value, sizeof(value));
-    assert(!strcmp(value, "ntclks version 9.8.7-0123 (2026-09-11 01:02:03)\n"));
+    assert(!strcmp(value, "ReliefNT version 9.8.7-0123 (2026-09-11 01:02:03)\n"));
     read_value("/proc/cpuinfo", value, sizeof(value));
     assert(strstr(value, "processor\t: 0\n") && strstr(value, "model name\t:") &&
            strstr(value, "cpu cores\t: 1\n"));

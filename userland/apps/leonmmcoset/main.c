@@ -1,12 +1,12 @@
-#include <leonos/fs.h>
-#include <leonos/gui.h>
-#include <leonos/png.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
+#include <reliefos/png.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 
 #define LEONMMCOSSET_W 760U
 #define LEONMMCOSSET_H 760U
@@ -33,12 +33,12 @@ static void copy_text(char *dst, uint32_t capacity, const char *src)
 
 static int change_to_executable_directory(const char *path)
 {
-    char directory[LEONOS_FS_PATH_LEN];
+    char directory[RELIEFOS_FS_PATH_LEN];
     uint32_t length = 0;
     uint32_t last_separator = 0;
 
     if (!path || !path[0]) {
-        return chdir(LEONOS_LAYOUT_LEONOS_APPS "/leonmmcoset");
+        return chdir(RELIEFOS_LAYOUT_RELIEFOS_APPS "/leonmmcoset");
     }
     while (path[length]) {
         if (path[length] == '/') {
@@ -47,25 +47,25 @@ static int change_to_executable_directory(const char *path)
         ++length;
     }
     if (last_separator == 0 || last_separator >= sizeof(directory)) {
-        return chdir(LEONOS_LAYOUT_LEONOS_APPS "/leonmmcoset");
+        return chdir(RELIEFOS_LAYOUT_RELIEFOS_APPS "/leonmmcoset");
     }
     copy_text(directory, sizeof(directory), path);
     directory[last_separator] = 0;
     return chdir(directory);
 }
 
-static void draw_image(struct leonos_ui_surface *ui)
+static void draw_image(struct reliefos_ui_surface *ui)
 {
     uint32_t draw_width;
     uint32_t draw_height;
     uint32_t draw_x;
     uint32_t draw_y;
 
-    leonos_ui_rect(ui, 0, 0, LEONMMCOSSET_W, LEONMMCOSSET_H, LEONOS_UI_BLACK);
+    reliefos_ui_rect(ui, 0, 0, LEONMMCOSSET_W, LEONMMCOSSET_H, RELIEFOS_UI_BLACK);
     if (!image_pixels || !image_width || !image_height) {
-        leonos_ui_text(ui, 24U, LEONMMCOSSET_H / 2U - 16U,
+        reliefos_ui_text(ui, 24U, LEONMMCOSSET_H / 2U - 16U,
                        "Could not decode leonmmcoset.png",
-                       LEONOS_UI_WHITE, LEONOS_UI_BLACK);
+                       RELIEFOS_UI_WHITE, RELIEFOS_UI_BLACK);
         return;
     }
 
@@ -92,14 +92,14 @@ static void draw_image(struct leonos_ui_surface *ui)
 
 int main(int argc, char **argv)
 {
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
 
     if (change_to_executable_directory(argc > 0 ? argv[0] : 0) < 0) {
         printf("[leonmmcoset.elf] could not change to executable directory\n");
     }
-    if (leonos_png_decode_file(LEONMMCOSSET_IMAGE_PATH, &image_pixels,
+    if (reliefos_png_decode_file(LEONMMCOSSET_IMAGE_PATH, &image_pixels,
                                &image_width, &image_height) < 0) {
         printf("[leonmmcoset.elf] relative PNG open failed path=%s\n", LEONMMCOSSET_IMAGE_PATH);
     } else {
@@ -107,33 +107,33 @@ int main(int argc, char **argv)
                LEONMMCOSSET_IMAGE_PATH, (int)image_width, (int)image_height);
     }
 
-    window_id = leonos_gui_create_app_window_ex(
+    window_id = reliefos_gui_create_app_window_ex(
         "leonmmcoset", "leonmmcoset PNG libpng relative-path test",
-        LEONMMCOSSET_W, LEONMMCOSSET_H, LEONOS_GUI_WINDOW_NO_RESIZE);
+        LEONMMCOSSET_W, LEONMMCOSSET_H, RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[leonmmcoset.elf] create window failed=%d\n", window_id);
-        leonos_png_free(image_pixels);
+        reliefos_png_free(image_pixels);
         return 1;
     }
 
-    leonos_ui_bind(&ui, pixels, LEONMMCOSSET_W, LEONMMCOSSET_H, LEONMMCOSSET_W);
+    reliefos_ui_bind(&ui, pixels, LEONMMCOSSET_W, LEONMMCOSSET_H, LEONMMCOSSET_W);
     draw_image(&ui);
-    leonos_gui_present_window((uint32_t)window_id, LEONMMCOSSET_W, LEONMMCOSSET_H,
+    reliefos_gui_present_window((uint32_t)window_id, LEONMMCOSSET_W, LEONMMCOSSET_H,
                               LEONMMCOSSET_W, pixels);
 
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE ||
-                (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN &&
-                 event.pressed && event.keycode == LEONOS_KEY_ESCAPE)) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE ||
+                (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN &&
+                 event.pressed && event.keycode == RELIEFOS_KEY_ESCAPE)) {
                 break;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_RESIZE ||
-                event.type == LEONOS_GUI_APP_EVENT_FOCUS ||
-                event.type == LEONOS_GUI_APP_EVENT_THEME_CHANGED) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_RESIZE ||
+                event.type == RELIEFOS_GUI_APP_EVENT_FOCUS ||
+                event.type == RELIEFOS_GUI_APP_EVENT_THEME_CHANGED) {
                 draw_image(&ui);
-                leonos_gui_present_window((uint32_t)window_id, LEONMMCOSSET_W,
+                reliefos_gui_present_window((uint32_t)window_id, LEONMMCOSSET_W,
                                           LEONMMCOSSET_H, LEONMMCOSSET_W, pixels);
             }
         } else {
@@ -141,6 +141,6 @@ int main(int argc, char **argv)
         }
     }
 
-    leonos_png_free(image_pixels);
+    reliefos_png_free(image_pixels);
     return 0;
 }

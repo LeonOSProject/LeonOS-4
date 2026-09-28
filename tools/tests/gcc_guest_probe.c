@@ -31,7 +31,7 @@
 #define GCC "/opt/dyne/gcc-musl/bin/x86_64-linux-musl-gcc"
 #include "../../userland/apps/installer/installer_directory.h"
 #define SYSROOT "--sysroot=/opt/dyne/gcc-musl/x86_64-linux-musl"
-#define SELF_FALLBACK "/usr/lib/leonos/tests/gcc-probe.elf"
+#define SELF_FALLBACK "/usr/lib/reliefos/tests/gcc-probe.elf"
 
 static char self_path[256];
 static volatile int shared_marker;
@@ -615,7 +615,7 @@ int main(int argc, char **argv)
     }
 
     unsigned failed = edge_failures;
-    struct leonos_dir_entry *headers = NULL;
+    struct reliefos_dir_entry *headers = NULL;
     uint32_t header_count = 0;
     int directory_result = installer_list_dir(
         "/opt/dyne/gcc-musl/x86_64-linux-musl/include/linux", &headers, &header_count);

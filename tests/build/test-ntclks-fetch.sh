@@ -1,13 +1,13 @@
 #!/bin/sh
 # Contract tests for the kernel-fetch delegation: `make fetch` in the parent
-# also runs `make fetch` in the ntclks kernel checkout named by NTCLKS_DIR.
+# also runs `make fetch` in the ReliefNT checkout named by RELIEFNT_DIR.
 #
-#   1. `make ntclks-fetch` delegates to the checkout's own fetch;
+#   1. `make reliefnt-fetch` delegates to the checkout's own fetch;
 #   2. `make fetch` runs the parent fetch and the kernel fetch together;
 #   3. a missing checkout warns and keeps the goal successful (fetch must keep
 #      working on a fresh machine before the submodule exists);
 #   4. `make -n` never reaches the sub-make (the adapter's no-output promise);
-#   5. NTCLKS_DIR pointing back at this repository skips the delegation
+#   5. RELIEFNT_DIR pointing back at this repository skips the delegation
 #      instead of recursing into `make -C . fetch`.
 #
 # Everything is stubbed: a fake checkout Makefile records the fetch call and
@@ -20,10 +20,10 @@ export LC_ALL
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 
-deps=${LEONOS_DEPS:?set by mk/tests.mk}
-lock=${LEONOS_LOCK:-configs/dependencies.lock.json}
+deps=${RELIEFOS_DEPS:-${LEONOS_DEPS:?set by mk/tests.mk}}
+lock=${RELIEFOS_LOCK:-${LEONOS_LOCK:-configs/dependencies.lock.json}}
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-fetch-delegate.XXXXXX") || exit 1
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-fetch-delegate.XXXXXX") || exit 1
 failures=0
 checks=0
 
@@ -39,8 +39,8 @@ fail() {
 }
 
 # A stub kernel checkout whose fetch only records that it ran.
-mkdir -p "$work/ntclks-stub"
-cat >"$work/ntclks-stub/Makefile" <<EOF
+mkdir -p "$work/reliefnt-stub"
+cat >"$work/reliefnt-stub/Makefile" <<EOF
 .PHONY: fetch
 fetch:
 	@echo called >>'$work/kernel-fetch-called'
@@ -59,12 +59,12 @@ else
     guarded() { "$@"; }
 fi
 
-printf '=== (1) make ntclks-fetch delegates to the checkout ===\n'
-if make -s O="$work/out" NTCLKS_DIR="$work/ntclks-stub" ntclks-fetch \
+printf '=== (1) make reliefnt-fetch delegates to the checkout ===\n'
+if make -s O="$work/out" RELIEFNT_DIR="$work/reliefnt-stub" reliefnt-fetch \
         >"$work/delegate.log" 2>&1; then
-    pass "make ntclks-fetch exits 0"
+    pass "make reliefnt-fetch exits 0"
 else
-    fail "make ntclks-fetch exits 0" "$(head -c 400 "$work/delegate.log")"
+    fail "make reliefnt-fetch exits 0" "$(head -c 400 "$work/delegate.log")"
 fi
 if [ -f "$work/kernel-fetch-called" ]; then
     pass "the checkout's fetch goal ran"
@@ -76,7 +76,7 @@ printf '\n=== (2) make fetch runs both fetches ===\n'
 rm -f "$work/kernel-fetch-called" "$work/parent-fetch-called"
 if make -s O="$work/out" LEONOS_DEPS_TOOL="$deps" LEONOS_LOCK="$lock" \
         LEONOS_FETCH_SCRIPT="$work/fetch-stub.sh" LEONOS_CACHE="$work/cache" \
-        NTCLKS_DIR="$work/ntclks-stub" fetch >"$work/fetch.log" 2>&1; then
+        RELIEFNT_DIR="$work/reliefnt-stub" fetch >"$work/fetch.log" 2>&1; then
     pass "make fetch exits 0"
 else
     fail "make fetch exits 0" "$(head -c 400 "$work/fetch.log")"
@@ -94,11 +94,11 @@ fi
 
 printf '\n=== (3) a missing checkout warns and stays successful ===\n'
 rm -f "$work/kernel-fetch-called"
-if make -s O="$work/out" NTCLKS_DIR="$work/nonexistent" ntclks-fetch \
+if make -s O="$work/out" RELIEFNT_DIR="$work/nonexistent" reliefnt-fetch \
         >"$work/missing.log" 2>&1; then
-    pass "make ntclks-fetch exits 0 without a checkout"
+    pass "make reliefnt-fetch exits 0 without a checkout"
 else
-    fail "make ntclks-fetch exits 0 without a checkout" \
+    fail "make reliefnt-fetch exits 0 without a checkout" \
         "$(head -c 400 "$work/missing.log")"
 fi
 if grep -q 'kernel checkout not found' "$work/missing.log"; then
@@ -115,11 +115,11 @@ fi
 
 printf '\n=== (4) make -n never reaches the sub-make ===\n'
 rm -f "$work/kernel-fetch-called"
-if make -s -n O="$work/out" NTCLKS_DIR="$work/ntclks-stub" ntclks-fetch \
+if make -s -n O="$work/out" RELIEFNT_DIR="$work/reliefnt-stub" reliefnt-fetch \
         >"$work/dryrun.log" 2>&1; then
-    pass "make -n ntclks-fetch exits 0"
+    pass "make -n reliefnt-fetch exits 0"
 else
-    fail "make -n ntclks-fetch exits 0" "$(head -c 400 "$work/dryrun.log")"
+    fail "make -n reliefnt-fetch exits 0" "$(head -c 400 "$work/dryrun.log")"
 fi
 if [ ! -f "$work/kernel-fetch-called" ]; then
     pass "make -n writes no call marker"
@@ -127,13 +127,13 @@ else
     fail "make -n writes no call marker" 'the sub-make ran under -n'
 fi
 
-printf '\n=== (5) NTCLKS_DIR pointing at this repository skips instead of recursing ===\n'
+printf '\n=== (5) RELIEFNT_DIR pointing at this repository skips instead of recursing ===\n'
 rm -f "$work/kernel-fetch-called"
-if guarded make -s O="$work/out" NTCLKS_DIR="$repo_root" ntclks-fetch \
+if guarded make -s O="$work/out" RELIEFNT_DIR="$repo_root" reliefnt-fetch \
         >"$work/self.log" 2>&1; then
-    pass "make ntclks-fetch NTCLKS_DIR=. exits 0 without recursing"
+    pass "make reliefnt-fetch RELIEFNT_DIR=. exits 0 without recursing"
 else
-    fail "make ntclks-fetch NTCLKS_DIR=. exits 0 without recursing" \
+    fail "make reliefnt-fetch RELIEFNT_DIR=. exits 0 without recursing" \
         "$(head -c 400 "$work/self.log")"
 fi
 if grep -q 'skipping' "$work/self.log"; then

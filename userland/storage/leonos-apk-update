@@ -5,7 +5,7 @@ PATH=/usr/sbin:/usr/bin:/sbin:/bin
 LC_ALL=C
 export PATH LC_ALL
 if [ "$#" -ne 2 ]; then
-    echo "usage: leonos-apk-update TARGET_ROOT SIGNED_REPOSITORY" >&2
+    echo "usage: reliefos-apk-update TARGET_ROOT SIGNED_REPOSITORY" >&2
     exit 2
 fi
 target=$1
@@ -19,14 +19,22 @@ if [ ! -s "$target/lib/apk/db/installed" ]; then
     exit 1
 fi
 if [ ! -f "$repository/packages.adb" ]; then
-    echo "Missing signed LeonOS repository index." >&2
+    echo "Missing signed ReliefOS repository index." >&2
     exit 1
 fi
 # Retain only repository tags used by world, plus the signed update source.
 # Unused network repositories must not make a fresh system's offline update fail.
-temporary=/tmp/leonos-apk-update.$$
+temporary=/tmp/reliefos-apk-update.$$
 (umask 077; /bin/busybox mkdir "$temporary")
-trap '/bin/busybox rm -rf "$temporary"' EXIT HUP INT TERM
+restore_world=0
+cleanup() {
+    if [ "$restore_world" -eq 1 ]; then
+        /bin/busybox cp "$temporary/world-before" "$target/etc/apk/world.restore.$$"
+        /bin/busybox mv "$target/etc/apk/world.restore.$$" "$target/etc/apk/world"
+    fi
+    /bin/busybox rm -rf "$temporary"
+}
+trap cleanup EXIT HUP INT TERM
 ( /bin/busybox mkdir "$temporary/seen" )
 required_tags=' '
 while IFS= read -r dependency || [ -n "$dependency" ]; do
@@ -76,7 +84,7 @@ done
 broken_packages() {
     /bin/busybox awk -v exclude_system="$1" '
         function emit() {
-            if (flags ~ /[fs]/ && (!exclude_system || name !~ /^leonos-/))
+            if (flags ~ /[fs]/ && (!exclude_system || name !~ /^(leonos|reliefos)-/))
                 print name "\t" version "\t" checksum "\t" flags
             name = version = checksum = flags = ""
         }
@@ -89,10 +97,38 @@ broken_packages() {
     ' "$target/lib/apk/db/installed" > "$temporary/records"
     /bin/busybox sort "$temporary/records"
 }
-broken_packages 1 > "$temporary/broken-before"
-/bin/busybox cp "$target/etc/apk/world" "$temporary/world-before"
+# Download and validate every ReliefOS package before changing world or letting
+# apk remove any legacy package. The signed index binds each archive's digest.
+preflight_repository=$temporary/preflight
+/bin/busybox mkdir "$preflight_repository"
 status=0
-apk --root "$target" --repositories-file "$configuration" --no-network upgrade 'leonos-*' \
+apk --root "$target" --repositories-file "$configuration" --no-network fetch \
+    --output "$preflight_repository" 'reliefos-*' > "$temporary/preflight.log" 2>&1 || status=$?
+/bin/busybox cat "$temporary/preflight.log"
+if [ "$status" -ne 0 ]; then
+    exit "$status"
+fi
+/bin/busybox cp "$repository/packages.adb" "$preflight_repository/packages.adb"
+preflight_configuration=$temporary/repositories.preflight
+/bin/busybox awk -v repo_index="$preflight_repository/packages.adb" \
+    'NR == 1 { print "ndx " repo_index; next } { print }' \
+    "$configuration" > "$preflight_configuration"
+configuration=$preflight_configuration
+# Copy known old-brand configuration before apk introduces canonical defaults.
+# The migrator never overwrites an existing canonical file and verifies bytes,
+# mode and ownership before publishing; a failure prevents the transaction.
+/bin/sh /usr/lib/reliefos/reliefos-migrate "$target"
+broken_packages 1 > "$temporary/broken-before"
+world=$target/etc/apk/world
+/bin/busybox cp "$world" "$temporary/world-before"
+sed 's/^leonos-/reliefos-/' "$temporary/world-before" > "$temporary/world-after"
+# Move the desired package names first so apk's own solver removes each old
+# package through the replacement metadata in the signed ReliefOS index.
+/bin/busybox cp "$temporary/world-after" "$target/etc/apk/world.reliefos-update.$$"
+/bin/busybox mv "$target/etc/apk/world.reliefos-update.$$" "$world"
+restore_world=1
+status=0
+apk --root "$target" --repositories-file "$configuration" --no-network upgrade 'reliefos-*' \
     > "$temporary/transaction.log" 2>&1 || status=$?
 /bin/busybox cat "$temporary/transaction.log"
 if [ "$status" -ne 0 ]; then
@@ -103,18 +139,19 @@ if [ "$status" -ne 0 ]; then
     # Solver, trust, extraction, script and database-write failures remain fatal.
     if [ "$count" -gt 0 ] && [ "$count" -lt 125 ] && [ "$status" -eq "$count" ] &&
        /bin/busybox cmp -s "$temporary/broken-before" "$temporary/broken-after" &&
-       /bin/busybox cmp -s "$temporary/world-before" "$target/etc/apk/world" &&
+       /bin/busybox cmp -s "$temporary/world-after" "$target/etc/apk/world" &&
        ! /bin/busybox grep -q '^ERROR:' "$temporary/transaction.log" &&
        /bin/busybox tail -n 1 "$temporary/transaction.log" |
            /bin/busybox grep -Eq "^$status errors?; .+ in [0-9]+ packages$"; then
-        echo "WARNING: LeonOS packages updated; pre-existing external package errors remain:" >&2
+        echo "WARNING: ReliefOS packages updated; pre-existing external package errors remain:" >&2
         /bin/busybox cut -f 1 "$temporary/broken-before" >&2
     else
         exit "$status"
     fi
 fi
+restore_world=0
 # Publish the offline repository only after the package transaction succeeded.
-destination=$target/usr/share/leonos/apk/repository
+destination=$target/usr/share/reliefos/apk/repository
 /bin/busybox mkdir -p "$destination"
 for package in "$repository"/*.apk; do
     /bin/busybox cp "$package" "$destination/$(/bin/busybox basename "$package").new"

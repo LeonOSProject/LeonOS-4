@@ -11,5 +11,5 @@ awk '/\/\* end of options \*\// {
     print "#undef PNG_READ_FLOAT_SUPPORTED"
     print "#undef PNG_INCH_CONVERSIONS_SUPPORTED"
 } { print }' "$1" > "$tmp"
-# leonos-emit consumes stdin and leaves an identical output untouched.
+# reliefos-emit consumes stdin and leaves an identical output untouched.
 "$3" --output "$2" < "$tmp"

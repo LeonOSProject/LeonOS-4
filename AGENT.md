@@ -1,6 +1,6 @@
-# LeonOS 4 Agent Guide
+# ReliefOS Agent Guide
 
-本文件是 LeonOS 4 仓库内所有自动化代理、维护者和贡献者的工作约定。它
+本文件是 ReliefOS 仓库内所有自动化代理、维护者和贡献者的工作约定。它
 描述当前架构、构建与验证边界，以及本项目维护者偏好的协作方式。除非用户的
 明确指令与本文件冲突，否则应遵守本文件。
 
@@ -23,14 +23,14 @@
 
 ## 2. 项目定位与运行时架构
 
-LeonOS 4 是面向 x86_64、UEFI 启动的操作系统项目。正常系统使用 FAT32 ESP
+ReliefOS 是面向 x86_64、UEFI 启动的操作系统项目。正常系统使用 FAT32 ESP
 和 ext2 根文件系统，应用运行在 Ring 3，内核和可加载驱动运行在 Ring 0。主要启动
 与服务链如下：
 
 ```text
 UEFI/GRUB
   -> boot/ loader.elf
-  -> kernel/ntclks 子仓产物 kernel.sys（Ring 0）
+  -> kernel/reliefnt 子仓产物 kernel.sys（Ring 0）
   -> userland init.elf
   -> desktop.elf（窗口服务器）
   -> 登录 / OOBE / 服务 / 普通桌面应用
@@ -46,11 +46,11 @@ installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
 | 路径 | 职责 |
 | --- | --- |
 | `boot/` | GRUB 配置与 EFI 模块；loader 源码在内核子仓 `boot/loader/`。 |
-| `kernel/ntclks/` | 内核子仓（gitlink，github.com/LeonOSProject/NTCLKS）：内核核心（调度、内存、ELF 进程、syscall、GUI IPC、网络、驱动管理、权限判定与 `lib/` 内部工具）、`drivers/`、`boot/loader/`、`include/uapi` 与内核侧 `include/leonos/`，内部保持原始嵌套布局。首次使用执行 `git submodule update --init --recursive`，并在子仓内 `make fetch`（其缓存不入库）。 |
-| `userland/runtime/` | LeonOS libc、syscall 包装、UI/字体、网络/HTTP/TLS、PTY 等公共实现。 |
+| `kernel/reliefnt/` | ReliefNT 子仓（gitlink，URL 为 github.com/ReliefOSProject/ReliefNT）：内核核心（调度、内存、ELF 进程、syscall、GUI IPC、网络、驱动管理、权限判定与 `lib/` 内部工具）、`drivers/`、`boot/loader/`、`include/uapi` 与内核侧 `include/reliefnt/`。首次使用执行 `git submodule update --init --recursive`，并在子仓内 `make fetch`（其缓存不入库）。 |
+| `userland/runtime/` | ReliefOS libc、syscall 包装、UI/字体、网络/HTTP/TLS、PTY 等公共实现。 |
 | `userland/apps/` | Ring-3 系统与桌面应用；`desktop/` 是窗口服务器，其他应用为它的客户端。 |
-| `userland/{busybox,cmd,stardustui}/` | 第三方软件的 LeonOS 端口、适配层与构建输入。 |
-| `include/leonos/` | 公共 C ABI 头文件；修改公开 ABI 时优先检查这里。 |
+| `userland/{busybox,cmd,stardustui}/` | 第三方软件的 ReliefOS 端口、适配层与构建输入。 |
+| `include/reliefos/` | 公共 C ABI 头文件；旧 `include/leonos/` 转发头保持兼容。 |
 | `system/` | 被 staging 的系统配置、字体、壁纸、证书、图标、应用资源和默认内容。 |
 | `configs/` | 动态组件清单、可提交 build profile 与默认配置。 |
 | `tools/` | 构建、Kconfig 同步、镜像、安装器、SDK、资源生成和验证脚本。 |
@@ -65,16 +65,16 @@ installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
   `syscall`；参数使用 `rax/rdi/rsi/rdx/r10/r8/r9`，负返回值为
   `-errno`。已实现接口才可视为可用，未知 syscall 返回 `-ENOSYS`。
 - 内核负责用户指针与长度验证、页表/进程资源、硬件和最终授权。
-- 内核内部能力按职责直接落在内核子仓的 `kernel/ntclks/kernel/ntclks/`（含 `lib/` 工具）和
-  `kernel/ntclks/drivers/bootstrap/storage/`（文件系统与 `LEONACL.SYS` 权限元数据），全部编译进
+- 内核内部能力按职责直接落在内核子仓的 `kernel/reliefnt/kernel/reliefnt/`（含 `lib/` 工具）和
+  `kernel/reliefnt/drivers/bootstrap/storage/`（文件系统与 `LEONACL.SYS` 权限元数据），全部编译进
   kernel.sys；不存在跨模块 callback 表或第二个启动镜像。用户态与内核之间只有
   syscall/ioctl ABI 和 GUI IPC。职责归属与旧数据格式的兼容策略见
   `docs/KERNEL_USERSPACE_BOUNDARIES.md`。
 - GUI 客户端与 `desktop.elf` 通过 GUI IPC/ioctl 通信，而不是共享窗口服务器
   的私有像素内存。应用提交自己的缓冲内容；不要把窗口服务器内部 buffer
   当作公共 ABI。
-- 来宾运行路径使用 Unix 根目录格式，例如 `/usr/lib/leonos/apps/desktop/desktop.elf`；
-  仓库源码路径（`system/`、`kernel/ntclks/drivers/`、`docs/`）是构建输入，不等于来宾路径。
+- 来宾运行路径使用 Unix 根目录格式，例如 `/usr/lib/reliefos/apps/desktop/desktop.elf`；
+  仓库源码路径（`system/`、`kernel/reliefnt/drivers/`、`docs/`）是构建输入，不等于来宾路径。
   现行 rootfs 契约见 `docs/ROOTFS_LAYOUT_AND_MIGRATION.md`。
   相对路径依赖任务当前目录；路径统一使用 Unix 根目录语义。
 
@@ -83,13 +83,13 @@ installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
 任何新 syscall、ioctl、公共结构、窗口/鼠标/网络/输入法 API 或 UI 库接口，
 都要逐项检查以下闭环，不能只修改一处：
 
-1. `include/leonos/*.h`：公共定义、常量、结构布局、权限语义和返回值。
-2. `kernel/ntclks/kernel/ntclks/`（内核子仓）：编号、用户范围检查、权限检查、实现和错误路径。
+1. `include/reliefos/*.h`：公共定义、常量、结构布局、权限语义和返回值。
+2. `kernel/reliefnt/kernel/reliefnt/`（内核子仓）：编号、用户范围检查、权限检查、实现和错误路径。
 3. `userland/runtime/include/` 与 `userland/runtime/src/`：声明、包装和实现。
 4. 使用该 API 的系统应用、窗口服务器及相关测试程序。
 5. `configs/header-export.list` 白名单与 `headers_install` 导出：SDK/用户态只消费
    导出结果，由 `tools/test_header_export.py` 校验；不维护手工 ABI 镜像副本。
-6. `packages/leonos-musl-sdk.tar.gz` 装配规则与归属/许可证文本。
+6. `packages/reliefos-musl-sdk.tar.gz` 装配规则与归属/许可证文本。
 7. `docs/ABI.md`、`docs/SYSCALLS.md` 或对应专题文档。
 
 公开结构应采用定宽类型，校验用户提供的指针、容量、长度、枚举值和版本。
@@ -98,7 +98,7 @@ installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
 
 ### libc 与第三方移植
 
-- musl、mimalloc 与 LeonOS 扩展库构成用户态 C 环境；不要把“成功链接”误称为
+- musl、mimalloc 与 ReliefOS 扩展库构成用户态 C 环境；不要把“成功链接”误称为
   “已完整移植”。每个移植软件都需要确认其真实源码、适配层、启动代码、
   musl/mimalloc 依赖、ELF 输出、镜像 staging 和运行路径。
 - 新增第三方软件时，除上游源码外还要处理：构建脚本、组件清单、镜像路径、
@@ -129,7 +129,7 @@ UI 修改必须横向检查，而不是只改一个应用。典型关联范围�
 
 - 用户个性化数据属于 `/home/<name>/appearance.conf`；Metro 与 Win95
   的基础色配置相互独立，不能相互覆盖。
-- `/etc/leonos/display.conf` 是尚无用户会话时的启动/默认外观，用于早期
+- `/etc/reliefos/display.conf` 是尚无用户会话时的启动/默认外观，用于早期
   framebuffer、bugcheck、登录、OOBE 和安装器等场景。它不能替代每用户配置。
 - 修改个性化设置后应立即经 Desktop 发布状态并让已打开应用收到主题变化；
   不要只写文件、等下次启动才生效。
@@ -212,7 +212,7 @@ make test-smoke
 - 下载只能出现在显式 fetch；生产消费已校验缓存，不允许隐式联网。依赖锁是唯一下载身份来源。
 - 新源文件、删除源文件、编译/链接参数变化、多输出成员缺失必须正确触发重建。
   对目录 stage 使用完整成员清单，临时树完成并校验后再发布，不能以 stamp 代替存在性检查。
-- 同一 O 的真实构建互斥，不手工伪造 LEONOS_BUILD_OWNER。不同 O 可并行。
+- 同一 O 的真实构建互斥，不手工伪造 RELIEFOS_BUILD_OWNER。不同 O 可并行。
   `-n/-q` 不重建被包含的配置，避免干扰持锁构建；首次准确预览前先 defconfig。
 - `all` 包括 kernel、userland、runtime、sdk、apk-repo、image-vmdk、iso、installer；
   `release` 再加本地 rpr-pages。run/run-debug/run-iso/run-installer 只负责运行对应产物。
@@ -246,7 +246,8 @@ make test-smoke
 - 编译通过不等于镜像已含文件；镜像已生成不等于虚拟机能启动；日志出现不等于
   UI 可见。分别证明。
 - QEMU 的 QMP Unix socket 不要放在 `/mnt/d/...`（WSL DrvFs 不支持绑定）；
-  使用 `/tmp/leonos-qmp-<id>.sock`。
+  使用支持 Unix socket 的数据盘目录，例如
+  `/home/xiaobai/Projects/Projects/.reliefos-qmp-<id>.sock`；不要使用 `/tmp` 或 tmpfs。
 - 遇到概率性失败，记录平台、镜像、网络、操作步骤和关键日志，重复定向验证；
   不要以单次成功或失败就宣布根因。
 - 新增安全审计报告时，使用简体中文，归档为 `docs/security/YYYY-MM-DD.md`，
@@ -254,7 +255,7 @@ make test-smoke
 
 ## 8. 代码注释规范
 
-`kernel/ntclks/kernel/ntclks/`（内核子仓）中的每个函数定义和公共函数声明必须紧贴
+`kernel/reliefnt/kernel/reliefnt/`（内核子仓）中的每个函数定义和公共函数声明必须紧贴
 Doxygen 风格块注释。C 与汇编预处理源统一使用 `/** ... */`，格式如下：
 
 ```c
@@ -283,7 +284,7 @@ int subsystem_handle(const struct request *request, struct result *out_result);
 - 新功能、公开 API、构建开关、镜像布局或第三方移植发生变化时，更新相关
   `docs/`、SDK 说明、示例和归属/许可证文本。文档只能描述
   已确认存在的接口；计划中的接口必须明确标为计划。
-- 日志应使用稳定前缀（例如 `[ntclks]`、`[desktop.elf]`、`[tls]`），包含足够的
+- 日志应使用稳定前缀（例如 `[reliefnt]`，兼容期 `[ntclks]`、`[desktop.elf]`、`[tls]`），包含足够的
   阶段、返回码和状态来定位问题，但不能泄露令牌、密码、Cookie、私钥或请求体。
 - 对用户的最终交付应优先给出结果，然后列出：修改了什么、关键路径、构建/
   打包/运行验证分别是否完成、已知限制和下一步。默认使用简体中文。
@@ -303,9 +304,9 @@ int subsystem_handle(const struct request *request, struct result *out_result);
   音频、鼠标、网络或安装交互已经验证。
 - 发布任务应同时考虑 VMDK、普通 ISO、Installer ISO、SDK、API 包、校验和与
   第三方归属文件；任何一项是否包含某个组件由当前 profile 与组件清单决定。
-- 内核子仓（`kernel/ntclks`，NTCLKS）日常开发在子仓内进行：在子仓里开分支或
+- ReliefNT 子仓（`kernel/reliefnt`，`https://github.com/ReliefOSProject/ReliefNT`）日常开发在子仓内进行：在子仓里开分支或
   游离提交（detached HEAD），验证通过后推送其工作分支或 main；主仓只提交
-  更新后的 gitlink（`git add kernel/ntclks`），不把子仓改动拆进主仓提交。
+  更新后的 gitlink（`git add kernel/reliefnt`），不把子仓改动拆进主仓提交。
   子仓 checkout 处于 detached HEAD 是正常状态（gitlink 检出即游离），不要
   在主仓 `git submodule update` 后顺手帮子仓建分支。发布目标（rpr-pages/
   release）要求子仓 clean 且 HEAD 与 gitlink 一致；开发构建（all/kernel）

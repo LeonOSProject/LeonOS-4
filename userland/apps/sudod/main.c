@@ -5,16 +5,16 @@
 #endif
 #include <errno.h>
 #include <fcntl.h>
-#include <leonos/sudo.h>
-#include <leonos/auth.h>
-#include <leonos/ui.h>
+#include <reliefos/sudo.h>
+#include <reliefos/auth.h>
+#include <reliefos/ui.h>
 #include <libintl.h>
 #define T(s) gettext(s)
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/fs.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
+#include <reliefos/layout.h>
+#include <reliefos/fs.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -34,13 +34,13 @@ struct sudod_result {
     int32_t status;
     uint32_t count;
     uint32_t reserved;
-    struct leonos_dir_entry entries[LEONOS_FS_MAX_ENTRIES];
+    struct reliefos_dir_entry entries[RELIEFOS_FS_MAX_ENTRIES];
 };
 
 struct sudod_request {
     uint32_t op;
-    char path1[LEONOS_FS_PATH_LEN];
-    char path2[LEONOS_FS_PATH_LEN];
+    char path1[RELIEFOS_FS_PATH_LEN];
+    char path2[RELIEFOS_FS_PATH_LEN];
 };
 
 static struct sudod_result sudod_output;
@@ -55,7 +55,7 @@ static int sudod_open_dir(const char *path)
     while (fd >= 0 && *part) {
         const char *end = strchr(part, '/');
         size_t length = end ? (size_t)(end - part) : strlen(part);
-        char name[LEONOS_FS_PATH_LEN];
+        char name[RELIEFOS_FS_PATH_LEN];
         if (!length || length >= sizeof(name)) { close(fd); errno = EINVAL; return -1; }
         memcpy(name, part, length);
         name[length] = 0;
@@ -72,7 +72,7 @@ static int sudod_open_dir(const char *path)
 
 static int sudod_parent_fd(const char *path, char *name)
 {
-    char parent[LEONOS_FS_PATH_LEN];
+    char parent[RELIEFOS_FS_PATH_LEN];
     size_t length = strlen(path);
     if (!sudo_path_allowed(path) || length < 2 || length >= sizeof(parent) ||
         path[length - 1] == '/') { errno = EINVAL; return -1; }
@@ -87,7 +87,7 @@ static int sudod_parent_fd(const char *path, char *name)
 static int sudod_straight_stat(const char *path, struct stat *st, void *context)
 {
     (void)context;
-    char name[LEONOS_FS_PATH_LEN];
+    char name[RELIEFOS_FS_PATH_LEN];
     int fd = sudod_parent_fd(path, name);
     if (fd < 0) return -1;
     int result = fstatat(fd, name, st, AT_SYMLINK_NOFOLLOW);
@@ -129,7 +129,7 @@ static int sudod_text_eq(const char *a, const char *b)
 }
 
 struct sudod_path {
-    char text[LEONOS_FS_PATH_LEN];
+    char text[RELIEFOS_FS_PATH_LEN];
 };
 
 /* Derive the directory that must be re-listed after a write. */
@@ -166,7 +166,7 @@ static int sudod_parent_of(struct sudod_path *out, const char *path)
 }
 
 /* Enumerate `path` into the shared result buffer. This is the same
- * open + leonos_readdir pair Fileman itself uses, so the entries are exactly
+ * open + reliefos_readdir pair Fileman itself uses, so the entries are exactly
  * what its list view already understands. */
 static int sudod_load_dir(const char *path)
 {
@@ -176,15 +176,15 @@ static int sudod_load_dir(const char *path)
         return -errno;
     }
     for (;;) {
-        struct leonos_dir_entry entry;
+        struct reliefos_dir_entry entry;
         int ret;
-        if (count >= LEONOS_FS_MAX_ENTRIES) {
+        if (count >= RELIEFOS_FS_MAX_ENTRIES) {
             /* Report a partial view as an error instead of silently dropping
              * entries the user would then believe are gone. */
             close(fd);
             return -EOVERFLOW;
         }
-        ret = leonos_readdir(fd, &entry);
+        ret = reliefos_readdir(fd, &entry);
         if (ret < 0) {
             close(fd);
             return ret;
@@ -215,8 +215,8 @@ static int sudod_remove_at(int parent, const char *name, unsigned depth, int rec
         return -errno;
     }
     for (;;) {
-        struct leonos_dir_entry entry;
-        int ret = leonos_readdir(fd, &entry);
+        struct reliefos_dir_entry entry;
+        int ret = reliefos_readdir(fd, &entry);
         if (ret < 0) {
             close(fd);
             return ret;
@@ -242,7 +242,7 @@ static int sudod_remove_at(int parent, const char *name, unsigned depth, int rec
 
 static int sudod_remove_tree(const char *path, int recursive)
 {
-    char name[LEONOS_FS_PATH_LEN];
+    char name[RELIEFOS_FS_PATH_LEN];
     int fd = sudod_parent_fd(path, name);
     if (fd < 0) return -errno;
     int result = sudod_remove_at(fd, name, 0, recursive);
@@ -282,10 +282,10 @@ static int sudod_finish(int32_t status)
 
 static int askpass(const char *prompt)
 {
-    char password[LEONOS_AUTH_PASSWORD_LEN] = {0};
+    char password[RELIEFOS_AUTH_PASSWORD_LEN] = {0};
     if (!prompt || !strcmp(prompt, "Password:") || !strcmp(prompt, "Password: "))
         prompt = T("Password:");
-    int result = leonos_ui_show_password_dialog(
+    int result = reliefos_ui_show_password_dialog(
         T("Authentication"), prompt, password, sizeof(password));
     fprintf(stderr, "[askpass] dialog result=%d\n", result);
     if (result == 1) {
@@ -309,7 +309,7 @@ static int askpass(const char *prompt)
 int main(int argc, char **argv)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
     struct sudod_request request;
     struct sudod_path dir;
@@ -346,7 +346,7 @@ int main(int argc, char **argv)
         result = fd < 0 || mkdirat(fd, request.path2, 0755) < 0 ? -errno : 0;
         if (fd >= 0) close(fd);
     } else if (request.op == SUDO_FILEOP_RENAME) {
-        char first[LEONOS_FS_PATH_LEN], second[LEONOS_FS_PATH_LEN];
+        char first[RELIEFOS_FS_PATH_LEN], second[RELIEFOS_FS_PATH_LEN];
         int src = sudod_parent_fd(request.path1, first);
         int dst = src < 0 ? -1 : sudod_parent_fd(request.path2, second);
         result = src < 0 || dst < 0 || renameat(src, first, dst, second) < 0 ? -errno : 0;

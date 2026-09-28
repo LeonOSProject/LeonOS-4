@@ -1,6 +1,6 @@
-#include <leonos/system.h>
-#include <leonos/net.h>
-#include <leonos/openrc.h>
+#include <reliefos/system.h>
+#include <reliefos/net.h>
+#include <reliefos/openrc.h>
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
@@ -14,7 +14,7 @@
  * A restarted process alone is not evidence of a selected NTP peer. */
 static int ntp_notification(void)
 {
-    int fd = open("/run/leonos/ntp-state", O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    int fd = open("/run/reliefos/ntp-state", O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
     if (fd < 0) return 0;
     struct stat st;
     if (fstat(fd, &st) || !S_ISREG(st.st_mode) || st.st_uid || (st.st_mode & 022)) {
@@ -36,13 +36,13 @@ static int ntp_notification(void)
     return adjtimex(&tx) >= 0 && (tx.status & STA_PLL);
 }
 
-int leonos_time_ntp_sync(uint32_t timeout_ms, struct leonos_time_sync *result)
+int reliefos_time_ntp_sync(uint32_t timeout_ms, struct reliefos_time_sync *result)
 {
     if (!result) { errno = EINVAL; return -1; }
     memset(result, 0, sizeof(*result));
     result->timeout_ms = timeout_ms;
-    result->status = LEONOS_NET_STATUS_NTP_TIMEOUT;
-    if (leonos_openrc_run("leonos-ntp", "restart")) { errno = EIO; return -1; }
+    result->status = RELIEFOS_NET_STATUS_NTP_TIMEOUT;
+    if (reliefos_openrc_run("reliefos-ntp", "restart")) { errno = EIO; return -1; }
     struct timespec started, now;
     if (clock_gettime(CLOCK_MONOTONIC, &started)) return -1;
     uint64_t budget = timeout_ms ? timeout_ms : 15000;
@@ -52,7 +52,7 @@ int leonos_time_ntp_sync(uint32_t timeout_ms, struct leonos_time_sync *result)
             if (clock_gettime(CLOCK_REALTIME, &wall)) return -1;
             result->unix_seconds = wall.tv_sec;
             result->valid = 1;
-            result->status = LEONOS_NET_STATUS_OK;
+            result->status = RELIEFOS_NET_STATUS_OK;
             return 0;
         }
         if (clock_gettime(CLOCK_MONOTONIC, &now)) return -1;
@@ -63,3 +63,5 @@ int leonos_time_ntp_sync(uint32_t timeout_ms, struct leonos_time_sync *result)
         if (nanosleep(&interval, NULL) && errno != EINTR) return -1;
     }
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_time_ntp_sync) leonos_time_ntp_sync __attribute__((alias("reliefos_time_ntp_sync")));

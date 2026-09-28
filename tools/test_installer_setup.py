@@ -14,13 +14,13 @@ CRYPTO = [f"third_party/mbedtls/library/{name}.c" for name in
 
 class InstallerSetupTests(unittest.TestCase):
     def test_hyfetch_defaults(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-hyfetch-home-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="reliefos-hyfetch-home-") as temporary:
             work = Path(temporary)
             executable = work / "prepare-home"
             subprocess.run([
                 "cc", "-std=gnu11", "-O1", "-g", "-fsanitize=address,undefined",
                 "-fno-omit-frame-pointer", "-ffunction-sections", "-fdata-sections",
-                "-Wl,--gc-sections", "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi",
+                "-Wl,--gc-sections", "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi",
                 "-idirafter", "userland/runtime/include",
                 "tools/tests/installer_hyfetch_config_test.c", "-o", str(executable),
             ], cwd=ROOT, check=True)
@@ -57,27 +57,27 @@ class InstallerSetupTests(unittest.TestCase):
             self.assertEqual(list(outside.iterdir()), [])
 
     def test_tty_input(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-login-input-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="reliefos-login-input-") as temporary:
             executable = Path(temporary) / "login-input"
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
                 "-Wl,--wrap=read,--wrap=write,--wrap=tcgetattr,--wrap=tcsetattr",
-                "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-idirafter", "userland/runtime/include",
+                "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-idirafter", "userland/runtime/include",
                 "tools/tests/installer_tty_input_test.c", "-o", str(executable),
             ], cwd=ROOT, check=True)
             subprocess.run([str(executable)], check=True, timeout=10)
 
     def test_setup_validation(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-components-test-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="reliefos-components-test-") as temporary:
             root = Path(temporary)
             executable = root / "setup"
             subprocess.run([
                 "cc", "-std=gnu11", "-O1", "-g",
                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi",
+                "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi",
                 "-idirafter", "userland/runtime/include", "tools/tests/installer_setup_validation_test.c",
                 "userland/apps/installer/installer_setup.c", "userland/auth/standard_accounts.c",
                 "userland/runtime/src/auth_password.c", "-o", str(executable),
@@ -85,14 +85,14 @@ class InstallerSetupTests(unittest.TestCase):
             subprocess.run([str(executable)], check=True, timeout=30)
 
     def test_legacy_accounts(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-setup-test-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="reliefos-setup-test-") as temporary:
             executable = Path(temporary) / "accounts"
             subprocess.run([
                 "cc", "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                '-DMBEDTLS_CONFIG_FILE="leonos_mbedtls_config.h"',
-                "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ithird_party/mbedtls/include",
+                '-DMBEDTLS_CONFIG_FILE="reliefos_mbedtls_config.h"',
+                "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ithird_party/mbedtls/include",
                 "-idirafter", "userland/runtime/include", "tools/tests/installer_accounts_test.c",
                 "-Itools/tests/legacy_authd/include",
                 "tools/tests/legacy_authd/accounts.c", "userland/runtime/src/auth_password.c",

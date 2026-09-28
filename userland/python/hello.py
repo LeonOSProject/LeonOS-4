@@ -3,7 +3,7 @@ import json
 import sys
 
 print("Python", sys.version.split()[0])
-print("Hello from Python 3 on LeonOS!")
+print("Hello from Python 3 on ReliefOS!")
 numbers = list(range(1, 11))
 print("Numbers:", numbers)
 print("Sum:", sum(numbers))

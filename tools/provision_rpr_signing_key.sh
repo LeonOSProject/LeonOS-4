@@ -24,7 +24,7 @@ command -v openssl >/dev/null 2>&1 || {
     exit 1
 }
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-rpr-key.XXXXXX")
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-rpr-key.XXXXXX")
 cleanup() {
     if command -v shred >/dev/null 2>&1; then
         find "$work" -type f -exec shred -u -- {} \; 2>/dev/null || true

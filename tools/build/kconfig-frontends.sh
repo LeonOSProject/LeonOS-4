@@ -64,10 +64,10 @@ if [ "$action" = build ]; then
 
     # The front end writes to a source-local staging name (see the run action
     # below), but users should be told about the configuration they requested.
-    # Keep the upstream behavior when the LeonOS-only display variable is absent.
+    # Keep the upstream behavior when the ReliefOS display variable is absent.
     confdata="$work_dir/libs/parser/confdata.c"
     display_old='	conf_message(_("configuration written to %s"), newname);'
-    display_env='	env = getenv("LEONOS_KCONFIG_DISPLAY_CONFIG");'
+    display_env='	env = getenv("RELIEFOS_KCONFIG_DISPLAY_CONFIG");'
     display_new='	conf_message(_("configuration written to %s"), env && *env ? env : newname);'
     if grep -F -q -- "$display_old" "$confdata"; then
         awk -v old="$display_old" -v first="$display_env" -v new="$display_new" \
@@ -99,7 +99,7 @@ fi
 # location working without leaving anything behind.
 kconfig_dir=$(CDPATH= readlink -f -- "$(dirname -- "$kconfig")" 2>/dev/null || dirname -- "$kconfig")
 cd "$kconfig_dir" || die "cannot enter $kconfig_dir"
-stage=".leonos-kconfig-stage.$$"
+stage=".reliefos-kconfig-stage.$$"
 cleanup_stage() { rm -f "$stage" "$stage~" "$stage.old"; }
 trap cleanup_stage EXIT INT TERM
 if [ -f "$config" ]; then
@@ -115,8 +115,8 @@ fi
 mkdir -p include/config || die 'cannot create the kconfig scratch directory'
 tmpconfig_before=$(ls .tmpconfig.* 2>/dev/null | sort)
 KCONFIG_CONFIG=$stage
-LEONOS_KCONFIG_DISPLAY_CONFIG=$config
-export KCONFIG_CONFIG LEONOS_KCONFIG_DISPLAY_CONFIG
+RELIEFOS_KCONFIG_DISPLAY_CONFIG=$config
+export KCONFIG_CONFIG RELIEFOS_KCONFIG_DISPLAY_CONFIG
 
 case "$mode" in
     defconfig)

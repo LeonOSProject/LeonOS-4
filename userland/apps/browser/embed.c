@@ -26,7 +26,7 @@ static void browser_embed_reset(void)
     menu_open = BROWSER_MENU_NONE;
     browser_should_exit = 0;
     browser_form_clear_focus();
-    browser_toast = (struct leonos_ui_toast_state){0};
+    browser_toast = (struct reliefos_ui_toast_state){0};
     for (uint32_t i = 0; i < BROWSER_MAX_LINES; ++i) {
         lines[i] = (struct browser_line){0};
     }
@@ -74,15 +74,15 @@ void browser_embed_init(uint32_t width, uint32_t height, const char *initial_url
                                    BROWSER_MAX_W);
     init_h = browser_embed_min_u32(height ? height : BROWSER_INITIAL_H,
                                    BROWSER_MAX_H);
-    leonos_ui_set_font_path(BROWSER_FONT_PATH);
-    leonos_ui_set_font_fallback_path(BROWSER_FONT_FALLBACK_PATH);
-    leonos_ui_bind(&ui, pixels, init_w, init_h, BROWSER_MAX_W);
+    reliefos_ui_set_font_path(BROWSER_FONT_PATH);
+    reliefos_ui_set_font_fallback_path(BROWSER_FONT_FALLBACK_PATH);
+    reliefos_ui_bind(&ui, pixels, init_w, init_h, BROWSER_MAX_W);
     view_w = init_w;
     view_h = init_h;
     browser_embed_reset();
     browser_bookmarks_load();
     copy_text(address_input, sizeof(address_input), initial_url ? initial_url : "");
-    leonos_ui_edit_state_init(&address_edit, address_input, sizeof(address_input));
+    reliefos_ui_edit_state_init(&address_edit, address_input, sizeof(address_input));
     address_edit.focused = 0;
     if (initial_url && initial_url[0]) {
         navigate_to(initial_url, 1);
@@ -92,7 +92,7 @@ void browser_embed_init(uint32_t width, uint32_t height, const char *initial_url
     }
 }
 
-void browser_embed_draw(struct leonos_ui_surface *surface)
+void browser_embed_draw(struct reliefos_ui_surface *surface)
 {
     if (!surface || !surface->pixels) {
         return;
@@ -102,21 +102,21 @@ void browser_embed_draw(struct leonos_ui_surface *surface)
     draw_browser();
 }
 
-void browser_embed_handle_mouse_button(struct leonos_gui_app_event *event)
+void browser_embed_handle_mouse_button(struct reliefos_gui_app_event *event)
 {
     handle_mouse_button(event);
 }
 
-void browser_embed_handle_mouse_wheel(struct leonos_gui_app_event *event)
+void browser_embed_handle_mouse_wheel(struct reliefos_gui_app_event *event)
 {
-    if (leonos_ui_vscrollbar_handle_wheel(&scroll_line,
+    if (reliefos_ui_vscrollbar_handle_wheel(&scroll_line,
                                           line_count ? line_count : 1U,
                                           visible_rows(), event->dy)) {
         present_browser();
     }
 }
 
-void browser_embed_handle_key(struct leonos_gui_app_event *event)
+void browser_embed_handle_key(struct reliefos_gui_app_event *event)
 {
     handle_key(event);
 }

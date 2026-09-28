@@ -23,18 +23,18 @@ done
 SH
 chmod +x "$w/config-tool"
 cat > "$w/test.mk" <<'MAKE'
-LEONOS_SRC := $(TEST_WORK)/src
+RELIEFOS_SRC := $(TEST_WORK)/src
 O_CONFIG := $(TEST_WORK)/out/config
 O_HOST := $(TEST_WORK)/out/host
 O_INCLUDE := $(TEST_WORK)/out/include
 O_GENERATED := $(TEST_WORK)/out/generated
-LEONOS_HOST_PUFF_SRC := puff.c
-LEONOS_CONFIG_TOOL := $(TEST_WORK)/config-tool
-LEONOS_PASSIVE := 1
+RELIEFOS_HOST_PUFF_SRC := puff.c
+RELIEFOS_CONFIG_TOOL := $(TEST_WORK)/config-tool
+RELIEFOS_PASSIVE := 1
 include $(TEST_REPO)/mk/config.mk
 .PHONY: front derived
 front: $(KCONFIG_CONF) $(KCONFIG_MCONF)
-derived: $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(LEONOS_AUTOCONF_MK)
+derived: $(AUTOCONF_H) $(AUTOCONF_INSTALLER_H) $(RELIEFOS_AUTOCONF_MK)
 $(O_INCLUDE)/generated:
 	@mkdir -p $@
 MAKE

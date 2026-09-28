@@ -2,6 +2,7 @@
 # Keep local identity, authentication and boot configuration as .apk-new.
 # This is configuration-file handling, not a sandbox for package scripts.
 !etc/leonos
+!etc/reliefos
 !etc/os-release
 !etc/passwd
 !etc/shadow

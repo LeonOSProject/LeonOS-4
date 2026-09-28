@@ -1,8 +1,8 @@
 /*
  * Subprocess execution for host build tools.
  */
-#ifndef LEONOS_HOST_COMMON_PROCESS_H
-#define LEONOS_HOST_COMMON_PROCESS_H
+#ifndef RELIEFOS_HOST_COMMON_PROCESS_H
+#define RELIEFOS_HOST_COMMON_PROCESS_H
 
 /**
  * @brief Run one program to completion using argv, never a shell string.
@@ -26,4 +26,4 @@
 int run_process(const char *program, char *const argv[], const char *working_dir,
         int *out_child_status);
 
-#endif /* LEONOS_HOST_COMMON_PROCESS_H */
+#endif /* RELIEFOS_HOST_COMMON_PROCESS_H */

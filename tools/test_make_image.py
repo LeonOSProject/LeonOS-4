@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for the host-independent LeonOS GPT image writer."""
+"""Unit tests for the host-independent ReliefOS GPT image writer."""
 
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ from make_image import (
     SECTOR_SIZE,
     write_gpt,
     make_root_tree,
+    make_boot_tree,
 )
 from populate_exfat import ExfatVolume
 
@@ -41,8 +42,35 @@ def assert_header_crc(test: unittest.TestCase, image: bytes, lba: int) -> None:
 
 
 class LocaleSeedTests(unittest.TestCase):
+    def test_boot_tree_stages_canonical_and_legacy_esp_payloads(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="reliefos-esp-layout-") as directory:
+            root = Path(directory)
+            staging = root / "staging"
+            destination = root / "esp"
+            (staging / "EFI/BOOT").mkdir(parents=True)
+            (staging / "grub").mkdir()
+            for name, value in (
+                ("EFI/BOOT/BOOTX64.EFI", b"efi"),
+                ("loader.elf", b"loader"),
+                ("grub/grub.cfg", b"menu"),
+                ("reliefos/kernel.sys", b"kernel"),
+                ("leonos/kernel.sys", b"kernel"),
+                ("etc/reliefos/display.conf", b"theme=metro\n"),
+            ):
+                path = staging / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(value)
+
+            make_boot_tree(staging, destination)
+            self.assertEqual((destination / "reliefos/kernel.sys").read_bytes(), b"kernel")
+            self.assertEqual((destination / "leonos/kernel.sys").read_bytes(), b"kernel")
+            self.assertEqual((destination / "reliefos/config/display.conf").read_bytes(),
+                             b"theme=metro\n")
+            self.assertEqual((destination / "leonos/config/display.conf").read_bytes(),
+                             b"theme=metro\n")
+
     def test_root_locale_seed(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="leonos-locale-test-") as directory:
+        with tempfile.TemporaryDirectory(prefix="reliefos-locale-test-") as directory:
             root = Path(directory)
             staging = root / "staging"
             (staging / "etc/skel").mkdir(parents=True)
@@ -50,7 +78,7 @@ class LocaleSeedTests(unittest.TestCase):
             for locale in ("zh_CN.UTF-8", "en_US.UTF-8"):
                 destination = root / locale
                 make_root_tree(staging, destination, locale)
-                self.assertEqual((destination / "etc/leonos/locale.conf").read_text(),
+                self.assertEqual((destination / "etc/reliefos/locale.conf").read_text(),
                                  f"LANG={locale}\n")
             with self.assertRaises(ValueError):
                 make_root_tree(staging, root / "invalid", "../bad")
@@ -59,7 +87,7 @@ class LocaleSeedTests(unittest.TestCase):
 
 class GptWriterTests(unittest.TestCase):
     def test_writes_valid_primary_and_backup_gpt(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="leonos-gpt-test-") as directory:
+        with tempfile.TemporaryDirectory(prefix="reliefos-gpt-test-") as directory:
             image_path = Path(directory) / "disk.raw"
             image_size = 64 * 1024 * 1024
             with image_path.open("wb") as image:
@@ -111,7 +139,7 @@ class GptWriterTests(unittest.TestCase):
             assert_header_crc(self, image, backup_lba)
 
     def test_ext2_compatibility_gpt_type_remains_available(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="leonos-gpt-ext2-test-") as directory:
+        with tempfile.TemporaryDirectory(prefix="reliefos-gpt-ext2-test-") as directory:
             image_path = Path(directory) / "disk.raw"
             with image_path.open("wb") as image:
                 image.truncate(64 * 1024 * 1024)
@@ -127,13 +155,13 @@ class GptWriterTests(unittest.TestCase):
                      "exfatprogs is required for exFAT image validation")
 class ExfatPopulationTests(unittest.TestCase):
     def test_standard_volume_metadata_and_expanded_directory(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="leonos-exfat-test-") as directory:
+        with tempfile.TemporaryDirectory(prefix="reliefos-exfat-test-") as directory:
             root = Path(directory)
             image_path = root / "root.exfat"
             staging = root / "staging"
             data = staging / "data"
             data.mkdir(parents=True)
-            (staging / "Unicode-世界.txt").write_text("LeonOS exFAT\n", encoding="utf-8")
+            (staging / "Unicode-世界.txt").write_text("ReliefOS exFAT\n", encoding="utf-8")
             # More than one 4 KiB directory cluster of 3-entry file sets.
             for index in range(96):
                 (data / f"entry-{index:03d}.txt").write_text(str(index), encoding="ascii")

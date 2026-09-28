@@ -41,7 +41,7 @@ The standard exclusions cover build products and temporary directories such as
 `buildsystem/tmp/`. Common binary and compiler-generated file suffixes are
 also excluded. The repository configuration additionally excludes the optional
 `third_party/llama2.c` component and `third_party/cmd`, because those trees are
-not part of LeonOS's code-size statistics. These path exclusions are recursive,
+not part of ReliefOS's code-size statistics. These path exclusions are recursive,
 so all files below each directory are omitted.
 
 Adjust persistent exclusions in `tools/codecount.json`:

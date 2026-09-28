@@ -1,25 +1,25 @@
-#include <leonos/fs.h>
-#include <leonos/gui.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/launch.h>
-#include <leonos/launch_result.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
+#include <reliefos/launch.h>
+#include <reliefos/launch_result.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
+#include <reliefos/layout.h>
 
 #define RUN_W 360
 #define RUN_H 148
-#define PATH_MAX_LEN LEONOS_FS_PATH_LEN
+#define PATH_MAX_LEN RELIEFOS_FS_PATH_LEN
 #define T(s) gettext(s)
 
 static uint32_t pixels[RUN_W * RUN_H];
-static char input_path[PATH_MAX_LEN] = LEONOS_LAYOUT_LEONOS_APPS "/";
+static char input_path[PATH_MAX_LEN] = RELIEFOS_LAYOUT_RELIEFOS_APPS "/";
 static char status_text[96];
-static struct leonos_ui_edit_state input_edit;
+static struct reliefos_ui_edit_state input_edit;
 
 static void copy_text(char *dst, uint32_t cap, const char *src)
 {
@@ -63,23 +63,23 @@ static void append_text(char *dst, uint32_t cap, const char *prefix, int value)
     dst[pos] = 0;
 }
 
-static void draw_run(struct leonos_ui_surface *ui)
+static void draw_run(struct reliefos_ui_surface *ui)
 {
-    leonos_ui_rect(ui, 0, 0, RUN_W, RUN_H, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 12, 14, T("Open LeonOS program or file path"), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 12, 38, T("Path:"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_edit_state_draw(ui, 56, 34, RUN_W - 68, &input_edit, 0);
-    leonos_ui_statusbar(ui, RUN_H - 28, 28, status_text);
+    reliefos_ui_rect(ui, 0, 0, RUN_W, RUN_H, RELIEFOS_UI_GRAY);
+    reliefos_ui_text(ui, 12, 14, T("Open ReliefOS program or file path"), RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_text(ui, 12, 38, T("Path:"), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_edit_state_draw(ui, 56, 34, RUN_W - 68, &input_edit, 0);
+    reliefos_ui_statusbar(ui, RUN_H - 28, 28, status_text);
 }
 
 static void launch_path(int window_id)
 {
-    char *argv[LEONOS_LAUNCH_MAX_ARGS + 1];
+    char *argv[RELIEFOS_LAUNCH_MAX_ARGS + 1];
     int pid;
-    pid = leonos_launch_command_line(input_path, argv, LEONOS_LAUNCH_MAX_ARGS + 1);
+    pid = reliefos_launch_command_line(input_path, argv, RELIEFOS_LAUNCH_MAX_ARGS + 1);
     if (pid < 0) {
-        if (leonos_launch_is_error(pid)) {
-            copy_text(status_text, sizeof(status_text), leonos_launch_error_text(pid));
+        if (reliefos_launch_is_error(pid)) {
+            copy_text(status_text, sizeof(status_text), reliefos_launch_error_text(pid));
         } else {
             append_text(status_text, sizeof(status_text), T("Launch failed "), pid);
         }
@@ -93,10 +93,10 @@ static void launch_path(int window_id)
 int main(int argc, char **argv, char **envp)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
     (void)argc;
     (void)argv;
@@ -104,41 +104,41 @@ int main(int argc, char **argv, char **envp)
 
     puts("[run.elf] run dialog starting");
     copy_text(status_text, sizeof(status_text), T("Enter a file path and press Enter"));
-    window_id = leonos_gui_create_app_window_ex(T("Run"), T("Open file path"),
-                                                RUN_W, RUN_H, LEONOS_GUI_WINDOW_NO_RESIZE);
+    window_id = reliefos_gui_create_app_window_ex(T("Run"), T("Open file path"),
+                                                RUN_W, RUN_H, RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[run.elf] create window failed=%d\n", window_id);
         return 1;
     }
 
-    leonos_ui_bind(&ui, pixels, RUN_W, RUN_H, RUN_W);
-    leonos_ui_edit_state_init(&input_edit, input_path, sizeof(input_path));
+    reliefos_ui_bind(&ui, pixels, RUN_W, RUN_H, RUN_W);
+    reliefos_ui_edit_state_init(&input_edit, input_path, sizeof(input_path));
     input_edit.focused = 1;
     draw_run(&ui);
-    leonos_gui_present_window((uint32_t)window_id, RUN_W, RUN_H, RUN_W, pixels);
+    reliefos_gui_present_window((uint32_t)window_id, RUN_W, RUN_H, RUN_W, pixels);
 
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        while (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        while (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON) {
-                if (leonos_ui_edit_state_handle_mouse(&input_edit, event.x, event.y,
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON) {
+                if (reliefos_ui_edit_state_handle_mouse(&input_edit, event.x, event.y,
                                                       56, 34, RUN_W - 68, event.buttons)) {
                     draw_run(&ui);
-                    leonos_gui_present_window((uint32_t)window_id, RUN_W, RUN_H, RUN_W, pixels);
+                    reliefos_gui_present_window((uint32_t)window_id, RUN_W, RUN_H, RUN_W, pixels);
                 }
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN || event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
-                if (event.pressed && event.keycode == LEONOS_KEY_ENTER) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN || event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
+                if (event.pressed && event.keycode == RELIEFOS_KEY_ENTER) {
                     launch_path(window_id);
-                } else if (!leonos_ui_edit_state_handle_key(&input_edit, event.keycode, event.pressed)) {
+                } else if (!reliefos_ui_edit_state_handle_key(&input_edit, event.keycode, event.pressed)) {
                     continue;
                 }
                 draw_run(&ui);
-                leonos_gui_present_window((uint32_t)window_id, RUN_W, RUN_H, RUN_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, RUN_W, RUN_H, RUN_W, pixels);
             }
         }
         sleep_ms(10);

@@ -9,7 +9,7 @@
 static struct browser_cookie browser_cookies[BROWSER_MAX_COOKIES];
 static uint32_t browser_cookie_count;
 static uint8_t browser_cookies_loaded;
-static char browser_cookie_store_path[LEONOS_FS_PATH_LEN];
+static char browser_cookie_store_path[RELIEFOS_FS_PATH_LEN];
 static char browser_cookie_file_buffer[BROWSER_COOKIE_FILE_CAP];
 
 static uint32_t cookie_text_len(const char *text)
@@ -113,17 +113,17 @@ static void cookie_append_path(char *dst, uint32_t cap,
 
 static void cookie_build_store_path(char *dst, uint32_t cap)
 {
-    struct leonos_user_info user;
-    char dir[LEONOS_FS_PATH_LEN];
-    if (leonos_auth_current(&user) == 0 && user.uid && user.home[0]) {
+    struct reliefos_user_info user;
+    char dir[RELIEFOS_FS_PATH_LEN];
+    if (reliefos_auth_current(&user) == 0 && user.uid && user.home[0]) {
         cookie_append_path(dir, sizeof(dir), user.home,
                            BROWSER_COOKIE_STORE_DIR);
         (void)mkdir(dir, 0700);
     } else {
         (void)mkdir("/var", 0755);
         (void)mkdir("/var/lib", 0755);
-        (void)mkdir("/var/lib/leonos", 0750);
-        cookie_append_path(dir, sizeof(dir), "/var/lib/leonos",
+        (void)mkdir("/var/lib/reliefos", 0750);
+        cookie_append_path(dir, sizeof(dir), "/var/lib/reliefos",
                            BROWSER_COOKIE_STORE_DIR);
         (void)mkdir(dir, 0700);
     }
@@ -132,8 +132,8 @@ static void cookie_build_store_path(char *dst, uint32_t cap)
 
 static uint64_t cookie_now_unix(void)
 {
-    struct leonos_time_info info;
-    if (leonos_time_info(&info) == 0 && info.valid) {
+    struct reliefos_time_info info;
+    if (reliefos_time_info(&info) == 0 && info.valid) {
         return info.unix_seconds;
     }
     return 0;
@@ -242,7 +242,7 @@ static void cookie_save(void)
     browser_cookie_file_buffer[0] = 0;
     append_text(browser_cookie_file_buffer, &pos,
                 sizeof(browser_cookie_file_buffer),
-                "# LeonOS Browser cookies v1\n");
+                "# ReliefOS Browser cookies v1\n");
     for (uint32_t i = 0; i < browser_cookie_count; ++i) {
         const struct browser_cookie *cookie = &browser_cookies[i];
         append_text(browser_cookie_file_buffer, &pos,
@@ -272,7 +272,7 @@ static void cookie_save(void)
                     sizeof(browser_cookie_file_buffer), '\n');
     }
     fd = open(browser_cookie_store_path,
-              LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0600);
+              RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0600);
     if (fd >= 0) {
         (void)write(fd, browser_cookie_file_buffer,
                     cookie_text_len(browser_cookie_file_buffer));
@@ -322,7 +322,7 @@ static void cookie_load_file(void)
     if (!browser_cookie_store_path[0]) {
         return;
     }
-    fd = open(browser_cookie_store_path, LEONOS_O_RDONLY, 0);
+    fd = open(browser_cookie_store_path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return;
     }
@@ -355,7 +355,7 @@ static void cookie_load_file(void)
 
 static void cookie_ensure_loaded(void)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     cookie_build_store_path(path, sizeof(path));
     if (!browser_cookies_loaded ||
         !text_eq(path, browser_cookie_store_path)) {
@@ -753,12 +753,12 @@ static int browser_http_request_with_cookies(
     const char *body, uint32_t body_len, uint32_t timeout_ms,
     char *response_body, uint32_t response_body_capacity,
     char *response_headers, uint32_t response_headers_capacity,
-    struct leonos_http_response *response)
+    struct reliefos_http_response *response)
 {
     char current_url[BROWSER_URL_CAP];
     char next_url[BROWSER_URL_CAP];
     char location[BROWSER_URL_CAP];
-    char merged_headers[LEONOS_HTTP_HEADER_MAX];
+    char merged_headers[RELIEFOS_HTTP_HEADER_MAX];
     const char *active_method = method && method[0] ? method : "GET";
     const char *active_extra = extra_headers;
     const char *active_body = body;
@@ -772,24 +772,24 @@ static int browser_http_request_with_cookies(
     }
     copy_text(current_url, sizeof(current_url), url);
     for (;;) {
-        struct leonos_http_request request;
+        struct reliefos_http_request request;
         browser_http_prepare_headers(current_url, active_extra,
                                      merged_headers,
                                      sizeof(merged_headers));
-        request = (struct leonos_http_request){
+        request = (struct reliefos_http_request){
             .url = current_url,
             .method = active_method,
             .extra_headers = merged_headers,
             .request_body = active_body,
             .request_body_len = active_body_len,
-            .timeout_ms = timeout_ms ? timeout_ms : LEONOS_HTTP_DEFAULT_TIMEOUT_MS,
-            .max_redirects = LEONOS_HTTP_NO_REDIRECTS,
+            .timeout_ms = timeout_ms ? timeout_ms : RELIEFOS_HTTP_DEFAULT_TIMEOUT_MS,
+            .max_redirects = RELIEFOS_HTTP_NO_REDIRECTS,
             .response_body = response_body,
             .response_body_capacity = response_body_capacity,
             .response_headers = response_headers,
             .response_headers_capacity = response_headers_capacity,
         };
-        ret = leonos_http_request(&request, response);
+        ret = reliefos_http_request(&request, response);
         if (ret < 0) {
             return ret;
         }
@@ -816,15 +816,15 @@ static int browser_http_request_with_cookies(
         if (!location[0]) {
             return 0;
         }
-        if (redirect_count >= LEONOS_HTTP_DEFAULT_REDIRECTS ||
-            leonos_http_resolve_url(current_url, location,
+        if (redirect_count >= RELIEFOS_HTTP_DEFAULT_REDIRECTS ||
+            reliefos_http_resolve_url(current_url, location,
                                     next_url, sizeof(next_url)) < 0) {
             response->net_status = NET_SERVICE_STATUS_HTTP_FAILED;
             return 0;
         }
         copy_text(current_url, sizeof(current_url), next_url);
         ++redirect_count;
-        preserved_flags |= LEONOS_HTTP_FLAG_REDIRECTED;
+        preserved_flags |= RELIEFOS_HTTP_FLAG_REDIRECTED;
         if (response->http_status == 303U ||
             ((response->http_status == 301U || response->http_status == 302U) &&
              !text_eq_ignore_case(active_method, "GET"))) {
@@ -841,7 +841,7 @@ int browser_http_get_with_cookies(const char *url, uint32_t timeout_ms,
                                   uint32_t response_body_capacity,
                                   char *response_headers,
                                   uint32_t response_headers_capacity,
-                                  struct leonos_http_response *response)
+                                  struct reliefos_http_response *response)
 {
     return browser_http_request_with_cookies(
         url, "GET", 0, 0, 0, timeout_ms, response_body, response_body_capacity,
@@ -853,13 +853,13 @@ int browser_http_post_with_cookies(const char *url, const char *body,
                                    uint32_t response_body_capacity,
                                    char *response_headers,
                                    uint32_t response_headers_capacity,
-                                   struct leonos_http_response *response)
+                                   struct reliefos_http_response *response)
 {
     const char *request_body = body ? body : "";
     return browser_http_request_with_cookies(
         url, "POST", "Content-Type: application/x-www-form-urlencoded\r\n",
         request_body, (uint32_t)strlen(request_body),
-        LEONOS_HTTP_DEFAULT_TIMEOUT_MS, response_body,
+        RELIEFOS_HTTP_DEFAULT_TIMEOUT_MS, response_body,
         response_body_capacity, response_headers,
         response_headers_capacity, response);
 }

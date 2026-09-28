@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "../../kernel/ntclks/net/net_udp.c"
+#include "../../kernel/reliefnt/net/net_udp.c"
 
 static struct task current;
 static struct task_file files[80];
@@ -25,8 +25,8 @@ int task_allocate_fd(struct task *task, int minimum, struct task_file **out)
 }
 struct task_file *task_file_for_fd(struct task *task, int fd)
 { (void)task; return fd >= 0 && fd < 80 && files[fd].used ? &files[fd] : NULL; }
-int net_get_config(struct leonos_net_config *config)
-{ *config = (struct leonos_net_config){.local_ip = 0x0a00020f}; return 0; }
+int net_get_config(struct reliefos_net_config *config)
+{ *config = (struct reliefos_net_config){.local_ip = 0x0a00020f}; return 0; }
 void net_poll_packets(void) {}
 int net_ipv4_send_udp(uint32_t source, uint32_t destination, uint16_t source_port,
                        uint16_t destination_port, const void *data, uint32_t length)
@@ -42,7 +42,7 @@ int main(void)
     current.cap_effective = 1ULL << CAP_NET_BIND_SERVICE;
     int a = open_socket(), b = open_socket();
     assert(a >= 0 && b >= 0 && a != b);
-    assert(files[a].fd_flags == 1 && (files[a].flags & LEONOS_O_NONBLOCK));
+    assert(files[a].fd_flags == 1 && (files[a].flags & RELIEFOS_O_NONBLOCK));
     struct sockaddr_in dest = {.sin_family = AF_INET, .sin_port = swap16(55000),
                                .sin_addr = {.s_addr = swap32(0x7f000001)}};
     assert(call(__NR_bind, b, (uintptr_t)&dest, sizeof(dest), 0, 0) == 0);
@@ -67,12 +67,12 @@ int main(void)
     assert(call(__NR_setsockopt, b, SOL_SOCKET, SO_RCVTIMEO, (uintptr_t)timeout, sizeof(timeout)) == 0);
     size = sizeof(timeout);
     assert(call(__NR_getsockopt, b, SOL_SOCKET, SO_RCVTIMEO, (uintptr_t)timeout, (uintptr_t)&size) == 0);
-    assert(timeout[0] == 0 && timeout[1] == 1000000 / NTCLKS_TICK_HZ);
-    files[b].flags &= ~LEONOS_O_NONBLOCK;
+    assert(timeout[0] == 0 && timeout[1] == 1000000 / RELIEFNT_TICK_HZ);
+    files[b].flags &= ~RELIEFOS_O_NONBLOCK;
     assert(task_udp_recv(&files[b], text, sizeof(text), 0, 0, 0) == KERNEL_SYSCALL_BLOCKED);
     ++ticks;
     assert(task_udp_recv(&files[b], text, sizeof(text), 0, 0, 0) == -LINUX_EAGAIN);
-    files[b].flags |= LEONOS_O_NONBLOCK;
+    files[b].flags |= RELIEFOS_O_NONBLOCK;
     assert(call(__NR_setsockopt, b, SOL_SOCKET, SO_SNDTIMEO, (uintptr_t)timeout, sizeof(timeout)) == -LINUX_ENOPROTOOPT);
     assert(call(__NR_getsockopt, b, SOL_SOCKET, SO_SNDTIMEO, (uintptr_t)timeout, (uintptr_t)&size) == -LINUX_ENOPROTOOPT);
     int value = -1;

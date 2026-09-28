@@ -33,22 +33,23 @@ ext2)
         # unmarked (component disabled); tools/test_service_marker.py pins the
         # marked set against the plan/manifest and system/*/etc/group.
         for base in "" /install/root; do
-            for role in /usr/lib/leonos/apps/desktop/desktop.elf:60001 \
-                        /usr/lib/leonos/apps/windowd/windowd.elf:60002 \
-                        /usr/lib/leonos/apps/imd/imd.elf:60002; do
+            for role in /usr/lib/reliefos/apps/desktop/desktop.elf:60001 \
+                        /usr/lib/reliefos/apps/windowd/windowd.elf:60002 \
+                        /usr/lib/reliefos/apps/imd/imd.elf:60002; do
                 [ -e "$1$base${role%:*}" ] || continue
                 chown -h "0:${role##*:}" "$1$base${role%:*}"
             done
         done
-        if [ -f "$1/etc/leonos/test-image" ]; then
-            test "$(cat "$1/etc/leonos/test-image")" = leonos-standalone-test-v1
+        if [ -f "$1/etc/reliefos/test-image" ]; then
+            test "$(cat "$1/etc/reliefos/test-image")" = leonos-standalone-test-v1
             test ! -L "$1/home/test"
             find "$1/home/test" -exec chown -h 1000:1000 {} +
         fi
         mke2fs -q -t ext2 -F -b 4096 -I 128 -O none,filetype,sparse_super,large_file -m 0 -E root_owner=0:0,hash_seed="$4" -U "$4" -N "$3" -d "$1" "$2"
     ' sh "$work/root" "$work/root.ext2" "$inodes" "$uuid"
-    : "${LEONOS_EXT2_TIME:?ext2 timestamp tool required}"
-    "$LEONOS_EXT2_TIME" "$work/root.ext2" "$epoch"
+    reliefos_ext2_time=${RELIEFOS_EXT2_TIME:-${LEONOS_EXT2_TIME:-}}
+    : "${reliefos_ext2_time:?ext2 timestamp tool required}"
+    "$reliefos_ext2_time" "$work/root.ext2" "$epoch"
     e2fsck -f -n "$work/root.ext2"
     mv "$work/root.ext2" "$output"
     ;;

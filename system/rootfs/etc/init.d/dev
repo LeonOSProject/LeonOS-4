@@ -1,6 +1,6 @@
 #!/sbin/openrc-run
 
-description="NTCLKS device namespace"
+description="ReliefNT device namespace"
 
 depend() {
 	provide dev

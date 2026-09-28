@@ -11,25 +11,30 @@ work=$(mktemp -d "$output.new.XXXXXX")
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 cp -a "$raw" "$work/installed-raw"
 for app in desktop settings; do
-    cp "$out/userland-installer-policy/$app.elf" "$work/installed-raw/usr/lib/leonos/apps/$app/$app.elf"
+    mkdir -p "$work/installed-raw/usr/lib/reliefos/apps/$app"
+    cp "$out/userland-installer-policy/$app.elf" "$work/installed-raw/usr/lib/reliefos/apps/$app/$app.elf"
 done
+mkdir -p "$work/installed-raw/usr/lib/reliefos"
+cp "$out/installer/lib/libreliefos.so.2" "$work/installed-raw/usr/lib/reliefos/libreliefos.so.2"
 cp "$out/installer/lib/libleonos.so.2" "$work/installed-raw/usr/lib/leonos/libleonos.so.2"
 rm -f "$work/installed-raw/etc/license.conf" "$work/installed-raw/etc/install.id"
 package_root() {
-    leonos_log APK "$3"
+    reliefos_log APK "$3"
     SOURCE_DATE_EPOCH=$epoch APK_MUSL_SYSROOT=$out/sysroot/musl sh "$src/tools/build/apk-stage.sh" "$src" "$1" "$2" "$3" \
         "$APK_TOOL" "$APK_UPSTREAM" "$src/configs/apk-ownership.json" "$APK_OWN_TOOL" "$APK_KEY" "$APK_VERSION"
 }
 package_root "$work/installed-raw" "$work/installed" "$out/packages/apk-installed"
 cp -a "$raw" "$work/runtime-raw"
-mkdir -p "$work/runtime-raw/usr/lib/leonos/apps/installer"
-cp "$out/userland/installer.elf" "$work/runtime-raw/usr/lib/leonos/apps/installer/installer.elf"
-chmod 755 "$work/runtime-raw/usr/lib/leonos/apps/installer/installer.elf"
-ln -s ../lib/leonos/apps/installer/installer.elf "$work/runtime-raw/usr/bin/installer"
+mkdir -p "$work/runtime-raw/usr/lib/reliefos/apps/installer"
+cp "$out/userland/installer.elf" "$work/runtime-raw/usr/lib/reliefos/apps/installer/installer.elf"
+chmod 755 "$work/runtime-raw/usr/lib/reliefos/apps/installer/installer.elf"
+ln -s ../lib/reliefos/apps/installer/installer.elf "$work/runtime-raw/usr/bin/installer"
+mkdir -p "$work/runtime-raw/usr/lib/reliefos"
+cp "$out/installer/lib/libreliefos.so.2" "$work/runtime-raw/usr/lib/reliefos/libreliefos.so.2"
 cp "$out/installer/lib/libleonos.so.2" "$work/runtime-raw/usr/lib/leonos/libleonos.so.2"
-mkdir -p "$work/runtime-raw/usr/lib/leonos/apps/gptinit" "$work/runtime-raw/root" "$work/runtime-raw/etc/leonos"
-cp "$out/userland-installer/gptinit.elf" "$work/runtime-raw/usr/lib/leonos/apps/gptinit/gptinit.elf"
-cat > "$work/runtime-raw/usr/lib/leonos/apps/gptinit/manifest.ini" <<'MANIFEST'
+mkdir -p "$work/runtime-raw/usr/lib/reliefos/apps/gptinit" "$work/runtime-raw/root" "$work/runtime-raw/etc/reliefos"
+cp "$out/userland-installer/gptinit.elf" "$work/runtime-raw/usr/lib/reliefos/apps/gptinit/gptinit.elf"
+cat > "$work/runtime-raw/usr/lib/reliefos/apps/gptinit/manifest.ini" <<'MANIFEST'
 [app]
 id=gptinit
 name=GPT initializer
@@ -41,19 +46,19 @@ terminal=1
 hidden=1
 commands=gptinit
 MANIFEST
-ln -s ../lib/leonos/apps/gptinit/gptinit.elf "$work/runtime-raw/usr/bin/gptinit"
-printf 'installer\n' > "$work/runtime-raw/etc/leonos/installer-runtime"
+ln -s ../lib/reliefos/apps/gptinit/gptinit.elf "$work/runtime-raw/usr/bin/gptinit"
+printf 'installer\n' > "$work/runtime-raw/etc/reliefos/installer-runtime"
 cp "$src/docs/ADVANCED_INSTALL.txt" "$work/runtime-raw/root/ADVANCED_INSTALL.txt"
 package_root "$work/runtime-raw" "$work/runtime" "$out/packages/apk-installer-runtime"
-[ -x "$work/runtime/usr/lib/leonos/apps/installer/installer.elf" ] || {
+[ -x "$work/runtime/usr/lib/reliefos/apps/installer/installer.elf" ] || {
     echo 'installer runtime package is missing installer.elf' >&2
     exit 1
 }
 mkdir -p "$work/runtime/install"
-leonos_log STAGE 'installer payload and ESP'
+reliefos_log STAGE 'installer payload and ESP'
 mv "$work/installed" "$work/runtime/install/root"
 cp -a "$esp" "$work/runtime/install/esp"
-"${INSTALLER_DEDUP_TOOL:-$out/host/bin/leonos-dedup}" "$work/runtime"
+"${INSTALLER_DEDUP_TOOL:-$out/host/bin/reliefos-dedup}" "$work/runtime"
 find "$work/runtime" -exec touch -h -d "@$epoch" {} +
 if [ -d "$output.previous" ] && [ ! -e "$output" ]; then mv "$output.previous" "$output"; fi
 rm -rf "$output.previous"

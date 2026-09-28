@@ -1,6 +1,6 @@
-#include <leonos/fs.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
+#include <reliefos/fs.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
 
 #include <errno.h>
 #include <string.h>
@@ -139,7 +139,7 @@ static int installer_hash_file(const char *path, uint8_t hash[INSTALLER_SHA256_H
 {
     struct installer_sha256_ctx ctx;
     uint64_t total = 0;
-    int fd = open(path, LEONOS_O_RDONLY, 0);
+    int fd = open(path, RELIEFOS_O_RDONLY, 0);
     long got;
     if (fd < 0) {
         printf("[installer.elf] hash open failed path=%s ret=%d\n", path, fd);
@@ -192,10 +192,10 @@ int installer_files_equal(const char *source, const char *target,
 {
     uint8_t source_hash[INSTALLER_SHA256_HASH_LEN];
     uint8_t target_hash[INSTALLER_SHA256_HASH_LEN];
-    struct leonos_stat source_st;
+    struct reliefos_stat source_st;
     struct stat target_st;
-    char source_target[LEONOS_FS_PATH_LEN];
-    char target_target[LEONOS_FS_PATH_LEN];
+    char source_target[RELIEFOS_FS_PATH_LEN];
+    char target_target[RELIEFOS_FS_PATH_LEN];
     int source_is_link = 0;
     int target_is_link = 0;
     int ret;
@@ -220,8 +220,8 @@ int installer_files_equal(const char *source, const char *target,
         if (out_diff) *out_diff = 0;
         return 0;
     }
-    if (leonos_stat_legacy(source, &source_st) < 0 ||
-        source_st.type != LEONOS_FS_TYPE_FILE) {
+    if (reliefos_stat_legacy(source, &source_st) < 0 ||
+        source_st.type != RELIEFOS_FS_TYPE_FILE) {
         return -2;
     }
     if (lstat(target, &target_st) < 0 || !S_ISREG(target_st.st_mode)) {

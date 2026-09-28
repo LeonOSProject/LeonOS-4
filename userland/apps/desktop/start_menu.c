@@ -1,4 +1,4 @@
-#include <leonos/pam_session.h>
+#include <reliefos/pam_session.h>
 #include "desktop.h"
 #include "../localized_doc.h"
 #include <dirent.h>
@@ -8,7 +8,7 @@
 
 /* Generated per image. Unknown (for example, post-install) programs remain
  * visible; only build-managed packages are listed here. */
-#define START_MENU_ENTRY_POLICY_PATH LEONOS_PATH_DESKTOP_ENTRIES
+#define START_MENU_ENTRY_POLICY_PATH RELIEFOS_PATH_DESKTOP_ENTRIES
 #define START_MENU_ENTRY_POLICY_BYTES 4096U
 #define START_MENU_ENTRY_POLICY_MAX 96U
 
@@ -64,7 +64,7 @@ struct start_menu_result {
     uint8_t document;
 };
 
-static char start_menu_disabled_packages[START_MENU_ENTRY_POLICY_MAX][LEONOS_FS_PATH_LEN];
+static char start_menu_disabled_packages[START_MENU_ENTRY_POLICY_MAX][RELIEFOS_FS_PATH_LEN];
 static uint32_t start_menu_disabled_package_count;
 static uint8_t start_menu_apps_started;
 static uint32_t start_menu_registry_count;
@@ -75,8 +75,8 @@ static void start_menu_collect_apps(void);
 static int start_menu_kernel_debug_enabled(void)
 {
     uint32_t flags = 0;
-    return leonos_kernel_debug_get_state(&flags) == 0 &&
-           (flags & LEONOS_KERNEL_DEBUG_STATE_ENABLED) != 0U;
+    return reliefos_kernel_debug_get_state(&flags) == 0 &&
+           (flags & RELIEFOS_KERNEL_DEBUG_STATE_ENABLED) != 0U;
 }
 
 static int start_menu_entry_policy_matches(const char *path)
@@ -138,7 +138,7 @@ static void start_menu_load_entry_policy(void)
             buffer[line_start + 2U] == 'd' && buffer[line_start + 3U] == 'e' &&
             buffer[line_start + 4U] == '=') {
             uint32_t value = line_start + 5U;
-            while (value < offset && out + 1U < LEONOS_FS_PATH_LEN) {
+            while (value < offset && out + 1U < RELIEFOS_FS_PATH_LEN) {
                 start_menu_disabled_packages[start_menu_disabled_package_count][out++] = buffer[value++];
             }
             start_menu_disabled_packages[start_menu_disabled_package_count][out] = 0;
@@ -175,14 +175,14 @@ static void start_menu_sort_apps(void)
         for (uint32_t j = i + 1U; j < start_menu_app_count; ++j) {
             if (start_menu_label_compare(start_menu_app_labels[i], start_menu_app_labels[j]) > 0) {
                 char label[sizeof(start_menu_app_labels[0])];
-                char path[LEONOS_FS_PATH_LEN];
+                char path[RELIEFOS_FS_PATH_LEN];
                 uint32_t k;
                 for (k = 0; k < sizeof(label); ++k) {
                     label[k] = start_menu_app_labels[i][k];
                     start_menu_app_labels[i][k] = start_menu_app_labels[j][k];
                     start_menu_app_labels[j][k] = label[k];
                 }
-                for (k = 0; k < LEONOS_FS_PATH_LEN; ++k) {
+                for (k = 0; k < RELIEFOS_FS_PATH_LEN; ++k) {
                     path[k] = start_menu_app_paths[i][k];
                     start_menu_app_paths[i][k] = start_menu_app_paths[j][k];
                     start_menu_app_paths[j][k] = path[k];
@@ -198,14 +198,14 @@ static void start_menu_sort_docs(void)
         for (uint32_t j = i + 1U; j < start_menu_doc_count; ++j) {
             if (start_menu_label_compare(start_menu_doc_labels[i], start_menu_doc_labels[j]) > 0) {
                 char label[sizeof(start_menu_doc_labels[0])];
-                char path[LEONOS_FS_PATH_LEN];
+                char path[RELIEFOS_FS_PATH_LEN];
                 uint32_t k;
                 for (k = 0; k < sizeof(label); ++k) {
                     label[k] = start_menu_doc_labels[i][k];
                     start_menu_doc_labels[i][k] = start_menu_doc_labels[j][k];
                     start_menu_doc_labels[j][k] = label[k];
                 }
-                for (k = 0; k < LEONOS_FS_PATH_LEN; ++k) {
+                for (k = 0; k < RELIEFOS_FS_PATH_LEN; ++k) {
                     path[k] = start_menu_doc_paths[i][k];
                     start_menu_doc_paths[i][k] = start_menu_doc_paths[j][k];
                     start_menu_doc_paths[j][k] = path[k];
@@ -223,14 +223,14 @@ int start_menu_load_apps(void)
     start_menu_app_count = 0;
     start_menu_registry_count = 0;
     start_menu_load_entry_policy();
-    if (leonos_app_registry_is_loaded()) {
+    if (reliefos_app_registry_is_loaded()) {
         start_menu_apps_started = 1;
         start_menu_collect_apps();
         start_menu_apps_started = 0;
         start_menu_apps_loaded = 1;
         return 0;
     }
-    if (leonos_app_registry_begin_refresh() < 0) {
+    if (reliefos_app_registry_begin_refresh() < 0) {
         return -1;
     }
     start_menu_apps_started = 1;
@@ -239,13 +239,13 @@ int start_menu_load_apps(void)
 
 static void start_menu_collect_apps(void)
 {
-    struct leonos_app_info info;
-    uint32_t total = leonos_app_registry_count();
+    struct reliefos_app_info info;
+    uint32_t total = reliefos_app_registry_count();
     for (uint32_t i = start_menu_registry_count;
          i < total && start_menu_app_count < START_MENU_MAX_APPS; ++i) {
-        if (leonos_app_registry_get(i, &info) < 0 ||
-            (info.flags & LEONOS_APP_FLAG_ENTRY) == 0 ||
-            (info.flags & LEONOS_APP_FLAG_HIDDEN) != 0 ||
+        if (reliefos_app_registry_get(i, &info) < 0 ||
+            (info.flags & RELIEFOS_APP_FLAG_ENTRY) == 0 ||
+            (info.flags & RELIEFOS_APP_FLAG_HIDDEN) != 0 ||
             start_menu_entry_policy_matches(info.exec)) {
             continue;
         }
@@ -261,7 +261,7 @@ static void start_menu_collect_apps(void)
 
 void start_menu_ensure_apps(void)
 {
-    unsigned long now = leonos_uptime_ms();
+    unsigned long now = reliefos_uptime_ms();
     if (!start_menu_apps_loaded && now >= start_menu_apps_retry_ms) {
         if (start_menu_load_apps() < 0) {
             start_menu_apps_retry_ms = now + 1000UL;
@@ -375,7 +375,7 @@ void start_menu_load_docs(void)
         return;
     }
     start_menu_doc_count = 0;
-    start_menu_docs_dir = opendir(LEONOS_LAYOUT_LEONOS_DOC);
+    start_menu_docs_dir = opendir(RELIEFOS_LAYOUT_RELIEFOS_DOC);
     if (!start_menu_docs_dir) {
         return;
     }
@@ -384,7 +384,7 @@ void start_menu_load_docs(void)
 
 void start_menu_ensure_docs(void)
 {
-    unsigned long now = leonos_uptime_ms();
+    unsigned long now = reliefos_uptime_ms();
     if (!start_menu_docs_loaded && !start_menu_docs_started &&
         now >= start_menu_docs_retry_ms) {
         start_menu_load_docs();
@@ -406,7 +406,7 @@ static void start_menu_collect_docs(void)
     }
     copy_text(start_menu_doc_paths[start_menu_doc_count],
               sizeof(start_menu_doc_paths[start_menu_doc_count]),
-              LEONOS_LAYOUT_LEONOS_DOC "/");
+              RELIEFOS_LAYOUT_RELIEFOS_DOC "/");
     while (start_menu_doc_paths[start_menu_doc_count][pos]) {
         ++pos;
     }
@@ -523,7 +523,7 @@ static uint8_t start_menu_effective_view(void)
 
 int start_menu_update(void)
 {
-    unsigned long now = leonos_uptime_ms();
+    unsigned long now = reliefos_uptime_ms();
     uint8_t view = start_menu_effective_view();
     uint8_t old_apps_loaded = start_menu_apps_loaded;
     uint8_t old_docs_loaded = start_menu_docs_loaded;
@@ -542,7 +542,7 @@ int start_menu_update(void)
         }
     }
     if (start_menu_apps_started) {
-        int ret = leonos_app_registry_refresh_step(1);
+        int ret = reliefos_app_registry_refresh_step(1);
         if (ret < 0) {
             start_menu_apps_started = 0;
             start_menu_apps_loaded = 0;
@@ -744,9 +744,9 @@ static const char *start_menu_shortcut_label(uint32_t index)
     static const char *const ids[] = {
         "fileman", "terminal", "settings", "run", "taskmgr",
     };
-    static char label[LEONOS_APP_NAME_LEN];
+    static char label[RELIEFOS_APP_NAME_LEN];
     if (index < sizeof(ids) / sizeof(ids[0]) &&
-        leonos_app_registry_label(ids[index], label, sizeof(label)) == 0) {
+        reliefos_app_registry_label(ids[index], label, sizeof(label)) == 0) {
         return label;
     }
     return index < sizeof(ids) / sizeof(ids[0]) ? ids[index] : "";
@@ -757,9 +757,9 @@ static const char *start_menu_shortcut_path(uint32_t index)
     static const char *const ids[] = {
         "fileman", "terminal", "settings", "run", "taskmgr",
     };
-    static char path[LEONOS_APP_PATH_LEN];
+    static char path[RELIEFOS_APP_PATH_LEN];
     if (index >= sizeof(ids) / sizeof(ids[0]) ||
-        leonos_app_registry_resolve(ids[index], path, sizeof(path)) < 0) {
+        reliefos_app_registry_resolve(ids[index], path, sizeof(path)) < 0) {
         path[0] = 0;
     }
     return path;
@@ -767,19 +767,19 @@ static const char *start_menu_shortcut_path(uint32_t index)
 
 static void start_menu_draw_header(const struct start_panel_layout *panel)
 {
-    struct leonos_user_info user = {0};
+    struct reliefos_user_info user = {0};
     const char *session = T("Desktop session");
     uint32_t header_w = panel->w > 2U ? panel->w - 2U : panel->w;
-    leonos_ui_rect(&ui, panel->x + 1U, panel->y + 1U, header_w,
-                   START_PANEL_HEADER_H, LEONOS_UI_ACTIVE_TITLE);
-    leonos_ui_text(&ui, panel->x + 12U, panel->y + 7U, "LeonOS 4",
-                   LEONOS_UI_WHITE, LEONOS_UI_ACTIVE_TITLE);
-    if (leonos_session_current(&user) == 0 && user.username[0]) {
+    reliefos_ui_rect(&ui, panel->x + 1U, panel->y + 1U, header_w,
+                   START_PANEL_HEADER_H, RELIEFOS_UI_ACTIVE_TITLE);
+    reliefos_ui_text(&ui, panel->x + 12U, panel->y + 7U, "ReliefOS",
+                   RELIEFOS_UI_WHITE, RELIEFOS_UI_ACTIVE_TITLE);
+    if (reliefos_session_current(&user) == 0 && user.username[0]) {
         session = user.username;
     }
-    leonos_ui_text_clipped(&ui, panel->x + 12U, panel->y + 24U,
+    reliefos_ui_text_clipped(&ui, panel->x + 12U, panel->y + 24U,
                            panel->w > 24U ? panel->w - 24U : 0U, session,
-                           LEONOS_UI_WHITE, LEONOS_UI_ACTIVE_TITLE);
+                           RELIEFOS_UI_WHITE, RELIEFOS_UI_ACTIVE_TITLE);
 }
 
 static void start_menu_draw_tabs(const struct start_panel_layout *panel,
@@ -795,8 +795,8 @@ static void start_menu_draw_tabs(const struct start_panel_layout *panel,
     };
     for (uint32_t i = 0; i < 3U; ++i) {
         uint32_t item_w = i == 2U ? width - tab_w * 2U : tab_w;
-        uint32_t flags = start_menu_view == i ? LEONOS_UI_BUTTON_ACTIVE : 0;
-        leonos_ui_button(&ui, x, content->tabs_y, item_w, START_PANEL_TAB_H, labels[i], flags);
+        uint32_t flags = start_menu_view == i ? RELIEFOS_UI_BUTTON_ACTIVE : 0;
+        reliefos_ui_button(&ui, x, content->tabs_y, item_w, START_PANEL_TAB_H, labels[i], flags);
         x += item_w;
     }
 }
@@ -806,27 +806,27 @@ static void start_menu_draw_search(const struct start_panel_layout *panel,
 {
     uint32_t x = panel->x + START_PANEL_MARGIN;
     uint32_t width = panel->w > START_PANEL_MARGIN * 2U ? panel->w - START_PANEL_MARGIN * 2U : 0U;
-    leonos_ui_text_field(&ui, x, content->search_y, width, start_menu_query,
-                         LEONOS_UI_EDIT_FOCUSED);
+    reliefos_ui_text_field(&ui, x, content->search_y, width, start_menu_query,
+                         RELIEFOS_UI_EDIT_FOCUSED);
     if (!start_menu_query[0]) {
-        leonos_ui_text_clipped(&ui, x + 7U, content->search_y + 5U,
+        reliefos_ui_text_clipped(&ui, x + 7U, content->search_y + 5U,
                                width > 14U ? width - 14U : 0U,
                                T("Search apps and documents"),
-                               LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                               RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     }
 }
 
 static void start_menu_draw_shortcut(const struct start_panel_layout *panel, uint32_t x,
                                      uint32_t y, uint32_t width, uint32_t index)
 {
-    char icon_path[LEONOS_FS_PATH_LEN];
+    char icon_path[RELIEFOS_FS_PATH_LEN];
     const char *path = start_menu_shortcut_path(index);
     (void)panel;
-    leonos_ui_button(&ui, x, y, width, START_SHORTCUT_H, "", 0);
+    reliefos_ui_button(&ui, x, y, width, START_SHORTCUT_H, "", 0);
     desktop_icon_path_for_app(path, icon_path, sizeof(icon_path));
     draw_app_icon(icon_path, (int)x + 7, (int)y + 13);
-    leonos_ui_text_clipped(&ui, x + 29U, y + 13U, width > 35U ? width - 35U : 0U,
-                           start_menu_shortcut_label(index), LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    reliefos_ui_text_clipped(&ui, x + 29U, y + 13U, width > 35U ? width - 35U : 0U,
+                           start_menu_shortcut_label(index), RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
 }
 
 static void start_menu_draw_home(const struct start_panel_layout *panel,
@@ -839,8 +839,8 @@ static void start_menu_draw_home(const struct start_panel_layout *panel,
                           ? (content_w - START_SHORTCUT_GAP * 2U) / START_SHORTCUT_COLUMNS : 0U;
     uint32_t minimized = start_menu_minimized_count();
     uint32_t shown = 0;
-    leonos_ui_text(&ui, content_x, content->body_y,
-                   T("Quick access"), LEONOS_UI_DARK, LEONOS_UI_GRAY);
+    reliefos_ui_text(&ui, content_x, content->body_y,
+                   T("Quick access"), RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
     for (uint32_t index = 0; index < 5U; ++index) {
         uint32_t row = index / START_SHORTCUT_COLUMNS;
         uint32_t col = index % START_SHORTCUT_COLUMNS;
@@ -852,19 +852,19 @@ static void start_menu_draw_home(const struct start_panel_layout *panel,
                                  home.shortcuts_y + row * (START_SHORTCUT_H + START_SHORTCUT_GAP),
                                  tile_w, index);
     }
-    leonos_ui_button(&ui, content_x, home.browse_y,
+    reliefos_ui_button(&ui, content_x, home.browse_y,
                      content_w > START_SHORTCUT_GAP ? (content_w - START_SHORTCUT_GAP) / 2U : 0U,
                      START_MENU_ITEM_H, T("All applications"), 0);
-    leonos_ui_button(&ui, content_x + (content_w + START_SHORTCUT_GAP) / 2U, home.browse_y,
+    reliefos_ui_button(&ui, content_x + (content_w + START_SHORTCUT_GAP) / 2U, home.browse_y,
                      content_w > START_SHORTCUT_GAP ? (content_w - START_SHORTCUT_GAP) / 2U : 0U,
                      START_MENU_ITEM_H, T("Documents"), 0);
     if (!home.window_rows) {
         return;
     }
-    leonos_ui_text(&ui, content_x, home.windows_title_y,
+    reliefos_ui_text(&ui, content_x, home.windows_title_y,
                    minimized ? T("Minimized windows")
                              : T("No minimized windows"),
-                   LEONOS_UI_DARK, LEONOS_UI_GRAY);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
     for (uint32_t i = 0; i < minimized && shown < home.window_rows; ++i) {
         int id = start_menu_minimized_window(i);
         uint32_t y = home.windows_y + shown * START_MENU_ITEM_H;
@@ -872,7 +872,7 @@ static void start_menu_draw_home(const struct start_panel_layout *panel,
             break;
         }
         draw_app_icon(windows[id].icon_path, (int)content_x + 6, (int)y + 5);
-        leonos_ui_menu_item(&ui, content_x + 29U, y,
+        reliefos_ui_menu_item(&ui, content_x + 29U, y,
                             content_w > 35U ? content_w - 35U : 0U,
                             windows[id].title ? windows[id].title : T("Window"), 0);
         ++shown;
@@ -950,8 +950,8 @@ static void start_menu_draw_results(const struct start_panel_layout *panel,
     struct start_list_layout list = start_menu_list_layout(panel, content);
     uint32_t count = start_menu_result_count(view);
     start_menu_clamp_list(view, list.rows);
-    leonos_ui_text(&ui, list.x, content->body_y, start_menu_list_title(view),
-                   LEONOS_UI_DARK, LEONOS_UI_GRAY);
+    reliefos_ui_text(&ui, list.x, content->body_y, start_menu_list_title(view),
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
     if (!count) {
         const char *empty_text = T("Nothing found");
         if ((view == START_MENU_VIEW_APPS || view == START_MENU_VIEW_SEARCH) &&
@@ -961,37 +961,37 @@ static void start_menu_draw_results(const struct start_panel_layout *panel,
                    !start_menu_docs_loaded) {
             empty_text = T("Loading documents...");
         }
-        leonos_ui_menu_item(&ui, list.x + 5U, list.y,
+        reliefos_ui_menu_item(&ui, list.x + 5U, list.y,
                             list.w > 10U ? list.w - 10U : 0U,
                             empty_text,
-                            LEONOS_UI_MENU_DISABLED);
+                            RELIEFOS_UI_MENU_DISABLED);
     } else {
         for (uint32_t visible = 0; visible < list.rows; ++visible) {
             struct start_menu_result result;
             uint32_t index = start_menu_scroll + visible;
             uint32_t row_y = list.y + visible * START_MENU_ITEM_H;
-            char icon_path[LEONOS_FS_PATH_LEN];
+            char icon_path[RELIEFOS_FS_PATH_LEN];
             if (index >= count || !start_menu_result_at(view, index, &result)) {
                 break;
             }
             if (result.document) {
                 /* Help files use the installed help viewer's registered icon.
                  * This keeps document UI independent of its package directory. */
-                (void)leonos_app_registry_icon("oshlp", icon_path,
+                (void)reliefos_app_registry_icon("oshlp", icon_path,
                                                sizeof(icon_path));
             } else {
                 desktop_icon_path_for_app(result.path, icon_path, sizeof(icon_path));
             }
             draw_app_icon(icon_path, (int)list.x + 6, (int)row_y + 5);
-            leonos_ui_menu_item(&ui, list.x + 29U, row_y,
+            reliefos_ui_menu_item(&ui, list.x + 29U, row_y,
                                 list.w > 35U ? list.w - 35U : 0U, result.label,
-                                index == start_menu_selected ? LEONOS_UI_MENU_SELECTED : 0);
+                                index == start_menu_selected ? RELIEFOS_UI_MENU_SELECTED : 0);
         }
     }
     if (list.scrollbar_w && list.h) {
-        leonos_ui_vscrollbar(&ui, list.scrollbar_x, list.y, list.scrollbar_w, list.h,
+        reliefos_ui_vscrollbar(&ui, list.scrollbar_x, list.y, list.scrollbar_w, list.h,
                              start_menu_scroll, count, list.rows,
-                             count <= list.rows ? LEONOS_UI_SCROLLBAR_DISABLED : 0);
+                             count <= list.rows ? RELIEFOS_UI_SCROLLBAR_DISABLED : 0);
     }
 }
 
@@ -1001,20 +1001,20 @@ static void start_menu_draw_power(const struct start_panel_layout *panel,
     uint32_t x = panel->x + START_PANEL_MARGIN;
     uint32_t width = panel->w > START_PANEL_MARGIN * 2U ? panel->w - START_PANEL_MARGIN * 2U : 0U;
     uint32_t y = content->body_y + START_LIST_TITLE_H;
-    leonos_ui_text(&ui, x, content->body_y, T("Power"),
-                   LEONOS_UI_DARK, LEONOS_UI_GRAY);
-    leonos_ui_button(&ui, x, y, width, START_MENU_ITEM_H,
+    reliefos_ui_text(&ui, x, content->body_y, T("Power"),
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
+    reliefos_ui_button(&ui, x, y, width, START_MENU_ITEM_H,
                      T("Restart"), 0);
     y += START_MENU_ITEM_H + START_PANEL_GAP;
     if (start_menu_kernel_debug_enabled()) {
-        leonos_ui_button(&ui, x, y, width, START_MENU_ITEM_H,
+        reliefos_ui_button(&ui, x, y, width, START_MENU_ITEM_H,
                          T("Restart into kernel debugger"), 0);
         y += START_MENU_ITEM_H + START_PANEL_GAP;
     }
-    leonos_ui_button(&ui, x, y, width, START_MENU_ITEM_H,
+    reliefos_ui_button(&ui, x, y, width, START_MENU_ITEM_H,
                      T("Shut down"), 0);
     y += START_MENU_ITEM_H + START_PANEL_GAP;
-    leonos_ui_button(&ui, x, y, width, START_MENU_ITEM_H,
+    reliefos_ui_button(&ui, x, y, width, START_MENU_ITEM_H,
                      T("Back"), 0);
 }
 
@@ -1026,17 +1026,17 @@ static void start_menu_draw_footer(const struct start_panel_layout *panel,
     uint32_t power_w = 92U;
     uint32_t session_w = width > power_w + START_PANEL_GAP ? width - power_w - START_PANEL_GAP : 0U;
     if (desktop_session_logged_in()) {
-        leonos_ui_button(&ui, x, content->footer_y, session_w, START_PANEL_FOOTER_H,
+        reliefos_ui_button(&ui, x, content->footer_y, session_w, START_PANEL_FOOTER_H,
                          T("Sign out"), 0);
     } else {
-        leonos_ui_button(&ui, x, content->footer_y, session_w, START_PANEL_FOOTER_H,
-                         T("Session"), LEONOS_UI_BUTTON_DISABLED);
+        reliefos_ui_button(&ui, x, content->footer_y, session_w, START_PANEL_FOOTER_H,
+                         T("Session"), RELIEFOS_UI_BUTTON_DISABLED);
     }
-    leonos_ui_button(&ui, x + session_w + START_PANEL_GAP, content->footer_y,
+    reliefos_ui_button(&ui, x + session_w + START_PANEL_GAP, content->footer_y,
                      power_w, START_PANEL_FOOTER_H,
                      start_menu_view == START_MENU_VIEW_POWER ? T("Back")
                                                                : T("Power"),
-                     start_menu_view == START_MENU_VIEW_POWER ? LEONOS_UI_BUTTON_ACTIVE : 0);
+                     start_menu_view == START_MENU_VIEW_POWER ? RELIEFOS_UI_BUTTON_ACTIVE : 0);
 }
 
 void draw_start_menu(void)
@@ -1052,15 +1052,15 @@ void draw_start_menu(void)
     progress = start_menu_progress();
     if (start_menu_animating) {
         printf("[desktop.elf] DBG menu-draw progress=%u t=%lu\n",
-               progress, leonos_uptime_ms());
+               progress, reliefos_uptime_ms());
     }
     visible_h = (panel.h * progress + 99U) / 100U;
     if (visible_h < panel.h) {
         uint32_t visible_y = taskbar_y() > visible_h ? taskbar_y() - visible_h : 0U;
-        leonos_ui_panel(&ui, panel.x, visible_y, panel.w, visible_h, LEONOS_UI_GRAY);
+        reliefos_ui_panel(&ui, panel.x, visible_y, panel.w, visible_h, RELIEFOS_UI_GRAY);
         return;
     }
-    leonos_ui_panel(&ui, panel.x, panel.y, panel.w, panel.h, LEONOS_UI_GRAY);
+    reliefos_ui_panel(&ui, panel.x, panel.y, panel.w, panel.h, RELIEFOS_UI_GRAY);
     if (panel.h < START_PANEL_HEADER_H + START_PANEL_TAB_H + START_MENU_SEARCH_H + START_PANEL_FOOTER_H) {
         return;
     }
@@ -1106,7 +1106,7 @@ int start_menu_handle_key(uint8_t keycode, uint8_t pressed)
     if (!pressed) {
         return 1;
     }
-    if (keycode == LEONOS_KEY_ESCAPE) {
+    if (keycode == RELIEFOS_KEY_ESCAPE) {
         if (start_menu_query[0]) {
             start_menu_query[0] = 0;
             start_menu_scroll = 0;
@@ -1119,14 +1119,14 @@ int start_menu_handle_key(uint8_t keycode, uint8_t pressed)
         full_redraw_pending = 1;
         return 1;
     }
-    if (keycode == LEONOS_KEY_TAB) {
+    if (keycode == RELIEFOS_KEY_TAB) {
         if (start_menu_query[0]) {
             start_menu_query[0] = 0;
         }
         start_menu_set_view((uint8_t)((start_menu_view + 1U) % 3U));
         return 1;
     }
-    if (keycode == LEONOS_KEY_BACKSPACE) {
+    if (keycode == RELIEFOS_KEY_BACKSPACE) {
         while (start_menu_query[len]) {
             ++len;
         }
@@ -1147,20 +1147,20 @@ int start_menu_handle_key(uint8_t keycode, uint8_t pressed)
         panel = start_menu_panel_layout();
         content = start_menu_content_layout(&panel);
         list = start_menu_list_layout(&panel, &content);
-        if (keycode == LEONOS_KEY_UP && count && start_menu_selected) {
+        if (keycode == RELIEFOS_KEY_UP && count && start_menu_selected) {
             --start_menu_selected;
-        } else if (keycode == LEONOS_KEY_DOWN && count && start_menu_selected + 1U < count) {
+        } else if (keycode == RELIEFOS_KEY_DOWN && count && start_menu_selected + 1U < count) {
             ++start_menu_selected;
-        } else if (keycode == LEONOS_KEY_HOME && count) {
+        } else if (keycode == RELIEFOS_KEY_HOME && count) {
             start_menu_selected = 0;
-        } else if (keycode == LEONOS_KEY_END && count) {
+        } else if (keycode == RELIEFOS_KEY_END && count) {
             start_menu_selected = count - 1U;
-        } else if (keycode == LEONOS_KEY_PAGE_UP && count) {
+        } else if (keycode == RELIEFOS_KEY_PAGE_UP && count) {
             start_menu_selected = start_menu_selected > list.rows ? start_menu_selected - list.rows : 0;
-        } else if (keycode == LEONOS_KEY_PAGE_DOWN && count) {
+        } else if (keycode == RELIEFOS_KEY_PAGE_DOWN && count) {
             uint32_t next = start_menu_selected + list.rows;
             start_menu_selected = next < count ? next : count - 1U;
-        } else if (keycode == LEONOS_KEY_ENTER && count) {
+        } else if (keycode == RELIEFOS_KEY_ENTER && count) {
             start_menu_launch_result(view, start_menu_selected);
             return 1;
         } else {
@@ -1170,12 +1170,12 @@ int start_menu_handle_key(uint8_t keycode, uint8_t pressed)
         full_redraw_pending = 1;
         return 1;
     }
-    if (view == START_MENU_VIEW_POWER && keycode == LEONOS_KEY_ENTER) {
+    if (view == START_MENU_VIEW_POWER && keycode == RELIEFOS_KEY_ENTER) {
         return 1;
     }
 
 text_input:
-    if (leonos_ui_keycode_to_char_shift(keycode,
+    if (reliefos_ui_keycode_to_char_shift(keycode,
                                         desktop_left_shift_down || desktop_right_shift_down,
                                         &ch)) {
         while (start_menu_query[len]) {
@@ -1219,7 +1219,7 @@ uint32_t start_menu_cursor_style(uint32_t x, uint32_t y)
     uint32_t content_w;
 
     if (!start_menu_open || start_menu_animating) {
-        return LEONOS_GUI_CURSOR_ARROW;
+        return RELIEFOS_GUI_CURSOR_ARROW;
     }
     panel = start_menu_panel_layout();
     visible_h = panel.h;
@@ -1227,7 +1227,7 @@ uint32_t start_menu_cursor_style(uint32_t x, uint32_t y)
     if (!hit_rect(x, y, (int)panel.x, (int)visible_y, panel.w, visible_h) ||
         panel.h < START_PANEL_HEADER_H + START_PANEL_TAB_H + START_MENU_SEARCH_H +
                     START_PANEL_FOOTER_H) {
-        return LEONOS_GUI_CURSOR_ARROW;
+        return RELIEFOS_GUI_CURSOR_ARROW;
     }
     content = start_menu_content_layout(&panel);
     content_x = panel.x + START_PANEL_MARGIN;
@@ -1236,11 +1236,11 @@ uint32_t start_menu_cursor_style(uint32_t x, uint32_t y)
 
     if (hit_rect(x, y, (int)content_x, (int)content.tabs_y, content_w,
                  START_PANEL_TAB_H)) {
-        return LEONOS_GUI_CURSOR_HAND;
+        return RELIEFOS_GUI_CURSOR_HAND;
     }
     if (hit_rect(x, y, (int)content_x, (int)content.search_y, content_w,
                  START_MENU_SEARCH_H)) {
-        return LEONOS_GUI_CURSOR_TEXT;
+        return RELIEFOS_GUI_CURSOR_TEXT;
     }
 
     if (hit_rect(x, y, (int)content_x, (int)content.footer_y, content_w,
@@ -1249,14 +1249,14 @@ uint32_t start_menu_cursor_style(uint32_t x, uint32_t y)
         uint32_t session_w = content_w > power_w + START_PANEL_GAP
                                  ? content_w - power_w - START_PANEL_GAP : 0U;
         if (x < content_x + session_w) {
-            return desktop_session_logged_in() ? LEONOS_GUI_CURSOR_HAND
-                                               : LEONOS_GUI_CURSOR_NO;
+            return desktop_session_logged_in() ? RELIEFOS_GUI_CURSOR_HAND
+                                               : RELIEFOS_GUI_CURSOR_NO;
         }
         if (x >= content_x + session_w + START_PANEL_GAP &&
             x < content_x + session_w + START_PANEL_GAP + power_w) {
-            return LEONOS_GUI_CURSOR_HAND;
+            return RELIEFOS_GUI_CURSOR_HAND;
         }
-        return LEONOS_GUI_CURSOR_ARROW;
+        return RELIEFOS_GUI_CURSOR_ARROW;
     }
 
     view = start_menu_effective_view();
@@ -1276,7 +1276,7 @@ uint32_t start_menu_cursor_style(uint32_t x, uint32_t y)
                              (int)content_x + (int)(col * (tile_w + START_SHORTCUT_GAP)),
                              (int)home.shortcuts_y + (int)(row * (START_SHORTCUT_H + START_SHORTCUT_GAP)),
                              tile_w, START_SHORTCUT_H)) {
-                    return LEONOS_GUI_CURSOR_HAND;
+                    return RELIEFOS_GUI_CURSOR_HAND;
                 }
             }
         }
@@ -1286,15 +1286,15 @@ uint32_t start_menu_cursor_style(uint32_t x, uint32_t y)
                      browse_w, START_MENU_ITEM_H) ||
             hit_rect(x, y, (int)content_x + (int)(browse_w + START_SHORTCUT_GAP),
                      (int)home.browse_y, browse_w, START_MENU_ITEM_H)) {
-            return LEONOS_GUI_CURSOR_HAND;
+            return RELIEFOS_GUI_CURSOR_HAND;
         }
         uint32_t minimized = start_menu_minimized_count();
         uint32_t shown = minimized < home.window_rows ? minimized : home.window_rows;
         if (shown && hit_rect(x, y, (int)content_x, (int)home.windows_y,
                               content_w, shown * START_MENU_ITEM_H)) {
-            return LEONOS_GUI_CURSOR_HAND;
+            return RELIEFOS_GUI_CURSOR_HAND;
         }
-        return LEONOS_GUI_CURSOR_ARROW;
+        return RELIEFOS_GUI_CURSOR_ARROW;
     }
     if (view == START_MENU_VIEW_POWER) {
         uint32_t power_y = content.body_y + START_LIST_TITLE_H;
@@ -1305,10 +1305,10 @@ uint32_t start_menu_cursor_style(uint32_t x, uint32_t y)
             uint32_t row_y = power_y + row * (START_MENU_ITEM_H + START_PANEL_GAP);
             if (row < rows && hit_rect(x, y, (int)content_x, (int)row_y,
                                        content_w, START_MENU_ITEM_H)) {
-                return LEONOS_GUI_CURSOR_HAND;
+                return RELIEFOS_GUI_CURSOR_HAND;
             }
         }
-        return LEONOS_GUI_CURSOR_ARROW;
+        return RELIEFOS_GUI_CURSOR_ARROW;
     }
 
     {
@@ -1318,14 +1318,14 @@ uint32_t start_menu_cursor_style(uint32_t x, uint32_t y)
         uint32_t shown = available < list.rows ? available : list.rows;
         if (list.scrollbar_w && hit_rect(x, y, (int)list.scrollbar_x, (int)list.y,
                                          list.scrollbar_w, list.h)) {
-            return count > list.rows ? LEONOS_GUI_CURSOR_HAND : LEONOS_GUI_CURSOR_NO;
+            return count > list.rows ? RELIEFOS_GUI_CURSOR_HAND : RELIEFOS_GUI_CURSOR_NO;
         }
         if (shown && hit_rect(x, y, (int)list.x, (int)list.y,
                               list.w, shown * START_MENU_ITEM_H)) {
-            return LEONOS_GUI_CURSOR_HAND;
+            return RELIEFOS_GUI_CURSOR_HAND;
         }
     }
-    return LEONOS_GUI_CURSOR_ARROW;
+    return RELIEFOS_GUI_CURSOR_ARROW;
 }
 
 static int start_menu_hit_tab(uint32_t x, uint32_t y, const struct start_panel_layout *panel,
@@ -1400,7 +1400,7 @@ static void start_menu_handle_power_click(uint32_t x, uint32_t y,
         if (start_menu_kernel_debug_enabled()) {
             if (hit_rect(x, y, (int)left, (int)first_y, width, START_MENU_ITEM_H)) {
                 start_menu_set_open(0);
-                if (leonos_kernel_debug_arm_next_boot() == 0) {
+                if (reliefos_kernel_debug_arm_next_boot() == 0) {
                     desktop_lifecycle_begin(POWER_CONFIRM_REBOOT);
                 } else {
                     desktop_show_message(T("Kernel debugger"),
@@ -1483,7 +1483,7 @@ void start_menu_handle_click(uint32_t x, uint32_t y)
         start_menu_clamp_list(view, list.rows);
         if (list.scrollbar_w &&
             hit_rect(x, y, (int)list.scrollbar_x, (int)list.y, list.scrollbar_w, list.h)) {
-            if (leonos_ui_vscrollbar_handle_mouse(&start_menu_scroll, count, list.rows,
+            if (reliefos_ui_vscrollbar_handle_mouse(&start_menu_scroll, count, list.rows,
                                                   list.scrollbar_x, list.y,
                                                   list.scrollbar_w, list.h, x, y)) {
                 start_menu_keep_selected_in_view(view, list.rows);
@@ -1530,7 +1530,7 @@ int start_menu_handle_wheel(uint32_t x, uint32_t y, int32_t wheel)
         return 1;
     }
     start_menu_clamp_list(view, list.rows);
-    if (leonos_ui_vscrollbar_handle_wheel(&start_menu_scroll, count, list.rows, wheel)) {
+    if (reliefos_ui_vscrollbar_handle_wheel(&start_menu_scroll, count, list.rows, wheel)) {
         start_menu_keep_selected_in_view(view, list.rows);
         full_redraw_pending = 1;
     }

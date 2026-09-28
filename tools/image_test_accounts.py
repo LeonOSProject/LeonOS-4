@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 
 SEEDS = Path(__file__).resolve().parents[1] / "system/test-accounts"
-MARKER = "etc/leonos/test-image"
+MARKER = "etc/reliefos/test-image"
 PROFILE = "leonos-standalone-test-v1\n"
 
 
@@ -33,7 +33,7 @@ def seed_test_accounts(root: Path) -> None:
             path.mkdir(exist_ok=True)
             path.chmod(0o700)
     # The existing session launcher requires this marker to enforce PAM login.
-    settings = root / "etc/leonos"
+    settings = root / "etc/reliefos"
     for name, text in (("test-image", PROFILE), ("installed", "test-image=1\n")):
         path = settings / name
         if path.is_symlink():

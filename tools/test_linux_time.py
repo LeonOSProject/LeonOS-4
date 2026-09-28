@@ -5,10 +5,10 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-time-") as tmp:
+with tempfile.TemporaryDirectory(prefix="reliefos-time-") as tmp:
     output = Path(tmp) / "time"
     subprocess.run(["cc", "-std=c11", "-g", "-O1", "-fsanitize=address,undefined",
-                    "-fno-pie", "-no-pie", "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi",
-                    "-Ikernel/ntclks/kernel/ntclks/include", "tools/tests/nanosleep_state_test.c",
+                    "-fno-pie", "-no-pie", "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi",
+                    "-Ikernel/reliefnt/kernel/reliefnt/include", "tools/tests/nanosleep_state_test.c",
                     "-o", output], cwd=root, check=True)
     subprocess.run([output], cwd=root, check=True, timeout=20)

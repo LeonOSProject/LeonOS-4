@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../kernel/ntclks/net/net_packet.c"
+#include "../../kernel/reliefnt/net/net_packet.c"
 static struct task current;
 static struct task_file description;
 static uint8_t sent[1514];
@@ -22,7 +22,7 @@ void net_poll_packets(void) {}
 bool net_interface_ready(void) { return true; }
 const uint8_t *e1000_mac(void) { static const uint8_t mac[6] = {2,3,4,5,6,7}; return mac; }
 int e1000_send(const void *p, uint32_t n) { assert(n <= sizeof(sent)); memcpy(sent,p,n); sent_length=n; return 0; }
-int net_get_config(struct leonos_net_config *c) { *c=(struct leonos_net_config){0}; return 0; }
+int net_get_config(struct reliefos_net_config *c) { *c=(struct reliefos_net_config){0}; return 0; }
 int net_ipv4_send_raw(uint32_t d, uint32_t s, uint8_t p, bool h, const void *b, uint32_t n)
 { (void)d; (void)s; (void)p; (void)h; (void)b; return n; }
 int main(void)
@@ -32,7 +32,7 @@ int main(void)
     assert(syscall_packet(__NR_socket, AF_PACKET, SOCK_DGRAM|SOCK_NONBLOCK|SOCK_CLOEXEC, 8,0,0,0) == 3);
     assert(description.flags & TASK_FILE_FLAG_SOCKET);
     assert(description.flags & TASK_FILE_FLAG_SOCKET_INET);
-    assert(description.fd_flags == LEONOS_FD_CLOEXEC);
+    assert(description.fd_flags == RELIEFOS_FD_CLOEXEC);
     struct sockaddr_ll dest = {.sll_family=AF_PACKET,.sll_ifindex=2,.sll_protocol=8,.sll_halen=6,
         .sll_addr={255,255,255,255,255,255}};
     assert(syscall_packet(__NR_bind,3,(uintptr_t)&dest,-1,0,0,0) == -LINUX_EINVAL);

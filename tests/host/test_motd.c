@@ -5,7 +5,7 @@
 #include <string.h>
 #include <wchar.h>
 #include "userland/apps/motd/format.h"
-#include "kernel/ntclks/kernel/ntclks/include/ntclks/loadavg.h"
+#include "kernel/reliefnt/kernel/reliefnt/include/reliefnt/loadavg.h"
 
 static void check_width(const char *text, size_t limit)
 {
@@ -35,7 +35,7 @@ int main(void)
             char *text = NULL; size_t size = 0;
             FILE *output = open_memstream(&text, &size); assert(output);
             motd_render(output, &info, zh, width);
-            motd_wrap(output, "Project: https://github.com/LeonOSProject/LeonOS-4", width);
+            motd_wrap(output, "Project: https://github.com/ReliefOSProject/ReliefOS", width);
             assert(fclose(output) == 0);
             check_width(text, width);
             if (width >= 80) {

@@ -56,7 +56,7 @@ def main():
     ltp = cache / f"ltp-{LTP_REVISION}"
     run(["make", "-C", linux, "ARCH=x86_64", "headers_install", f"INSTALL_HDR_PATH={headers}"])
     run(["make", "autotools"], cwd=ltp)
-    env = {**os.environ, "CC": str(sdk / "bin/leonos-musl-cc"),
+    env = {**os.environ, "CC": str(sdk / "bin/reliefos-musl-cc"),
            "CFLAGS": f"-O2 -I{headers / 'include'}", "LDFLAGS": "-static",
            "AR": "llvm-ar", "RANLIB": "llvm-ranlib", "PKG_CONFIG_LIBDIR": "/nonexistent"}
     run([ltp / "configure", "--host=x86_64-linux-musl", "--build=x86_64-pc-linux-gnu",
@@ -68,11 +68,11 @@ def main():
         shutil.copy2(location / test, output / f"{test}.elf")
     posix = ltp / "testcases/open_posix_testsuite"
     for test in POSIX_TESTS:
-        run([sdk / "bin/leonos-musl-cc", "-O2", "-static", "-pthread",
+        run([sdk / "bin/reliefos-musl-cc", "-O2", "-static", "-pthread",
              f"-I{headers / 'include'}", f"-I{posix / 'include'}",
              posix / f"conformance/interfaces/{test}/1-1.c", posix / "lib/common.c",
              "-o", output / f"{test}_1-1.elf"])
-    run([sdk / "bin/leonos-musl-cc", "-O2", "-static", ROOT / "tools/tests/ltp_guest_runner.c",
+    run([sdk / "bin/reliefos-musl-cc", "-O2", "-static", ROOT / "tools/tests/ltp_guest_runner.c",
          "-o", output / "ltp-runner.elf"])
     shutil.copy2(ltp / "COPYING", output / "COPYING.ltp")
     (output / "manifest.json").write_text(json.dumps({

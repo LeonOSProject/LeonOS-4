@@ -6,44 +6,44 @@
 # architecture into a freestanding kernel image (plan section 6.2).
 
 ifeq ($(origin TOOLCHAIN),command line)
-LEONOS_TOOLCHAIN_ORIGIN := command line
+RELIEFOS_TOOLCHAIN_ORIGIN := command line
 else
-LEONOS_TOOLCHAIN_ORIGIN := default
+RELIEFOS_TOOLCHAIN_ORIGIN := default
 endif
 
-$(if $(wildcard $(TOOLCHAIN)),,$(error toolchain description '$(TOOLCHAIN)' not found (set via $(LEONOS_TOOLCHAIN_ORIGIN))))
+$(if $(wildcard $(TOOLCHAIN)),,$(error toolchain description '$(TOOLCHAIN)' not found (set via $(RELIEFOS_TOOLCHAIN_ORIGIN))))
 
 include $(TOOLCHAIN)
 
 # Only a command-line override may displace the description file. An
 # environment-provided CC, LD or AR is deliberately ignored so that whatever
 # `make doctor` validated is what actually runs.
-leonos_take_override = $(if $(filter command line,$(origin $(2))),$($(2)),$($(1)))
+reliefos_take_override = $(if $(filter command line,$(origin $(2))),$($(2)),$($(1)))
 
-TARGET_CC      := $(call leonos_take_override,TOOLCHAIN_CC,CC)
-TARGET_CXX     := $(call leonos_take_override,TOOLCHAIN_CXX,CXX)
-TARGET_AR      := $(call leonos_take_override,TOOLCHAIN_AR,AR)
-TARGET_RANLIB  := $(call leonos_take_override,TOOLCHAIN_RANLIB,RANLIB)
-TARGET_LD      := $(call leonos_take_override,TOOLCHAIN_LD,LD)
-TARGET_OBJCOPY := $(call leonos_take_override,TOOLCHAIN_OBJCOPY,OBJCOPY)
-TARGET_STRIP   := $(call leonos_take_override,TOOLCHAIN_STRIP,STRIP)
+TARGET_CC      := $(call reliefos_take_override,TOOLCHAIN_CC,CC)
+TARGET_CXX     := $(call reliefos_take_override,TOOLCHAIN_CXX,CXX)
+TARGET_AR      := $(call reliefos_take_override,TOOLCHAIN_AR,AR)
+TARGET_RANLIB  := $(call reliefos_take_override,TOOLCHAIN_RANLIB,RANLIB)
+TARGET_LD      := $(call reliefos_take_override,TOOLCHAIN_LD,LD)
+TARGET_OBJCOPY := $(call reliefos_take_override,TOOLCHAIN_OBJCOPY,OBJCOPY)
+TARGET_STRIP   := $(call reliefos_take_override,TOOLCHAIN_STRIP,STRIP)
 
 # Which of the two the value came from, for `make V=1` and the signatures.
-leonos_override_note = $(if $(filter command line,$(origin $(2))),overridden-from-command-line,$($(1)))
+reliefos_override_note = $(if $(filter command line,$(origin $(2))),overridden-from-command-line,$($(1)))
 
 # A profile is a compile policy, so it belongs here rather than being copied
 # into C constants or scattered through the rules (plan section 7).
 ifeq ($(PROFILE),debug)
-	LEONOS_OPTIMIZATION_FLAGS := -O0 -g
-	LEONOS_LINK_POLICY_FLAGS :=
+	RELIEFOS_OPTIMIZATION_FLAGS := -O0 -g
+	RELIEFOS_LINK_POLICY_FLAGS :=
 else
-	LEONOS_OPTIMIZATION_FLAGS := -O3
-	LEONOS_LINK_POLICY_FLAGS := --strip-all
+	RELIEFOS_OPTIMIZATION_FLAGS := -O3
+	RELIEFOS_LINK_POLICY_FLAGS := --strip-all
 endif
 
 # Explicit per-class override variables from the command line remain available
 # for experiments. They no longer feed any parent compile rule (the kernel is
-# built by the ntclks sub-make, see mk/kernel.mk) but they are kept because the
+# built by the ReliefNT sub-make, see mk/kernel.mk) but they are kept because the
 # command-line form reaches the sub-make through MAKEFLAGS and the regression
 # tests use that pass-through; leaving them unset keeps the profile policy in
 # charge.

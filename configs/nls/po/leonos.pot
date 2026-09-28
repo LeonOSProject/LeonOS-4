@@ -159,7 +159,7 @@ msgid "About Browser"
 msgstr ""
 
 #: userland/apps/osver/main.c:250
-msgid "About LeonOS"
+msgid "About ReliefOS"
 msgstr ""
 
 #: userland/apps/osver/main.c:173
@@ -615,7 +615,7 @@ msgid "Checking dependencies and preserving local configuration"
 msgstr ""
 
 #: userland/apps/installer/main.c:3181
-msgid "Checking existing LeonOS 4"
+msgid "Checking existing ReliefOS"
 msgstr ""
 
 #: userland/apps/desktop/render.c:41
@@ -655,11 +655,11 @@ msgid "Choose the default app used by File Manager and desktop shortcuts."
 msgstr ""
 
 #: userland/apps/installer/main.c:1329
-msgid "Choose the disk that already contains LeonOS 4."
+msgid "Choose the disk that already contains ReliefOS."
 msgstr ""
 
 #: userland/apps/installer/main.c:1330
-msgid "Choose the disk that will receive LeonOS."
+msgid "Choose the disk that will receive ReliefOS."
 msgstr ""
 
 #: userland/apps/installer/main.c:1212
@@ -675,7 +675,7 @@ msgid "Class"
 msgstr ""
 
 #: userland/apps/browser/input.c:291
-msgid "Classic HTTP browser for LeonOS 4."
+msgid "Classic HTTP browser for ReliefOS."
 msgstr ""
 
 #: userland/apps/browser/main.c:36
@@ -1519,11 +1519,11 @@ msgid "Error"
 msgstr ""
 
 #: userland/apps/installer/main.c:2352
-msgid "Existing LeonOS 4 boot partition was not detected"
+msgid "Existing ReliefOS boot partition was not detected"
 msgstr ""
 
 #: userland/apps/installer/main.c:2341
-msgid "Existing LeonOS 4 was not detected"
+msgid "Existing ReliefOS was not detected"
 msgstr ""
 
 #: userland/apps/installer/main.c:3190
@@ -1703,7 +1703,7 @@ msgid "Format partition"
 msgstr ""
 
 #: userland/apps/installer/main.c:1312
-msgid "Format the selected disk and copy a clean LeonOS 4 system."
+msgid "Format the selected disk and copy a clean ReliefOS system."
 msgstr ""
 
 #: userland/apps/browser/view.c:964
@@ -1963,7 +1963,7 @@ msgid "Install Options"
 msgstr ""
 
 #: userland/apps/installer/main.c:1297
-msgid "Install a new system or update an existing LeonOS 4 disk."
+msgid "Install a new system or update an existing ReliefOS disk."
 msgstr ""
 
 #: userland/apps/apiapp/main.c:730
@@ -1995,7 +1995,7 @@ msgid "Installation media is incomplete"
 msgstr ""
 
 #: userland/apps/installer/main.c:1448
-msgid "Installed LeonOS packages will be upgraded."
+msgid "Installed ReliefOS packages will be upgraded."
 msgstr ""
 
 #: userland/apps/helloworld/main.c:39
@@ -2007,7 +2007,7 @@ msgid "Installing Application"
 msgstr ""
 
 #: userland/apps/installer/main.c:849
-msgid "Installing LeonOS 4"
+msgid "Installing ReliefOS"
 msgstr ""
 
 #: userland/apps/apiapp/main.c:565
@@ -2175,59 +2175,59 @@ msgid "Legacy accounts require recovery before updating"
 msgstr ""
 
 #: userland/apps/osver/main.c:178
-msgid "LeonOS 4"
+msgid "ReliefOS"
 msgstr ""
 
 #: userland/apps/installer/main.c:1297
-msgid "LeonOS 4 Setup"
+msgid "ReliefOS Setup"
 msgstr ""
 
 #: userland/apps/browser/input.c:290
-msgid "LeonOS Browser"
+msgid "ReliefOS Browser"
 msgstr ""
 
 #: userland/apps/guitest/main.c:120
-msgid "LeonOS GUI API Tester"
+msgid "ReliefOS GUI API Tester"
 msgstr ""
 
 #: userland/apps/oshlp/main.c:1860
-msgid "LeonOS Help"
+msgid "ReliefOS Help"
 msgstr ""
 
 #: userland/apps/minesweeper/main.c:457
-msgid "LeonOS Minesweeper"
+msgid "ReliefOS Minesweeper"
 msgstr ""
 
 #: userland/apps/paint/main.c:569
-msgid "LeonOS Paint"
+msgid "ReliefOS Paint"
 msgstr ""
 
 #: userland/apps/desktop/render.c:31
-msgid "LeonOS UI Component Library"
+msgid "ReliefOS UI Component Library"
 msgstr ""
 
 #: userland/apps/servicemgr/main.c:47
-msgid "LeonOS device protocol"
+msgid "ReliefOS device protocol"
 msgstr ""
 
 #: userland/apps/fileman/main.c:14
-msgid "LeonOS file browser"
+msgid "ReliefOS file browser"
 msgstr ""
 
 #: userland/apps/osver/main.c:207
-msgid "LeonOS is free software for learning and experimentation."
+msgid "ReliefOS is free software for learning and experimentation."
 msgstr ""
 
 #: userland/apps/notepad/main.c:810
-msgid "LeonOS text viewer"
+msgid "ReliefOS text viewer"
 msgstr ""
 
 #: userland/apps/installer/main.c:1487
-msgid "LeonOS was installed to the selected disk."
+msgid "ReliefOS was installed to the selected disk."
 msgstr ""
 
 #: userland/apps/installer/main.c:1486
-msgid "LeonOS was updated on the selected disk."
+msgid "ReliefOS was updated on the selected disk."
 msgstr ""
 
 #: userland/apps/browser/view.c:970
@@ -2759,7 +2759,7 @@ msgid "Open Failed"
 msgstr ""
 
 #: userland/apps/run/main.c:69
-msgid "Open LeonOS program or file path"
+msgid "Open ReliefOS program or file path"
 msgstr ""
 
 #: userland/apps/mp3play/main.c:346
@@ -3359,7 +3359,7 @@ msgid "Restart"
 msgstr ""
 
 #: userland/apps/desktop/screen.c:789
-msgid "Restart LeonOS now?"
+msgid "Restart ReliefOS now?"
 msgstr ""
 
 #: userland/apps/desktop/input.c:671
@@ -3715,7 +3715,7 @@ msgid "Setup can copy the full normal system payload"
 msgstr ""
 
 #: userland/apps/installer/main.c:856
-msgid "Setup will check for an existing LeonOS 4 system."
+msgid "Setup will check for an existing ReliefOS system."
 msgstr ""
 
 #: userland/apps/desktop/desktop_items.c:565
@@ -3759,7 +3759,7 @@ msgid "Shut down"
 msgstr ""
 
 #: userland/apps/desktop/screen.c:792
-msgid "Shut down LeonOS now?"
+msgid "Shut down ReliefOS now?"
 msgstr ""
 
 #: userland/apps/desktop/input.c:672
@@ -3783,7 +3783,7 @@ msgid "Sign out"
 msgstr ""
 
 #: userland/apps/desktop/screen.c:791
-msgid "Sign out of LeonOS now?"
+msgid "Sign out of ReliefOS now?"
 msgstr ""
 
 #: userland/apps/login/main.c:158
@@ -4423,11 +4423,11 @@ msgid "Update dictionary"
 msgstr ""
 
 #: userland/apps/installer/main.c:3198
-msgid "Update installed LeonOS packages"
+msgid "Update installed ReliefOS packages"
 msgstr ""
 
 #: userland/apps/installer/main.c:848
-msgid "Updating LeonOS 4"
+msgid "Updating ReliefOS"
 msgstr ""
 
 #: userland/apps/settings/main.c:605
@@ -4439,7 +4439,7 @@ msgid "Updating runlevel..."
 msgstr ""
 
 #: userland/apps/installer/main.c:3340
-msgid "Upgrading signed LeonOS packages"
+msgid "Upgrading signed ReliefOS packages"
 msgstr ""
 
 #: userland/apps/taskmgr/main.c:1065
@@ -4459,7 +4459,7 @@ msgid "Use dotted decimal form, for example 10.0.2.2."
 msgstr ""
 
 #: userland/apps/browser/navigation.c:812
-msgid "Use http://, https://, about:, or a LeonOS file path such as /file.html."
+msgid "Use http://, https://, about:, or a ReliefOS file path such as /file.html."
 msgstr ""
 
 #: userland/apps/taskmgr/main.c:1059

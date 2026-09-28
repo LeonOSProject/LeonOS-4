@@ -1,7 +1,7 @@
-# LeonOS EEVDF 调度
+# ReliefOS EEVDF 调度
 
 本实现参考本地 Linux 6.12 的 `kernel/sched/fair.c` 中 EEVDF 的调度规则，
-以 LeonOS 的任务、锁和时钟接口独立实现，替换原来按严格优先级轮转的任务选择。
+以 ReliefOS 的任务、锁和时钟接口独立实现，替换原来按严格优先级轮转的任务选择。
 所有现有可调度用户任务，包括桌面和服务，使用相同的公平调度策略。
 进程生命周期、信号、地址空间、上下文切换及 idle 机制仍由原有内核接口负责。
 
@@ -21,7 +21,7 @@
 
 ## 与 Linux 6.12 的差异
 
-LeonOS 当前时钟抢占为 100 Hz，所以请求长度选用 10 ms；没有宣称实现 Linux
+ReliefOS 当前时钟抢占为 100 Hz，所以请求长度选用 10 ms；没有宣称实现 Linux
 亚毫秒 hrtick 精度。队列使用链表扫描，选择复杂度 O(n)，未移植 Linux 的增强
 红黑树、PELT、调度组、CPU capacity/NUMA、CFS bandwidth、实时调度类或
 `RUN_TO_PARITY` 特性。现有 Linux ABI 对不支持的调度策略继续拒绝。

@@ -3,7 +3,7 @@ set -eu
 src=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
-${HOSTCC:-cc} -std=c11 -O2 -Wall -Wextra -Werror -I"$src" "$src/tools/host/assets/leonos-font.c" "$src/tools/host/common/io.c" "$src/tools/host/common/buffer.c" -o "$work/font"
+${HOSTCC:-cc} -std=c11 -O2 -Wall -Wextra -Werror -I"$src" "$src/tools/host/assets/reliefos-font.c" "$src/tools/host/common/io.c" "$src/tools/host/common/buffer.c" -o "$work/font"
 "$work/font" "$src/system/fonts/Deng.ttf" "$src/system/fonts/system.psf" "$work/metro.ttf" "$work/win95.ttf"
 [ "$(sha256sum "$work/metro.ttf" | cut -d' ' -f1)" = e051009b42b454352a90ae0c9b8adb58bbdbcd168768750b35bc3357510de141 ]
 [ "$(sha256sum "$work/win95.ttf" | cut -d' ' -f1)" = 2000e8330dccdb600977fa1f1ce45a3fae5c1d1c6bb2ad7bba5b68d2c8713401 ]

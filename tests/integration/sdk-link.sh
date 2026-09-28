@@ -9,8 +9,8 @@ cat > "$w/div.c" <<'C'
 volatile unsigned __int128 dividend = 123, divisor = 7;
 int main(void) { return dividend / divisor != 17; }
 C
-"$SDK_ROOT/bin/leonos-musl-cc" "$w/div.c" -o "$w/dynamic"
+"$SDK_ROOT/bin/reliefos-musl-cc" "$w/div.c" -o "$w/dynamic"
 "$MUSL_LOADER" --library-path "$SDK_ROOT/lib" "$w/dynamic"
-"$SDK_ROOT/bin/leonos-musl-cc" -static "$w/div.c" -o "$w/static"
+"$SDK_ROOT/bin/reliefos-musl-cc" -static "$w/div.c" -o "$w/static"
 "$w/static"
 echo 'ok - SDK dynamic/static compiler-rt arithmetic (Linux host)'

@@ -5,9 +5,9 @@ src=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 w=$(mktemp -d)
 trap 'rm -rf "$w"' EXIT HUP INT TERM
 cat > "$w/Makefile" <<'MAKE'
-include $(LEONOS_SRC)/mk/config.mk
+include $(RELIEFOS_SRC)/mk/config.mk
 .PHONY: check
-check: $(LEONOS_AUTOCONF_MK)
+check: $(RELIEFOS_AUTOCONF_MK)
 	@test '$(KCONFIG_CONFIG_VMDK_DEFAULT_LANG)' = zh_CN.UTF-8
 MAKE
 mkdir -p "$w/include/generated"
@@ -27,8 +27,8 @@ done
 exit 1
 SH
 chmod +x "$w/config-tool"
-make --no-print-directory -f "$w/Makefile" check LEONOS_SRC="$src" \
+make --no-print-directory -f "$w/Makefile" check RELIEFOS_SRC="$src" \
     O_CONFIG="$w" O_INCLUDE="$w/include" O_HOST="$w/host" \
-    LEONOS_CONFIG_FILE="$w/config" KCONFIG_CONF= KCONFIG_SEED= KCONFIG_ROOT= \
-    LEONOS_CONFIG_TOOL="$w/config-tool"
+    RELIEFOS_CONFIG_FILE="$w/config" KCONFIG_CONF= KCONFIG_SEED= KCONFIG_ROOT= \
+    RELIEFOS_CONFIG_TOOL="$w/config-tool"
 printf 'first build: generated configuration loaded before recipes passed\n'

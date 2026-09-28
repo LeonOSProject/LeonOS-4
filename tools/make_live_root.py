@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 import tempfile
 
-from leonos_layout import layout_directories, apply_root_symlinks
+from reliefos_layout import layout_directories, apply_root_symlinks
 
 from make_image import make_root_tree
 from make_ext2_root import write_ext2_root
@@ -25,7 +25,7 @@ def main() -> None:
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="leonos-live-tree-", dir=args.out.parent) as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-live-tree-", dir=args.out.parent) as directory:
         stage = Path(directory)
         make_live_tree(args.tree, stage)
         write_ext2_root(stage, args.out)

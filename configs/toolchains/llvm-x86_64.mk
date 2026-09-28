@@ -1,4 +1,4 @@
-# LeonOS 4 x86_64 target toolchain description.
+# ReliefOS x86_64 target toolchain description.
 #
 # Reviewed data, not logic: mk/toolchain.mk interprets it and `make doctor`
 # verifies it. Switching toolchains means pointing TOOLCHAIN= at another file in

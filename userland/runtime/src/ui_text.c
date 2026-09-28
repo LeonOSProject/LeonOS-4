@@ -1,13 +1,13 @@
-#include <leonos/syscall.h>
+#include <reliefos/syscall.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 
 #include "ui_internal.h"
 
-#define UI_TTF_METRO_PATH LEONOS_PATH_UI_METRO_FONT
-#define UI_TTF_WIN95_PATH LEONOS_PATH_UI_WIN95_FONT
+#define UI_TTF_METRO_PATH RELIEFOS_PATH_UI_METRO_FONT
+#define UI_TTF_WIN95_PATH RELIEFOS_PATH_UI_WIN95_FONT
 #define UI_TTF_PATH_MAX 128U
 #define UI_TTF_MAX (20U * 1024U * 1024U)
 #define UI_TTF_POINTS_MAX 2048U
@@ -206,35 +206,35 @@ static int ui_ttf_set_path(char *target, const char *path)
     return 0;
 }
 
-int leonos_ui_set_font_path(const char *path)
+int reliefos_ui_set_font_path(const char *path)
 {
     return ui_ttf_set_path(ui_ttf_override_path, path);
 }
 
-int leonos_ui_set_font_fallback_path(const char *path)
+int reliefos_ui_set_font_fallback_path(const char *path)
 {
     return ui_ttf_set_path(ui_ttf_fallback_path, path);
 }
 
 static int ui_ttf_read_file(struct ui_ttf_font *font, const char *path)
 {
-    struct leonos_stat st;
+    struct reliefos_stat st;
     int fd;
     long mapped_raw;
     if (!font || !path) {
         fprintf(stderr, "[ui] TTF invalid load request\n");
         return 0;
     }
-    if (leonos_stat_legacy(path, &st) != 0) {
+    if (reliefos_stat_legacy(path, &st) != 0) {
         fprintf(stderr, "[ui] TTF stat failed path=%s\n", path);
         return 0;
     }
-    if (st.type != LEONOS_FS_TYPE_FILE || st.size < 12 || st.size > UI_TTF_MAX) {
+    if (st.type != RELIEFOS_FS_TYPE_FILE || st.size < 12 || st.size > UI_TTF_MAX) {
         fprintf(stderr, "[ui] TTF invalid file path=%s type=%u size=%u\n",
                path, st.type, (unsigned)st.size);
         return 0;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         fprintf(stderr, "[ui] TTF open failed path=%s ret=%d\n", path, fd);
         return 0;
@@ -243,8 +243,8 @@ static int ui_ttf_read_file(struct ui_ttf_font *font, const char *path)
      * every byte during the first paint turns startup into thousands of disk
      * reads.  A read-only file mapping keeps the same parser API while the
      * kernel supplies only the font pages actually used by UI text. */
-    mapped_raw = syscall6(SYS_mmap, 0, (long)st.size, LEONOS_PROT_READ,
-                          LEONOS_MAP_PRIVATE, fd, 0);
+    mapped_raw = syscall6(SYS_mmap, 0, (long)st.size, RELIEFOS_PROT_READ,
+                          RELIEFOS_MAP_PRIVATE, fd, 0);
     close(fd);
     if (mapped_raw < 0) {
         fprintf(stderr, "[ui] TTF mmap failed path=%s bytes=%u ret=%ld\n",
@@ -316,7 +316,7 @@ static int ui_ttf_load_font(struct ui_ttf_font *font, const char *path)
 static void ui_ttf_load(void)
 {
     uint8_t metro = (uint8_t)ui_theme_is_metro();
-    unsigned long now = leonos_uptime_ms();
+    unsigned long now = reliefos_uptime_ms();
     if (ui_ttf_checked && ui_ttf_metro == metro && ui_ttf_primary.data) {
         return;
     }
@@ -537,7 +537,7 @@ static uint32_t ui_ttf_pixel_width(uint32_t codepoint, uint32_t height,
         uint32_t space = ui_ttf_pixel_width(' ', height, fallback);
         return space <= UINT32_MAX / 4U ? space * 4U : UINT32_MAX;
     }
-    if (height == LEONOS_FONT_H) {
+    if (height == RELIEFOS_FONT_H) {
         cache_index = (codepoint * 2654435761U) & (UI_TTF_METRIC_CACHE_ENTRIES - 1U);
         cache_entry = &ui_ttf_metric_cache[cache_index];
         if (cache_entry->state && cache_entry->codepoint == codepoint &&
@@ -867,19 +867,19 @@ static uint32_t ui_blend_color(uint32_t background, uint32_t foreground, uint8_t
     return (red << 16) | (green << 8) | blue;
 }
 
-static uint32_t ui_surface_color(const struct leonos_ui_surface *surface, uint32_t x, uint32_t y)
+static uint32_t ui_surface_color(const struct reliefos_ui_surface *surface, uint32_t x, uint32_t y)
 {
     return (!surface || !surface->pixels || x >= surface->width || y >= surface->height) ? 0 : surface->pixels[(uint64_t)y * surface->stride + x];
 }
 
-static void ui_tofu(struct leonos_ui_surface *surface, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t fg, uint32_t bg, int transparent)
+static void ui_tofu(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t fg, uint32_t bg, int transparent)
 {
-    if (!transparent) leonos_ui_rect(surface, x, y, w, h, bg);
+    if (!transparent) reliefos_ui_rect(surface, x, y, w, h, bg);
     if (w < 3 || h < 3) return;
-    leonos_ui_rect(surface, x + 1, y + 1, w - 2, 1, fg);
-    leonos_ui_rect(surface, x + 1, y + h - 2, w - 2, 1, fg);
-    leonos_ui_rect(surface, x + 1, y + 1, 1, h - 2, fg);
-    leonos_ui_rect(surface, x + w - 2, y + 1, 1, h - 2, fg);
+    reliefos_ui_rect(surface, x + 1, y + 1, w - 2, 1, fg);
+    reliefos_ui_rect(surface, x + 1, y + h - 2, w - 2, 1, fg);
+    reliefos_ui_rect(surface, x + 1, y + 1, 1, h - 2, fg);
+    reliefos_ui_rect(surface, x + w - 2, y + 1, 1, h - 2, fg);
 }
 
 static void ui_ttf_sort_intersections(int32_t low, int32_t high)
@@ -1075,25 +1075,25 @@ static struct ui_ttf_mask_cache_entry *ui_ttf_mask_cache_get(uint32_t codepoint,
     return entry;
 }
 
-static void ui_ttf_blit_mask(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+static void ui_ttf_blit_mask(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                              uint32_t w, uint32_t h, const uint8_t *mask,
                              uint32_t fg, uint32_t bg, int transparent)
 {
     if (!transparent) {
-        leonos_ui_rect(surface, x, y, w, h, bg);
+        reliefos_ui_rect(surface, x, y, w, h, bg);
     }
     for (uint32_t row = 0; row < h; ++row) {
         for (uint32_t col = 0; col < w; ++col) {
             uint8_t alpha = mask[row * w + col];
             if (alpha) {
                 uint32_t base = transparent ? ui_surface_color(surface, x + col, y + row) : bg;
-                leonos_ui_pixel(surface, x + col, y + row, ui_blend_color(base, fg, alpha));
+                reliefos_ui_pixel(surface, x + col, y + row, ui_blend_color(base, fg, alpha));
             }
         }
     }
 }
 
-static void ui_ttf_raster_surface(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+static void ui_ttf_raster_surface(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                                   uint32_t w, uint32_t h, uint32_t edges,
                                   uint32_t samples, uint32_t fg, uint32_t bg,
                                   int transparent)
@@ -1108,7 +1108,7 @@ static void ui_ttf_raster_surface(struct leonos_ui_surface *surface, uint32_t x,
         dynamic_coverage = 1;
     }
     if (!transparent) {
-        leonos_ui_rect(surface, x, y, w, h, bg);
+        reliefos_ui_rect(surface, x, y, w, h, bg);
     }
     for (uint32_t row = 0; row < h; ++row) {
         for (uint32_t col = 0; col < w; ++col) {
@@ -1120,7 +1120,7 @@ static void ui_ttf_raster_surface(struct leonos_ui_surface *surface, uint32_t x,
             uint8_t alpha = ui_ttf_coverage_alpha(coverage[col], samples);
             if (alpha) {
                 uint32_t base = transparent ? ui_surface_color(surface, x + col, y + row) : bg;
-                leonos_ui_pixel(surface, x + col, y + row, ui_blend_color(base, fg, alpha));
+                reliefos_ui_pixel(surface, x + col, y + row, ui_blend_color(base, fg, alpha));
             }
         }
     }
@@ -1129,7 +1129,7 @@ static void ui_ttf_raster_surface(struct leonos_ui_surface *surface, uint32_t x,
     }
 }
 
-static void ui_ttf_draw_direct(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+static void ui_ttf_draw_direct(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                                uint32_t w, uint32_t h, uint32_t codepoint,
                                uint32_t fg, uint32_t bg, int transparent)
 {
@@ -1142,14 +1142,14 @@ static void ui_ttf_draw_direct(struct leonos_ui_surface *surface, uint32_t x, ui
                           ui_ttf_sample_count(codepoint), fg, bg, transparent);
 }
 
-static void ui_ttf_draw(struct leonos_ui_surface *surface, uint32_t x, uint32_t y, uint32_t w, uint32_t h,
+static void ui_ttf_draw(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y, uint32_t w, uint32_t h,
                         uint32_t codepoint, uint32_t fg, uint32_t bg, int transparent)
 {
     const uint8_t *mask_data;
     uint16_t glyph;
     if (codepoint == ' ' || codepoint == '\t') {
         if (!transparent) {
-            leonos_ui_rect(surface, x, y, w, h, bg);
+            reliefos_ui_rect(surface, x, y, w, h, bg);
         }
         return;
     }
@@ -1191,10 +1191,10 @@ uint32_t ui_decode_utf8(const char *text, uint32_t len, uint32_t off, uint32_t *
     const uint8_t *bytes = (const uint8_t *)text;
     uint8_t first;
     if (byte_len) *byte_len = 1;
-    if (!text || off >= len) return LEONOS_TEXT_REPLACEMENT_CHAR;
+    if (!text || off >= len) return RELIEFOS_TEXT_REPLACEMENT_CHAR;
     first = bytes[off];
     if (first < 0x80U) return first;
-    if (first < 0xc2U) return LEONOS_TEXT_REPLACEMENT_CHAR;
+    if (first < 0xc2U) return RELIEFOS_TEXT_REPLACEMENT_CHAR;
     if (first < 0xe0U && off + 1U < len && ui_utf8_cont(bytes[off + 1U])) {
         if (byte_len) *byte_len = 2;
         return ((uint32_t)(first & 0x1fU) << 6) | (bytes[off + 1U] & 0x3fU);
@@ -1210,7 +1210,7 @@ uint32_t ui_decode_utf8(const char *text, uint32_t len, uint32_t off, uint32_t *
         return ((uint32_t)(first & 7U) << 18) | ((uint32_t)(bytes[off + 1U] & 0x3fU) << 12) |
                ((uint32_t)(bytes[off + 2U] & 0x3fU) << 6) | (bytes[off + 3U] & 0x3fU);
     }
-    return LEONOS_TEXT_REPLACEMENT_CHAR;
+    return RELIEFOS_TEXT_REPLACEMENT_CHAR;
 }
 
 static int ui_is_wide_codepoint(uint32_t codepoint)
@@ -1231,10 +1231,10 @@ uint32_t ui_cell_width(uint32_t codepoint)
 uint32_t ui_codepoint_pixel_width(uint32_t codepoint)
 {
     uint32_t cell_width = ui_cell_width(codepoint);
-    return ui_ttf_pixel_width(codepoint, LEONOS_FONT_H, cell_width * LEONOS_FONT_W);
+    return ui_ttf_pixel_width(codepoint, RELIEFOS_FONT_H, cell_width * RELIEFOS_FONT_W);
 }
 
-int ui_layout_utf8(const char *text, uint32_t byte_len, struct leonos_text_glyph *glyphs, uint32_t capacity, struct leonos_text_layout *out)
+int ui_layout_utf8(const char *text, uint32_t byte_len, struct reliefos_text_glyph *glyphs, uint32_t capacity, struct reliefos_text_layout *out)
 {
     uint32_t offset = 0, count = 0, cells = 0, pixels = 0;
     if (!text) {
@@ -1321,45 +1321,45 @@ uint32_t ui_byte_offset_for_pixel(const char *text, uint32_t len, uint32_t start
     return start;
 }
 
-uint32_t leonos_ui_text_width(const char *text)
+uint32_t reliefos_ui_text_width(const char *text)
 {
-    struct leonos_text_layout layout;
-    struct leonos_text_glyph glyphs[UI_LAYOUT_GLYPH_MAX];
+    struct reliefos_text_layout layout;
+    struct reliefos_text_glyph glyphs[UI_LAYOUT_GLYPH_MAX];
     ui_layout_utf8(text, 0, glyphs, UI_LAYOUT_GLYPH_MAX, &layout);
     return layout.total_px;
 }
 
-uint32_t leonos_ui_text_fit_chars(uint32_t pixel_width)
+uint32_t reliefos_ui_text_fit_chars(uint32_t pixel_width)
 {
-    return pixel_width / LEONOS_FONT_W;
+    return pixel_width / RELIEFOS_FONT_W;
 }
 
-void ui_codepoint(struct leonos_ui_surface *surface, uint32_t x, uint32_t y, uint32_t codepoint, uint32_t cell_width, uint32_t fg, uint32_t bg, int transparent)
+void ui_codepoint(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y, uint32_t codepoint, uint32_t cell_width, uint32_t fg, uint32_t bg, int transparent)
 {
     uint32_t pixel_width;
     if (!cell_width) return;
     pixel_width = ui_codepoint_pixel_width(codepoint);
-    ui_ttf_draw(surface, x, y, pixel_width, LEONOS_FONT_H, codepoint, fg, bg, transparent);
+    ui_ttf_draw(surface, x, y, pixel_width, RELIEFOS_FONT_H, codepoint, fg, bg, transparent);
 }
 
-void ui_char(struct leonos_ui_surface *surface, uint32_t x, uint32_t y, char character, uint32_t fg, uint32_t bg, int transparent)
+void ui_char(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y, char character, uint32_t fg, uint32_t bg, int transparent)
 {
     ui_codepoint(surface, x, y, (uint8_t)character, 1, fg, bg, transparent);
 }
 
-void leonos_ui_codepoint(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_codepoint(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                          uint32_t codepoint, uint32_t cell_width,
                          uint32_t fg, uint32_t bg)
 {
     ui_codepoint(surface, x, y, codepoint, cell_width, fg, bg, 0);
 }
 
-static void ui_draw_layout_text(struct leonos_ui_surface *surface, uint32_t x, uint32_t y, uint32_t w, const char *text, uint32_t fg, uint32_t bg, int transparent, int clipped)
+static void ui_draw_layout_text(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y, uint32_t w, const char *text, uint32_t fg, uint32_t bg, int transparent, int clipped)
 {
-    struct leonos_text_layout layout;
-    struct leonos_text_glyph glyphs[UI_LAYOUT_GLYPH_MAX];
+    struct reliefos_text_layout layout;
+    struct reliefos_text_glyph glyphs[UI_LAYOUT_GLYPH_MAX];
     uint32_t draw_x = x;
-    if (!transparent && clipped) leonos_ui_rect(surface, x, y, w, LEONOS_FONT_H, bg);
+    if (!transparent && clipped) reliefos_ui_rect(surface, x, y, w, RELIEFOS_FONT_H, bg);
     ui_layout_utf8(text ? text : "", 0, glyphs, UI_LAYOUT_GLYPH_MAX, &layout);
     for (uint32_t i = 0; i < layout.count && i < UI_LAYOUT_GLYPH_MAX; ++i) {
         if (clipped && draw_x + glyphs[i].pixel_width > x + w) break;
@@ -1368,40 +1368,51 @@ static void ui_draw_layout_text(struct leonos_ui_surface *surface, uint32_t x, u
     }
 }
 
-void leonos_ui_text(struct leonos_ui_surface *surface, uint32_t x, uint32_t y, const char *text, uint32_t fg, uint32_t bg)
+void reliefos_ui_text(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y, const char *text, uint32_t fg, uint32_t bg)
 {
     ui_draw_layout_text(surface, x, y, 0, text, fg, bg, 0, 0);
 }
 
-void leonos_ui_text_clipped(struct leonos_ui_surface *surface, uint32_t x, uint32_t y, uint32_t w, const char *text, uint32_t fg, uint32_t bg)
+void reliefos_ui_text_clipped(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y, uint32_t w, const char *text, uint32_t fg, uint32_t bg)
 {
     ui_draw_layout_text(surface, x, y, w, text, fg, bg, 0, 1);
 }
 
-void leonos_ui_text_resized_clipped(struct leonos_ui_surface *surface, uint32_t x, uint32_t y, uint32_t w, const char *text, uint32_t fg, uint32_t bg, uint32_t cell_w, uint32_t cell_h)
+void reliefos_ui_text_resized_clipped(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y, uint32_t w, const char *text, uint32_t fg, uint32_t bg, uint32_t cell_w, uint32_t cell_h)
 {
-    struct leonos_text_layout layout;
-    struct leonos_text_glyph glyphs[UI_LAYOUT_GLYPH_MAX];
+    struct reliefos_text_layout layout;
+    struct reliefos_text_glyph glyphs[UI_LAYOUT_GLYPH_MAX];
     uint32_t draw_x = x;
-    if (!cell_w) cell_w = LEONOS_FONT_W;
-    if (!cell_h) cell_h = LEONOS_FONT_H;
-    leonos_ui_rect(surface, x, y, w, cell_h, bg);
+    if (!cell_w) cell_w = RELIEFOS_FONT_W;
+    if (!cell_h) cell_h = RELIEFOS_FONT_H;
+    reliefos_ui_rect(surface, x, y, w, cell_h, bg);
     ui_layout_utf8(text ? text : "", 0, glyphs, UI_LAYOUT_GLYPH_MAX, &layout);
     for (uint32_t i = 0; i < layout.count && i < UI_LAYOUT_GLYPH_MAX; ++i) {
-        uint32_t glyph_w = (glyphs[i].pixel_width * cell_w + LEONOS_FONT_W / 2U) /
-                           LEONOS_FONT_W;
+        uint32_t glyph_w = (glyphs[i].pixel_width * cell_w + RELIEFOS_FONT_W / 2U) /
+                           RELIEFOS_FONT_W;
         if (draw_x + glyph_w > x + w) break;
         if (glyphs[i].codepoint != '\t') ui_ttf_draw(surface, draw_x, y, glyph_w, cell_h, glyphs[i].codepoint, fg, bg, 0);
         draw_x += glyph_w;
     }
 }
 
-void leonos_ui_text_transparent(struct leonos_ui_surface *surface, uint32_t x, uint32_t y, const char *text, uint32_t fg)
+void reliefos_ui_text_transparent(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y, const char *text, uint32_t fg)
 {
     ui_draw_layout_text(surface, x, y, 0, text, fg, 0, 1, 0);
 }
 
-void leonos_ui_text_transparent_clipped(struct leonos_ui_surface *surface, uint32_t x, uint32_t y, uint32_t w, const char *text, uint32_t fg)
+void reliefos_ui_text_transparent_clipped(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y, uint32_t w, const char *text, uint32_t fg)
 {
     ui_draw_layout_text(surface, x, y, w, text, fg, 0, 1, 1);
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_ui_codepoint) leonos_ui_codepoint __attribute__((alias("reliefos_ui_codepoint")));
+extern __typeof__(reliefos_ui_set_font_fallback_path) leonos_ui_set_font_fallback_path __attribute__((alias("reliefos_ui_set_font_fallback_path")));
+extern __typeof__(reliefos_ui_set_font_path) leonos_ui_set_font_path __attribute__((alias("reliefos_ui_set_font_path")));
+extern __typeof__(reliefos_ui_text) leonos_ui_text __attribute__((alias("reliefos_ui_text")));
+extern __typeof__(reliefos_ui_text_clipped) leonos_ui_text_clipped __attribute__((alias("reliefos_ui_text_clipped")));
+extern __typeof__(reliefos_ui_text_fit_chars) leonos_ui_text_fit_chars __attribute__((alias("reliefos_ui_text_fit_chars")));
+extern __typeof__(reliefos_ui_text_resized_clipped) leonos_ui_text_resized_clipped __attribute__((alias("reliefos_ui_text_resized_clipped")));
+extern __typeof__(reliefos_ui_text_transparent) leonos_ui_text_transparent __attribute__((alias("reliefos_ui_text_transparent")));
+extern __typeof__(reliefos_ui_text_transparent_clipped) leonos_ui_text_transparent_clipped __attribute__((alias("reliefos_ui_text_transparent_clipped")));
+extern __typeof__(reliefos_ui_text_width) leonos_ui_text_width __attribute__((alias("reliefos_ui_text_width")));

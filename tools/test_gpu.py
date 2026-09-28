@@ -10,14 +10,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class GpuAbiTests(unittest.TestCase):
     def test_syscall_and_copyout(self):
-        for name, source in (("gpu_syscall", "kernel/ntclks/kernel/ntclks/gpu.c"),
-                             ("gpu_usercopy", "kernel/ntclks/kernel/exec/usercopy.c")):
-            with self.subTest(name=name), tempfile.TemporaryDirectory(prefix="leonos-gpu-") as tmp:
+        for name, source in (("gpu_syscall", "kernel/reliefnt/kernel/reliefnt/gpu.c"),
+                             ("gpu_usercopy", "kernel/reliefnt/kernel/exec/usercopy.c")):
+            with self.subTest(name=name), tempfile.TemporaryDirectory(prefix="reliefos-gpu-") as tmp:
                 executable = str(Path(tmp) / name)
                 subprocess.run([
                     "cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-g",
                     "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
-                    "-Ikernel/ntclks/kernel/ntclks/include", "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi",
+                    "-Ikernel/reliefnt/kernel/reliefnt/include", "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi",
                     f"tools/tests/{name}_test.c", source, "-o", executable,
                 ], cwd=ROOT, check=True)
                 subprocess.run([executable], cwd=ROOT, check=True, timeout=30)
@@ -29,18 +29,18 @@ class GpuAbiTests(unittest.TestCase):
         self.assertFalse((ROOT / "devtools/include/linux").exists())
 
     def test_taskmgr_sampling(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-gpu-sampler-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="reliefos-gpu-sampler-") as tmp:
             executable = str(Path(tmp) / "sampler")
             subprocess.run([
                 "cc", "-std=c11", "-O1", "-g", "-Wall", "-Wextra", "-Werror",
                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer", "-Iinclude",
-                "-Ikernel/ntclks/include/uapi",
+                "-Ikernel/reliefnt/include/uapi",
                     "tools/tests/taskmgr_gpu_sample_test.c", "-o", executable,
             ], cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=30)
 
     def test_gears_backend(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-gears-source-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="reliefos-gears-source-") as tmp:
             upstream = ROOT / "third_party/portablegl/examples/classic/gears.c"
             source = upstream.read_text()
             marker = "#define PORTABLEGL_IMPLEMENTATION"

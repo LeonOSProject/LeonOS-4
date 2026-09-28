@@ -1,5 +1,5 @@
 #!/bin/sh
-# LeonOS adapters for upstream C programs. No upstream source is modified.
+# ReliefOS adapters for upstream C programs. No upstream source is modified.
 set -eu
 MAKEFLAGS=${MAKEFLAGS-}
 case ${MAKEFLAGS%% *} in *n*) exit 0 ;; esac
@@ -19,11 +19,11 @@ if [ -n "${UPSTREAM_DEPS-}" ]; then
  expected=$("$UPSTREAM_DEPS" --lock "$src/configs/dependencies.lock.json" --id "$source_id" --print commit)
  [ "$(git -C "$src/third_party/$source_id" rev-parse HEAD)" = "$expected" ] || { echo "$pkg: source revision mismatch" >&2; exit 1; }
 fi
-flags="--target=x86_64-linux-musl ${UPSTREAM_CFLAGS:--O2} -std=gnu11 -ffreestanding -fno-stack-protector -fPIC -ffunction-sections -fdata-sections -nostdinc -isystem $resource/include -I$musl/include -I$src/userland/runtime/include -I$src/include -I${UPSTREAM_UAPI:-$src/kernel/ntclks/include/uapi} -I$includes -I$work/generated -I$source -DLEONOS_USE_MUSL -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L"
+flags="--target=x86_64-linux-musl ${UPSTREAM_CFLAGS:--O2} -std=gnu11 -ffreestanding -fno-stack-protector -fPIC -ffunction-sections -fdata-sections -nostdinc -isystem $resource/include -I$musl/include -I$src/userland/runtime/include -I$src/include -I${UPSTREAM_UAPI:-$src/kernel/reliefnt/include/uapi} -I$includes -I$work/generated -I$source -DRELIEFOS_USE_MUSL -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L"
 compile() { "$cc" $flags "$@"; }
 shared() { name=$1; shift; "$ld" ${UPSTREAM_LDFLAGS-} -shared --no-undefined --hash-style=both -z max-page-size=0x1000 -soname "$name" -o "$output/$name.tmp" "$@" -L "$musl/lib" -l:libmimalloc.so.3 "$runtime" -lc; mv "$output/$name.tmp" "$output/$name"; }
 staticlib() { name=$1; shift; rm -f "$output/$name.tmp"; "$ar" rcs "$output/$name.tmp" "$@"; mv "$output/$name.tmp" "$output/$name"; }
-executable() { "$ld" ${UPSTREAM_LDFLAGS-} --gc-sections -z max-page-size=0x1000 -pie --hash-style=both --dynamic-linker /lib/ld-musl-x86_64.so.1 -rpath /usr/lib/leonos:/lib:/usr/lib -o "$output/$pkg.elf.tmp" "$musl/lib/Scrt1.o" "$musl/lib/crti.o" "$@" -L "$musl/lib" -l:libmimalloc.so.3 --start-group "$runtime" -lc --end-group "$musl/lib/crtn.o"; mv "$output/$pkg.elf.tmp" "$output/$pkg.elf"; }
+executable() { "$ld" ${UPSTREAM_LDFLAGS-} --gc-sections -z max-page-size=0x1000 -pie --hash-style=both --dynamic-linker /lib/ld-musl-x86_64.so.1 -rpath /usr/lib/reliefos:/lib:/usr/lib -o "$output/$pkg.elf.tmp" "$musl/lib/Scrt1.o" "$musl/lib/crti.o" "$@" -L "$musl/lib" -l:libmimalloc.so.3 --start-group "$runtime" -lc --end-group "$musl/lib/crtn.o"; mv "$output/$pkg.elf.tmp" "$output/$pkg.elf"; }
 staticexe() { "$ld" ${UPSTREAM_LDFLAGS-} --gc-sections -z max-page-size=0x1000 -static --image-base=0x4000000 -o "$output/$pkg.elf.tmp" "$musl/lib/crt1.o" "$musl/lib/crti.o" "$@" "$musl/lib/mimalloc.o" --start-group "$archive" "$musl/lib/libc.a" --end-group "$musl/lib/crtn.o"; mv "$output/$pkg.elf.tmp" "$output/$pkg.elf"; }
 case $pkg in
 cmd)
@@ -61,7 +61,7 @@ pleditor)
  END {if (changed != 1) exit 1}
  ' "$source/src/pleditor.c" > "$work/generated/src/pleditor.c"
  for name in main pleditor syntax; do compile -include "$autoconf" -fPIE -c "$work/generated/src/$name.c" -o "$work/objects/$name.o"; done
- compile -include "$autoconf" -fPIE -c "$src/userland/apps/pleditor/platform_leonos.c" -o "$work/objects/platform.o"
+ compile -include "$autoconf" -fPIE -c "$src/userland/apps/pleditor/platform_reliefos.c" -o "$work/objects/platform.o"
  executable "$work"/objects/*.o
  ;;
 sl)

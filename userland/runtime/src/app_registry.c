@@ -1,6 +1,6 @@
-#include <leonos/app.h>
-#include <leonos/fs.h>
-#include <leonos/ini.h>
+#include <reliefos/app.h>
+#include <reliefos/fs.h>
+#include <reliefos/ini.h>
 #include <errno.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -9,13 +9,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 
 /* One registry root serves both the former system-app and program-app
  * packages; the manifest's ``system`` key preserves the system flag. */
-#define APP_ROOT LEONOS_LAYOUT_LEONOS_APPS
+#define APP_ROOT RELIEFOS_LAYOUT_RELIEFOS_APPS
 
-static struct leonos_app_info registry[LEONOS_APP_REGISTRY_MAX];
+static struct reliefos_app_info registry[RELIEFOS_APP_REGISTRY_MAX];
 static uint32_t registry_count;
 static uint8_t registry_loaded;
 static uint8_t registry_scanning;
@@ -116,8 +116,8 @@ static int read_key(const char *manifest, const char *key, char *value,
                     uint32_t capacity)
 {
     if (!manifest || !key || !value || capacity == 0 ||
-        !leonos_ini_load_strict(manifest) ||
-        !leonos_ini_get("app", key, value, capacity)) {
+        !reliefos_ini_load_strict(manifest) ||
+        !reliefos_ini_get("app", key, value, capacity)) {
         if (value && capacity) value[0] = 0;
         return 0;
     }
@@ -179,7 +179,7 @@ static int app_has_id(const char *id)
 
 static int list_contains(const char *list, const char *wanted)
 {
-    char item[LEONOS_APP_ID_LEN];
+    char item[RELIEFOS_APP_ID_LEN];
     uint32_t pos = 0;
     uint32_t out = 0;
     if (!list || !wanted || !wanted[0]) return 0;
@@ -219,16 +219,16 @@ static int derive_icon(char *icon, uint32_t capacity, const char *exec,
 
 static int add_package(const char *root, const char *package)
 {
-    struct leonos_app_info info;
+    struct reliefos_app_info info;
     struct stat st;
-    char package_dir[LEONOS_APP_PATH_LEN];
-    char manifest[LEONOS_APP_PATH_LEN];
-    char legacy_manifest[LEONOS_APP_PATH_LEN];
-    char value[LEONOS_APP_LIST_LEN];
-    char fallback_exec[LEONOS_APP_PATH_LEN];
+    char package_dir[RELIEFOS_APP_PATH_LEN];
+    char manifest[RELIEFOS_APP_PATH_LEN];
+    char legacy_manifest[RELIEFOS_APP_PATH_LEN];
+    char value[RELIEFOS_APP_LIST_LEN];
+    char fallback_exec[RELIEFOS_APP_PATH_LEN];
     const char *manifest_path = 0;
     uint32_t package_len;
-    if (!root || !package || !package[0] || registry_count >= LEONOS_APP_REGISTRY_MAX ||
+    if (!root || !package || !package[0] || registry_count >= RELIEFOS_APP_REGISTRY_MAX ||
         !join_path(package_dir, sizeof(package_dir), root, package)) return 0;
     if (!join_path(manifest, sizeof(manifest), package_dir, "manifest.ini")) return 0;
     if (manifest_exists(manifest)) manifest_path = manifest;
@@ -273,11 +273,11 @@ static int add_package(const char *root, const char *package)
         }
         if (read_key(manifest_path, "commands", value, sizeof(value))) copy_text(info.commands, sizeof(info.commands), value);
         if (read_key(manifest_path, "extensions", value, sizeof(value))) copy_text(info.extensions, sizeof(info.extensions), value);
-        if (read_key(manifest_path, "system", value, sizeof(value)) && bool_value(value, 0)) info.flags |= LEONOS_APP_FLAG_SYSTEM;
-        if (read_key(manifest_path, "entry", value, sizeof(value)) && bool_value(value, 1)) info.flags |= LEONOS_APP_FLAG_ENTRY;
-        if (read_key(manifest_path, "terminal", value, sizeof(value)) && bool_value(value, 0)) info.flags |= LEONOS_APP_FLAG_TERMINAL;
-        if (read_key(manifest_path, "hidden", value, sizeof(value)) && bool_value(value, 0)) info.flags |= LEONOS_APP_FLAG_HIDDEN;
-        if (read_key(manifest_path, "open_with", value, sizeof(value)) && bool_value(value, 0)) info.flags |= LEONOS_APP_FLAG_OPEN_WITH;
+        if (read_key(manifest_path, "system", value, sizeof(value)) && bool_value(value, 0)) info.flags |= RELIEFOS_APP_FLAG_SYSTEM;
+        if (read_key(manifest_path, "entry", value, sizeof(value)) && bool_value(value, 1)) info.flags |= RELIEFOS_APP_FLAG_ENTRY;
+        if (read_key(manifest_path, "terminal", value, sizeof(value)) && bool_value(value, 0)) info.flags |= RELIEFOS_APP_FLAG_TERMINAL;
+        if (read_key(manifest_path, "hidden", value, sizeof(value)) && bool_value(value, 0)) info.flags |= RELIEFOS_APP_FLAG_HIDDEN;
+        if (read_key(manifest_path, "open_with", value, sizeof(value)) && bool_value(value, 0)) info.flags |= RELIEFOS_APP_FLAG_OPEN_WITH;
         value[0] = 0;
         if (read_key(manifest_path, "icon", value, sizeof(value)) &&
             ((value[0] == '/' && absolute_path_is_in_package(value, package_dir)) ||
@@ -292,7 +292,7 @@ static int add_package(const char *root, const char *package)
     return 1;
 }
 
-int leonos_app_registry_begin_refresh(void)
+int reliefos_app_registry_begin_refresh(void)
 {
     if (registry_scan_dir) {
         closedir(registry_scan_dir);
@@ -306,7 +306,7 @@ int leonos_app_registry_begin_refresh(void)
     return 0;
 }
 
-int leonos_app_registry_refresh_step(uint32_t budget)
+int reliefos_app_registry_refresh_step(uint32_t budget)
 {
     if (registry_loaded) return 0;
     if (!registry_scanning) return registry_scan_error < 0 ? registry_scan_error : -1;
@@ -357,12 +357,12 @@ int leonos_app_registry_refresh_step(uint32_t budget)
 
 /* Keep the synchronous API as a thin wrapper over the incremental scanner so
  * callers and the desktop share one registry implementation. */
-int leonos_app_registry_refresh(void)
+int reliefos_app_registry_refresh(void)
 {
     int ret;
-    leonos_app_registry_begin_refresh();
+    reliefos_app_registry_begin_refresh();
     do {
-        ret = leonos_app_registry_refresh_step(LEONOS_FS_MAX_ENTRIES);
+        ret = reliefos_app_registry_refresh_step(RELIEFOS_FS_MAX_ENTRIES);
     } while (ret > 0);
     return ret;
 }
@@ -370,37 +370,37 @@ int leonos_app_registry_refresh(void)
 static int ensure_registry(void)
 {
     if (registry_scanning) return 0;
-    return registry_loaded ? 0 : leonos_app_registry_refresh();
+    return registry_loaded ? 0 : reliefos_app_registry_refresh();
 }
 
-int leonos_app_registry_is_loading(void)
+int reliefos_app_registry_is_loading(void)
 {
     return registry_scanning != 0;
 }
 
-int leonos_app_registry_is_loaded(void)
+int reliefos_app_registry_is_loaded(void)
 {
     return registry_loaded != 0;
 }
 
-uint32_t leonos_app_registry_count(void)
+uint32_t reliefos_app_registry_count(void)
 {
     if (ensure_registry() < 0) return 0;
     return registry_count;
 }
 
-int leonos_app_registry_get(uint32_t index, struct leonos_app_info *info)
+int reliefos_app_registry_get(uint32_t index, struct reliefos_app_info *info)
 {
     if (!info || ensure_registry() < 0 || index >= registry_count) return -ENOENT;
     *info = registry[index];
     return 0;
 }
 
-int leonos_app_registry_find(const char *id_or_path, struct leonos_app_info *info)
+int reliefos_app_registry_find(const char *id_or_path, struct reliefos_app_info *info)
 {
     if (!id_or_path || !id_or_path[0] || ensure_registry() < 0) return -EINVAL;
     for (uint32_t i = 0; i < registry_count; ++i) {
-        struct leonos_app_info *candidate = &registry[i];
+        struct reliefos_app_info *candidate = &registry[i];
         if (text_eq_ignore_case(candidate->id, id_or_path) ||
             text_eq(candidate->exec, id_or_path) ||
             list_contains(candidate->commands, id_or_path)) {
@@ -411,15 +411,15 @@ int leonos_app_registry_find(const char *id_or_path, struct leonos_app_info *inf
     return -ENOENT;
 }
 
-int leonos_app_registry_resolve(const char *name_or_path, char *path,
+int reliefos_app_registry_resolve(const char *name_or_path, char *path,
                                 uint32_t capacity)
 {
-    struct leonos_app_info info;
+    struct reliefos_app_info info;
     uint32_t length;
     if (!path || capacity == 0 || !name_or_path || !name_or_path[0]) return -EINVAL;
     /* Resolve before clearing output: callers may resolve a previously returned
-     * path in place through leonos_launch_builtin_path(). */
-    if (leonos_app_registry_find(name_or_path, &info) < 0) {
+     * path in place through reliefos_launch_builtin_path(). */
+    if (reliefos_app_registry_find(name_or_path, &info) < 0) {
         path[0] = 0;
         return -ENOENT;
     }
@@ -430,27 +430,27 @@ int leonos_app_registry_resolve(const char *name_or_path, char *path,
     return path[0] ? 0 : -ENOENT;
 }
 
-int leonos_app_registry_label(const char *path, char *label, uint32_t capacity)
+int reliefos_app_registry_label(const char *path, char *label, uint32_t capacity)
 {
-    struct leonos_app_info info;
+    struct reliefos_app_info info;
     if (!label || capacity == 0) return -EINVAL;
     label[0] = 0;
-    if (leonos_app_registry_find(path, &info) < 0) return -ENOENT;
+    if (reliefos_app_registry_find(path, &info) < 0) return -ENOENT;
     copy_text(label, capacity, info.name);
     return 0;
 }
 
-int leonos_app_registry_icon(const char *path, char *icon, uint32_t capacity)
+int reliefos_app_registry_icon(const char *path, char *icon, uint32_t capacity)
 {
-    struct leonos_app_info info;
+    struct reliefos_app_info info;
     if (!icon || capacity == 0) return -EINVAL;
     icon[0] = 0;
-    if (leonos_app_registry_find(path, &info) < 0 || !info.icon[0]) return -ENOENT;
+    if (reliefos_app_registry_find(path, &info) < 0 || !info.icon[0]) return -ENOENT;
     copy_text(icon, capacity, info.icon);
     return 0;
 }
 
-int leonos_app_registry_default_for_extension(const char *extension,
+int reliefos_app_registry_default_for_extension(const char *extension,
                                               char *path, uint32_t capacity)
 {
     char wanted[32];
@@ -465,7 +465,7 @@ int leonos_app_registry_default_for_extension(const char *extension,
         copy_text(wanted, sizeof(wanted), prefixed);
     }
     for (uint32_t i = 0; i < registry_count; ++i) {
-        if ((registry[i].flags & LEONOS_APP_FLAG_OPEN_WITH) &&
+        if ((registry[i].flags & RELIEFOS_APP_FLAG_OPEN_WITH) &&
             list_contains(registry[i].extensions, wanted)) {
             copy_text(path, capacity, registry[i].exec);
             return path[0] && text_len(registry[i].exec) < capacity ? 0 : -ENAMETOOLONG;
@@ -473,3 +473,16 @@ int leonos_app_registry_default_for_extension(const char *extension,
     }
     return -ENOENT;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_app_registry_begin_refresh) leonos_app_registry_begin_refresh __attribute__((alias("reliefos_app_registry_begin_refresh")));
+extern __typeof__(reliefos_app_registry_count) leonos_app_registry_count __attribute__((alias("reliefos_app_registry_count")));
+extern __typeof__(reliefos_app_registry_default_for_extension) leonos_app_registry_default_for_extension __attribute__((alias("reliefos_app_registry_default_for_extension")));
+extern __typeof__(reliefos_app_registry_find) leonos_app_registry_find __attribute__((alias("reliefos_app_registry_find")));
+extern __typeof__(reliefos_app_registry_get) leonos_app_registry_get __attribute__((alias("reliefos_app_registry_get")));
+extern __typeof__(reliefos_app_registry_icon) leonos_app_registry_icon __attribute__((alias("reliefos_app_registry_icon")));
+extern __typeof__(reliefos_app_registry_is_loaded) leonos_app_registry_is_loaded __attribute__((alias("reliefos_app_registry_is_loaded")));
+extern __typeof__(reliefos_app_registry_is_loading) leonos_app_registry_is_loading __attribute__((alias("reliefos_app_registry_is_loading")));
+extern __typeof__(reliefos_app_registry_label) leonos_app_registry_label __attribute__((alias("reliefos_app_registry_label")));
+extern __typeof__(reliefos_app_registry_refresh) leonos_app_registry_refresh __attribute__((alias("reliefos_app_registry_refresh")));
+extern __typeof__(reliefos_app_registry_refresh_step) leonos_app_registry_refresh_step __attribute__((alias("reliefos_app_registry_refresh_step")));
+extern __typeof__(reliefos_app_registry_resolve) leonos_app_registry_resolve __attribute__((alias("reliefos_app_registry_resolve")));

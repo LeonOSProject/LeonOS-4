@@ -70,7 +70,7 @@ def package(archive: Path, out: Path) -> None:
         # created by the staging layout step.
         launcher_dir = tree / "opt/dyne/bin"
         launcher_dir.mkdir(parents=True)
-        launcher = launcher_dir / "leonos-musl-cc"
+        launcher = launcher_dir / "reliefos-musl-cc"
         subprocess.run([str(binaries / "x86_64-linux-musl-gcc"),
                         "--sysroot=" + str(suite / "x86_64-linux-musl"), "-static", "-Os", "-s",
                         "-Wall", "-Wextra", "-Werror", str(ROOT / "userland/musl-gcc/launcher.c"),

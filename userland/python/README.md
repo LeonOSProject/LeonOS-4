@@ -8,7 +8,7 @@ The original static executable and complete `python/install` tree are packaged
 in `/opt/python`; the image carries real relative symlinks for the aliases.
 Archive licenses and `PYTHON.json` metadata are in `/usr/share/licenses/python`.
 No interpreter or standard library source is patched. This does not certify
-all Python modules against LeonOS's incomplete Linux ABI.
+all Python modules against ReliefOS's incomplete Linux ABI.
 
 `/usr/bin/python3.14` is the static musl launcher; `/usr/bin/python` and
 `/usr/bin/python3` are relative symlinks to it.

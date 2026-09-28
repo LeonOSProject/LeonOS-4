@@ -11,11 +11,11 @@ ROOTFS = ROOT / "system/rootfs"
 
 class ConsoleBootPolicyTests(unittest.TestCase):
     def test_console_cursor_and_background_output(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-vt-console-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="reliefos-vt-console-") as tmp:
             binary = str(Path(tmp) / "console")
             subprocess.run(["clang", "-std=c11", "-g", "-O1",
                             "-ffunction-sections", "-fdata-sections", "-fsanitize=address,undefined",
-                            "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
+                            "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ikernel/reliefnt/kernel/reliefnt/include",
                             "-Wl,--gc-sections", "tools/tests/vt_console_test.c", "-o", binary],
                            cwd=ROOT, check=True)
             subprocess.run([binary], check=True, timeout=10)
@@ -24,20 +24,21 @@ class ConsoleBootPolicyTests(unittest.TestCase):
         config = (ROOTFS / "etc/inittab").read_text()
         for number in range(1, 7):
             self.assertIn(
-                f"tty{number}::respawn:/usr/lib/leonos/console-session tty{number}",
+                f"tty{number}::respawn:/usr/lib/reliefos/console-session tty{number}",
                 config,
             )
         self.assertEqual(config.count("::respawn:"), 6)
 
     def test_console_session_restores_login_after_graphical_exit(self):
-        script = (ROOTFS / "usr/lib/leonos/console-session").read_text()
+        script = (ROOTFS / "usr/lib/reliefos/console-session").read_text()
         self.assertIn("login.elf --graphical-session", script)
-        self.assertIn("/run/leonos/graphical-session-started", script)
+        self.assertIn("/run/reliefos/graphical-session-started", script)
         self.assertIn("login.elf --installer-shell", script)
         self.assertIn("exec /sbin/getty -n -l", script)
         self.assertLess(script.index("login.elf --graphical-session"),
                         script.index("exec /sbin/getty"))
         self.assertNotIn("LEONOS_BOOT_MODE", script)
+        self.assertNotIn("RELIEFOS_BOOT_MODE", script)
         self.assertNotIn("/bin/sleep", script)
 
     def test_graphical_and_installer_sessions_claim_a_controlling_terminal(self):
@@ -50,10 +51,11 @@ class ConsoleBootPolicyTests(unittest.TestCase):
         runlevels = ROOTFS / "etc/runlevels"
         for name in ("default", "installer"):
             self.assertFalse((runlevels / name / "leonos-desktop").exists())
+            self.assertFalse((runlevels / name / "reliefos-desktop").exists())
         self.assertFalse((runlevels / "tty").exists())
         self.assertFalse((runlevels / "installer-tty").exists())
-        self.assertTrue((ROOTFS / "etc/leonos/desktop-session").exists())
-        self.assertIn("installer-runtime", (ROOTFS / "usr/lib/leonos/rc-default").read_text())
+        self.assertTrue((ROOTFS / "etc/reliefos/desktop-session").exists())
+        self.assertIn("installer-runtime", (ROOTFS / "usr/lib/reliefos/rc-default").read_text())
 
     def test_grub_uses_only_installer_session_selection(self):
         configs = [ROOT / f"boot/grub/{name}.cfg" for name in ("grub", "live", "installer")]

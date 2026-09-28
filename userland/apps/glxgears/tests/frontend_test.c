@@ -8,25 +8,25 @@ static enum test_mode mode;
 static unsigned creates, destroys, renders, gpu_presents, sw_presents, sw_draws, polls;
 static unsigned diagnostic_queries;
 
-int leonos_gui_connect(void) { return 0; }
-unsigned long leonos_uptime_ms(void) { return 1000 + renders * 16; }
+int reliefos_gui_connect(void) { return 0; }
+unsigned long reliefos_uptime_ms(void) { return 1000 + renders * 16; }
 int sleep_ms(unsigned long ms) { (void)ms; return 0; }
-leonos_pgl_context *leonos_pgl_create(int width, int height, const char *title)
+reliefos_pgl_context *reliefos_pgl_create(int width, int height, const char *title)
 {
     const char *setting = getenv("GLXGEARS_TEST_MODE");
     mode = setting ? (enum test_mode)atoi(setting) : HARDWARE;
     assert(width == WIDTH && height == HEIGHT && title);
-    return (leonos_pgl_context *)(uintptr_t)1;
+    return (reliefos_pgl_context *)(uintptr_t)1;
 }
-void leonos_pgl_make_current(leonos_pgl_context *ctx) { assert(ctx); }
-int leonos_pgl_window_id(const leonos_pgl_context *ctx) { assert(ctx); return 1; }
-int leonos_pgl_present(leonos_pgl_context *ctx)
+void reliefos_pgl_make_current(reliefos_pgl_context *ctx) { assert(ctx); }
+int reliefos_pgl_window_id(const reliefos_pgl_context *ctx) { assert(ctx); return 1; }
+int reliefos_pgl_present(reliefos_pgl_context *ctx)
 {
     assert(ctx);
     ++sw_presents;
     return 0;
 }
-void leonos_pgl_destroy(leonos_pgl_context *ctx)
+void reliefos_pgl_destroy(reliefos_pgl_context *ctx)
 {
     assert(ctx && !gear1 && !gear2 && !gear3);
     unsigned render_failed = mode == RENDER_FAILURE || mode == DIAGNOSTIC_UNAVAILABLE;
@@ -46,7 +46,7 @@ void leonos_pgl_destroy(leonos_pgl_context *ctx)
     }
     printf("glxgears frontend scenario %d: PASS\n", mode);
 }
-int leonos_gui_present_window(uint32_t id, uint32_t width, uint32_t height,
+int reliefos_gui_present_window(uint32_t id, uint32_t width, uint32_t height,
                               uint32_t stride, const uint32_t *pixels)
 {
     assert(id == 1 && pixels && stride == width);
@@ -55,7 +55,7 @@ int leonos_gui_present_window(uint32_t id, uint32_t width, uint32_t height,
     ++gpu_presents;
     return mode == PRESENT_FAILURE ? -5 : 1;
 }
-int leonos_gui_poll_app_event(struct leonos_gui_app_event *event)
+int reliefos_gui_poll_app_event(struct reliefos_gui_app_event *event)
 {
     ++polls;
     event->window_id = 1;
@@ -64,24 +64,24 @@ int leonos_gui_poll_app_event(struct leonos_gui_app_event *event)
     if ((mode == RESIZE || mode == RESIZE_FAILURE || mode == POLYGON_MODE) && polls < 4) {
         if (polls == 3)
             return 0;
-        event->type = mode == POLYGON_MODE ? LEONOS_GUI_APP_EVENT_KEY_DOWN : LEONOS_GUI_APP_EVENT_RESIZE;
+        event->type = mode == POLYGON_MODE ? RELIEFOS_GUI_APP_EVENT_KEY_DOWN : RELIEFOS_GUI_APP_EVENT_RESIZE;
         event->keycode = GLXGEARS_KEY_P;
         event->pressed = 1;
         event->width = 320;
         event->height = 240;
     } else {
-        event->type = LEONOS_GUI_APP_EVENT_CLOSE;
+        event->type = RELIEFOS_GUI_APP_EVENT_CLOSE;
     }
     return 1;
 }
-int leonos_pgl_process_event(leonos_pgl_context *ctx, const struct leonos_gui_app_event *event)
+int reliefos_pgl_process_event(reliefos_pgl_context *ctx, const struct reliefos_gui_app_event *event)
 {
     assert(ctx);
-    if (event->type == LEONOS_GUI_APP_EVENT_CLOSE)
-        return LEONOS_PGL_EVENT_CLOSE;
-    if (event->type == LEONOS_GUI_APP_EVENT_RESIZE)
-        return LEONOS_PGL_EVENT_RESIZED;
-    return LEONOS_PGL_EVENT_NONE;
+    if (event->type == RELIEFOS_GUI_APP_EVENT_CLOSE)
+        return RELIEFOS_PGL_EVENT_CLOSE;
+    if (event->type == RELIEFOS_GUI_APP_EVENT_RESIZE)
+        return RELIEFOS_PGL_EVENT_RESIZED;
+    return RELIEFOS_PGL_EVENT_NONE;
 }
 int gpu_sdk_info(gpu_sdk_info_t *info)
 {

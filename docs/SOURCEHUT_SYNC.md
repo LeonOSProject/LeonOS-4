@@ -16,16 +16,16 @@ Add these repository secrets under **Settings > Secrets and variables > Actions*
 | Secret | Value |
 |---|---|
 | `SOURCEHUT_SSH_PRIVATE_KEY` | The complete private SSH key authorized on the SourceHut account that owns the repository. Keep the `BEGIN`/`END` lines. |
-| `SOURCEHUT_REPOSITORIES` | One or more SourceHut SSH URLs, one per line, for example `git@git.sr.ht:~your-user/LeonOS-4`. |
+| `SOURCEHUT_REPOSITORIES` | One or more SourceHut SSH URLs, one per line, for example `git@git.sr.ht:~your-user/ReliefOS`. |
 
 Create a dedicated deploy key when possible, for example:
 
 ```sh
-ssh-keygen -t ed25519 -f leonos4-sourcehut-sync -C leonos4-github-actions
+ssh-keygen -t ed25519 -f reliefos-sourcehut-sync -C reliefos-github-actions
 ```
 
-Add `leonos4-sourcehut-sync.pub` to the SourceHut account, then put the
-contents of `leonos4-sourcehut-sync` in `SOURCEHUT_SSH_PRIVATE_KEY`.
+Add `reliefos-sourcehut-sync.pub` to the SourceHut account, then put the
+contents of `reliefos-sourcehut-sync` in `SOURCEHUT_SSH_PRIVATE_KEY`.
 
 The workflow pins the current `git.sr.ht` SSH host keys and enables strict host
 key checking. If SourceHut rotates its host keys, update the pinned entries in

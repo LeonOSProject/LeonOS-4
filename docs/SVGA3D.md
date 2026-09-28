@@ -1,6 +1,6 @@
 # VMware SVGA-II 3D
 
-LeonOS initializes the SVGA-II 3D path after the physical page allocator is
+ReliefOS initializes the SVGA-II 3D path after the physical page allocator is
 ready. The driver first checks the device capability register, extended FIFO,
 fence support and GMR support. Legacy hosts use FIFO hardware versions and
 capability records; GB Objects hosts use indexed device capability registers,
@@ -10,16 +10,16 @@ If a host stalls while it still references guest memory, the driver preserves
 those pages and the FIFO until a later initialization/shutdown retry can finish
 retirement. FIFO waits remain bounded.
 
-The public ring-0 API is declared in `kernel/ntclks/kernel/ntclks/include/ntclks/svga.h`.
-The implementation lives in `kernel/ntclks/drivers/bootstrap/svga/` and uses the vendored
-Linux VMware protocol headers in `kernel/ntclks/drivers/bootstrap/svga/protocol/`, with
-the required GB wire extensions in `kernel/ntclks/drivers/bootstrap/svga/gb_protocol.h`.
+The public ring-0 API is declared in `kernel/reliefnt/kernel/reliefnt/include/reliefnt/svga.h`.
+The implementation lives in `kernel/reliefnt/drivers/bootstrap/svga/` and uses the vendored
+Linux VMware protocol headers in `kernel/reliefnt/drivers/bootstrap/svga/protocol/`, with
+the required GB wire extensions in `kernel/reliefnt/drivers/bootstrap/svga/gb_protocol.h`.
 
 ## glxgears and Task Manager
 
 Start glxgears from its existing desktop entry, or from a GUI terminal:
 
-    /usr/lib/leonos/apps/glxgears/glxgears.elf
+    /usr/lib/reliefos/apps/glxgears/glxgears.elf
 
 No boot parameter is required. The app prefers SVGA3D when 3D is available and
 prints `glxgears: renderer=VMware SVGA3D hardware`. Otherwise, or if hardware
@@ -106,13 +106,13 @@ returns `-19` (ENODEV). Older builds incorrectly used `-38` (ENOSYS) for this
 case too, so that older error alone does not identify the failing layer.
 
 To see the driver initialization log, reboot and select
-`LeonOS 4 (with boot log)` in GRUB. Alternatively edit the normal GRUB entry
+`ReliefOS (with boot log)` in GRUB. Alternatively edit the normal GRUB entry
 with `e`, append `bootlog=1 bootlog-pause=1` to its
 `multiboot2 /loader.elf ...` line, and boot with Ctrl+X. In updated kernels,
 `bootlog-pause=1` repeats the SVGA3D initialization summary and waits for Enter
 before starting desktop or TTY processes. Capture all the `[svga3d]` lines
 above `Boot log paused`, then press Enter to continue. The installer ISO's
-`Install LeonOS 4 (Enable boot log screen)` entry also pauses, so the new kernel
+`Install ReliefOS (Enable boot log screen)` entry also pauses, so the new kernel
 can be diagnosed from the ISO without installing it. Older kernels ignore the
 pause parameter. A VMware serial port redirected to a host file preserves the serial boot log
 when the selected entry includes `log=screen,serial`.
@@ -131,7 +131,7 @@ register interface used by upstream
 `gb=1 devcap3d=1` can coexist with zero legacy FIFO hardware versions. Linux
 checks guest-backed resource support in this case, as shown in
 [vmw_supports_3d](https://github.com/torvalds/linux/blob/master/drivers/gpu/drm/vmwgfx/vmwgfx_cmd.c).
-LeonOS now initializes the GB backend for these devices. A successful probe
+ReliefOS now initializes the GB backend for these devices. A successful probe
 reports `init=0 available=1` and `probe=ready-gb status=0`; the raw FIFO versions
 can still be zero. The reported `host=0x20001` describes legacy command
 compatibility, matching vmwgfx's GB compatibility interface, rather than a
@@ -173,8 +173,9 @@ Existing rendering request layouts remain unchanged.
 
 ## User ABI
 
-`include/leonos/gpu.h` (also shipped in the SDK) defines version-1 GPU ioctls:
-INFO, CREATE, RENDER, DESTROY and DIAGNOSTICS. The libc exports matching `leonos_gpu_*` wrappers.
+`include/reliefos/gpu.h` (also shipped in the SDK) defines version-1 GPU ioctls:
+INFO, CREATE, RENDER, DESTROY and DIAGNOSTICS. The libc exports matching
+`reliefos_gpu_*` wrappers; `leonos_gpu_*` names remain as source-compatible aliases.
 Raw requests must initialize `size` and `version`; wrappers supply these fields.
 Return values are zero or a negative errno. Context handles belong to the creating
 process, are not inherited by fork, and are retired on exit/exec. Mode resets

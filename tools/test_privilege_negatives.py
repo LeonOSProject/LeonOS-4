@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Privilege negative guest regression for the ntclks separation (phase 4).
 
-Boots a disposable copy of a LeonOS image in QEMU and pins today's privilege
+Boots a disposable copy of a ReliefOS image in QEMU and pins today's privilege
 boundaries from docs/superpowers/ntclks-separation/03-permission-matrix.md
 BEFORE any decoupling work (plan rule: negatives first, never remove a check
 before the tests exist):
@@ -23,9 +23,9 @@ before the tests exist):
           rule if a grant ever reappears
 
 Observables: every check runs a tiny probe ELF (tools/tests/
-privilege_negatives_probe.c, compiled with the LeonOS musl SDK and injected
+privilege_negatives_probe.c, compiled with the ReliefOS musl SDK and injected
 into the scratch disk) that prints "PR <tag> key=value" lines to /dev/ttyS0;
-flags come from LeonOS /proc/<pid>/status (LeonOSFlags), AT_SECURE from
+flags come from ReliefOS /proc/<pid>/status (LeonOSFlags), AT_SECURE from
 getauxval(3). Killability is observed as kill(2) from the same uid succeeding
 plus the process dying (waitpid / gone from /proc).
 
@@ -57,12 +57,12 @@ from test_vt_qemu import wait_text
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# TASK_FLAG_SERVICE | TASK_FLAG_WINDOW_SERVER (kernel/ntclks/kernel/ntclks/include/ntclks/sched.h).
+# TASK_FLAG_SERVICE | TASK_FLAG_WINDOW_SERVER (kernel/reliefnt/kernel/reliefnt/include/reliefnt/sched.h).
 SERVICE_BITS = 0x1 | 0x8
 
-DESKTOP_DIR = "/usr/lib/leonos/apps/desktop"
+DESKTOP_DIR = "/usr/lib/reliefos/apps/desktop"
 DESKTOP_PATH = f"{DESKTOP_DIR}/desktop.elf"
-# M1 grants on the image inode's role gid (kernel LEONOS_GID_*), never on the
+# M1 grants on the image inode's role gid (kernel RELIEFOS_GID_*), never on the
 # path name (03-permission-matrix M1(c) fixed in phase 5.7). Fixture isolation:
 # the writable copy carries the role gid so MODE is the only rejection reason,
 # the case-variant copy is explicitly unmarked (gid 0) so it must stay inert.
@@ -72,11 +72,11 @@ CASEVARIANT_COPY = f"{DESKTOP_DIR}/DESKTOP.ELF"  # root-owned 0755, unmarked
 
 M14_UNVERIFIED_REASON = (
     "not assertable in-guest today: kill(2)/signal delivery has no "
-    "TASK_FLAG_SERVICE gate (kernel/ntclks/kernel/ntclks/signal.c kernel_signal_queue_task_info, "
-    "kernel/ntclks/kernel/ntclks/syscall_process.c LINUX_SYS_KILL); the documented refusal "
+    "TASK_FLAG_SERVICE gate (kernel/reliefnt/kernel/reliefnt/signal.c kernel_signal_queue_task_info, "
+    "kernel/reliefnt/kernel/reliefnt/syscall_process.c LINUX_SYS_KILL); the documented refusal "
     "'kill windowd -> -1' lives only in sched_kill_user_task "
-    "(kernel/ntclks/kernel/ntclks/sched/sched.c:2527), whose sole caller "
-    "auth_kill_session_tasks_for_logout (kernel/ntclks/kernel/ntclks/syscall.c:2724, F3) is "
+    "(kernel/reliefnt/kernel/reliefnt/sched/sched.c:2527), whose sole caller "
+    "auth_kill_session_tasks_for_logout (kernel/reliefnt/kernel/reliefnt/syscall.c:2724, F3) is "
     "dead code, and sched_kill_user_tasks_for_pty/_for_logout have no callers. "
     "Impersonator killability is pinned by the m1-* checks instead.")
 
@@ -368,20 +368,20 @@ def locate_image(explicit):
     for candidate in candidates:
         if candidate.is_file():
             return candidate.resolve()
-    raise SystemExit(f"no LeonOS image found; tried: {candidates}")
+    raise SystemExit(f"no ReliefOS image found; tried: {candidates}")
 
 
 def locate_compiler():
     candidates = []
     if os.environ.get("PRIVNEG_CC"):
         candidates.append(Path(os.environ["PRIVNEG_CC"]))
-    candidates.append(ROOT / "out/x86_64/release/sdk/leonos-musl-sdk/bin/leonos-musl-cc")
-    candidates.append(Path("/home/leon/build/ntclks-sep/p4-out/sdk/leonos-musl-sdk/bin/leonos-musl-cc"))
-    candidates.append(Path("/home/leon/build/ntclks-sep/p4-out/host/bin/leonos-musl-cc"))
+    candidates.append(ROOT / "out/x86_64/release/sdk/leonos-musl-sdk/bin/reliefos-musl-cc")
+    candidates.append(Path("/home/leon/build/ntclks-sep/p4-out/sdk/leonos-musl-sdk/bin/reliefos-musl-cc"))
+    candidates.append(Path("/home/leon/build/ntclks-sep/p4-out/host/bin/reliefos-musl-cc"))
     for candidate in candidates:
         if candidate.is_file():
             return candidate
-    raise SystemExit(f"no leonos-musl-cc found; tried: {candidates}")
+    raise SystemExit(f"no reliefos-musl-cc found; tried: {candidates}")
 
 
 def build_probe(output):
@@ -501,7 +501,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True,
                         help="new directory for scratch disk, serial log and screenshots")
     parser.add_argument("--image", type=Path,
-                        help="LeonOS disk image to copy (default: p4-out/out build)")
+                        help="ReliefOS disk image to copy (default: p4-out/out build)")
     args = parser.parse_args()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)

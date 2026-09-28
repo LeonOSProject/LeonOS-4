@@ -1,5 +1,5 @@
 /* Small block-storage applets backed exclusively by /dev block FDs, Linux
- * BLK* ioctls and mount(2).  They intentionally do not use LeonOS private
+ * BLK* ioctls and mount(2).  They intentionally do not use ReliefOS private
  * disk-management ioctls. */
 //config:config LEONOS_FDISK
 //config: bool "fdisk (GPT editor)"
@@ -63,7 +63,7 @@
 //usage:#define umount_trivial_usage "DIR"
 //usage:#define umount_full_usage "\n\nUnmount a filesystem by mount point\n"
 //usage:#define leonos_grub_installer_trivial_usage "ESP-MOUNTPOINT"
-//usage:#define leonos_grub_installer_full_usage "\n\nInstall the LeonOS EFI/GRUB payload into an ESP mount\n"
+//usage:#define leonos_grub_installer_full_usage "\n\nInstall the ReliefOS EFI/GRUB payload into an ESP mount\n"
 //usage:#define leonos_fsck_fat_trivial_usage "BLOCKDEV"
 //usage:#define leonos_fsck_fat_full_usage "\n\nCheck a FAT32 filesystem signature\n"
 //usage:#define leonos_fsck_ext2_trivial_usage "BLOCKDEV"
@@ -422,6 +422,6 @@ int leonos_grub_installer_main(int argc, char **argv)
         snprintf(destination, sizeof(destination), "%s/grub", esp);
         if (grub_copy_tree(source, destination) < 0) { bb_error_msg("cannot install GRUB files"); return 1; }
     }
-    printf("LeonOS GRUB payload installed to %s.\n", esp);
+    printf("ReliefOS GRUB payload installed to %s.\n", esp);
     return 0;
 }

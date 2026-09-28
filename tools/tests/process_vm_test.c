@@ -2,14 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ntclks/sched.h>
-#include <ntclks/paging.h>
+#include <reliefnt/sched.h>
+#include <reliefnt/paging.h>
 #include <linux/errno.h>
 #include <linux/capability.h>
-#undef NTCLKS_KERNEL_DIRECT_MAP_BASE
-#define NTCLKS_KERNEL_DIRECT_MAP_BASE 0
-#include "../../kernel/ntclks/arch/x86_64/paging.c"
-#include "../../kernel/ntclks/kernel/ntclks/syscall_process_vm.c"
+#undef RELIEFNT_KERNEL_DIRECT_MAP_BASE
+#define RELIEFNT_KERNEL_DIRECT_MAP_BASE 0
+#include "../../kernel/reliefnt/arch/x86_64/paging.c"
+#include "../../kernel/reliefnt/kernel/reliefnt/syscall_process_vm.c"
 
 static struct task caller, target;
 static unsigned allocations, faults;
@@ -62,7 +62,7 @@ int syscall_handle_task_page_fault(struct task *task, uint64_t address, uint64_t
             !address_space_user_page_phys(sched_task_as(task), address)) {
             if ((error & 2) && !(vma->prot & TASK_VMA_PROT_WRITE)) return 0;
             return address_space_map_user_page(sched_task_as(task), address & ~4095ULL,
-                mm_alloc_page(), NTCLKS_PAGE_NOEXEC | (vma->prot & TASK_VMA_PROT_WRITE ? NTCLKS_PAGE_WRITABLE : 0));
+                mm_alloc_page(), RELIEFNT_PAGE_NOEXEC | (vma->prot & TASK_VMA_PROT_WRITE ? RELIEFNT_PAGE_WRITABLE : 0));
         }
     }
     return 0;
@@ -70,7 +70,7 @@ int syscall_handle_task_page_fault(struct task *task, uint64_t address, uint64_t
 static uint64_t add_page(struct task *task, uint64_t va, bool writable)
 {
     uint64_t p = mm_alloc_page();
-    assert(address_space_map_user_page(sched_task_as(task), va, p, NTCLKS_PAGE_NOEXEC | (writable ? NTCLKS_PAGE_WRITABLE : 0)));
+    assert(address_space_map_user_page(sched_task_as(task), va, p, RELIEFNT_PAGE_NOEXEC | (writable ? RELIEFNT_PAGE_WRITABLE : 0)));
     return p;
 }
 static int64_t transfer(int pid, struct iovec *local, uint64_t ln,
@@ -85,7 +85,7 @@ int main(void)
     caller.uid = caller.euid = caller.suid = target.uid = target.euid = target.suid = 1000;
     caller.gid = caller.egid = caller.sgid = target.gid = target.egid = target.sgid = 100;
     assert(address_space_create(&caller.as) && address_space_create(&target.as));
-    const uint64_t va = NTCLKS_USER_BASE + 0x20000;
+    const uint64_t va = RELIEFNT_USER_BASE + 0x20000;
     uint64_t lpage = add_page(&caller, va, true), rpage = add_page(&target, va, true);
     memcpy((void *)rpage, "0123456789abcdef", 16);
     struct iovec local[2] = {{(void *)va, 3}, {(void *)(va + 3), 13}};

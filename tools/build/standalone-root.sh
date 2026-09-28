@@ -28,9 +28,9 @@ for name in root home/test; do
         chmod 700 "$work/$name/$directory"
     done
 done
-printf 'leonos-standalone-test-v1\n' > "$work/etc/leonos/test-image"
-printf 'test-image=1\n' > "$work/etc/leonos/installed"
-printf 'LANG=%s\nMUSL_LOCPATH=/usr/share/musl/locales\n' "$language" > "$work/etc/leonos/locale.conf"
+printf 'leonos-standalone-test-v1\n' > "$work/etc/reliefos/test-image"
+printf 'test-image=1\n' > "$work/etc/reliefos/installed"
+printf 'LANG=%s\nMUSL_LOCPATH=/usr/share/musl/locales\n' "$language" > "$work/etc/reliefos/locale.conf"
 if [ "$mode" = disk ]; then
     cat > "$work/etc/fstab" <<'FSTAB'
 # Stable GPT partition identities owned by tools/build/disk.sh.

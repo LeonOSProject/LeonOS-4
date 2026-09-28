@@ -1,2 +1,2 @@
-# LeonOS shortcut
-target=/usr/lib/leonos/apps/terminal/terminal.elf
+# ReliefOS shortcut
+target=/usr/lib/reliefos/apps/terminal/terminal.elf

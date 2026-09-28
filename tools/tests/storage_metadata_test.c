@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_internal.h"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_internal.h"
 
 static FILE *disk;
 static unsigned locked;
@@ -12,7 +12,7 @@ static long inode_offset;
 
 void kernel_execution_lock_irqsave(uint64_t *flags) { assert(!locked); locked = 1; *flags = 17; }
 void kernel_execution_unlock_irqrestore(uint64_t flags) { assert(locked && flags == 17); locked = 0; }
-int time_wall_clock(struct leonos_time_info *value) { value->unix_seconds = 1800000000; return 0; }
+int time_wall_clock(struct reliefos_time_info *value) { value->unix_seconds = 1800000000; return 0; }
 static void storage_memcpy(void *dst, const void *src, size_t count) { memcpy(dst, src, count); }
 static int storage_select_node_volume(const struct storage_node *node, struct storage_volume **previous)
 { assert(locked && node->volume_id == 0); *previous = g_active_volume; return 0; }
@@ -47,8 +47,8 @@ static int fat32_read_fat_entry(uint32_t cluster, uint32_t *out)
 static int exfat_bitmap_get_cached(uint32_t cluster, uint8_t *out)
 { *out = cluster != 3 && cluster != 5; return read_error; }
 
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_permissions.c"
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_statfs.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_permissions.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_statfs.c"
 
 int main(int argc, char **argv)
 {
@@ -69,10 +69,10 @@ int main(int argc, char **argv)
     assert(!ext2_group_desc((test_inode - 1) / super.inodes_per_group, &group));
     inode_offset = group.inode_table * 1024L + ((test_inode - 1) % super.inodes_per_group) * super.inode_size;
     struct storage_node node = {.flags = STORAGE_NODE_FLAG_EXT2, .first_cluster = test_inode};
-    struct leonos_permissions mode;
+    struct reliefos_permissions mode;
     assert(!storage_inode_permissions(&node, &mode, false));
     assert(mode.mode == 0644 && mode.uid == 0 && mode.gid == 0);
-    mode = (struct leonos_permissions){06750, 70001, 90002};
+    mode = (struct reliefos_permissions){06750, 70001, 90002};
     assert(!storage_inode_permissions(&node, &mode, true));
     struct linux_stat_abi st;
     assert(!storage_inode_stat(&node, &st));

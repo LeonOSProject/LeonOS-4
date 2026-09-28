@@ -11,20 +11,20 @@ set -u
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 
-deps=${LEONOS_DEPS:?set by mk/tests.mk}
-lock=${LEONOS_LOCK:?set by mk/tests.mk}
+deps=${RELIEFOS_DEPS:-${LEONOS_DEPS:?set by mk/tests.mk}}
+lock=${RELIEFOS_LOCK:-${LEONOS_LOCK:?set by mk/tests.mk}}
 fetch=./tools/build/fetch.sh
 
 failures=0
 checks=0
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-third-party.XXXXXX") || exit 1
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-third-party.XXXXXX") || exit 1
 test_out=$work/out
 sysroot=$test_out/sysroot/musl
 stamp=$sysroot/.leonos-musl.json
 # Do not inherit the caller's O= or mutate the shared dependency lock.
 cp "$lock" "$work/dependencies.lock.json" || exit 1
 lock=$work/dependencies.lock.json
-make() { command make O="$test_out" LEONOS_LOCK="$lock" "$@"; }
+make() { command make O="$test_out" RELIEFOS_LOCK="$lock" "$@"; }
 
 cleanup() { rm -rf "$work"; }
 trap 'cleanup; exit 130' INT
@@ -218,24 +218,23 @@ else
     failures=$((failures + 1))
 fi
 
-# The signature carries the lock file digest, so an edit that changes a pin is
-# noticed even when the mtime is kept. The candidate text is written while Make
-# parses, so comparing candidate against the published signature proves the
-# dependency without paying for a rebuild.
+# The signature carries the lock file digest, so an edit is noticed even when
+# its mtime is kept. Build the signature target itself, without rebuilding the
+# sysroot: inspection mode deliberately does not write candidate signatures.
 meta=$test_out/meta
 sig=$meta/musl-sysroot.sig
-# The candidate is named after the make process that wrote it, so that two
-# concurrent makes cannot promote each other's signature.
-cp -p "$lock" "$work/lock-backup.json"
-latest_candidate() { ls -t "$meta"/musl-sysroot.*.candidate 2>/dev/null | head -n1; }
+cp "$sig" "$work/signature-baseline" || exit 1
+cp -p "$lock" "$work/lock-backup.json" || exit 1
+refresh_signature() {
+    make "$sig" >"$work/signature.log" 2>&1
+}
 
-make -n "$stamp" >/dev/null 2>&1
-candidate=$(latest_candidate)
 checks=$((checks + 1))
-if [ -n "$candidate" ] && cmp -s "$candidate" "$sig"; then
+if refresh_signature && cmp -s "$sig" "$work/signature-baseline"; then
     printf 'ok   - an unchanged lock keeps the sysroot signature identical\n'
 else
     printf 'FAIL - the signature moved with nothing changed\n'
+    cat "$work/signature.log"
     failures=$((failures + 1))
 fi
 sed 's/\"note": \"upstream musl binary/\"note": \"changed by test/' "$lock" >"$work/edited.json"
@@ -244,29 +243,26 @@ if cmp -s "$lock" "$work/edited.json"; then
     failures=$((failures + 1))
     checks=$((checks + 1))
 else
-    cp "$work/edited.json" "$lock"
-    make -n "$stamp" >/dev/null 2>&1
-    candidate=$(latest_candidate)
+    cp "$work/edited.json" "$lock" || exit 1
+    touch -r "$work/lock-backup.json" "$lock" || exit 1
     checks=$((checks + 1))
-    if [ -n "$candidate" ] && cmp -s "$candidate" "$sig"; then
-        printf 'FAIL - an edited lock left the sysroot signature unchanged\n'
-        failures=$((failures + 1))
-    else
+    if refresh_signature && [ -s "$sig" ] && ! cmp -s "$sig" "$work/signature-baseline"; then
         printf 'ok   - an edited lock moves the sysroot signature\n'
+    else
+        printf 'FAIL - an edited lock left the sysroot signature unchanged\n'
+        cat "$work/signature.log"
+        failures=$((failures + 1))
     fi
 fi
-# Restore with the original mtime: leaving a fresh timestamp on the lock would
-# make the next check in this suite rebuild the sysroot for the wrong reason.
-cp -p "$work/lock-backup.json" "$lock"
-latest_candidate() { ls -t "$meta"/musl-sysroot.*.candidate 2>/dev/null | head -n1; }
-
-make -n "$stamp" >/dev/null 2>&1
-candidate=$(latest_candidate)
+# Restore the lock contents and original mtime, then publish its original
+# signature so subsequent checks cannot rebuild the sysroot for this fixture.
+cp -p "$work/lock-backup.json" "$lock" || exit 1
 checks=$((checks + 1))
-if [ -n "$candidate" ] && cmp -s "$candidate" "$sig"; then
+if refresh_signature && cmp -s "$sig" "$work/signature-baseline"; then
     printf 'ok   - restoring the lock restores the signature\n'
 else
     printf 'FAIL - the signature did not return after the lock was restored\n'
+    cat "$work/signature.log"
     failures=$((failures + 1))
 fi
 

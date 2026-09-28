@@ -24,11 +24,11 @@ label: gpt
 label-id: B4A70D6A-278B-4A2C-986B-D79B8044C840
 unit: sectors
 
-start=2048,size=$esp_sectors,type=U,uuid=41A3EE19-BA85-47A0-9705-A5C128374021,name=LEONOS4_ESP
-start=$root_start,size=$root_sectors,type=L,uuid=5C13543B-732C-4F81-8652-621124484420,name=LEONOS4_ROOT
+start=2048,size=$esp_sectors,type=U,uuid=41A3EE19-BA85-47A0-9705-A5C128374021,name=RELIEFOS_ESP
+start=$root_start,size=$root_sectors,type=L,uuid=5C13543B-732C-4F81-8652-621124484420,name=RELIEFOS_ROOT
 TABLE
 truncate -s "${esp_mib}M" "$work/esp.fat"
-mkfs.fat --invariant -F 32 -s 2 -n LEONOS4ESP "$work/esp.fat"
+mkfs.fat --invariant -F 32 -s 2 -n RELIEFOS "$work/esp.fat"
 for entry in "$work/esp"/*; do mcopy -s -m -i "$work/esp.fat" "$entry" ::/; done
 dd if="$work/esp.fat" of="$work/disk.raw" bs=512 seek=2048 conv=notrunc status=none
 dd if="$root" of="$work/disk.raw" bs=512 seek="$root_start" conv=notrunc status=none

@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: leonos 1\n"
+"Project-Id-Version: ReliefOS 1\n"
 "PO-Revision-Date: 2026-09-21 00:00+0800\n"
-"Last-Translator: LeonOS NLS <nls@leonos.local>\n"
+"Last-Translator: ReliefOS NLS\n"
 "Language-Team: none\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -167,8 +167,8 @@ msgid "About Browser"
 msgstr "关于浏览器"
 
 #: userland/apps/osver/main.c:250
-msgid "About LeonOS"
-msgstr "关于 LeonOS"
+msgid "About ReliefOS"
+msgstr "关于 ReliefOS"
 
 #: userland/apps/osver/main.c:173
 msgid "About this operating system"
@@ -623,8 +623,8 @@ msgid "Checking dependencies and preserving local configuration"
 msgstr "检查依赖关系并保留本地配置"
 
 #: userland/apps/installer/main.c:3181
-msgid "Checking existing LeonOS 4"
-msgstr "正在检测现有 LeonOS 4"
+msgid "Checking existing ReliefOS"
+msgstr "正在检测现有 ReliefOS"
 
 #: userland/apps/desktop/render.c:41
 msgid "Checks and Fields"
@@ -663,12 +663,12 @@ msgid "Choose the default app used by File Manager and desktop shortcuts."
 msgstr "选择文件资源管理器和桌面快捷方式打开文件时使用的默认应用。"
 
 #: userland/apps/installer/main.c:1329
-msgid "Choose the disk that already contains LeonOS 4."
-msgstr "选择已经包含 LeonOS 4 的硬盘。"
+msgid "Choose the disk that already contains ReliefOS."
+msgstr "选择已经包含 ReliefOS 的硬盘。"
 
 #: userland/apps/installer/main.c:1330
-msgid "Choose the disk that will receive LeonOS."
-msgstr "选择用于安装 LeonOS 的硬盘。"
+msgid "Choose the disk that will receive ReliefOS."
+msgstr "选择用于安装 ReliefOS 的硬盘。"
 
 #: userland/apps/installer/main.c:1212
 msgid "Choose the language for Setup and the installed system."
@@ -683,8 +683,8 @@ msgid "Class"
 msgstr "类别"
 
 #: userland/apps/browser/input.c:291
-msgid "Classic HTTP browser for LeonOS 4."
-msgstr "LeonOS 4 经典 HTTP 浏览器。"
+msgid "Classic HTTP browser for ReliefOS."
+msgstr "ReliefOS 经典 HTTP 浏览器。"
 
 #: userland/apps/browser/main.c:36
 msgid "Classic Web Browser"
@@ -1527,12 +1527,12 @@ msgid "Error"
 msgstr "错误"
 
 #: userland/apps/installer/main.c:2352
-msgid "Existing LeonOS 4 boot partition was not detected"
-msgstr "未检测到现有 LeonOS 4 启动分区"
+msgid "Existing ReliefOS boot partition was not detected"
+msgstr "未检测到现有 ReliefOS 启动分区"
 
 #: userland/apps/installer/main.c:2341
-msgid "Existing LeonOS 4 was not detected"
-msgstr "未检测到现有 LeonOS 4"
+msgid "Existing ReliefOS was not detected"
+msgstr "未检测到现有 ReliefOS"
 
 #: userland/apps/installer/main.c:3190
 msgid "Existing system check failed"
@@ -1711,8 +1711,8 @@ msgid "Format partition"
 msgstr "格式化分区"
 
 #: userland/apps/installer/main.c:1312
-msgid "Format the selected disk and copy a clean LeonOS 4 system."
-msgstr "格式化所选硬盘并复制干净的 LeonOS 4 系统。"
+msgid "Format the selected disk and copy a clean ReliefOS system."
+msgstr "格式化所选硬盘并复制干净的 ReliefOS 系统。"
 
 #: userland/apps/browser/view.c:964
 msgid "Forward"
@@ -1971,8 +1971,8 @@ msgid "Install Options"
 msgstr "安装选项"
 
 #: userland/apps/installer/main.c:1297
-msgid "Install a new system or update an existing LeonOS 4 disk."
-msgstr "全新安装系统，或更新现有 LeonOS 4 硬盘。"
+msgid "Install a new system or update an existing ReliefOS disk."
+msgstr "全新安装系统，或更新现有 ReliefOS 硬盘。"
 
 #: userland/apps/apiapp/main.c:730
 msgid "Install location:"
@@ -2003,8 +2003,8 @@ msgid "Installation media is incomplete"
 msgstr "安装介质不完整"
 
 #: userland/apps/installer/main.c:1448
-msgid "Installed LeonOS packages will be upgraded."
-msgstr "将升级已安装的 LeonOS 软件包。"
+msgid "Installed ReliefOS packages will be upgraded."
+msgstr "将升级已安装的 ReliefOS 软件包。"
 
 #: userland/apps/helloworld/main.c:39
 msgid "Installed via API package"
@@ -2015,8 +2015,8 @@ msgid "Installing Application"
 msgstr "正在安装应用"
 
 #: userland/apps/installer/main.c:849
-msgid "Installing LeonOS 4"
-msgstr "正在安装 LeonOS 4"
+msgid "Installing ReliefOS"
+msgstr "正在安装 ReliefOS"
 
 #: userland/apps/apiapp/main.c:565
 msgid "Installing..."
@@ -2183,60 +2183,60 @@ msgid "Legacy accounts require recovery before updating"
 msgstr "旧账户需完成受控迁移后再更新"
 
 #: userland/apps/osver/main.c:178
-msgid "LeonOS 4"
-msgstr "LeonOS 4"
+msgid "ReliefOS"
+msgstr "ReliefOS"
 
 #: userland/apps/installer/main.c:1297
-msgid "LeonOS 4 Setup"
-msgstr "LeonOS 4 安装程序"
+msgid "ReliefOS Setup"
+msgstr "ReliefOS 安装程序"
 
 #: userland/apps/browser/input.c:290
-msgid "LeonOS Browser"
-msgstr "LeonOS 浏览器"
+msgid "ReliefOS Browser"
+msgstr "ReliefOS 浏览器"
 
 #: userland/apps/guitest/main.c:120
-msgid "LeonOS GUI API Tester"
-msgstr "LeonOS GUI API 测试器"
+msgid "ReliefOS GUI API Tester"
+msgstr "ReliefOS GUI API 测试器"
 
 #: userland/apps/oshlp/main.c:1860
-msgid "LeonOS Help"
-msgstr "LeonOS 帮助"
+msgid "ReliefOS Help"
+msgstr "ReliefOS 帮助"
 
 #: userland/apps/minesweeper/main.c:457
-msgid "LeonOS Minesweeper"
-msgstr "LeonOS 扫雷"
+msgid "ReliefOS Minesweeper"
+msgstr "ReliefOS 扫雷"
 
 #: userland/apps/paint/main.c:569
-msgid "LeonOS Paint"
-msgstr "LeonOS 画图"
+msgid "ReliefOS Paint"
+msgstr "ReliefOS 画图"
 
 #: userland/apps/desktop/render.c:31
-msgid "LeonOS UI Component Library"
-msgstr "LeonOS 界面组件库"
+msgid "ReliefOS UI Component Library"
+msgstr "ReliefOS 界面组件库"
 
 #: userland/apps/servicemgr/main.c:47
-msgid "LeonOS device protocol"
-msgstr "LeonOS 设备协议"
+msgid "ReliefOS device protocol"
+msgstr "ReliefOS 设备协议"
 
 #: userland/apps/fileman/main.c:14
-msgid "LeonOS file browser"
-msgstr "LeonOS 文件浏览器"
+msgid "ReliefOS file browser"
+msgstr "ReliefOS 文件浏览器"
 
 #: userland/apps/osver/main.c:207
-msgid "LeonOS is free software for learning and experimentation."
-msgstr "LeonOS 是用于学习和实验的自由软件。"
+msgid "ReliefOS is free software for learning and experimentation."
+msgstr "ReliefOS 是用于学习和实验的自由软件。"
 
 #: userland/apps/notepad/main.c:810
-msgid "LeonOS text viewer"
-msgstr "LeonOS 文本查看器"
+msgid "ReliefOS text viewer"
+msgstr "ReliefOS 文本查看器"
 
 #: userland/apps/installer/main.c:1487
-msgid "LeonOS was installed to the selected disk."
-msgstr "LeonOS 已安装到所选硬盘。"
+msgid "ReliefOS was installed to the selected disk."
+msgstr "ReliefOS 已安装到所选硬盘。"
 
 #: userland/apps/installer/main.c:1486
-msgid "LeonOS was updated on the selected disk."
-msgstr "所选硬盘上的 LeonOS 已更新。"
+msgid "ReliefOS was updated on the selected disk."
+msgstr "所选硬盘上的 ReliefOS 已更新。"
 
 #: userland/apps/browser/view.c:970
 msgid "License Website"
@@ -2767,8 +2767,8 @@ msgid "Open Failed"
 msgstr "打开失败"
 
 #: userland/apps/run/main.c:69
-msgid "Open LeonOS program or file path"
-msgstr "打开 LeonOS 程序或文件路径"
+msgid "Open ReliefOS program or file path"
+msgstr "打开 ReliefOS 程序或文件路径"
 
 #: userland/apps/mp3play/main.c:346
 msgid "Open MP3"
@@ -3367,8 +3367,8 @@ msgid "Restart"
 msgstr "重启"
 
 #: userland/apps/desktop/screen.c:789
-msgid "Restart LeonOS now?"
-msgstr "是否立即重启 LeonOS？"
+msgid "Restart ReliefOS now?"
+msgstr "是否立即重启 ReliefOS？"
 
 #: userland/apps/desktop/input.c:671
 msgid "Restart failed"
@@ -3723,8 +3723,8 @@ msgid "Setup can copy the full normal system payload"
 msgstr "安装程序可以复制完整的普通系统文件"
 
 #: userland/apps/installer/main.c:856
-msgid "Setup will check for an existing LeonOS 4 system."
-msgstr "安装程序会检测现有 LeonOS 4 系统。"
+msgid "Setup will check for an existing ReliefOS system."
+msgstr "安装程序会检测现有 ReliefOS 系统。"
 
 #: userland/apps/desktop/desktop_items.c:565
 msgid "Shortcut already exists."
@@ -3767,8 +3767,8 @@ msgid "Shut down"
 msgstr "关机"
 
 #: userland/apps/desktop/screen.c:792
-msgid "Shut down LeonOS now?"
-msgstr "是否立即关闭 LeonOS？"
+msgid "Shut down ReliefOS now?"
+msgstr "是否立即关闭 ReliefOS？"
 
 #: userland/apps/desktop/input.c:672
 msgid "Shutdown failed"
@@ -3791,8 +3791,8 @@ msgid "Sign out"
 msgstr "注销"
 
 #: userland/apps/desktop/screen.c:791
-msgid "Sign out of LeonOS now?"
-msgstr "是否立即注销 LeonOS？"
+msgid "Sign out of ReliefOS now?"
+msgstr "是否立即注销 ReliefOS？"
 
 #: userland/apps/login/main.c:158
 msgid "Signed in"
@@ -4431,12 +4431,12 @@ msgid "Update dictionary"
 msgstr "更新词库"
 
 #: userland/apps/installer/main.c:3198
-msgid "Update installed LeonOS packages"
-msgstr "更新已安装的 LeonOS 软件包"
+msgid "Update installed ReliefOS packages"
+msgstr "更新已安装的 ReliefOS 软件包"
 
 #: userland/apps/installer/main.c:848
-msgid "Updating LeonOS 4"
-msgstr "正在更新 LeonOS 4"
+msgid "Updating ReliefOS"
+msgstr "正在更新 ReliefOS"
 
 #: userland/apps/settings/main.c:605
 msgid "Updating OpenRC..."
@@ -4447,8 +4447,8 @@ msgid "Updating runlevel..."
 msgstr "正在更新运行级别…"
 
 #: userland/apps/installer/main.c:3340
-msgid "Upgrading signed LeonOS packages"
-msgstr "正在升级已签名的 LeonOS 软件包"
+msgid "Upgrading signed ReliefOS packages"
+msgstr "正在升级已签名的 ReliefOS 软件包"
 
 #: userland/apps/taskmgr/main.c:1065
 msgid "Uptime:"
@@ -4467,8 +4467,8 @@ msgid "Use dotted decimal form, for example 10.0.2.2."
 msgstr "请输入类似 10.0.2.2 的 IPv4 地址。"
 
 #: userland/apps/browser/navigation.c:812
-msgid "Use http://, https://, about:, or a LeonOS file path such as /file.html."
-msgstr "请使用 http://、https://、about:，或类似 /file.html 的 LeonOS 文件路径。"
+msgid "Use http://, https://, about:, or a ReliefOS file path such as /file.html."
+msgstr "请使用 http://、https://、about:，或类似 /file.html 的 ReliefOS 文件路径。"
 
 #: userland/apps/taskmgr/main.c:1059
 msgid "Used memory:"
@@ -4647,7 +4647,7 @@ msgid "open failed "
 msgstr "打开失败 "
 
 #: userland/apps/installer/main.c:1299
-msgid "or replace the boot/leonos and system files on an existing installation."
+msgid "or replace the boot/reliefos and system files on an existing installation."
 msgstr "也可以替换现有安装中的启动和系统文件。"
 
 #: userland/apps/installer/main.c:1373

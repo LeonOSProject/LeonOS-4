@@ -20,7 +20,7 @@ int main(void)
     assert(pipe(input) == 0 && pipe(output) == 0 && pipe(errors) == 0);
     assert(write(input[1], "separate-input\n", 15) == 15);
     close(input[1]);
-    struct leonos_authd_run request = {0};
+    struct reliefos_authd_run request = {0};
     strcpy(request.cwd, "/tmp");
     strcpy(request.term, "xterm-256color");
     struct authd_run_context context = {

@@ -1,5 +1,5 @@
 #include "desktop.h"
-#include <leonos/net_service.h>
+#include <reliefos/net_service.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <unistd.h>
@@ -33,23 +33,23 @@ static void draw_taskbar_plain_button(uint32_t x, uint32_t y, uint32_t width,
     uint32_t text_x;
     uint32_t text_y;
 
-    leonos_ui_bevel(&ui, x, y, width, LEONOS_UI_BUTTON_H,
-                    LEONOS_UI_GRAY,
-                    pressed ? LEONOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_bevel(&ui, x, y, width, RELIEFOS_UI_BUTTON_H,
+                    RELIEFOS_UI_GRAY,
+                    pressed ? RELIEFOS_UI_BUTTON_PRESSED : 0);
     if (!label || !label[0] || width <= 8) {
         return;
     }
-    text_width = leonos_ui_text_width(label);
+    text_width = reliefos_ui_text_width(label);
     text_x = text_width < width ? x + (width - text_width) / 2 : x + 4;
-    text_y = y + (LEONOS_UI_BUTTON_H > LEONOS_FONT_H
-                      ? (LEONOS_UI_BUTTON_H - LEONOS_FONT_H) / 2 : 2);
+    text_y = y + (RELIEFOS_UI_BUTTON_H > RELIEFOS_FONT_H
+                      ? (RELIEFOS_UI_BUTTON_H - RELIEFOS_FONT_H) / 2 : 2);
     if (pressed) {
         ++text_x;
         ++text_y;
     }
-    leonos_ui_text_transparent_clipped(&ui, text_x, text_y,
+    reliefos_ui_text_transparent_clipped(&ui, text_x, text_y,
                                        width > 8 ? width - 8 : width,
-                                       label, LEONOS_UI_BLACK);
+                                       label, RELIEFOS_UI_BLACK);
 }
 
 static void cursor_put_pixel(int x, int y, uint32_t color)
@@ -73,18 +73,18 @@ static void cursor_put_pixel(int x, int y, uint32_t color)
 
 static void format_taskbar_clock(char *buf, uint32_t cap)
 {
-    struct leonos_time_info time_info;
+    struct reliefos_time_info time_info;
     unsigned long total_seconds = 0;
     uint32_t hours;
     uint32_t minutes;
     uint32_t seconds;
     uint32_t pos = 0;
-    if (leonos_time_info(&time_info) == 0 && time_info.valid) {
+    if (reliefos_time_info(&time_info) == 0 && time_info.valid) {
         hours = time_info.hour;
         minutes = time_info.minute;
         seconds = time_info.second;
     } else {
-        total_seconds = leonos_uptime_ms() / 1000UL;
+        total_seconds = reliefos_uptime_ms() / 1000UL;
         hours = (uint32_t)((total_seconds / 3600UL) % 24UL);
         minutes = (uint32_t)((total_seconds / 60UL) % 60UL);
         seconds = (uint32_t)(total_seconds % 60UL);
@@ -114,7 +114,7 @@ static void draw_taskbar_clock(uint32_t tb_y)
         return;
     }
     x = fb_w() - TASKBAR_CLOCK_W;
-    second = leonos_uptime_ms() / 1000UL;
+    second = reliefos_uptime_ms() / 1000UL;
     if (taskbar_clock_cache_second != second) {
         format_taskbar_clock(taskbar_clock_cache, sizeof(taskbar_clock_cache));
         taskbar_clock_cache_second = second;
@@ -125,7 +125,7 @@ static void draw_taskbar_clock(uint32_t tb_y)
 
 void desktop_poll_network_state(void)
 {
-    unsigned long now = leonos_uptime_ms();
+    unsigned long now = reliefos_uptime_ms();
     if (taskbar_network_worker_pid > 0) {
         for (unsigned budget = 0; budget < 8; ++budget) {
             struct pollfd fd = {.fd = taskbar_network_pipe, .events = POLLIN};
@@ -193,28 +193,28 @@ static void draw_taskbar_network_icon(uint32_t tb_y)
     icon_y = tb_y + 11;
     draw_taskbar_plain_button(x + 4, tb_y + 5, TASKBAR_NET_W - 6, "", 1);
 
-    leonos_ui_rect(&ui, icon_x, icon_y, 8, 6, LEONOS_UI_WHITE);
-    leonos_ui_rect(&ui, icon_x, icon_y, 8, 1, LEONOS_UI_BLACK);
-    leonos_ui_rect(&ui, icon_x, icon_y, 1, 6, LEONOS_UI_BLACK);
-    leonos_ui_rect(&ui, icon_x + 7, icon_y, 1, 6, LEONOS_UI_BLACK);
-    leonos_ui_rect(&ui, icon_x, icon_y + 5, 8, 1, LEONOS_UI_BLACK);
-    leonos_ui_rect(&ui, icon_x + 3, icon_y + 6, 2, 2, LEONOS_UI_BLACK);
+    reliefos_ui_rect(&ui, icon_x, icon_y, 8, 6, RELIEFOS_UI_WHITE);
+    reliefos_ui_rect(&ui, icon_x, icon_y, 8, 1, RELIEFOS_UI_BLACK);
+    reliefos_ui_rect(&ui, icon_x, icon_y, 1, 6, RELIEFOS_UI_BLACK);
+    reliefos_ui_rect(&ui, icon_x + 7, icon_y, 1, 6, RELIEFOS_UI_BLACK);
+    reliefos_ui_rect(&ui, icon_x, icon_y + 5, 8, 1, RELIEFOS_UI_BLACK);
+    reliefos_ui_rect(&ui, icon_x + 3, icon_y + 6, 2, 2, RELIEFOS_UI_BLACK);
 
-    leonos_ui_rect(&ui, icon_x + 11, icon_y + 3, 8, 6, LEONOS_UI_WHITE);
-    leonos_ui_rect(&ui, icon_x + 11, icon_y + 3, 8, 1, LEONOS_UI_BLACK);
-    leonos_ui_rect(&ui, icon_x + 11, icon_y + 3, 1, 6, LEONOS_UI_BLACK);
-    leonos_ui_rect(&ui, icon_x + 18, icon_y + 3, 1, 6, LEONOS_UI_BLACK);
-    leonos_ui_rect(&ui, icon_x + 11, icon_y + 8, 8, 1, LEONOS_UI_BLACK);
-    leonos_ui_rect(&ui, icon_x + 14, icon_y + 9, 2, 2, LEONOS_UI_BLACK);
+    reliefos_ui_rect(&ui, icon_x + 11, icon_y + 3, 8, 6, RELIEFOS_UI_WHITE);
+    reliefos_ui_rect(&ui, icon_x + 11, icon_y + 3, 8, 1, RELIEFOS_UI_BLACK);
+    reliefos_ui_rect(&ui, icon_x + 11, icon_y + 3, 1, 6, RELIEFOS_UI_BLACK);
+    reliefos_ui_rect(&ui, icon_x + 18, icon_y + 3, 1, 6, RELIEFOS_UI_BLACK);
+    reliefos_ui_rect(&ui, icon_x + 11, icon_y + 8, 8, 1, RELIEFOS_UI_BLACK);
+    reliefos_ui_rect(&ui, icon_x + 14, icon_y + 9, 2, 2, RELIEFOS_UI_BLACK);
 
     if (taskbar_network_connected) {
-        leonos_ui_rect(&ui, icon_x + 7, icon_y + 8, 6, 1, taskbar_network_color);
-        leonos_ui_rect(&ui, icon_x + 10, icon_y + 6, 1, 5, taskbar_network_color);
+        reliefos_ui_rect(&ui, icon_x + 7, icon_y + 8, 6, 1, taskbar_network_color);
+        reliefos_ui_rect(&ui, icon_x + 10, icon_y + 6, 1, 5, taskbar_network_color);
     } else {
-        leonos_ui_rect(&ui, icon_x + 8, icon_y + 5, 8, 2, taskbar_network_color);
-        leonos_ui_rect(&ui, icon_x + 11, icon_y + 2, 2, 8, taskbar_network_color);
+        reliefos_ui_rect(&ui, icon_x + 8, icon_y + 5, 8, 2, taskbar_network_color);
+        reliefos_ui_rect(&ui, icon_x + 11, icon_y + 2, 2, 8, taskbar_network_color);
     }
-    leonos_ui_rect(&ui, icon_x + 20, icon_y + 11, 4, 4, taskbar_network_color);
+    reliefos_ui_rect(&ui, icon_x + 20, icon_y + 11, 4, 4, taskbar_network_color);
 }
 
 static void draw_taskbar_inputm(uint32_t tb_y)
@@ -333,11 +333,11 @@ static void draw_wallpaper(struct rect dirty)
         !desktop_width || !desktop_height) {
         return;
     }
-    if (desktop_wallpaper_mode == LEONOS_WALLPAPER_MODE_STRETCH) {
+    if (desktop_wallpaper_mode == RELIEFOS_WALLPAPER_MODE_STRETCH) {
         draw_scaled_wallpaper_region(dirty, 0, 0, desktop_width, desktop_height);
         return;
     }
-    if (desktop_wallpaper_mode == LEONOS_WALLPAPER_MODE_TILE) {
+    if (desktop_wallpaper_mode == RELIEFOS_WALLPAPER_MODE_TILE) {
         for (int y = dirty.y; y < dirty.y + dirty.h; ++y) {
             uint32_t source_y = (uint32_t)y % wallpaper_height;
             for (int x = dirty.x; x < dirty.x + dirty.w; ++x) {
@@ -347,13 +347,13 @@ static void draw_wallpaper(struct rect dirty)
         }
         return;
     }
-    if (desktop_wallpaper_mode == LEONOS_WALLPAPER_MODE_CENTER) {
+    if (desktop_wallpaper_mode == RELIEFOS_WALLPAPER_MODE_CENTER) {
         uint32_t target_w = wallpaper_width < desktop_width ? wallpaper_width : desktop_width;
         uint32_t target_h = wallpaper_height < desktop_height ? wallpaper_height : desktop_height;
         uint32_t target_x = desktop_width > target_w ? (desktop_width - target_w) / 2U : 0;
         uint32_t target_y = desktop_height > target_h ? (desktop_height - target_h) / 2U : 0;
         rect_fill((uint32_t)dirty.x, (uint32_t)dirty.y,
-                  (uint32_t)dirty.w, (uint32_t)dirty.h, LEONOS_UI_DESKTOP);
+                  (uint32_t)dirty.w, (uint32_t)dirty.h, RELIEFOS_UI_DESKTOP);
         for (int y = dirty.y; y < dirty.y + dirty.h; ++y) {
             if ((uint32_t)y < target_y || (uint32_t)y >= target_y + target_h) {
                 continue;
@@ -376,7 +376,7 @@ static void draw_wallpaper(struct rect dirty)
         return;
     }
 
-    if (desktop_wallpaper_mode == LEONOS_WALLPAPER_MODE_FIT) {
+    if (desktop_wallpaper_mode == RELIEFOS_WALLPAPER_MODE_FIT) {
         uint32_t target_w = desktop_width;
         uint32_t target_h = (uint32_t)(((uint64_t)desktop_width * wallpaper_height) /
                                       wallpaper_width);
@@ -392,7 +392,7 @@ static void draw_wallpaper(struct rect dirty)
             }
         }
         rect_fill((uint32_t)dirty.x, (uint32_t)dirty.y,
-                  (uint32_t)dirty.w, (uint32_t)dirty.h, LEONOS_UI_DESKTOP);
+                  (uint32_t)dirty.w, (uint32_t)dirty.h, RELIEFOS_UI_DESKTOP);
         draw_scaled_wallpaper_region(dirty,
                                      desktop_width > target_w ? (desktop_width - target_w) / 2U : 0,
                                      desktop_height > target_h ? (desktop_height - target_h) / 2U : 0,
@@ -440,7 +440,7 @@ static void draw_custom_cursor(int x, int y)
 {
     const uint32_t black = 0x00000000u;
     const uint32_t white = 0x00ffffffu;
-    if (desktop_cursor_style == LEONOS_GUI_CURSOR_TEXT) {
+    if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_TEXT) {
         for (uint32_t row = 0; row < FALLBACK_CURSOR_H; ++row) {
             cursor_put_pixel((int)x + 7, (int)y + (int)row, black);
         }
@@ -450,7 +450,7 @@ static void draw_custom_cursor(int x, int y)
         }
         return;
     }
-    if (desktop_cursor_style == LEONOS_GUI_CURSOR_CROSSHAIR) {
+    if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_CROSSHAIR) {
         for (uint32_t i = 0; i < FALLBACK_CURSOR_H; ++i) {
             cursor_put_pixel((int)x + 7, (int)y + (int)i, black);
             cursor_put_pixel((int)x + (int)i, (int)y + 7, black);
@@ -458,7 +458,7 @@ static void draw_custom_cursor(int x, int y)
         cursor_put_pixel((int)x + 7, (int)y + 7, white);
         return;
     }
-    if (desktop_cursor_style == LEONOS_GUI_CURSOR_MOVE) {
+    if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_MOVE) {
         for (uint32_t i = 3; i < 13; ++i) {
             put_pixel(x + 7, y + i, black);
             put_pixel(x + i, y + 7, black);
@@ -471,7 +471,7 @@ static void draw_custom_cursor(int x, int y)
         }
         return;
     }
-    if (desktop_cursor_style == LEONOS_GUI_CURSOR_WAIT) {
+    if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_WAIT) {
         for (uint32_t row = 2; row < 14; ++row) {
             for (uint32_t col = 2; col < 14; ++col) {
                 uint32_t dx = col > 7 ? col - 7 : 7 - col;
@@ -486,7 +486,7 @@ static void draw_custom_cursor(int x, int y)
         put_pixel(x + 10, y + 3, white);
         return;
     }
-    if (desktop_cursor_style == LEONOS_GUI_CURSOR_HAND) {
+    if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_HAND) {
         for (uint32_t row = 2; row < 11; ++row) {
             put_pixel(x + 7, y + row, black);
         }
@@ -504,7 +504,7 @@ static void draw_custom_cursor(int x, int y)
         put_pixel(x + 11, y + 12, black);
         return;
     }
-    if (desktop_cursor_style == LEONOS_GUI_CURSOR_NO) {
+    if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_NO) {
         for (uint32_t i = 2; i < 14; ++i) {
             put_pixel(x + i, y + i, black);
             put_pixel(x + i, y + 15U - i, black);
@@ -515,7 +515,7 @@ static void draw_custom_cursor(int x, int y)
         }
         return;
     }
-    if (desktop_cursor_style == LEONOS_GUI_CURSOR_HELP) {
+    if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_HELP) {
         for (uint32_t i = 3; i < 13; ++i) {
             put_pixel(x + i, y + 2, black);
             put_pixel(x + i, y + 13, black);
@@ -531,8 +531,8 @@ static void draw_custom_cursor(int x, int y)
         put_pixel(x + 7, y + 10, black);
         return;
     }
-    if (desktop_cursor_style == LEONOS_GUI_CURSOR_PROGRESS ||
-        desktop_cursor_style == LEONOS_GUI_CURSOR_APP_STARTING) {
+    if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_PROGRESS ||
+        desktop_cursor_style == RELIEFOS_GUI_CURSOR_APP_STARTING) {
         for (uint32_t i = 2; i < 14; ++i) {
             put_pixel(x + 7, y + i, black);
             put_pixel(x + i, y + 7, black);
@@ -541,29 +541,29 @@ static void draw_custom_cursor(int x, int y)
         put_pixel(x + 12, y + 7, white);
         return;
     }
-    if (desktop_cursor_style == LEONOS_GUI_CURSOR_SIZE_NS ||
-        desktop_cursor_style == LEONOS_GUI_CURSOR_SIZE_WE ||
-        desktop_cursor_style == LEONOS_GUI_CURSOR_SIZE_NWSE ||
-        desktop_cursor_style == LEONOS_GUI_CURSOR_SIZE_NESW) {
+    if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_SIZE_NS ||
+        desktop_cursor_style == RELIEFOS_GUI_CURSOR_SIZE_WE ||
+        desktop_cursor_style == RELIEFOS_GUI_CURSOR_SIZE_NWSE ||
+        desktop_cursor_style == RELIEFOS_GUI_CURSOR_SIZE_NESW) {
         for (uint32_t i = 3; i < 13; ++i) {
-            if (desktop_cursor_style == LEONOS_GUI_CURSOR_SIZE_NS) {
+            if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_SIZE_NS) {
                 put_pixel(x + 7, y + i, black);
-            } else if (desktop_cursor_style == LEONOS_GUI_CURSOR_SIZE_WE) {
+            } else if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_SIZE_WE) {
                 put_pixel(x + i, y + 7, black);
-            } else if (desktop_cursor_style == LEONOS_GUI_CURSOR_SIZE_NWSE) {
+            } else if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_SIZE_NWSE) {
                 put_pixel(x + i, y + i, black);
             } else {
                 put_pixel(x + i, y + 15U - i, black);
             }
         }
-        if (desktop_cursor_style == LEONOS_GUI_CURSOR_SIZE_NS) {
+        if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_SIZE_NS) {
             for (uint32_t i = 3; i < 7; ++i) {
                 put_pixel(x + 7U - i + 3U, y + i, black);
                 put_pixel(x + 7U + i - 3U, y + i, black);
                 put_pixel(x + 7U - i + 3U, y + 15U - i, black);
                 put_pixel(x + 7U + i - 3U, y + 15U - i, black);
             }
-        } else if (desktop_cursor_style == LEONOS_GUI_CURSOR_SIZE_WE) {
+        } else if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_SIZE_WE) {
             for (uint32_t i = 3; i < 7; ++i) {
                 put_pixel(x + i, y + 7U - i + 3U, black);
                 put_pixel(x + i, y + 7U + i - 3U, black);
@@ -573,7 +573,7 @@ static void draw_custom_cursor(int x, int y)
         }
         return;
     }
-    if (desktop_cursor_style == LEONOS_GUI_CURSOR_UP) {
+    if (desktop_cursor_style == RELIEFOS_GUI_CURSOR_UP) {
         for (uint32_t i = 3; i < 14; ++i) {
             put_pixel(x + 7, y + i, black);
         }
@@ -589,7 +589,7 @@ static void draw_custom_cursor(int x, int y)
 static void draw_cursor_shape_target(uint32_t x, uint32_t y)
 {
     uint32_t style = desktop_cursor_style < CURSOR_STYLE_COUNT
-                         ? desktop_cursor_style : LEONOS_GUI_CURSOR_ARROW;
+                         ? desktop_cursor_style : RELIEFOS_GUI_CURSOR_ARROW;
     int draw_x = (int)x - cursor_hotspot_x[style];
     int draw_y = (int)y - cursor_hotspot_y[style];
     if (cursor_bitmap_loaded) {
@@ -608,7 +608,7 @@ static void draw_cursor_shape_target(uint32_t x, uint32_t y)
         }
         return;
     }
-    if (style != LEONOS_GUI_CURSOR_ARROW) {
+    if (style != RELIEFOS_GUI_CURSOR_ARROW) {
         desktop_cursor_style = style;
         /* draw_x/draw_y already apply the style hotspot. Keep the fallback
          * shape anchored at that hotspot so every cursor style stays inside
@@ -659,21 +659,21 @@ void redraw_region(struct rect dirty)
     if (dirty.w <= 0 || dirty.h <= 0) {
         return;
     }
-    leonos_ui_set_clip(&ui, dirty.x, dirty.y, (uint32_t)dirty.w, (uint32_t)dirty.h);
+    reliefos_ui_set_clip(&ui, dirty.x, dirty.y, (uint32_t)dirty.w, (uint32_t)dirty.h);
 
     if (wallpaper_loaded) {
         draw_wallpaper(dirty);
     } else {
         rect_fill((uint32_t)dirty.x, (uint32_t)dirty.y, (uint32_t)dirty.w, (uint32_t)dirty.h,
-                  LEONOS_UI_DESKTOP);
+                  RELIEFOS_UI_DESKTOP);
     }
 
     if (active_window_is_fullscreen()) {
         if (rect_intersects(dirty, window_rect((uint8_t)active_window))) {
             draw_window((uint8_t)active_window);
         }
-        leonos_ui_clear_clip(&ui);
-        leonos_ui_cursor_clear(&ui);
+        reliefos_ui_clear_clip(&ui);
+        reliefos_ui_cursor_clear(&ui);
         return;
     }
 
@@ -689,7 +689,7 @@ void redraw_region(struct rect dirty)
 
     uint32_t tb_y = taskbar_y();
     if (desktop_taskbar_visible && (uint32_t)(dirty.y + dirty.h) >= tb_y) {
-        struct rect start_rect = rect_make(6, (int)tb_y + 5, 86, LEONOS_UI_BUTTON_H);
+        struct rect start_rect = rect_make(6, (int)tb_y + 5, 86, RELIEFOS_UI_BUTTON_H);
         struct rect network_rect = rect_make(0, 0, 0, 0);
         struct rect clock_rect = rect_make(0, 0, 0, 0);
         struct rect inputm_rect = rect_make(0, 0, 0, 0);
@@ -698,20 +698,20 @@ void redraw_region(struct rect dirty)
                                   (desktop_service_rtc_clock ? TASKBAR_CLOCK_W : 0U) -
                                   TASKBAR_NET_W;
             network_rect = rect_make((int)network_x + 4, (int)tb_y + 5,
-                                     TASKBAR_NET_W - 6, LEONOS_UI_BUTTON_H);
+                                     TASKBAR_NET_W - 6, RELIEFOS_UI_BUTTON_H);
         }
         if (desktop_service_rtc_clock && fb_w() >= TASKBAR_CLOCK_W + 8U) {
             clock_rect = rect_make((int)fb_w() - TASKBAR_CLOCK_W + 4,
                                    (int)tb_y + 5, TASKBAR_CLOCK_W - 10,
-                                   LEONOS_UI_BUTTON_H);
+                                   RELIEFOS_UI_BUTTON_H);
         }
         {
             uint32_t tray_w = desktop_tray_width();
             uint32_t inputm_x = fb_w() > tray_w ? fb_w() - tray_w : 0;
             inputm_rect = rect_make((int)inputm_x + 4, (int)tb_y + 5,
-                                    TASKBAR_INPUTM_W - 6, LEONOS_UI_BUTTON_H);
+                                    TASKBAR_INPUTM_W - 6, RELIEFOS_UI_BUTTON_H);
         }
-        leonos_ui_taskbar(&ui, tb_y, TASKBAR_H);
+        reliefos_ui_taskbar(&ui, tb_y, TASKBAR_H);
         if (rect_intersects(dirty, start_rect)) {
             draw_taskbar_plain_button(6, tb_y + 5, 86,
                                       T("Start Menu"),
@@ -721,11 +721,11 @@ void redraw_region(struct rect dirty)
         uint32_t button_w = taskbar_button_width(running_window_count());
         for (uint8_t i = 0; i < MAX_WINDOWS; ++i) {
             if (windows[i].visible &&
-                (windows[i].flags & LEONOS_GUI_WINDOW_HIDE_TASKBAR) == 0 &&
+                (windows[i].flags & RELIEFOS_GUI_WINDOW_HIDE_TASKBAR) == 0 &&
                 button_w > 0) {
                 struct rect button_rect = rect_make((int)x, (int)tb_y + 5,
                                                     button_w > 8 ? button_w - 8 : button_w,
-                                                    LEONOS_UI_BUTTON_H);
+                                                    RELIEFOS_UI_BUTTON_H);
                 if (rect_intersects(dirty, button_rect)) {
                     draw_taskbar_button(i, x, tb_y + 5, button_w);
                 }
@@ -756,9 +756,9 @@ void redraw_region(struct rect dirty)
     draw_desktop_shortcut_input();
     draw_desktop_message();
     draw_inputm_overlay();
-    leonos_ui_clear_clip(&ui);
+    reliefos_ui_clear_clip(&ui);
     /* Desktop controls are drawn on the framebuffer, not submitted as a GUI window. */
-    leonos_ui_cursor_clear(&ui);
+    reliefos_ui_cursor_clear(&ui);
 }
 
 void draw_power_confirm(void)
@@ -786,31 +786,31 @@ void draw_power_confirm(void)
                         ? T("Confirm Sign Out")
                         : T("Confirm Shut Down");
         message = power_confirm_action == POWER_CONFIRM_REBOOT
-                      ? T("Restart LeonOS now?")
+                      ? T("Restart ReliefOS now?")
                       : power_confirm_action == POWER_CONFIRM_LOGOUT
-                          ? T("Sign out of LeonOS now?")
-                          : T("Shut down LeonOS now?");
+                          ? T("Sign out of ReliefOS now?")
+                          : T("Shut down ReliefOS now?");
     }
     rect_fill_i((int)x + 5, (int)y + 5, W, H, 0x00404040);
-    leonos_ui_dialog(&ui, x, y, W, H, title);
-    leonos_ui_text_clipped(&ui, x + 20, y + 50, W - 40, message,
-                           LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    reliefos_ui_dialog(&ui, x, y, W, H, title);
+    reliefos_ui_text_clipped(&ui, x + 20, y + 50, W - 40, message,
+                           RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
     if (desktop_lifecycle_state == DESKTOP_LIFECYCLE_FORCE_PROMPT) {
-        leonos_ui_button(&ui, x + W - 188, y + H - 38, 84, LEONOS_UI_BUTTON_H,
+        reliefos_ui_button(&ui, x + W - 188, y + H - 38, 84, RELIEFOS_UI_BUTTON_H,
                          T("Force"), 0);
-        leonos_ui_button(&ui, x + W - 96, y + H - 38, 72, LEONOS_UI_BUTTON_H,
+        reliefos_ui_button(&ui, x + W - 96, y + H - 38, 72, RELIEFOS_UI_BUTTON_H,
                          T("Cancel"), 0);
     } else if (desktop_lifecycle_state == DESKTOP_LIFECYCLE_WAITING) {
         char pending[48];
         snprintf(pending, sizeof(pending), "%s: %u",
                  T("Remaining"),
                  (unsigned)desktop_lifecycle_remaining_count);
-        leonos_ui_text_clipped(&ui, x + 20, y + 78, W - 40, pending,
-                               LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+        reliefos_ui_text_clipped(&ui, x + 20, y + 78, W - 40, pending,
+                               RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
     } else {
-        leonos_ui_button(&ui, x + W - 188, y + H - 38, 84, LEONOS_UI_BUTTON_H,
+        reliefos_ui_button(&ui, x + W - 188, y + H - 38, 84, RELIEFOS_UI_BUTTON_H,
                          T("Yes"), 0);
-        leonos_ui_button(&ui, x + W - 96, y + H - 38, 72, LEONOS_UI_BUTTON_H,
+        reliefos_ui_button(&ui, x + W - 96, y + H - 38, 72, RELIEFOS_UI_BUTTON_H,
                          T("No"), 0);
     }
 }
@@ -822,7 +822,7 @@ static void flush_pixels(uint32_t x, uint32_t y, uint32_t width, uint32_t height
         return;
     }
     if (desktop_scale <= 1) {
-        leonos_fb_blit(x, y, width, height, stride, pixels);
+        reliefos_fb_blit(x, y, width, height, stride, pixels);
         return;
     }
     uint32_t scale = desktop_scale;
@@ -857,7 +857,7 @@ static void flush_pixels(uint32_t x, uint32_t y, uint32_t width, uint32_t height
                     }
                 }
             }
-            leonos_fb_blit((x + chunk_x) * scale,
+            reliefos_fb_blit((x + chunk_x) * scale,
                            (y + chunk_y) * scale,
                            logical_w * scale, logical_h * scale,
                            max_out_w, scaled);
@@ -883,7 +883,7 @@ static int build_cursor_composite(struct rect *raw_out, struct rect *clip_out)
     struct rect raw;
     struct rect clip;
 
-    if (!cursor_visible || leonos_gui_mouse_visible() <= 0) {
+    if (!cursor_visible || reliefos_gui_mouse_visible() <= 0) {
         return 0;
     }
     raw = cursor_rect_for_style(cursor_x, cursor_y, desktop_cursor_style);
@@ -948,7 +948,7 @@ static int flush_small_composited_region(struct rect dirty)
             cursor_frame[row * CURSOR_FRAME_MAX_W + col] = source[col];
         }
     }
-    if (cursor_visible && leonos_gui_mouse_visible() > 0) {
+    if (cursor_visible && reliefos_gui_mouse_visible() > 0) {
         cursor_rect = cursor_rect_for_style(cursor_x, cursor_y,
                                             desktop_cursor_style);
         if (rect_intersects(dirty, cursor_rect)) {
@@ -1037,12 +1037,12 @@ void redraw_all(void)
 {
     struct rect full = rect_make(0, 0, (int)fb_w(), (int)fb_h());
     if (fb.width > fb_w() * desktop_scale) {
-        leonos_fb_rect(fb_w() * desktop_scale, 0,
+        reliefos_fb_rect(fb_w() * desktop_scale, 0,
                        fb.width - fb_w() * desktop_scale,
                        fb.height, 0x00000000);
     }
     if (fb.height > fb_h() * desktop_scale) {
-        leonos_fb_rect(0, fb_h() * desktop_scale,
+        reliefos_fb_rect(0, fb_h() * desktop_scale,
                        fb.width,
                        fb.height - fb_h() * desktop_scale, 0x00000000);
     }

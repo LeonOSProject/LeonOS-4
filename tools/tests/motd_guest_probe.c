@@ -36,7 +36,7 @@ static void run_motd(int columns, int zh, int hush)
         setenv("PAM_USER", "root", 1); setenv("PAM_TTY", tty, 1);
         setenv("LC_ALL", zh ? "zh_CN.UTF-8" : "en_US.UTF-8", 1);
         setenv("COLUMNS", "999", 1);
-        execl("/usr/lib/leonos/motd", "motd", (char *)0);
+        execl("/usr/lib/reliefos/motd", "motd", (char *)0);
         _exit(127);
     }
     close(pipefd[1]);
@@ -49,7 +49,7 @@ static void run_motd(int columns, int zh, int hush)
     CHECK(strstr(output, zh ? "欢迎使用" : "Welcome to") != NULL);
     CHECK(strstr(output, "hushlogin") != NULL);
     if (columns >= 80) {
-        CHECK(strstr(output, "NTCLKS") != NULL);
+        CHECK(strstr(output, "ReliefNT") != NULL);
         CHECK(strstr(output, zh ? "内存:" : "Memory:") != NULL);
         CHECK(strstr(output, zh ? "不可用" : "N/A") == NULL);
     }

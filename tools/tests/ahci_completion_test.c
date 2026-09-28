@@ -2,7 +2,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_internal.h"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_internal.h"
 
 static int task_file_errors;
 static int timeouts;
@@ -23,7 +23,7 @@ void console_printf(const char *format, ...)
     va_end(ap);
 }
 
-#include "../../kernel/ntclks/drivers/bootstrap/storage/storage_ahci.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ahci.c"
 
 int main(void)
 {
@@ -49,6 +49,6 @@ int main(void)
     ahci_pending_command.port = &port;
     ahci_pending_command.active = 1;
     ahci_pending_command.start_tick = 1;
-    assert(ahci_pending_poll() == -LEONOS_EAGAIN && ahci_pending_command.active);
+    assert(ahci_pending_poll() == -RELIEFOS_EAGAIN && ahci_pending_command.active);
     puts("AHCI completion: error with PxCI set, success and asynchronous pending PASS");
 }

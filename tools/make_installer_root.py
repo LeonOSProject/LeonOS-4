@@ -14,28 +14,27 @@ from make_ext2_root import write_ext2_root
 ROOT = Path(__file__).resolve().parents[1]
 ADVANCED_INSTALL_GUIDE = ROOT / "docs/ADVANCED_INSTALL.txt"
 sys.path.insert(0, str(ROOT / "tools"))
-from leonos_layout import (  # noqa: E402
+from reliefos_layout import (  # noqa: E402
     BIN,
     BOOT,
     ETC,
-    ETC_LEONOS,
+    ETC_RELIEFOS,
     ETC_SSL_CERTS,
     HOME,
-    LEONOS_APPS,
-    LEONOS_LIB,
+    RELIEFOS_APPS,
+    RELIEFOS_LIB,
     LIB,
     LICENSES,
     ROOT_SYMLINKS,
     layout_directories,
     apply_root_symlinks,
     command_symlink,
-    RUN_LEONOS,
     SBIN,
     USR,
     USR_BIN,
     USR_LIB,
     USR_SBIN,
-    VAR_LIB_LEONOS,
+    VAR_LIB_RELIEFOS,
     VAR_TMP,
 )
 
@@ -105,6 +104,13 @@ def share_identical_payload_files(stage: Path) -> None:
             os.link(previous, path)
 
 
+def stage_policy_libraries(policy_runtime: Path, stage: Path) -> None:
+    """Stage separately linked canonical and legacy SONAME objects."""
+    copy_file(policy_runtime.with_name("libreliefos.so.2"),
+              stage / RELIEFOS_LIB / "libreliefos.so.2")
+    copy_file(policy_runtime, stage / "usr/lib/leonos/libleonos.so.2")
+
+
 def stage_runtime_payload(esp_tree: Path, stage: Path, policy_runtime: Path,
                           userland_dir: Path, gptinit: Path,
                           generated_icons_dir: Path,
@@ -120,28 +126,28 @@ def stage_runtime_payload(esp_tree: Path, stage: Path, policy_runtime: Path,
         copy_tree(esp_tree / "opt", stage / "opt")
     copy_tree(esp_tree / ETC, stage / ETC)
     layout_directories(stage)
-    (stage / "etc/leonos/installer-runtime").write_text("installer\n")
+    (stage / ETC_RELIEFOS / "installer-runtime").write_text("installer\n")
     # Installer-only programs and policy overrides.
     for app in ("imd", "windowd", "desktop", "installer"):
         copy_file(userland_dir / f"{app}.elf",
-                  stage / LEONOS_APPS / app / f"{app}.elf")
+                  stage / RELIEFOS_APPS / app / f"{app}.elf")
     copy_file(userland_dir / "busybox.elf", stage / BIN / "busybox")
-    copy_file(gptinit, stage / LEONOS_APPS / "gptinit" / "gptinit.elf")
-    (stage / LEONOS_APPS / "gptinit" / "manifest.ini").write_text(
+    copy_file(gptinit, stage / RELIEFOS_APPS / "gptinit" / "gptinit.elf")
+    (stage / RELIEFOS_APPS / "gptinit" / "manifest.ini").write_text(
         "[app]\nid=gptinit\nname=GPT initializer\nversion=installer\n"
         "category=Installer tools\nexec=gptinit.elf\nentry=0\nterminal=1\n"
         "hidden=1\ncommands=gptinit\n",
         encoding="ascii",
     )
-    copy_file(esp_tree / LEONOS_APPS / "dynlinkerror" / "dynlinkerror.elf",
-              stage / LEONOS_APPS / "dynlinkerror" / "dynlinkerror.elf")
+    copy_file(esp_tree / RELIEFOS_APPS / "dynlinkerror" / "dynlinkerror.elf",
+              stage / RELIEFOS_APPS / "dynlinkerror" / "dynlinkerror.elf")
     for app in policy_apps:
         copy_file(generated_icons_dir / f"{app}.bmp",
-                  stage / LEONOS_APPS / app / f"{app}.bmp")
-    copy_file(policy_runtime, stage / LEONOS_LIB / "libleonos.so.2")
+                  stage / RELIEFOS_APPS / app / f"{app}.bmp")
+    stage_policy_libraries(policy_runtime, stage)
     copy_file(ADVANCED_INSTALL_GUIDE, stage / "root/ADVANCED_INSTALL.txt")
     for app in ("imd", "windowd", "desktop", "installer", "gptinit"):
-        link, target = command_symlink(app, f"{LEONOS_APPS}/{app}/{app}.elf")
+        link, target = command_symlink(app, f"{RELIEFOS_APPS}/{app}/{app}.elf")
         path = stage / link
         if path.is_symlink():
             path.unlink()
@@ -157,7 +163,7 @@ def stage_installed_payloads(esp_tree: Path, destination: Path) -> None:
 
     The installed root keeps real /bin, /sbin and /lib directories; there is
     deliberately no /lib64.  The ESP gets only GRUB, the loader and the
-    /leonos boot files.
+    /reliefos boot files and the /leonos rollback payload.
     """
     root = destination / "install/root"
     esp = destination / "install/esp"
@@ -165,16 +171,18 @@ def stage_installed_payloads(esp_tree: Path, destination: Path) -> None:
     shutil.rmtree(root / "EFI", ignore_errors=True)
     shutil.rmtree(root / "grub", ignore_errors=True)
     remove_file(root / "loader.elf")
+    shutil.rmtree(root / "reliefos", ignore_errors=True)
     shutil.rmtree(root / "leonos", ignore_errors=True)
 
     copy_file(esp_tree / "EFI/BOOT/BOOTX64.EFI", esp / "EFI/BOOT/BOOTX64.EFI")
     copy_tree(esp_tree / "grub", esp / "grub")
     copy_file(esp_tree / "loader.elf", esp / "loader.elf")
+    copy_tree(esp_tree / "reliefos", esp / "reliefos")
     copy_tree(esp_tree / "leonos", esp / "leonos")
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Create LeonOS installer runtime ext2 root")
+    parser = argparse.ArgumentParser(description="Create ReliefOS installer runtime ext2 root")
     parser.add_argument("--out", default="build/install/root.fat")
     parser.add_argument("--stage", default="build/install/root")
     parser.add_argument("--esp-tree", default="build/esp")
@@ -201,7 +209,8 @@ def main() -> int:
     if not installed_policy_dir.exists():
         raise FileNotFoundError(f"missing installed policy directory: {installed_policy_dir}")
     if (not userland_dir.exists() or not generated_icons_dir.exists() or
-            not policy_runtime.is_file() or not gptinit.is_file()):
+            not policy_runtime.is_file() or
+            not policy_runtime.with_name("libreliefos.so.2").is_file() or not gptinit.is_file()):
         raise FileNotFoundError("missing installer build inputs")
 
     if stage.exists():
@@ -222,12 +231,11 @@ def main() -> int:
             raise ValueError(f"unsupported installer policy app: {app}")
         name = f"{app}.elf"
         copy_file(installed_policy_dir / name,
-                  stage / "install/root" / LEONOS_APPS / app / name)
-    copy_file(policy_runtime,
-              stage / "install/root" / LEONOS_LIB / "libleonos.so.2")
+                  stage / "install/root" / RELIEFOS_APPS / app / name)
+    stage_policy_libraries(policy_runtime, stage / "install/root")
     remove_file(stage / "install/root/etc/license.conf")
     remove_file(stage / "install/root/etc/install.id")
-    (stage / "install/root" / VAR_LIB_LEONOS).mkdir(parents=True, exist_ok=True)
+    (stage / "install/root" / VAR_LIB_RELIEFOS).mkdir(parents=True, exist_ok=True)
     layout_directories(stage)
     layout_directories(stage / "install/root")
     apply_root_symlinks(stage)

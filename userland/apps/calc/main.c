@@ -1,11 +1,11 @@
-#include <leonos/gui.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 
 #define CALC_W 312
 #define CALC_H 364
@@ -402,24 +402,24 @@ static void apply_button(const char *label)
     append_token(label);
 }
 
-static void draw_display(struct leonos_ui_surface *ui)
+static void draw_display(struct reliefos_ui_surface *ui)
 {
     const char *shown_expr = expr_len ? expr : "0";
     const char *shown_result = result_text[0] ? result_text : "";
-    uint32_t result_bg = error_state ? 0x00c0c0c0u : LEONOS_UI_WHITE;
-    uint32_t result_fg = error_state ? 0x00000080u : LEONOS_UI_BLACK;
+    uint32_t result_bg = error_state ? 0x00c0c0c0u : RELIEFOS_UI_WHITE;
+    uint32_t result_fg = error_state ? 0x00000080u : RELIEFOS_UI_BLACK;
 
-    leonos_ui_inset(ui, DISPLAY_X, DISPLAY_Y, DISPLAY_W, DISPLAY_H, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, DISPLAY_X + 8, DISPLAY_Y + 10, shown_expr, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_rect(ui, DISPLAY_X + 6, DISPLAY_Y + 32, DISPLAY_W - 12, 1, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, DISPLAY_X + 8, DISPLAY_Y + 38, shown_result, result_fg, result_bg);
+    reliefos_ui_inset(ui, DISPLAY_X, DISPLAY_Y, DISPLAY_W, DISPLAY_H, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, DISPLAY_X + 8, DISPLAY_Y + 10, shown_expr, RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_rect(ui, DISPLAY_X + 6, DISPLAY_Y + 32, DISPLAY_W - 12, 1, RELIEFOS_UI_GRAY);
+    reliefos_ui_text(ui, DISPLAY_X + 8, DISPLAY_Y + 38, shown_result, result_fg, result_bg);
 }
 
-static void draw_calc(struct leonos_ui_surface *ui, int pressed_index)
+static void draw_calc(struct reliefos_ui_surface *ui, int pressed_index)
 {
     int idx = 0;
-    leonos_ui_rect(ui, 0, 0, CALC_W, CALC_H, LEONOS_UI_LIGHT);
-    leonos_ui_panel(ui, 8, 8, CALC_W - 16, CALC_H - 16, LEONOS_UI_GRAY);
+    reliefos_ui_rect(ui, 0, 0, CALC_W, CALC_H, RELIEFOS_UI_LIGHT);
+    reliefos_ui_panel(ui, 8, 8, CALC_W - 16, CALC_H - 16, RELIEFOS_UI_GRAY);
     draw_display(ui);
     for (int row = 0; row < GRID_ROWS; ++row) {
         for (int col = 0; col < GRID_COLS; ++col, ++idx) {
@@ -429,11 +429,11 @@ static void draw_calc(struct leonos_ui_surface *ui, int pressed_index)
             if (!label[0]) {
                 continue;
             }
-            leonos_ui_button(ui, (uint32_t)x, (uint32_t)y, BUTTON_W, BUTTON_H, label,
-                             idx == pressed_index ? LEONOS_UI_BUTTON_PRESSED : 0);
+            reliefos_ui_button(ui, (uint32_t)x, (uint32_t)y, BUTTON_W, BUTTON_H, label,
+                             idx == pressed_index ? RELIEFOS_UI_BUTTON_PRESSED : 0);
         }
     }
-    leonos_ui_text(ui, 16, CALC_H - 22, T("Integer calculator"), LEONOS_UI_DARK, LEONOS_UI_GRAY);
+    reliefos_ui_text(ui, 16, CALC_H - 22, T("Integer calculator"), RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
 }
 
 static int hit_button(int x, int y)
@@ -471,17 +471,17 @@ static const char *button_label_by_index(int index)
 static int map_keycode(uint8_t keycode, uint8_t pressed, char *out)
 {
     static uint8_t shift_down;
-    if (keycode == LEONOS_KEY_LEFT_SHIFT || keycode == LEONOS_KEY_RIGHT_SHIFT) {
+    if (keycode == RELIEFOS_KEY_LEFT_SHIFT || keycode == RELIEFOS_KEY_RIGHT_SHIFT) {
         shift_down = pressed ? 1 : 0;
         return 0;
     }
-    if (keycode == LEONOS_KEY_CAPS_LOCK) {
+    if (keycode == RELIEFOS_KEY_CAPS_LOCK) {
         return 0;
     }
     if (!pressed) {
         return 0;
     }
-    return leonos_ui_keycode_to_char_shift(keycode, shift_down, out);
+    return reliefos_ui_keycode_to_char_shift(keycode, shift_down, out);
 }
 
 static void apply_key(char ch)
@@ -525,37 +525,37 @@ static void apply_key(char ch)
 int main(void)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
     int pressed = -1;
 
     puts("[calc.elf] calculator starting");
     printf("[calc.elf] pid=%d creating Calculator window\n", getpid());
-    window_id = leonos_gui_create_app_window_ex(T("Calculator"), T("Integer calculator"),
-                                                CALC_W, CALC_H, LEONOS_GUI_WINDOW_NO_RESIZE);
+    window_id = reliefos_gui_create_app_window_ex(T("Calculator"), T("Integer calculator"),
+                                                CALC_W, CALC_H, RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[calc.elf] create window failed=%d\n", window_id);
         return 1;
     }
 
     clear_all();
-    leonos_ui_bind(&ui, pixels, CALC_W, CALC_H, CALC_W);
+    reliefos_ui_bind(&ui, pixels, CALC_W, CALC_H, CALC_W);
     draw_calc(&ui, pressed);
-    leonos_gui_present_window((uint32_t)window_id, CALC_W, CALC_H, CALC_W, pixels);
+    reliefos_gui_present_window((uint32_t)window_id, CALC_W, CALC_H, CALC_W, pixels);
 
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 break;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_MOVE) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_MOVE) {
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON) {
                 if (event.buttons & 1u) {
                     pressed = hit_button(event.x, event.y);
                 } else if (pressed >= 0) {
@@ -566,21 +566,21 @@ int main(void)
                     pressed = -1;
                 }
                 draw_calc(&ui, pressed);
-                leonos_gui_present_window((uint32_t)window_id, CALC_W, CALC_H, CALC_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, CALC_W, CALC_H, CALC_W, pixels);
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN || event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN || event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
                 char ch;
                 if (map_keycode(event.keycode, event.pressed, &ch)) {
                     apply_key(ch);
                     draw_calc(&ui, pressed);
-                    leonos_gui_present_window((uint32_t)window_id, CALC_W, CALC_H, CALC_W, pixels);
+                    reliefos_gui_present_window((uint32_t)window_id, CALC_W, CALC_H, CALC_W, pixels);
                 }
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_RESIZE || event.type == LEONOS_GUI_APP_EVENT_FOCUS) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_RESIZE || event.type == RELIEFOS_GUI_APP_EVENT_FOCUS) {
                 draw_calc(&ui, pressed);
-                leonos_gui_present_window((uint32_t)window_id, CALC_W, CALC_H, CALC_W, pixels);
+                reliefos_gui_present_window((uint32_t)window_id, CALC_W, CALC_H, CALC_W, pixels);
             }
         } else {
             sleep_ms(10);

@@ -1,6 +1,6 @@
-# sl for LeonOS
+# sl for ReliefOS
 
-LeonOS ports upstream `mtoyoda/sl` (Steam Locomotive) at commit
+ReliefOS ports upstream `mtoyoda/sl` (Steam Locomotive) at commit
 `923e7d7ebc5c1f009755bdeb789ac25658ccce03`. It is a joke command that draws
 a train across the terminal when `sl` is typed instead of `ls`.
 

@@ -1,7 +1,7 @@
-#ifndef LEONOS_GLXGEARS_GPU_BACKEND_H
-#define LEONOS_GLXGEARS_GPU_BACKEND_H
+#ifndef RELIEFOS_GLXGEARS_GPU_BACKEND_H
+#define RELIEFOS_GLXGEARS_GPU_BACKEND_H
 
-#include <leonos/gpu_sdk.h>
+#include <reliefos/gpu_sdk.h>
 
 /* Included after the upstream example to share its mesh and matrix routines. */
 struct gears_gpu_backend {

@@ -1,28 +1,28 @@
-#include <leonos/fs.h>
-#include <leonos/ini.h>
-#include <leonos/syscall.h>
+#include <reliefos/fs.h>
+#include <reliefos/ini.h>
+#include <reliefos/syscall.h>
 #include <stdint.h>
 #include <string.h>
 
-struct leonos_ini_key {
-    char name[LEONOS_INI_NAME_LEN];
-    char value[LEONOS_INI_VALUE_LEN];
+struct reliefos_ini_key {
+    char name[RELIEFOS_INI_NAME_LEN];
+    char value[RELIEFOS_INI_VALUE_LEN];
 };
 
-struct leonos_ini_section {
-    char name[LEONOS_INI_NAME_LEN];
+struct reliefos_ini_section {
+    char name[RELIEFOS_INI_NAME_LEN];
     uint32_t key_count;
-    struct leonos_ini_key keys[LEONOS_INI_MAX_KEYS_PER_SECTION];
+    struct reliefos_ini_key keys[RELIEFOS_INI_MAX_KEYS_PER_SECTION];
 };
 
-struct leonos_ini_state {
+struct reliefos_ini_state {
     uint32_t section_count;
-    struct leonos_ini_section sections[LEONOS_INI_MAX_SECTIONS];
+    struct reliefos_ini_section sections[RELIEFOS_INI_MAX_SECTIONS];
     int loaded;
 };
 
-static struct leonos_ini_state ini_state;
-static char ini_buffer[LEONOS_INI_MAX_SIZE];
+static struct reliefos_ini_state ini_state;
+static char ini_buffer[RELIEFOS_INI_MAX_SIZE];
 
 static int ini_buffer_is_text(const char *buffer, long len, uint32_t strict)
 {
@@ -148,7 +148,7 @@ static int ini_parse_key_value(const char *line, char *key, uint32_t key_cap,
     return 1;
 }
 
-static struct leonos_ini_section *ini_find_section(const char *name)
+static struct reliefos_ini_section *ini_find_section(const char *name)
 {
     uint32_t i;
     if (!name || !ini_state.loaded) {
@@ -176,7 +176,7 @@ static int ini_section_exists_pending(const char *name)
     return 0;
 }
 
-static struct leonos_ini_key *ini_find_key(struct leonos_ini_section *section,
+static struct reliefos_ini_key *ini_find_key(struct reliefos_ini_section *section,
                                            const char *name)
 {
     uint32_t i;
@@ -197,20 +197,20 @@ static int ini_load_mode(const char *path, uint32_t strict)
     long got;
     const char *p;
     const char *end;
-    char line[LEONOS_INI_VALUE_LEN];
-    struct leonos_ini_section *current_section = 0;
-    struct leonos_stat st;
+    char line[RELIEFOS_INI_VALUE_LEN];
+    struct reliefos_ini_section *current_section = 0;
+    struct reliefos_stat st;
     memset(&ini_state, 0, sizeof(ini_state));
     if (!path || !path[0]) {
         return 0;
     }
-    if (leonos_stat_legacy(path, &st) == 0) {
-        if (st.type != LEONOS_FS_TYPE_FILE ||
+    if (reliefos_stat_legacy(path, &st) == 0) {
+        if (st.type != RELIEFOS_FS_TYPE_FILE ||
             st.size >= (uint64_t)sizeof(ini_buffer)) {
             return 0;
         }
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return 0;
     }
@@ -249,8 +249,8 @@ static int ini_load_mode(const char *path, uint32_t strict)
         if (!ini_is_comment_or_empty(line)) {
             if (line[0] == '[') {
                 current_section = 0;
-                if (ini_state.section_count < LEONOS_INI_MAX_SECTIONS) {
-                    char sec_name[LEONOS_INI_NAME_LEN];
+                if (ini_state.section_count < RELIEFOS_INI_MAX_SECTIONS) {
+                    char sec_name[RELIEFOS_INI_NAME_LEN];
                     if (ini_parse_section(line, sec_name,
                                           sizeof(sec_name), strict)) {
                         if (strict && ini_section_exists_pending(sec_name)) {
@@ -272,8 +272,8 @@ static int ini_load_mode(const char *path, uint32_t strict)
                 }
             } else if (current_section &&
                        current_section->key_count <
-                           LEONOS_INI_MAX_KEYS_PER_SECTION) {
-                struct leonos_ini_key *k =
+                           RELIEFOS_INI_MAX_KEYS_PER_SECTION) {
+                struct reliefos_ini_key *k =
                     &current_section->keys[current_section->key_count];
                 if (ini_parse_key_value(line, k->name, sizeof(k->name),
                                         k->value, sizeof(k->value),
@@ -302,21 +302,21 @@ static int ini_load_mode(const char *path, uint32_t strict)
     return 1;
 }
 
-int leonos_ini_load(const char *path)
+int reliefos_ini_load(const char *path)
 {
     return ini_load_mode(path, 0);
 }
 
-int leonos_ini_load_strict(const char *path)
+int reliefos_ini_load_strict(const char *path)
 {
     return ini_load_mode(path, 1);
 }
 
-int leonos_ini_get(const char *section, const char *key,
+int reliefos_ini_get(const char *section, const char *key,
                    char *value, uint32_t capacity)
 {
-    struct leonos_ini_section *sec;
-    struct leonos_ini_key *k;
+    struct reliefos_ini_section *sec;
+    struct reliefos_ini_key *k;
     uint32_t val_len;
     if (!ini_state.loaded || !section || !key || !value || capacity == 0) {
         return 0;
@@ -338,7 +338,7 @@ int leonos_ini_get(const char *section, const char *key,
     return 1;
 }
 
-int leonos_ini_section_count(void)
+int reliefos_ini_section_count(void)
 {
     if (!ini_state.loaded) {
         return 0;
@@ -346,7 +346,7 @@ int leonos_ini_section_count(void)
     return (int)ini_state.section_count;
 }
 
-int leonos_ini_section_name(uint32_t index, char *name, uint32_t capacity)
+int reliefos_ini_section_name(uint32_t index, char *name, uint32_t capacity)
 {
     uint32_t len;
     if (!ini_state.loaded || index >= ini_state.section_count ||
@@ -362,9 +362,9 @@ int leonos_ini_section_name(uint32_t index, char *name, uint32_t capacity)
     return 1;
 }
 
-int leonos_ini_key_count(const char *section)
+int reliefos_ini_key_count(const char *section)
 {
-    struct leonos_ini_section *sec;
+    struct reliefos_ini_section *sec;
     if (!ini_state.loaded || !section) {
         return 0;
     }
@@ -375,10 +375,10 @@ int leonos_ini_key_count(const char *section)
     return (int)sec->key_count;
 }
 
-int leonos_ini_key_name(const char *section, uint32_t index,
+int reliefos_ini_key_name(const char *section, uint32_t index,
                         char *name, uint32_t capacity)
 {
-    struct leonos_ini_section *sec;
+    struct reliefos_ini_section *sec;
     uint32_t len;
     if (!ini_state.loaded || !section || !name || capacity == 0) {
         return 0;
@@ -395,3 +395,11 @@ int leonos_ini_key_name(const char *section, uint32_t index,
     name[len] = 0;
     return 1;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_ini_get) leonos_ini_get __attribute__((alias("reliefos_ini_get")));
+extern __typeof__(reliefos_ini_key_count) leonos_ini_key_count __attribute__((alias("reliefos_ini_key_count")));
+extern __typeof__(reliefos_ini_key_name) leonos_ini_key_name __attribute__((alias("reliefos_ini_key_name")));
+extern __typeof__(reliefos_ini_load) leonos_ini_load __attribute__((alias("reliefos_ini_load")));
+extern __typeof__(reliefos_ini_load_strict) leonos_ini_load_strict __attribute__((alias("reliefos_ini_load_strict")));
+extern __typeof__(reliefos_ini_section_count) leonos_ini_section_count __attribute__((alias("reliefos_ini_section_count")));
+extern __typeof__(reliefos_ini_section_name) leonos_ini_section_name __attribute__((alias("reliefos_ini_section_name")));

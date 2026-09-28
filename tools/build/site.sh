@@ -10,9 +10,9 @@
 #
 #   arguments:
 #     rpr_pages  $(O)/rpr-pages   fully generated RPR tree (apk/, kernel/, ...)
-#     iso        .../images/leonos4-installer.iso
+#     iso        .../images/reliefos-installer.iso
 #     build      build_info.h (for the release version)
-#     css        resources/pages/css/leonos.css
+#     css        resources/pages/css/reliefos.css
 #     output     $(O)/pages       the assembled site root
 #
 # Runs the download and home page generators from its own directory so it uses
@@ -26,7 +26,7 @@ docs_src=$root/docs
 [ -d "$rpr_pages" ] && [ -f "$rpr_pages/manifest.json" ] || { echo "missing RPR tree at $rpr_pages" >&2; exit 1; }
 [ -s "$iso" ] || { echo "missing installer ISO $iso" >&2; exit 1; }
 [ -f "$css" ] || { echo "missing shared stylesheet $css" >&2; exit 1; }
-version=$(sed -n 's/^#define LEONOS_KERNEL_VERSION "\([0-9.]*\)"$/\1/p' "$build")
+version=$(sed -n 's/^#define RELIEFOS_KERNEL_VERSION "\([0-9.]*\)"$/\1/p' "$build")
 printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo 'invalid release version' >&2; exit 1; }
 
 mkdir -p "$(dirname "$output")"
@@ -40,7 +40,7 @@ cp -R "$rpr_pages" "$work/pages/rpr"
 # 2. Shared top-level stylesheet referenced by home and download pages at the
 #    site root. The RPR subtree keeps its own /rpr/css copy for standalone use.
 mkdir -p "$work/pages/css"
-cp "$css" "$work/pages/css/leonos.css"
+cp "$css" "$work/pages/css/reliefos.css"
 # 3. Installer ISO into /download/ alongside its page.
 mkdir -p "$work/pages/download"
 cp "$iso" "$work/pages/download/${iso##*/}"

@@ -1,0 +1,31 @@
+#!/bin/sh
+# BusyBox init supplies the named VT as fd 0, 1, and 2.
+case "$1" in
+    tty1|tty2|tty3|tty4|tty5|tty6) ;;
+    *) exit 2 ;;
+esac
+
+if test "$1" = tty1; then
+    # The kernel keeps only the /proc/cmdline mechanism; the installer UI
+    # selection is decided here from the exact boot command line token.
+    if test -f /etc/reliefos/installer-runtime &&
+       grep -qE '(^| )installer-session=tui( |$)' /proc/cmdline; then
+        export HOME=/root
+        cd "$HOME" || exit 1
+        exec /usr/lib/reliefos/apps/login/login.elf --installer-shell
+    fi
+    if test -f /etc/reliefos/desktop-session &&
+       test ! -e /run/reliefos/graphical-session-started; then
+        : > /run/reliefos/graphical-session-started
+        /usr/lib/reliefos/apps/login/login.elf --graphical-session \
+            >>/var/log/desktop.log 2>&1
+    fi
+fi
+# Installation media has locked account passwords; offer the same local
+# rescue shell on every text VT, including tty1 after the graphical session.
+if test -f /etc/reliefos/installer-runtime; then
+    export HOME=/root
+    cd "$HOME" || exit 1
+    exec /usr/lib/reliefos/apps/login/login.elf --installer-shell
+fi
+exec /sbin/getty -n -l /usr/lib/reliefos/apps/login/login.elf 115200 "$1"

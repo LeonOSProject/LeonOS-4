@@ -1,7 +1,7 @@
 #ifndef TASKMGR_GPU_SAMPLE_H
 #define TASKMGR_GPU_SAMPLE_H
 
-#include <leonos/gpu_sdk.h>
+#include <reliefos/gpu_sdk.h>
 
 struct taskmgr_gpu_sample {
     uint64_t sample_ticks, busy_ticks;

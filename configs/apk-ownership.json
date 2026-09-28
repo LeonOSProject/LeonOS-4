@@ -1,25 +1,25 @@
 {
   "version": 1,
-  "current_distributor": "leonos-build",
+  "current_distributor": "reliefos-build",
   "apk_registration": "not-installed",
   "groups": {
-    "leonos-nls": {
-      "destination": "leonos",
+    "reliefos-nls": {
+      "destination": "reliefos",
       "components": [],
       "paths": ["usr/share/locale/zh_CN"],
       "reason": "Message catalogs from configs/nls/po, scoped per language to preserve upstream catalog ownership."
     },
-    "leonos-apps": {
-      "destination": "leonos",
+    "reliefos-apps": {
+      "destination": "reliefos",
       "components": ["imd", "windowd", "desktop", "installer", "login", "sessiond", "device-agent", "rcctl", "shell", "fileman", "taskmgr", "settings", "terminal", "run", "osver", "netctl", "servicemgr", "diskmgr", "devmgr", "drvmgr", "sysconfdialog", "apiapp", "sudod", "hello", "uidemo", "cjktest", "notepad", "calc", "paint", "minesweeper", "snake", "matrix", "memtest", "smptest", "abittest", "ipctest", "bugtest", "ping", "httpget", "rprfetch", "downloadmgr", "browser", "imageview", "wavplay", "mp3play", "oshlp", "helloworld", "guitest", "pleditor", "stardusthello", "stardustlayout", "stardustshowcase", "doomlauncher", "doom", "oschinpt", "cmd", "stardustui", "portablegl", "glxgears", "leonmmcoset", "xiaobai"],
-      "paths": ["usr/lib/leonos", "usr/share/leonos", "usr/share/fonts/leonos", "etc/leonos", "usr/sbin/leonos-rpr-apkcheck", "usr/sbin/leonos-rpr-ping", "usr/sbin/leonos-kernel-update", "usr/sbin/leonos-check-update", "usr/lib/libportablegl.so.1"],
+      "paths": ["usr/lib/leonos", "usr/lib/reliefos", "usr/share/reliefos", "usr/share/fonts/reliefos", "etc/reliefos", "usr/sbin/leonos-rpr-apkcheck", "usr/sbin/leonos-rpr-ping", "usr/sbin/leonos-kernel-update", "usr/sbin/leonos-check-update", "usr/sbin/reliefos-rpr-apkcheck", "usr/sbin/reliefos-rpr-ping", "usr/sbin/reliefos-kernel-update", "usr/sbin/reliefos-check-update", "usr/lib/libportablegl.so.1"],
       "reason": "Native desktop, service, graphics and application interfaces. Embedded dependencies remain part of their actual consumers."
     },
-    "leonos-fastfetch": {
-      "destination": "leonos",
+    "reliefos-fastfetch": {
+      "destination": "reliefos",
       "components": ["fastfetch"],
       "future_apk_conflicts": ["fastfetch"],
-      "reason": "Retain the verified custom release with LeonOS Logo. The future real local APK must depend on !fastfetch. This manifest does not enforce that conflict."
+      "reason": "Retain the verified ReliefOS release with the legacy LeonOS Logo alias. The future real local APK must depend on !fastfetch. This manifest does not enforce that conflict."
     },
     "musl": {
       "destination": "alpine-after-validation",
@@ -28,16 +28,16 @@
       "alpine_candidates": ["musl"],
       "reason": "Password-file locking patch and loader ABI require validation before replacing the running system libc. No fabricated musl provides."
     },
-    "leonos-mimalloc": {
-      "destination": "leonos",
+    "reliefos-mimalloc": {
+      "destination": "reliefos",
       "components": [],
       "paths": ["lib/libmimalloc.so.3"],
-      "reason": "LeonOS runtime allocator contract; statically linked copies belong to their consumers."
+      "reason": "ReliefOS runtime allocator contract; statically linked copies belong to their consumers."
     },
-    "leonos-musl-dev": {
-      "destination": "leonos",
+    "reliefos-musl-dev": {
+      "destination": "reliefos",
       "components": [],
-      "paths": ["usr/share/licenses/leonos-musl-dev"],
+      "paths": ["usr/share/licenses/leonos-musl-dev", "usr/share/licenses/reliefos-musl-dev"],
       "reason": "Default-installed headers, startup objects and static libraries generated from the exact runtime musl sysroot. The APK builder assigns their exact file paths when packaging and repackaging roots."
     },
     "busybox": {
@@ -115,10 +115,16 @@
       "components": [],
       "paths": ["etc/ssl/certs", "etc/ssl/cert.pem", "etc/apk/keys", "etc/apk/ca.pem", "usr/share/licenses/alpine-keys"],
       "alpine_candidates": ["ca-certificates", "alpine-keys"],
-      "reason": "Transfer trust data via authenticated packages; validate certificate update triggers on LeonOS."
+      "reason": "Transfer trust data via authenticated packages; validate certificate update triggers on ReliefOS."
     },
-    "leonos-base": {
-      "destination": "leonos",
+    "reliefos-apk-tools": {
+      "destination": "reliefos",
+      "components": [],
+      "paths": ["sbin/apk", "usr/lib/leonos/leonos-apk-update", "usr/lib/reliefos/leonos-apk-update", "usr/lib/reliefos/reliefos-apk-update", "usr/share/licenses/apk-tools"],
+      "reason": "Upstream apk transaction tools plus the local signed repository updater and legacy command paths."
+    },
+    "reliefos-base": {
+      "destination": "reliefos",
       "components": [],
       "reason": "Fallback distribution inventory, not proof of an individual package producer. Includes kernel, boot, identity and layout; review every fallback before generating APKs."
     }

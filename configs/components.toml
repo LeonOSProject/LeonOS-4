@@ -756,7 +756,7 @@ api = false
 [[components]]
 id = "oschinpt"
 symbol = "APP_OSCHINPT"
-label = "LeonOS 4 Chinese Input"
+label = "ReliefOS Chinese Input"
 category = "Input methods"
 kind = "package-app"
 default = true
@@ -888,7 +888,7 @@ api = false
 [[components]]
 id = "device-agent"
 symbol = "APP_DEVICE_AGENT"
-label = "LeonOS device protocol"
+label = "ReliefOS device protocol"
 category = "Core services"
 kind = "system-app"
 default = true

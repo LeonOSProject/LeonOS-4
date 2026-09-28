@@ -7,7 +7,7 @@ int main(void)
     struct task task = {.cap_effective = UINT64_MAX};
     strcpy(task.root_dir, "/data");
     strcpy(task.cwd, "/data/dir");
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     assert(fs_permissions_resolve(&task, task.cwd, "/file", path, sizeof(path), false) == 0);
     assert(!strcmp(path, "/data/file"));
     assert(fs_permissions_resolve(&task, task.cwd, "../../../../file", path, sizeof(path), false) == 0);

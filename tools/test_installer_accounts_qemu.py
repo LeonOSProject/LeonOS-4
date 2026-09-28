@@ -4,6 +4,8 @@ import argparse
 from contextlib import contextmanager
 from pathlib import Path
 import subprocess
+import re
+import json
 import time
 
 from test_installer_window_qemu import Probe as WindowProbe, wait_log
@@ -16,6 +18,16 @@ ROOT_PASSWORD = "r"
 
 
 class Probe(WindowProbe):
+    def click(self, x, y):
+        super().click(x, y)
+        # QMP acknowledges enqueueing, not the guest focus change.
+        time.sleep(0.5)
+
+    def key(self, key):
+        super().key(key)
+        # Allow guest key release processing before repeating the same key.
+        time.sleep(0.15)
+
     def text(self, text):
         punctuation = {";": "semicolon", "(": "shift-9", ")": "shift-0",
                        ">": "shift-dot", "$": "shift-4", "?": "shift-slash",
@@ -51,6 +63,7 @@ def boot(output, disk, iso=None, *, smp=2):
                 if process.poll() is not None: raise RuntimeError("QEMU failed to start")
                 time.sleep(.1)
             probe = Probe(qmp, output)
+            probe.disk = disk
             yield probe, serial, process
         finally:
             try:
@@ -67,6 +80,25 @@ def next_page(probe):
     time.sleep(.8)
 
 
+def installer_log(probe, serial):
+    """Read the actual redirected guest stderr after the finish page appears."""
+    match = re.search(r"installer root ready ramdisk=(0x[0-9a-f]+).*bytes=(\d+)",
+                      serial.read_text(errors="replace"))
+    if not match:
+        raise AssertionError("Missing installer RAM disk location in serial log")
+    memory = probe.output / "installer-root.ext2"
+    log_path = probe.output / "installer.log"
+    probe.command("stop")
+    try:
+        probe.command("pmemsave", {"val": int(match[1], 16), "size": int(match[2]),
+                                  "filename": str(memory)})
+    finally:
+        probe.command("cont")
+    subprocess.run(["debugfs", "-R", f"dump /var/log/desktop.log {log_path}",
+                    str(memory)], check=True)
+    return log_path.read_text()
+
+
 def wait_install(probe, serial, process):
     deadline = time.monotonic() + 2400
     while time.monotonic() < deadline:
@@ -77,13 +109,31 @@ def wait_install(probe, serial, process):
         if any("[installer.elf]" in line and " ret=-" in line for line in log.splitlines()):
             raise AssertionError("Installer failed; see serial.log and last-frame.png")
         if process.poll() is not None: raise RuntimeError("QEMU exited during installation")
-        probe.frame("progress")
+        frame = probe.frame("progress")
+        # The sidebar finish row is language independent. It only triggers log
+        # capture; success still requires the real installer's completion record.
+        finish_y = 104 + 9 * (34 if probe.height >= 600 else 26)
+        if probe.width > 520 and frame.getpixel((14, finish_y)) == (229, 229, 229):
+            guest_log = installer_log(probe, serial)
+            assert "[installer.elf] installation completed successfully" in guest_log, guest_log
+            probe.frame("installed")
+            return
         time.sleep(5)
     raise AssertionError("Installation timed out")
 
 
+def wait_desktop(probe, timeout=30):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        frame = probe.frame("desktop")
+        if frame.getpixel((probe.width // 2, probe.height - 10)) != (0, 120, 212):
+            return frame
+        time.sleep(.5)
+    raise AssertionError("Login did not transition from the ReliefOS login screen to the desktop")
+
+
 def install_gui(probe, serial, process):
-    wait_log(serial, "[installer.elf] starting installer wizard", process)
+    wait_log(serial, "path=/usr/lib/reliefos/apps/installer/installer.elf", process)
     time.sleep(4)
     probe.frame("language")
     for _ in range(6): next_page(probe)
@@ -119,17 +169,19 @@ def install_tty(probe, serial, process):
 
 
 def login_tty(probe, serial, process, root):
-    time.sleep(3)
-    probe.key("down")
-    probe.key("ret")
-    wait_log(serial, "Username: ", process)
+    # All normal boots now start the graphical session on tty1. Exercise a
+    # real independent getty on tty2 instead of guessing a GRUB menu timing.
+    from test_vt_qemu import wait_text, ocr
+    wait_log(serial, "path=/usr/lib/reliefos/apps/login/login.elf", process)
+    wait_text(probe, process, "graphical-login", "alice", timeout=90)
+    probe.key("ctrl-alt-f2")
+    wait_text(probe, process, "tty-login", "login:", timeout=90)
     probe.text("root" if root else "alice")
     probe.key("ret")
-    wait_log(serial, "Password: ", process)
+    wait_text(probe, process, "tty-password", "Password:")
     probe.text(ROOT_PASSWORD if root else USER_PASSWORD)
     probe.key("ret")
-    wait_log(serial, "Login successful.", process)
-    time.sleep(2)
+    wait_text(probe, process, "tty-shell", "built-in shell", timeout=60)
     if root:
         command = ("cat /proc/self/status; echo root-ok > /root/installer-root-check; "
                    "cat /root/installer-root-check; echo group-only > /tmp/root-group-only; "
@@ -144,16 +196,31 @@ def login_tty(probe, serial, process, root):
             "test -e /usr/bin/python3; echo PYTHON_STATUS=$?; "
             "test -e /usr/bin/gcc; echo GCC_STATUS=$?; "
             "test -e /usr/bin/tcc; echo TCC_STATUS=$?; echo USER_SESSION_DONE")
-    probe.text(command)
-    probe.key("ret")
+    evidence_path = "/root/installer-root-evidence" if root else "/home/alice/installer-user-evidence"
     marker = "ROOT_SESSION_DONE" if root else "USER_SESSION_DONE"
-    # The echoed input contains the marker too, so wait for a standalone output line.
-    deadline = time.monotonic() + 30
-    while marker not in serial.read_text(errors="replace").splitlines():
-        if time.monotonic() >= deadline or process.poll() is not None:
-            raise AssertionError(f"Missing shell output: {marker}")
-        time.sleep(.2)
-    log = serial.read_text(errors="replace").replace("\r", "")
+    probe.text("( " + command + " ) > " + evidence_path + " 2>&1; sync")
+    probe.key("ret")
+    # Read back only after the shell has returned and flushed its writes. The
+    # ordinary user need not gain access to the root-owned serial device.
+    time.sleep(3)
+    probe.text("cat " + evidence_path)
+    probe.key("ret")
+    wait_text(probe, process, "session-evidence", marker, timeout=60)
+    table = json.loads(subprocess.check_output(["sfdisk", "--json", str(probe.disk)], text=True))["partitiontable"]
+    partition = next(part for part in table["partitions"]
+                     if part["type"].lower() == "0fc63daf-8483-4772-8e79-3d69d8477de4")
+    image = probe.output / "evidence-root.ext2"
+    probe.command("stop")
+    try:
+        subprocess.run(["dd", f"if={probe.disk}", f"of={image}", "bs=4M", "iflag=skip_bytes,count_bytes",
+                        f"skip={partition['start'] * table['sectorsize']}",
+                        f"count={partition['size'] * table['sectorsize']}", "conv=sparse", "status=none"], check=True)
+    finally:
+        probe.command("cont")
+    log = subprocess.check_output(["debugfs", "-R", f"cat {evidence_path}", str(image)],
+                                  stderr=subprocess.DEVNULL, text=True).replace("\r", "")
+    (probe.output / "session-evidence.txt").write_text(log)
+    assert marker in log.splitlines(), log
     expected = ["0" if root else "1000"] * 4
     for field in ("Uid:", "Gid:"):
         identities = [line.split()[1:] for line in log.splitlines() if line.startswith(field)]
@@ -170,24 +237,27 @@ def login_tty(probe, serial, process, root):
 
 
 def login_desktop(probe, serial, process):
-    wait_log(serial, "[login.elf] starting login UI", process)
+    wait_log(serial, "path=/usr/lib/reliefos/apps/login/login.elf", process)
     time.sleep(5)
     probe.frame("login")
     probe.key("down")
     probe.text(USER_PASSWORD)
     probe.key("ret")
-    wait_log(serial, "name=login.elf code=0", process)
+    wait_desktop(probe)
     time.sleep(5)
     probe.key("meta_l")
     time.sleep(1)
     probe.text("terminal")
     probe.key("ret")
-    wait_log(serial, "terminal: PTY ready", process)
+    wait_log(serial, "path=/usr/lib/reliefos/apps/terminal/terminal.elf", process)
+    probe.text("fastfetch --format json --structure OS:Kernel")
+    probe.key("ret")
+    time.sleep(3)
+    probe.frame("terminal-fastfetch")
     time.sleep(2)
     probe.text("cat /proc/self/status; echo HOME=$HOME")
     probe.key("ret")
-    wait_log(serial, "name=cat code=0", process)
-    time.sleep(2)
+    time.sleep(3)
     probe.frame("terminal-identity")
     log = serial.read_text(errors="replace")
     assert "name=terminal.elf code=127" not in log, "Terminal shell failed to execute"
@@ -196,7 +266,7 @@ def login_desktop(probe, serial, process):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--iso", type=Path, default=ROOT / "build/images/leonos4-installer.iso")
+    parser.add_argument("--iso", type=Path, default=ROOT / "build/images/reliefos-installer.iso")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--installer", choices=("gui", "tty"), default="gui")
     parser.add_argument("--login-only", action="store_true", help="Boot this test's existing scratch disk without reinstalling")

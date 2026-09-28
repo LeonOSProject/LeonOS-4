@@ -1,9 +1,9 @@
 #include <dirent.h>
 #include <errno.h>
-#include <leonos/fs.h>
-#include <leonos/launch.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
+#include <reliefos/fs.h>
+#include <reliefos/launch.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -37,8 +37,8 @@ static void shell_line(const char *text)
 
 static void shell_prompt(void)
 {
-    char cwd[LEONOS_FS_PATH_LEN];
-    shell_write("\x1b[96mleonos\x1b[0m:");
+    char cwd[RELIEFOS_FS_PATH_LEN];
+    shell_write("\x1b[96mreliefos\x1b[0m:");
     if (getcwd(cwd, sizeof(cwd))) {
         shell_write(cwd);
     } else {
@@ -110,7 +110,7 @@ static void shell_list(const char *path)
         return;
     }
     while ((entry = readdir(dir)) != NULL) {
-        char child[LEONOS_FS_PATH_LEN];
+        char child[RELIEFOS_FS_PATH_LEN];
         struct stat st;
         const char *kind = "file";
         uint32_t pos = 0;
@@ -147,7 +147,7 @@ static void shell_cat(const char *path)
         shell_line("cat: a file path is required");
         return;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         printf("cat: cannot open %s (%d)\n", path, fd);
         return;
@@ -175,12 +175,12 @@ static void shell_echo(char *const argv[])
 
 static void shell_start(char *argv[])
 {
-    int pid = leonos_launch_argv(argv);
+    int pid = reliefos_launch_argv(argv);
     if (pid >= 0) {
         printf("started %s (pid %d)\n", argv[0], pid);
         return;
     }
-    printf("unable to start %s: %s\n", argv[0], leonos_launch_error_text(pid));
+    printf("unable to start %s: %s\n", argv[0], reliefos_launch_error_text(pid));
 }
 
 static int shell_dispatch(char *line)
@@ -203,7 +203,7 @@ static int shell_dispatch(char *line)
     } else if (shell_same(argv[0], "clear")) {
         shell_write("\x1b[2J\x1b[H");
     } else if (shell_same(argv[0], "pwd")) {
-        char cwd[LEONOS_FS_PATH_LEN];
+        char cwd[RELIEFOS_FS_PATH_LEN];
         if (getcwd(cwd, sizeof(cwd))) {
             shell_line(cwd);
         }
@@ -242,7 +242,7 @@ int main(int argc, char **argv, char **envp)
     if (argc > 1 && argv[1] && argv[1][0]) {
         (void)chdir(argv[1]);
     }
-    shell_line("LeonOS command shell 2");
+    shell_line("ReliefOS command shell 2");
     shell_line("Type help to see available commands.");
     if (argc > 2 && argv[2] && argv[2][0]) {
         char startup[SHELL_LINE_CAP];

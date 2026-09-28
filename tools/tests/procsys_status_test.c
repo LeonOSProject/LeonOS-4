@@ -5,28 +5,28 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <leonos/fs.h>
+#include <reliefos/fs.h>
 int fixture_open(const char *path, int flags, ...);
 ssize_t fixture_read(int fd, void *buffer, size_t size);
 int fixture_close(int fd);
-int fixture_readdir(int fd, struct leonos_dir_entry *entry);
+int fixture_readdir(int fd, struct reliefos_dir_entry *entry);
 int fixture_getpwuid_r(uid_t uid, struct passwd *record, char *buffer, size_t size,
                        struct passwd **result);
 #define open fixture_open
 #define read fixture_read
 #define close fixture_close
 #define getpwuid_r fixture_getpwuid_r
-#define leonos_readdir fixture_readdir
+#define reliefos_readdir fixture_readdir
 #include "../../userland/runtime/src/procsys.c"
 #undef open
 #undef read
 #undef close
 #undef getpwuid_r
-#undef leonos_readdir
+#undef reliefos_readdir
 
 static unsigned cursor, offset, closes;
 static int current_file, missing_status;
-uint64_t leonos_uptime_ms(void) { return 123; }
+uint64_t reliefos_uptime_ms(void) { return 123; }
 int fixture_open(const char *path, int flags, ...)
 {
     (void)flags;
@@ -49,7 +49,7 @@ ssize_t fixture_read(int fd, void *buffer, size_t size)
     return length;
 }
 int fixture_close(int fd) { assert(fd == 0 || fd == 1); ++closes; return 0; }
-int fixture_readdir(int fd, struct leonos_dir_entry *entry)
+int fixture_readdir(int fd, struct reliefos_dir_entry *entry)
 {
     assert(fd == 0);
     if (cursor++) return 0;
@@ -65,12 +65,12 @@ int fixture_getpwuid_r(uid_t uid, struct passwd *record, char *buffer, size_t si
 }
 int main(void)
 {
-    struct leonos_task_info task;
-    assert(leonos_task_snapshot(&task, 1, NULL) == 1);
+    struct reliefos_task_info task;
+    assert(reliefos_task_snapshot(&task, 1, NULL) == 1);
     assert(task.cpu_ticks == 20 && task.state == 1 && task.parent_pid == 1 && task.pid == 42 && task.uid == 1001 && task.memory_kib == 1234);
     assert(!strcmp(task.username, "admin") && closes == 3);
     missing_status = 1;
-    assert(leonos_task_snapshot(&task, 1, NULL) == 1);
+    assert(reliefos_task_snapshot(&task, 1, NULL) == 1);
     assert(task.uid == UINT32_MAX && task.memory_kib == 0 && closes == 5);
     puts("PASS task snapshot: status UID/RSS, account resolution, partial reads and fd cleanup");
 }

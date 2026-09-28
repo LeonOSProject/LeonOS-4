@@ -35,7 +35,7 @@ int poll(struct pollfd *fds, nfds_t count, int timeout)
     return request_pending;
 }
 
-int leonos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
+int reliefos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
 {
     if (fd == 4) {
         assert(!request_pending && length <= sizeof(request_buffer));
@@ -54,7 +54,7 @@ int leonos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
     return 0;
 }
 
-int leonos_ipc_recv(int fd, uint32_t *type, void *payload, uint32_t capacity,
+int reliefos_ipc_recv(int fd, uint32_t *type, void *payload, uint32_t capacity,
                     uint32_t *length)
 {
     if (fd == 5) {
@@ -75,31 +75,31 @@ int leonos_ipc_recv(int fd, uint32_t *type, void *payload, uint32_t capacity,
     return 0;
 }
 
-int leonos_ipc_connect(const char *path) { (void)path; assert(0); return -1; }
-int leonos_ipc_set_nonblock(int fd, int enabled) { (void)fd; (void)enabled; return 0; }
-int leonos_ipc_close(int fd) { (void)fd; return 0; }
+int reliefos_ipc_connect(const char *path) { (void)path; assert(0); return -1; }
+int reliefos_ipc_set_nonblock(int fd, int enabled) { (void)fd; (void)enabled; return 0; }
+int reliefos_ipc_close(int fd) { (void)fd; return 0; }
 
 int main(int argc, char **argv)
 {
     assert(argc == 2);
     clients[0] = (struct imd_client){.used = 1, .fd = 5, .pid = 10,
-                                    .uid = 0, .role = LEONOS_IMD_ROLE_APP};
+                                    .uid = 0, .role = RELIEFOS_IMD_ROLE_APP};
     imd_fd = 4;
     if (!strcmp(argv[1], "list")) {
-        struct leonos_inputm_provider entries[2];
+        struct reliefos_inputm_provider entries[2];
         uint32_t count = 0;
         assert(text_input_list(1, entries, 2, &count) == 1);
         assert(count == 1 && !strcmp(entries[0].id, "en"));
     } else if (!strcmp(argv[1], "state")) {
-        struct leonos_inputm_state state = {0};
+        struct reliefos_inputm_state state = {0};
         assert(text_input_get_state(1, &state) == 1);
         assert(state.uid == 1 && !strcmp(state.active_id, "en"));
     } else if (!strcmp(argv[1], "active")) {
         assert(text_input_set_active(1, "en") == 1);
         assert(!strcmp(imd_find_user(1)->state.active_id, "en"));
     } else if (!strcmp(argv[1], "context")) {
-        struct leonos_inputm_context context = {.window_id = 3,
-            .flags = LEONOS_INPUTM_CONTEXT_FOCUSED | LEONOS_INPUTM_CONTEXT_SECURE};
+        struct reliefos_inputm_context context = {.window_id = 3,
+            .flags = RELIEFOS_INPUTM_CONTEXT_FOCUSED | RELIEFOS_INPUTM_CONTEXT_SECURE};
         assert(text_input_set_context(&context) == 1);
         struct imd_context *stored = imd_find_context(10, 3, 0);
         assert(stored && stored->context.flags == context.flags);
@@ -108,7 +108,7 @@ int main(int argc, char **argv)
         assert(imd_find_user(1)->state.config_generation == 1);
     } else if (!strcmp(argv[1], "denied")) {
         clients[0].uid = 2;
-        struct leonos_inputm_state state = {0};
+        struct reliefos_inputm_state state = {0};
         assert(text_input_get_state(1, &state) < 0);
         assert(test_now < 50); /* A rejection is a reply, not a timeout. */
         assert(text_input_set_active(1, "en") < 0);

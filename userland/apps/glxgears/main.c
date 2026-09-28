@@ -1,16 +1,16 @@
 /*
- * LeonOS frontend for PortableGL's upstream classic gears example, with
+ * ReliefOS frontend for PortableGL's upstream classic gears example, with
  * native SVGA3D drawing and a PortableGL software fallback.
  *
  * The renderer and gear mesh below come from
  * third_party/portablegl/examples/classic/gears.c.  That example has an SDL
- * frontend; LeonOS supplies the window, event and presentation layer here.
+ * frontend; ReliefOS supplies the window, event and presentation layer here.
  * pgl.h is included first so the upstream implementation section is skipped
  * by portablegl.h's include guard and is provided by libportablegl instead.
  */
-#include <leonos/gui.h>
-#include <leonos/pgl.h>
-#include <leonos/syscall.h>
+#include <reliefos/gui.h>
+#include <reliefos/pgl.h>
+#include <reliefos/syscall.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -74,7 +74,7 @@ static void gears_idle(const struct gears_gpu_backend *gpu)
     static unsigned long previous_ms;
     static unsigned long report_ms;
     static unsigned long frames;
-    unsigned long now = leonos_uptime_ms();
+    unsigned long now = reliefos_uptime_ms();
     double dt;
 
     if (!previous_ms)
@@ -113,9 +113,9 @@ static void gears_idle(const struct gears_gpu_backend *gpu)
     }
 }
 
-static void handle_key_event(const struct leonos_gui_app_event *event)
+static void handle_key_event(const struct reliefos_gui_app_event *event)
 {
-    if (!event || event->type != LEONOS_GUI_APP_EVENT_KEY_DOWN || !event->pressed)
+    if (!event || event->type != RELIEFOS_GUI_APP_EVENT_KEY_DOWN || !event->pressed)
         return;
     switch (event->keycode) {
     case GLXGEARS_KEY_P:
@@ -127,16 +127,16 @@ static void handle_key_event(const struct leonos_gui_app_event *event)
         else
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         break;
-    case LEONOS_KEY_LEFT:
+    case RELIEFOS_KEY_LEFT:
         view_rot[1] += 5.0f;
         break;
-    case LEONOS_KEY_RIGHT:
+    case RELIEFOS_KEY_RIGHT:
         view_rot[1] -= 5.0f;
         break;
-    case LEONOS_KEY_UP:
+    case RELIEFOS_KEY_UP:
         view_rot[0] += 5.0f;
         break;
-    case LEONOS_KEY_DOWN:
+    case RELIEFOS_KEY_DOWN:
         view_rot[0] -= 5.0f;
         break;
     default:
@@ -146,26 +146,26 @@ static void handle_key_event(const struct leonos_gui_app_event *event)
 
 int main(void)
 {
-    leonos_pgl_context *ctx;
+    reliefos_pgl_context *ctx;
     struct gears_gpu_backend gpu = {0};
-    struct leonos_gui_app_event event = {0};
+    struct reliefos_gui_app_event event = {0};
     GLuint vao;
     int width = WIDTH;
     int height = HEIGHT;
     int should_close = 0;
     int result;
 
-    if (leonos_gui_connect() < 0) {
+    if (reliefos_gui_connect() < 0) {
         puts("glxgears requires a graphical session");
         return 1;
     }
-    ctx = leonos_pgl_create(width, height, "glxgears");
+    ctx = reliefos_pgl_create(width, height, "glxgears");
     if (!ctx) {
         puts("glxgears: unable to create GUI window");
         return 1;
     }
 
-    leonos_pgl_make_current(ctx);
+    reliefos_pgl_make_current(ctx);
     polygon_mode = 2;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -173,7 +173,7 @@ int main(void)
     if (!gear1 || !gear2 || !gear3) {
         puts("glxgears: unable to create gear meshes");
         destroy_gears();
-        leonos_pgl_destroy(ctx);
+        reliefos_pgl_destroy(ctx);
         return 1;
     }
     perspective(ProjectionMatrix, 60.0f, (GLfloat)width / (GLfloat)height,
@@ -186,15 +186,15 @@ int main(void)
     else
         puts("glxgears: renderer=VMware SVGA3D hardware");
 
-    event.window_id = (uint32_t)leonos_pgl_window_id(ctx);
+    event.window_id = (uint32_t)reliefos_pgl_window_id(ctx);
     while (!should_close) {
-        while (leonos_gui_poll_app_event(&event) > 0) {
-            int action = leonos_pgl_process_event(ctx, &event);
-            if (action == LEONOS_PGL_EVENT_CLOSE) {
+        while (reliefos_gui_poll_app_event(&event) > 0) {
+            int action = reliefos_pgl_process_event(ctx, &event);
+            if (action == RELIEFOS_PGL_EVENT_CLOSE) {
                 should_close = 1;
                 break;
             }
-            if (action == LEONOS_PGL_EVENT_RESIZED) {
+            if (action == RELIEFOS_PGL_EVENT_RESIZED) {
                 width = (int)event.width;
                 height = (int)event.height;
                 if (height > 0) {
@@ -214,7 +214,7 @@ int main(void)
         if (should_close)
             break;
 
-        leonos_pgl_make_current(ctx);
+        reliefos_pgl_make_current(ctx);
         gears_idle(&gpu);
         if (gpu.handle) {
             result = gears_gpu_draw(&gpu);
@@ -222,12 +222,12 @@ int main(void)
                 use_software_renderer(&gpu, "SVGA3D render failed", result);
         }
         if (gpu.handle) {
-            if (leonos_gui_present_window((uint32_t)leonos_pgl_window_id(ctx),
+            if (reliefos_gui_present_window((uint32_t)reliefos_pgl_window_id(ctx),
                     gpu.width, gpu.height, gpu.width, gpu.pixels) <= 0)
                 break;
         } else {
             gears_draw();
-            if (leonos_pgl_present(ctx) < 0)
+            if (reliefos_pgl_present(ctx) < 0)
                 break;
         }
         sleep_ms(1);
@@ -236,6 +236,6 @@ int main(void)
     gears_gpu_release(&gpu);
     destroy_gears();
     glDeleteVertexArrays(1, &vao);
-    leonos_pgl_destroy(ctx);
+    reliefos_pgl_destroy(ctx);
     return 0;
 }

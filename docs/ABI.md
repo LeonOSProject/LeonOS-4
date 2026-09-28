@@ -1,4 +1,9 @@
-# LeonOS 4 ABI
+# ReliefOS ABI
+
+This guide retains frozen Linux/ReliefOS ABI identifiers and legacy `leonos_*`
+names where existing binaries or callers still use them. Canonical ReliefOS
+names and the forwarding/alias rules are listed in
+[`branding-compatibility.md`](branding-compatibility.md).
 
 ## Linux x86_64 syscall convention
 
@@ -25,8 +30,9 @@ for layout semantics, limits, synchronization, software fallback and validation.
 
 Dynamic PIE executables use `/lib/ld-musl-x86_64.so.1`. musl supplies the
 loader and standard C/POSIX ABI; mimalloc supplies public allocation functions.
-LeonOS extensions live in `/usr/lib/leonos/libleonos.so.2`. The build driver writes
-`/usr/lib/leonos:/lib:/usr/lib` as the application search path. A private LeonOS ABI note
+ReliefOS extensions live in `/usr/lib/reliefos/libreliefos.so.2`; the compatible
+`libleonos.so.2` object name is retained during migration. The build driver writes
+`/usr/lib/reliefos:/usr/lib/leonos:/lib:/usr/lib` as the application search path. A private ReliefOS ABI note
 is not required for Linux ELF programs. Static binaries use musl CRT and the
 same allocator policy.
 
@@ -36,7 +42,7 @@ the current paths; there is no automatic migration of stored paths.
 
 ## Syscall subset
 
-LeonOS keeps Linux-compatible syscall numbers for the current user ABI:
+ReliefOS keeps Linux-compatible syscall numbers for the current user ABI:
 
 - File I/O: `read`, `write`, `open`, `close`, `stat`, `fstat`, `lseek`
 - Filesystem mutation: `mkdir`, `unlink`, `rmdir`, `rename`
@@ -46,17 +52,18 @@ LeonOS keeps Linux-compatible syscall numbers for the current user ABI:
 - Memory: `mmap`, `munmap`
 - Device and system extensions: `ioctl`
 
-Standard libc wrappers come from `third_party/musl`. LeonOS extensions live in
-`userland/runtime`. Canonical kernel wire definitions are in `kernel/ntclks/include/uapi`; the
+Standard libc wrappers come from `third_party/musl`. ReliefOS extensions live in
+`userland/runtime`. Canonical kernel wire definitions are in `kernel/reliefnt/include/uapi`; the
 complete per-call status is in `LINUX_ABI_SYSCALLS_2026-09-07.csv`. `mmap`
 supports anonymous private mappings and private file mappings; `munmap`
 supports whole or partial unmapping.
 
 ## Shared POSIX porting surface
 
-`libleonos.so.2` provides the ANSI curses subset used by `sl`.
+`libreliefos.so.2` provides the ANSI curses subset used by `sl`; the same
+implementation is also exported by the compatible `libleonos.so.2`.
 Applications include `<curses.h>` or `<ncurses.h>` from the SDK. This is a
-LeonOS terminal API, not binary compatibility with host ncurses.
+ReliefOS terminal API, not binary compatibility with host ncurses.
 
 Standard file, process, pthread, signal and socket APIs come from musl without
 private POSIX adapters. Raw syscalls return negative errno; musl converts
@@ -71,7 +78,7 @@ certify complete signal, PTY, wait, clone, socket or SMP behavior; consult
 [the implementation ledger](LINUX_ABI_PROGRESS_2026-09-08.md).
 
 `stat`, `fstat` and `lstat` use Linux x86-64 layouts, including the 144-byte raw
-stat record. Compact LeonOS metadata is available through explicitly named
+stat record. Compact ReliefOS metadata is available through explicitly named
 `leonos_stat_legacy` and `leonos_fstat_legacy` extension functions only.
 
 See [Syscalls](SYSCALLS.md) for extension interfaces and the audit CSV for the
@@ -81,13 +88,13 @@ full native Linux v6.12 syscall scope.
 
 Time synchronization is a userland service, not a kernel ioctl. The libc
 helper `leonos_time_ntp_sync()` in `include/leonos/system.h` restarts the
-root-owned OpenRC service `leonos-ntp`, then polls the fresh notification
-file `/run/leonos/ntp-state` (mode-checked, root-owned, ≤120 s old) and
+root-owned OpenRC service `reliefos-ntp`, then polls the fresh notification
+file `/run/reliefos/ntp-state` (mode-checked, root-owned, ≤120 s old) and
 confirms an active PLL via `adjtimex(2)` before reporting `valid=1`. The
 result returns the selected server, resolved IPv4 address, network status,
 and validated Unix seconds from `CLOCK_REALTIME`. Ordinary applications
 change system time only through the standard `settimeofday`/`adjtimex`
-syscalls subject to the kernel's permission checks, not through a LeonOS
+syscalls subject to the kernel's permission checks, not through a ReliefOS
 private control.
 
 ## Device model
@@ -106,7 +113,7 @@ nodes are synthetic and are not stored in the filesystem image.
 
 Framebuffer, audio, input, disk, and PTY libc helpers open their
 corresponding `/dev` node and issue the device ABI (Linux fbdev, evdev,
-block, and OSS ioctls, plus the LeonOS `LEONOS_FBIOBLIT` and
+block, and OSS ioctls, plus the ReliefOS `LEONOS_FBIOBLIT` and
 `LEONOS_IOCTL_GPU_*` extensions). PTY users can use the
 standard `posix_openpt/openpty/forkpty` functions; master/slave data flows
 through normal `read/write/poll` descriptors. Calls made by old
@@ -135,35 +142,37 @@ control actions only for administrator tasks. There are no legacy
 
 The kernel loads unsigned ELF64 `ET_REL` files from `/drivers` after the
 root filesystem is mounted. The complete binary format, restricted kernel API,
-and persistent `/etc/leonos/drivers.conf` policy are documented in
+and persistent `/etc/reliefos/drivers.conf` policy are documented in
 [Drivers](DRIVERS.md).
 
 ## Kernel Debug Module ABI
 
-`/usr/lib/leonos/kerneldebug.sys` is a built-in-only x86_64 little-endian `ET_REL`
-module. It must contain a `.note.leonos.kerneldebug` ELF note owned by
+`/usr/lib/reliefos/kerneldebug.sys` is a built-in-only x86_64 little-endian `ET_REL`
+module. New builds contain a `.note.reliefos.kerneldebug` ELF note; the legacy
+`.note.leonos.kerneldebug` section remains accepted. Both notes are owned by
 `LEONKDBG`, type `0x4c4b4447`, ABI `1`, and the fixed entry-name hash. The
 loader accepts only PIC-free kernel sections and the `NONE`, `64`, `32`,
 `32S`, `PC32`, and `PLT32` relocations; dynamic segments, TLS, IFUNC,
 undefined symbols, W+X sections, and unknown sections are rejected.
 
-The module receives the fixed `leonos_kernel_debug_api` table declared in
-`kernel/ntclks/kernel/ntclks/include/ntclks/kernel_debug.h`. It provides ostui output/input,
+The module receives the fixed `reliefos_kernel_debug_api` table declared in
+`kernel/reliefnt/kernel/reliefnt/include/reliefnt/kernel_debug.h`. It provides ostui output/input,
 TSC timing, controlled syscall/ioctl benchmark callbacks, and explicit
 continue, reboot, and shutdown operations. A valid module owns the diagnostic
 session; the kernel's minimal menu is only a recovery path for a missing or
 rejected module.
 
-The one-shot marker is `/boot/leonos/state/kerneldebug.next`. The loader consumes
+The one-shot marker is `/boot/reliefos/state/kerneldebug.next`; the loader also
+accepts `/boot/leonos/state/kerneldebug.next` for old installations. The loader consumes
 and deletes it before validating its contents, preventing repeated entry after
 an interrupted or malformed debug boot. The persistent activation flag is
-`/var/lib/leonos/kerneldebug.enabled`.
+`/var/lib/reliefos/kerneldebug.enabled`.
 
 ## Appearance ABI
 
 The runtime UI appearance is a Desktop-owned state. `Metro` is the default
 (`LEONOS_UI_THEME_METRO`); `LEONOS_UI_THEME_WIN95` restores the legacy Win95
-palette and bevelled controls. The global `/etc/leonos/display.conf`
+palette and bevelled controls. The global `/etc/reliefos/display.conf`
 `theme=` key remains the boot/default style used before a user session is
 available, including early framebuffer output and bugcheck rendering.
 
@@ -211,7 +220,7 @@ the private auth ioctl family was removed. The legacy
 
 Task snapshots now include `uid`, `role`, `session_id`, and `username`.
 Children inherit identity and current directory from the parent task.
-File access decisions are made in the kernel: `kernel/ntclks/fs/permissions.c`
+File access decisions are made in the kernel: `kernel/reliefnt/fs/permissions.c`
 compares a task's filesystem UID/GID and role against the permission value the
 storage layer reports for the path. Protected service work is gated by kernel
 task flags (`TASK_FLAG_SERVICE`, `TASK_FLAG_WINDOW_SERVER`) and by
@@ -227,7 +236,7 @@ POSIX permissions reach userland through the Linux ABI only: `stat`, `chmod`,
 API implemented on top of those same calls (see `userland/runtime/src/libc.c`);
 they are not ioctls and the kernel exposes no ACL ioctl. On FAT32 and exFAT the
 kernel stores the resulting mode, owner and group in the hidden `LEONACL.SYS`
-sidecar owned by `kernel/ntclks/drivers/bootstrap/storage/storage_sidecar.c`; on ext2 it uses
+sidecar owned by `kernel/reliefnt/drivers/bootstrap/storage/storage_sidecar.c`; on ext2 it uses
 the native inode fields. See
 [KERNEL_USERSPACE_BOUNDARIES.md](KERNEL_USERSPACE_BOUNDARIES.md).
 
@@ -243,7 +252,7 @@ Disk tools operate on `/dev/diskN` and `/dev/diskNpN`. They obtain capacity
 and sector geometry through `<linux/fs.h>` `BLKGETSIZE64` and `BLKSSZGET`,
 update GPT metadata with aligned raw I/O followed by `BLKRRPART`, and mount
 FAT32, exFAT, or ext2 volumes with `<sys/mount.h>` `mount(2)` and `umount2(2)`.
-The SDK no longer defines LeonOS-specific disk-management ioctl records.
+The SDK no longer defines ReliefOS-specific disk-management ioctl records.
 
 ## Boot handoff ABI
 
@@ -263,14 +272,14 @@ layout it does not understand.
 Kernel code owns hardware probing, interrupts, page tables, physical memory,
 scheduling, user pointer validation, storage block I/O, exFAT/FAT32/ext2
 mutation, path resolution and the final DAC decision. The storage layer in
-`kernel/ntclks/drivers/bootstrap/storage/` owns on-disk metadata, including `LEONACL.SYS`.
+`kernel/reliefnt/drivers/bootstrap/storage/` owns on-disk metadata, including `LEONACL.SYS`.
 The full ownership map is in
 [KERNEL_USERSPACE_BOUNDARIES.md](KERNEL_USERSPACE_BOUNDARIES.md).
 
 ## Path resolution
 
 Path normalization lives in the kernel: `fs_permissions_resolve()` and
-`fs_permissions_resolve_flags()` in `kernel/ntclks/fs/permissions.c` combine the
+`fs_permissions_resolve_flags()` in `kernel/reliefnt/fs/permissions.c` combine the
 task's current directory with the input, walk components and symlinks, and check
 directory search permission on the way. Whether the final symlink is followed is
 decided by the syscall the caller made (for example `O_NOFOLLOW`); more than 40
@@ -305,7 +314,7 @@ Sockets use the standard Linux socket syscalls: the kernel dispatches
 `socket`, `connect`, `accept`/`accept4`, `bind`, `listen`, `send`/`recv`,
 `sendto`/`recvfrom`, `sendmsg`/`recvmsg`, `shutdown`, and option queries to
 the AF_UNIX and AF_INET backends (`syscall_socket_dispatch` in
-`kernel/ntclks/kernel/ntclks/syscall.c`). `include/leonos/net.h` keeps a versioned
+`kernel/reliefnt/kernel/reliefnt/syscall.c`). `include/leonos/net.h` keeps a versioned
 compatibility surface — `leonos_net_config()`, `leonos_net_dhcp_renew()`,
 DNS, ping, TCP helpers — but its libc implementations in
 `userland/runtime/src/netsock.c` are ordinary socket-fd clients:
@@ -313,9 +322,9 @@ DNS, ping, TCP helpers — but its libc implementations in
 read-only queries issue `LEONOS_NET_CONTROL_IOCTL` on an `AF_INET` datagram
 fd; there are no `LEONOS_IOCTL_NET_*` request codes.
 
-Network lifecycle is an OpenRC service: DHCP renew restarts `leonos-ntp`'s
-companion `leonos-dhcp` (root-owned udhcpc), whose hook publishes the lease
-atomically at `/run/leonos/dhcp-lease`; clients verify the file's ownership
+Network lifecycle is an OpenRC service: DHCP renew restarts `reliefos-ntp`'s
+companion `reliefos-dhcp` (root-owned udhcpc), whose hook publishes the lease
+atomically at `/run/reliefos/dhcp-lease`; clients verify the file's ownership
 and mode before trusting it. Connection inventory uses the control ioctl and
 is filtered by identity: administrators and trusted service tasks see all
 sockets, while normal users see only sockets owned by their uid.
@@ -354,7 +363,7 @@ handler.
 ## PortableGL Rendering ABI
 
 `/usr/lib/libportablegl.so.1` provides the PortableGL 0.101 API with the
-LeonOS ABI-v1 window wrapper declared by `leonos/pgl.h`. The wrapper manages a
+ReliefOS ABI-v1 window wrapper declared by `leonos/pgl.h`. The wrapper manages a
 GUI window, an ABGR32 color buffer and a D24S8 depth/stencil buffer, and submits
 frames through `leonos_gui_present_window`. Contexts are single-process and
 single-current; callers must handle resize events through
@@ -365,10 +374,10 @@ renderer usable within the current user address-space budget.
 
 The launcher library in `leonos/launch.h` owns user-facing file launch policy.
 It supports `.lnk` shortcuts, built-in program aliases, and persistent extension
-associations stored in `/etc/leonos/fileassoc.cfg`. Settings can edit the common
+associations stored in `/etc/reliefos/fileassoc.cfg`. Settings can edit the common
 associations for `.txt`, `.md`, `.html`, `.htm`, `.bmp`, `.wav`, and `.hlp`.
-The default `.hlp` handler is `/usr/lib/leonos/apps/oshlp/oshlp.elf`; it accepts
-`oshlp.elf <file.hlp> [doc.id]` and opens a Markdown page inside a LeonOS help
+The default `.hlp` handler is `/usr/lib/reliefos/apps/oshlp/oshlp.elf`; it accepts
+`oshlp.elf <file.hlp> [doc.id]` and opens a Markdown page inside a ReliefOS help
 container.
 
 Current companion applications:
@@ -380,27 +389,27 @@ Current companion applications:
   same directory.
 - `wavplay.elf`: plays 16-bit stereo PCM WAV files through the active audio
   driver, or a built-in test melody when started without a file.
-- `oshlp.elf`: opens LeonOS `.hlp` help containers from `/usr/share/doc/leonos` or any path
+- `oshlp.elf`: opens ReliefOS `.hlp` help containers from `/usr/share/doc/reliefos` or any path
   passed by another app. The help viewer uses the current system language as its
   default but language changes inside the window are local to that process.
 - `servicemgr.elf`: service manager UI. It lists the OpenRC services
-  (`leonos-desktop`, `leonos-dhcp`, `leonos-session`, `leonos-device`,
-  `leonos-ntp`), reads enabled state from `/etc/runlevels/default/`, and
+  (`reliefos-windowd`, `reliefos-dhcp`, `reliefos-session`, `reliefos-device`,
+  `reliefos-ntp`), reads enabled state from `/etc/runlevels/default/`, and
   starts/stops/restarts/enables them by running `rcctl.elf` (elevated through
   the sudo path for non-root callers). The retired `serviced.elf` runtime,
   `/run/leonos/services.state`, `/run/leonos/services.cmd`, and
   `/etc/leonos/services.cfg` no longer exist.
 
-Service behaviour is now OpenRC policy: `leonos-dhcp` runs BusyBox `udhcpc`
-with the publishing hook, and `leonos-ntp` runs BusyBox `ntpd` against
-`pool.ntp.org`; its hook publishes `/run/leonos/ntp-state` and `ntpd` steers
+Service behaviour is now OpenRC policy: `reliefos-dhcp` runs BusyBox `udhcpc`
+with the publishing hook, and `reliefos-ntp` runs BusyBox `ntpd` against
+`pool.ntp.org`; its hook publishes `/run/reliefos/ntp-state` and `ntpd` steers
 the kernel clock through the standard `adjtimex` PLL. The desktop taskbar
 reads the live network/clock state instead of the old `network_icon` and
 `rtc_clock` toggles.
 ## POSIX/Linux ABI migration status
 
 The public `stat`, `fstat`, and `lstat` symbols use the musl/Linux x86-64
-`struct stat` layout. LeonOS first-party code that needs the compact metadata
+`struct stat` layout. ReliefOS first-party code that needs the compact metadata
 record must call the explicitly named `leonos_stat_legacy` or
 `leonos_fstat_legacy` functions. Linux fbdev applications can open `/dev/fb0`,
 map its framebuffer, and use the `FBIOGET_VSCREENINFO`, `FBIOGET_FSCREENINFO`,
@@ -416,7 +425,7 @@ receive EAGAIN. `<leonos/device.h>` adds LEONOS_EVIOCSVT (0x400445f0), a uint32
 graphical-origin filter shared by an evdev open file description; zero keeps
 the raw stream. LEONOS_VT_GETGENERATION (0x800856f0) returns a uint64 display
 generation so a compositor can detect switches that happened while it was
-paused. These three requests are LeonOS extensions, not Linux ioctl ABI.
+paused. These three requests are ReliefOS extensions, not Linux ioctl ABI.
 
 The userspace IPC library retains at most one partially transmitted frame per
 nonblocking connection. A successful send means the frame is accepted; event

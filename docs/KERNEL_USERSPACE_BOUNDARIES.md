@@ -19,15 +19,18 @@ owner that already held the data.
 
 | Concern | Owner | Interface |
 | --- | --- | --- |
-| UTF-8 / UTF-16LE transcoding for on-disk names | `kernel/ntclks/kernel/ntclks/lib/text_utf16.c` | `text_utf8_to_utf16le()`, `text_utf16le_to_utf8()` |
-| POSIX permission and ACL metadata on FAT32/exFAT (`LEONACL.SYS`) | `kernel/ntclks/drivers/bootstrap/storage/storage_sidecar.c` | `storage_sidecar_permissions()`, `storage_sidecar_note_deleted()`, `storage_sidecar_note_renamed()` |
-| Kernel DAC decision (task credentials against a permission value) | `kernel/ntclks/fs/permissions.c` | `fs_permissions_check()`, `fs_permissions_parent()`, `fs_permissions_get()` |
-| Path and symlink resolution with search permission | `kernel/ntclks/fs/permissions.c` | `fs_permissions_resolve()`, `fs_permissions_resolve_flags()` |
-| Root and installer-root mount choice at boot | `kernel/ntclks/drivers/bootstrap/storage/storage_mount.c` | `storage_mount_boot_root()` |
-| Device inventory shown to userland | `userland/apps/device-agent` over the devmand IPC | `leonos_device_list()` in `userland/runtime/src/devmand_client.c` |
+| UTF-8 / UTF-16LE transcoding for on-disk names | `kernel/reliefnt/kernel/reliefnt/lib/text_utf16.c` | `text_utf8_to_utf16le()`, `text_utf16le_to_utf8()` |
+| POSIX permission and ACL metadata on FAT32/exFAT (`LEONACL.SYS`) | `kernel/reliefnt/drivers/bootstrap/storage/storage_sidecar.c` | `storage_sidecar_permissions()`, `storage_sidecar_note_deleted()`, `storage_sidecar_note_renamed()` |
+| Kernel DAC decision (task credentials against a permission value) | `kernel/reliefnt/fs/permissions.c` | `fs_permissions_check()`, `fs_permissions_parent()`, `fs_permissions_get()` |
+| Path and symlink resolution with search permission | `kernel/reliefnt/fs/permissions.c` | `fs_permissions_resolve()`, `fs_permissions_resolve_flags()` |
+| Root and installer-root mount choice at boot | `kernel/reliefnt/drivers/bootstrap/storage/storage_mount.c` | `storage_mount_boot_root()` |
+| Device inventory shown to userland | `userland/apps/device-agent` over the devmand IPC | `reliefos_device_list()` in `userland/runtime/src/devmand_client.c` |
 | Accounts, passwords, sessions | passwd/shadow/group/gshadow plus Linux-PAM | `docs/SUDOERS_PAM_STATUS.md`, `docs/POSIX_PERMISSIONS_2026-09-08.md` |
 
-## Migration table
+## Migration table (historical middle-layer removal record)
+
+The old names and source paths below record that earlier removal. The live
+owner paths for the renamed tree are listed above.
 
 | Original entry | Production consumers | New owner | New interface | Old-format compatibility |
 | --- | --- | --- | --- | --- |

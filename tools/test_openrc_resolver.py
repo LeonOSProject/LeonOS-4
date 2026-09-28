@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
 """Run the resolver publisher in a private root using the built BusyBox."""
 from pathlib import Path
+import os
 import shutil
 import subprocess
 import tempfile
 import unittest
 ROOT = Path(__file__).resolve().parents[1]
+OUT = Path(os.environ.get('RELIEFOS_OUT', ROOT / 'out/x86_64/release'))
 class Resolver(unittest.TestCase):
     def test_policy_and_rejected_input(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for folder in ('bin', 'etc/udhcpc', 'run/leonos', 'dev'):
+            for folder in ('bin', 'etc/udhcpc', 'run/reliefos', 'dev'):
                 (root / folder).mkdir(parents=True)
-            shutil.copy2(ROOT / 'build/userland/busybox.elf', root / 'bin/busybox')
+            shutil.copy2(OUT / 'userland/busybox.elf', root / 'bin/busybox')
             for name in ('sh', 'cat', 'rm', 'mktemp', 'chmod', 'mv'):
                 (root / 'bin' / name).symlink_to('busybox')
             (root / 'dev/null').touch()
-            shutil.copy2(ROOT / 'system/rootfs/usr/lib/leonos/publish-resolver', root / 'publish')
-            (root / 'run/leonos/dhcp-dns').write_text('10.0.2.3\n')
+            shutil.copy2(ROOT / 'system/rootfs/usr/lib/reliefos/publish-resolver', root / 'publish')
+            (root / 'run/reliefos/dhcp-dns').write_text('10.0.2.3\n')
             def publish(policy):
                 (root / 'etc/udhcpc/leonos-dns').write_text(policy)
                 return subprocess.run(['unshare', '-Ur', 'chroot', root, '/bin/sh', '/publish']).returncode

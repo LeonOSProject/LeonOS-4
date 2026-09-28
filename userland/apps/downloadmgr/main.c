@@ -1,13 +1,13 @@
-#include <leonos/auth.h>
-#include <leonos/fs.h>
-#include <leonos/gui.h>
-#include <leonos/http.h>
+#include <reliefos/auth.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
+#include <reliefos/http.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 
 #define DOWNLOAD_W 680U
 #define DOWNLOAD_H 300U
@@ -20,13 +20,13 @@
 #define T(s) gettext(s)
 
 static uint32_t pixels[DOWNLOAD_W * DOWNLOAD_H];
-static char url_input[LEONOS_HTTP_URL_LEN] = "http://example.com/";
+static char url_input[RELIEFOS_HTTP_URL_LEN] = "http://example.com/";
 static char status_text[160] = "Ready";
-static char target_path[LEONOS_FS_PATH_LEN] = "";
+static char target_path[RELIEFOS_FS_PATH_LEN] = "";
 static char detail_text[192] = "Enter an http:// or https:// URL or open a download link from Browser.";
-static char body[LEONOS_HTTP_BODY_MAX + 1U];
-static char headers[LEONOS_HTTP_HEADER_MAX + 1U];
-static struct leonos_ui_edit_state url_edit;
+static char body[RELIEFOS_HTTP_BODY_MAX + 1U];
+static char headers[RELIEFOS_HTTP_HEADER_MAX + 1U];
+static struct reliefos_ui_edit_state url_edit;
 static uint32_t progress_value;
 static uint8_t busy;
 static uint8_t done;
@@ -164,8 +164,8 @@ static void sanitize_filename(char *dst, uint32_t cap, const char *src)
 
 static void build_download_dir(char *dst, uint32_t cap)
 {
-    struct leonos_user_info user;
-    if (leonos_auth_current(&user) == 0 && user.home[0]) {
+    struct reliefos_user_info user;
+    if (reliefos_auth_current(&user) == 0 && user.home[0]) {
         uint32_t pos = 0;
         dst[0] = 0;
         append_text(dst, &pos, cap, user.home);
@@ -214,10 +214,10 @@ static void build_numbered_name(char *dst, uint32_t cap, const char *name,
 
 static int choose_target_path(char *dst, uint32_t cap, const char *url)
 {
-    char dir[LEONOS_FS_PATH_LEN];
-    char name[LEONOS_FS_NAME_LEN];
-    char numbered[LEONOS_FS_NAME_LEN];
-    struct leonos_stat st;
+    char dir[RELIEFOS_FS_PATH_LEN];
+    char name[RELIEFOS_FS_NAME_LEN];
+    char numbered[RELIEFOS_FS_NAME_LEN];
+    struct reliefos_stat st;
     build_download_dir(dir, sizeof(dir));
     (void)mkdir(dir, 0700);
     sanitize_filename(name, sizeof(name), url_filename(url));
@@ -228,7 +228,7 @@ static int choose_target_path(char *dst, uint32_t cap, const char *url)
             build_numbered_name(numbered, sizeof(numbered), name, i + 1U);
             build_child_path(dst, cap, dir, numbered);
         }
-        if (leonos_stat_legacy(dst, &st) < 0) {
+        if (reliefos_stat_legacy(dst, &st) < 0) {
             return 0;
         }
     }
@@ -238,24 +238,24 @@ static int choose_target_path(char *dst, uint32_t cap, const char *url)
 static const char *net_status_name(uint32_t status)
 {
     switch (status) {
-    case LEONOS_NET_STATUS_OK:
+    case RELIEFOS_NET_STATUS_OK:
         return T("Succeeded");
-    case LEONOS_NET_STATUS_TCP_TIMEOUT:
+    case RELIEFOS_NET_STATUS_TCP_TIMEOUT:
         return T("TCP timeout");
-    case LEONOS_NET_STATUS_DNS_FAILED:
+    case RELIEFOS_NET_STATUS_DNS_FAILED:
         return T("DNS failed");
-    case LEONOS_NET_STATUS_DNS_NO_ANSWER:
+    case RELIEFOS_NET_STATUS_DNS_NO_ANSWER:
         return T("No DNS answer");
-    case LEONOS_NET_STATUS_PROTOCOL_UNSUPPORTED:
+    case RELIEFOS_NET_STATUS_PROTOCOL_UNSUPPORTED:
         return T("Protocol unsupported");
-    case LEONOS_NET_STATUS_TLS_FAILED:
+    case RELIEFOS_NET_STATUS_TLS_FAILED:
         return T("TLS verification failed");
     default:
         return T("Network failed");
     }
 }
 
-static void set_detail_done(const struct leonos_http_response *response)
+static void set_detail_done(const struct reliefos_http_response *response)
 {
     uint32_t pos = 0;
     detail_text[0] = 0;
@@ -267,7 +267,7 @@ static void set_detail_done(const struct leonos_http_response *response)
 
 static int save_body(const char *path, const char *data, uint32_t len)
 {
-    int fd = open(path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
+    int fd = open(path, RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0666);
     long wrote;
     if (fd < 0) {
         return fd;
@@ -282,7 +282,7 @@ static int save_body(const char *path, const char *data, uint32_t len)
 
 static void perform_download(void)
 {
-    struct leonos_http_response response;
+    struct reliefos_http_response response;
     int ret;
     busy = 1;
     done = 0;
@@ -301,11 +301,11 @@ static void perform_download(void)
                   T("Only http:// and https:// downloads are supported."));
         return;
     }
-    ret = leonos_http_get(url_input, LEONOS_HTTP_DEFAULT_TIMEOUT_MS,
+    ret = reliefos_http_get(url_input, RELIEFOS_HTTP_DEFAULT_TIMEOUT_MS,
                           body, sizeof(body), headers, sizeof(headers),
                           &response);
     progress_value = 72;
-    if (ret < 0 || response.net_status != LEONOS_NET_STATUS_OK) {
+    if (ret < 0 || response.net_status != RELIEFOS_NET_STATUS_OK) {
         failed = 1;
         busy = 0;
         copy_text(status_text, sizeof(status_text),
@@ -322,7 +322,7 @@ static void perform_download(void)
         append_u32(status_text, &pos, sizeof(status_text), response.http_status);
         return;
     }
-    if (response.flags & LEONOS_HTTP_FLAG_TRUNCATED) {
+    if (response.flags & RELIEFOS_HTTP_FLAG_TRUNCATED) {
         failed = 1;
         busy = 0;
         copy_text(status_text, sizeof(status_text),
@@ -353,35 +353,35 @@ static void perform_download(void)
     set_detail_done(&response);
 }
 
-static void draw_downloadmgr(struct leonos_ui_surface *ui)
+static void draw_downloadmgr(struct reliefos_ui_surface *ui)
 {
-    uint32_t state_color = failed ? 0x00b03030U : (done ? 0x00108040U : LEONOS_UI_DARK);
-    leonos_ui_rect(ui, 0, 0, DOWNLOAD_W, DOWNLOAD_H, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 24, 14,
+    uint32_t state_color = failed ? 0x00b03030U : (done ? 0x00108040U : RELIEFOS_UI_DARK);
+    reliefos_ui_rect(ui, 0, 0, DOWNLOAD_W, DOWNLOAD_H, RELIEFOS_UI_GRAY);
+    reliefos_ui_text(ui, 24, 14,
                    T("Web downloads are saved to the current user's Downloads folder."),
-                   LEONOS_UI_DARK, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 24, URL_Y + 4U, T("URL:"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_edit_state_draw(ui, URL_X, URL_Y, URL_W, &url_edit, busy ? LEONOS_UI_EDIT_DISABLED : 0);
-    leonos_ui_button(ui, BUTTON_X, BUTTON_Y, BUTTON_W, LEONOS_UI_BUTTON_H,
-                     T("Download"), busy ? LEONOS_UI_BUTTON_DISABLED : 0);
-    leonos_ui_text(ui, 24, 88, T("Progress"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_progress(ui, 104, 84, DOWNLOAD_W - 142, 22,
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_GRAY);
+    reliefos_ui_text(ui, 24, URL_Y + 4U, T("URL:"), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_edit_state_draw(ui, URL_X, URL_Y, URL_W, &url_edit, busy ? RELIEFOS_UI_EDIT_DISABLED : 0);
+    reliefos_ui_button(ui, BUTTON_X, BUTTON_Y, BUTTON_W, RELIEFOS_UI_BUTTON_H,
+                     T("Download"), busy ? RELIEFOS_UI_BUTTON_DISABLED : 0);
+    reliefos_ui_text(ui, 24, 88, T("Progress"), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_progress(ui, 104, 84, DOWNLOAD_W - 142, 22,
                        progress_value, 100);
-    leonos_ui_text_clipped(ui, 24, 130, DOWNLOAD_W - 48,
-                           status_text, state_color, LEONOS_UI_WHITE);
-    leonos_ui_text_clipped(ui, 24, 158, DOWNLOAD_W - 48,
-                           detail_text, LEONOS_UI_DARK, LEONOS_UI_WHITE);
+    reliefos_ui_text_clipped(ui, 24, 130, DOWNLOAD_W - 48,
+                           status_text, state_color, RELIEFOS_UI_WHITE);
+    reliefos_ui_text_clipped(ui, 24, 158, DOWNLOAD_W - 48,
+                           detail_text, RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     if (target_path[0]) {
-        leonos_ui_text_clipped(ui, 24, 188, DOWNLOAD_W - 48,
-                               target_path, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+        reliefos_ui_text_clipped(ui, 24, 188, DOWNLOAD_W - 48,
+                               target_path, RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     }
-    leonos_ui_statusbar(ui, DOWNLOAD_H - 28, 28, status_text);
+    reliefos_ui_statusbar(ui, DOWNLOAD_H - 28, 28, status_text);
 }
 
-static void present(int window_id, struct leonos_ui_surface *ui)
+static void present(int window_id, struct reliefos_ui_surface *ui)
 {
     draw_downloadmgr(ui);
-    leonos_gui_present_window((uint32_t)window_id, DOWNLOAD_W, DOWNLOAD_H,
+    reliefos_gui_present_window((uint32_t)window_id, DOWNLOAD_W, DOWNLOAD_H,
                               DOWNLOAD_W, pixels);
 }
 
@@ -395,10 +395,10 @@ static int hit_rect(int32_t px, int32_t py, uint32_t x, uint32_t y,
 int main(int argc, char **argv, char **envp)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
     uint8_t auto_start = 0;
     (void)envp;
@@ -406,16 +406,16 @@ int main(int argc, char **argv, char **envp)
         copy_text(url_input, sizeof(url_input), argv[1]);
         auto_start = 1;
     }
-    window_id = leonos_gui_create_app_window_ex(T("Download Manager"),
+    window_id = reliefos_gui_create_app_window_ex(T("Download Manager"),
                                                 T("Web downloads"),
                                                 DOWNLOAD_W, DOWNLOAD_H,
-                                                LEONOS_GUI_WINDOW_NO_RESIZE);
+                                                RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[downloadmgr.elf] create window failed=%d\n", window_id);
         return 1;
     }
-    leonos_ui_bind(&ui, pixels, DOWNLOAD_W, DOWNLOAD_H, DOWNLOAD_W);
-    leonos_ui_edit_state_init(&url_edit, url_input, sizeof(url_input));
+    reliefos_ui_bind(&ui, pixels, DOWNLOAD_W, DOWNLOAD_H, DOWNLOAD_W);
+    reliefos_ui_edit_state_init(&url_edit, url_input, sizeof(url_input));
     url_edit.focused = !auto_start;
     present(window_id, &ui);
     if (auto_start) {
@@ -424,41 +424,41 @@ int main(int argc, char **argv, char **envp)
     }
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON &&
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON &&
                 (event.buttons & 1U)) {
-                if (leonos_ui_edit_state_handle_mouse(&url_edit, event.x, event.y,
+                if (reliefos_ui_edit_state_handle_mouse(&url_edit, event.x, event.y,
                                                       URL_X, URL_Y, URL_W,
                                                       event.buttons)) {
                     present(window_id, &ui);
                     continue;
                 }
                 if (!busy && hit_rect(event.x, event.y, BUTTON_X, BUTTON_Y,
-                                      BUTTON_W, LEONOS_UI_BUTTON_H)) {
+                                      BUTTON_W, RELIEFOS_UI_BUTTON_H)) {
                     perform_download();
                     present(window_id, &ui);
                     continue;
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN ||
-                event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN ||
+                event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
                 if (event.pressed && event.keycode == 1U) {
                     return 0;
                 }
-                if (event.pressed && event.keycode == LEONOS_KEY_ENTER && !busy) {
+                if (event.pressed && event.keycode == RELIEFOS_KEY_ENTER && !busy) {
                     perform_download();
                     present(window_id, &ui);
-                } else if (leonos_ui_edit_state_handle_key(&url_edit,
+                } else if (reliefos_ui_edit_state_handle_key(&url_edit,
                                                            event.keycode,
                                                            event.pressed)) {
                     present(window_id, &ui);
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_FOCUS ||
-                event.type == LEONOS_GUI_APP_EVENT_RESIZE) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_FOCUS ||
+                event.type == RELIEFOS_GUI_APP_EVENT_RESIZE) {
                 present(window_id, &ui);
             }
         } else {

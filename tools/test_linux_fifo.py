@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run identical static-musl FIFO checks on Linux and optionally NTCLKS.
+"""Run identical static-musl FIFO checks on Linux and optionally ReliefNT.
 
 --guest copies the built production staging tree into a disposable probe image,
 updates its kernel from build/system, and runs the probe before the real init.
@@ -35,7 +35,7 @@ def main():
     work = ROOT / "build/openrc-fifo-probe"
     work.mkdir(parents=True, exist_ok=True)
     binary = work / "fifo-abi"
-    run(ROOT / "build/musl/sdk/bin/leonos-musl-cc", "-static", "-O2", "-Wall", "-Wextra", "-Werror",
+    run(ROOT / "build/musl/sdk/bin/reliefos-musl-cc", "-static", "-O2", "-Wall", "-Wextra", "-Werror",
         ROOT / "tools/tests/fifo_abi_test.c", "-o", binary)
     host = run(binary, capture_output=True, text=True, timeout=15)
     (work / "host.log").write_text(host.stdout + host.stderr)
@@ -70,23 +70,23 @@ def main():
                 except socket.timeout: continue
                 except OSError: break
         threading.Thread(target=serve, daemon=True).start()
-    with tempfile.TemporaryDirectory(prefix="leonos-fifo-stage-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="reliefos-fifo-stage-") as temporary:
         tree = Path(temporary) / "esp"
         run("cp", "-a", "--reflink=auto", ROOT / "build/apk/root", tree)
         shutil.copy2(ROOT / "build/system/kernel.sys", tree / "leonos/kernel.sys")
         shutil.copy2(binary, tree / "usr/bin/fifo-abi")
         shutil.copy2(ROOT / "build/userland/busybox.elf", tree / "bin/busybox")
         shutil.copytree(ROOT / "system/rootfs/usr/share/udhcpc", tree / "usr/share/udhcpc", dirs_exist_ok=True)
-        shutil.copy2(ROOT / "system/rootfs/usr/lib/leonos/ntp-status", tree / "usr/lib/leonos/ntp-status")
+        shutil.copy2(ROOT / "system/rootfs/usr/lib/reliefos/ntp-status", tree / "usr/lib/reliefos/ntp-status")
         shutil.copytree(ROOT / "system/rootfs/etc/init.d", tree / "etc/init.d", dirs_exist_ok=True)
         if ntp:
             (tree / "etc/conf.d").mkdir(exist_ok=True)
-            (tree / "etc/conf.d/leonos-ntp").write_text(
+            (tree / "etc/conf.d/reliefos-ntp").write_text(
                 f'command_args="-n -dddd -p 10.0.2.2:{ntp.getsockname()[1]}"\n')
         report = tree / "usr/bin/openrc-probe-report"
         report.write_text("#!/bin/sh\nsleep 20\necho '[openrc-probe] service logs'\n"
             "for f in /var/log/imd.log /var/log/windowd.log /var/log/desktop.log /var/log/sessiond.log /var/log/device-agent.log /var/log/udhcpc.log /var/log/ntpd.log; do echo \"$f\"; cat \"$f\"; done\n"
-            "cat /run/leonos/dhcp-lease /run/leonos/ntp-state /etc/resolv.conf\n/bin/busybox nslookup pool.ntp.org\n/bin/rc-status -a\necho '[openrc-probe] report end'\n")
+            "cat /run/reliefos/dhcp-lease /run/reliefos/ntp-state /etc/resolv.conf\n/bin/busybox nslookup pool.ntp.org\n/bin/rc-status -a\necho '[openrc-probe] report end'\n")
         report.chmod(0o755)
         inittab = tree / "etc/inittab"
         inittab.write_text(inittab.read_text() + "\n::once:/usr/bin/openrc-probe-report\n")
@@ -102,7 +102,7 @@ def main():
                 stdout=log, stderr=subprocess.STDOUT)
     serial = work / f"guest-smp{args.smp}.log"
     serial.write_text("")
-    with tempfile.TemporaryDirectory(prefix="leonos-fifo-qmp-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="reliefos-fifo-qmp-") as temporary:
         qmp = Path(temporary) / "qmp.sock"
         command = ["qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-machine", "q35",
             "-m", "4096", "-smp", str(args.smp), "-bios", "/usr/share/edk2/x64/OVMF.4m.fd",
@@ -145,7 +145,7 @@ def main():
     print("\n".join(line for line in text.splitlines() if "[fifo]" in line))
     if "[fifo] DONE failures=0" not in text or "[fifo] FAIL" in text:
         raise SystemExit(f"FAIL guest FIFO probe; evidence: {serial}")
-    print(f"PASS FIFO on NTCLKS smp={args.smp}; OpenRC boot is not certified by this test")
+    print(f"PASS FIFO on ReliefNT smp={args.smp}; OpenRC boot is not certified by this test")
 
 
 if __name__ == "__main__":

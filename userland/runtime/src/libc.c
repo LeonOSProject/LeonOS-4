@@ -1,23 +1,23 @@
-#include <leonos/device.h>
-#include <leonos/environment.h>
-#include <leonos/driver.h>
-#include <leonos/auth.h>
-#include <leonos/auth.h>
-#include <leonos/audio.h>
-#include <leonos/fs.h>
-#include <leonos/gui.h>
-#include <leonos/http.h>
-#include <leonos/inputm.h>
-#include <leonos/net.h>
-#include <leonos/mouse.h>
-#include <leonos/pty.h>
-#include <leonos/stdio.h>
-#include <leonos/system.h>
-#include <leonos/syscall.h>
-#include <leonos/gui.h>
-#include <leonos/text.h>
-#include <leonos/tls.h>
-#include <leonos/ui.h>
+#include <reliefos/device.h>
+#include <reliefos/environment.h>
+#include <reliefos/driver.h>
+#include <reliefos/auth.h>
+#include <reliefos/auth.h>
+#include <reliefos/audio.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
+#include <reliefos/http.h>
+#include <reliefos/inputm.h>
+#include <reliefos/net.h>
+#include <reliefos/mouse.h>
+#include <reliefos/pty.h>
+#include <reliefos/stdio.h>
+#include <reliefos/system.h>
+#include <reliefos/syscall.h>
+#include <reliefos/gui.h>
+#include <reliefos/text.h>
+#include <reliefos/tls.h>
+#include <reliefos/ui.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdarg.h>
@@ -32,7 +32,7 @@
 #include <pty.h>
 #include <linux/tty.h>
 #include <unistd.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 
 
 
@@ -43,25 +43,25 @@ int sleep_ms(unsigned long ms)
     return (int)syscall2(SYS_nanosleep, (long)&request, 0);
 }
 
-int leonos_stat_legacy(const char *path, struct leonos_stat *st)
+int reliefos_stat_legacy(const char *path, struct reliefos_stat *st)
 {
     struct stat status;
     if (!st) return -EFAULT;
     if (stat(path, &status) < 0) return -errno;
-    st->type = S_ISDIR(status.st_mode) ? LEONOS_FS_TYPE_DIR :
-        (S_ISREG(status.st_mode) ? LEONOS_FS_TYPE_FILE : LEONOS_FS_TYPE_DEVICE);
+    st->type = S_ISDIR(status.st_mode) ? RELIEFOS_FS_TYPE_DIR :
+        (S_ISREG(status.st_mode) ? RELIEFOS_FS_TYPE_FILE : RELIEFOS_FS_TYPE_DEVICE);
     st->reserved = 0;
     st->size = status.st_size;
     return 0;
 }
 
-int leonos_fstat_legacy(int fd, struct leonos_stat *st)
+int reliefos_fstat_legacy(int fd, struct reliefos_stat *st)
 {
     struct stat status;
     if (!st) return -EFAULT;
     if (fstat(fd, &status) < 0) return -errno;
-    st->type = S_ISDIR(status.st_mode) ? LEONOS_FS_TYPE_DIR :
-        (S_ISREG(status.st_mode) ? LEONOS_FS_TYPE_FILE : LEONOS_FS_TYPE_DEVICE);
+    st->type = S_ISDIR(status.st_mode) ? RELIEFOS_FS_TYPE_DIR :
+        (S_ISREG(status.st_mode) ? RELIEFOS_FS_TYPE_FILE : RELIEFOS_FS_TYPE_DEVICE);
     st->reserved = 0;
     st->size = status.st_size;
     return 0;
@@ -73,7 +73,7 @@ int leonos_fstat_legacy(int fd, struct leonos_stat *st)
 /* Keep one descriptor per process so per-frame drawing does not repeatedly
  * allocate and release a device fd.  The kernel still accepts the legacy
  * control descriptor for old statically linked applications. */
-int leonos_list_dir(const char *path, struct leonos_dir_entry *entries,
+int reliefos_list_dir(const char *path, struct reliefos_dir_entry *entries,
                     uint32_t capacity, uint32_t *out_count)
 {
     uint32_t count = 0;
@@ -84,10 +84,10 @@ int leonos_list_dir(const char *path, struct leonos_dir_entry *entries,
     if (!path || (capacity && !entries)) {
         return -1;
     }
-    if (capacity > LEONOS_FS_MAX_ENTRIES) {
-        capacity = LEONOS_FS_MAX_ENTRIES;
+    if (capacity > RELIEFOS_FS_MAX_ENTRIES) {
+        capacity = RELIEFOS_FS_MAX_ENTRIES;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return fd;
     }
@@ -122,17 +122,17 @@ static uint32_t mode_to_legacy_permissions(uint32_t mode)
     return ((mode & 4u) >> 2) | (mode & 2u) | ((mode & 1u) << 2);
 }
 
-int leonos_fs_acl_get(const char *path, struct leonos_fs_acl *acl)
+int reliefos_fs_acl_get(const char *path, struct reliefos_fs_acl *acl)
 {
     struct stat st;
     if (!path || !acl) { errno = EINVAL; return -1; }
     if (stat(path, &st) < 0) return -1;
     memset(acl, 0, sizeof(*acl));
-    acl->version = LEONOS_FS_ACL_VERSION;
+    acl->version = RELIEFOS_FS_ACL_VERSION;
     acl->owner_uid = st.st_uid;
     acl->ace_count = 3;
-    const uint32_t principals[] = {LEONOS_FS_ACL_PRINCIPAL_OWNER,
-        LEONOS_FS_ACL_PRINCIPAL_GROUP, LEONOS_FS_ACL_PRINCIPAL_EVERYONE};
+    const uint32_t principals[] = {RELIEFOS_FS_ACL_PRINCIPAL_OWNER,
+        RELIEFOS_FS_ACL_PRINCIPAL_GROUP, RELIEFOS_FS_ACL_PRINCIPAL_EVERYONE};
     for (uint32_t i = 0; i < 3; ++i) {
         acl->aces[i].principal = principals[i];
         acl->aces[i].permissions = mode_to_legacy_permissions((st.st_mode >> (6 - 3 * i)) & 7u);
@@ -140,46 +140,46 @@ int leonos_fs_acl_get(const char *path, struct leonos_fs_acl *acl)
     return 0;
 }
 
-int leonos_fs_acl_set(const char *path, const struct leonos_fs_acl *acl)
+int reliefos_fs_acl_set(const char *path, const struct reliefos_fs_acl *acl)
 {
     struct stat st;
-    if (!path || !acl || acl->version != LEONOS_FS_ACL_VERSION ||
-        acl->ace_count > LEONOS_FS_ACL_MAX_ACE) { errno = EINVAL; return -1; }
+    if (!path || !acl || acl->version != RELIEFOS_FS_ACL_VERSION ||
+        acl->ace_count > RELIEFOS_FS_ACL_MAX_ACE) { errno = EINVAL; return -1; }
     if (stat(path, &st) < 0) return -1;
     mode_t mode = st.st_mode & 07000;
     for (uint32_t i = 0; i < acl->ace_count; ++i) {
-        const struct leonos_fs_acl_ace *ace = &acl->aces[i];
+        const struct reliefos_fs_acl_ace *ace = &acl->aces[i];
         unsigned shift;
-        if (ace->principal == LEONOS_FS_ACL_PRINCIPAL_OWNER) shift = 6;
-        else if (ace->principal == LEONOS_FS_ACL_PRINCIPAL_GROUP) shift = 3;
-        else if (ace->principal == LEONOS_FS_ACL_PRINCIPAL_EVERYONE) shift = 0;
+        if (ace->principal == RELIEFOS_FS_ACL_PRINCIPAL_OWNER) shift = 6;
+        else if (ace->principal == RELIEFOS_FS_ACL_PRINCIPAL_GROUP) shift = 3;
+        else if (ace->principal == RELIEFOS_FS_ACL_PRINCIPAL_EVERYONE) shift = 0;
         else { if (ace->permissions) { errno = ENOTSUP; return -1; } continue; }
         if (ace->flags || (ace->permissions & ~7u)) { errno = ENOTSUP; return -1; }
-        uint32_t bits = ((ace->permissions & LEONOS_FS_PERM_READ) << 2) |
-                        (ace->permissions & LEONOS_FS_PERM_WRITE) |
-                        ((ace->permissions & LEONOS_FS_PERM_EXEC) >> 2);
+        uint32_t bits = ((ace->permissions & RELIEFOS_FS_PERM_READ) << 2) |
+                        (ace->permissions & RELIEFOS_FS_PERM_WRITE) |
+                        ((ace->permissions & RELIEFOS_FS_PERM_EXEC) >> 2);
         mode |= bits << shift;
     }
     if (st.st_uid != acl->owner_uid && chown(path, acl->owner_uid, (gid_t)-1) < 0) return -1;
     return chmod(path, mode);
 }
 
-int leonos_fs_acl_take_ownership(const char *path, struct leonos_fs_acl *acl)
+int reliefos_fs_acl_take_ownership(const char *path, struct reliefos_fs_acl *acl)
 {
     if (chown(path, getuid(), getgid()) < 0) return -1;
-    return leonos_fs_acl_get(path, acl);
+    return reliefos_fs_acl_get(path, acl);
 }
 
-int leonos_fs_acl_repair(const char *path, struct leonos_fs_acl *acl)
+int reliefos_fs_acl_repair(const char *path, struct reliefos_fs_acl *acl)
 {
     if (chmod(path, 0700) < 0) return -1;
-    return leonos_fs_acl_get(path, acl);
+    return reliefos_fs_acl_get(path, acl);
 }
 
-int leonos_text_layout_utf8(const char *text, uint32_t byte_len,
-                            struct leonos_text_glyph *glyphs,
+int reliefos_text_layout_utf8(const char *text, uint32_t byte_len,
+                            struct reliefos_text_glyph *glyphs,
                             uint32_t capacity,
-                            struct leonos_text_layout *out_layout)
+                            struct reliefos_text_layout *out_layout)
 {
     uint32_t pos = 0;
     uint32_t count = 0;
@@ -205,17 +205,17 @@ int leonos_text_layout_utf8(const char *text, uint32_t byte_len,
             sequence = 4;
             codepoint = first & 0x07u;
         } else {
-            codepoint = LEONOS_TEXT_REPLACEMENT_CHAR;
+            codepoint = RELIEFOS_TEXT_REPLACEMENT_CHAR;
             sequence = 1;
         }
         if (sequence > 1 && pos + sequence > byte_len) {
-            codepoint = LEONOS_TEXT_REPLACEMENT_CHAR;
+            codepoint = RELIEFOS_TEXT_REPLACEMENT_CHAR;
             sequence = 1;
         }
         for (uint32_t i = 1; i < sequence; ++i) {
             uint8_t next = (uint8_t)text[pos + i];
             if ((next & 0xc0u) != 0x80u) {
-                codepoint = LEONOS_TEXT_REPLACEMENT_CHAR;
+                codepoint = RELIEFOS_TEXT_REPLACEMENT_CHAR;
                 sequence = 1;
                 break;
             }
@@ -226,7 +226,7 @@ int leonos_text_layout_utf8(const char *text, uint32_t byte_len,
             cells += width;
             pixels += width * 8u;
             if (glyphs && count < capacity) {
-                glyphs[count] = (struct leonos_text_glyph){
+                glyphs[count] = (struct reliefos_text_glyph){
                     .codepoint = codepoint,
                     .byte_offset = pos,
                     .byte_len = sequence,
@@ -239,7 +239,7 @@ int leonos_text_layout_utf8(const char *text, uint32_t byte_len,
         pos += sequence;
     }
     if (out_layout) {
-        *out_layout = (struct leonos_text_layout){
+        *out_layout = (struct reliefos_text_layout){
             .text = text,
             .byte_len = byte_len,
             .capacity = capacity,
@@ -255,8 +255,8 @@ int leonos_text_layout_utf8(const char *text, uint32_t byte_len,
 #define HTTP_REQUEST_MAX 1024U
 
 struct libc_http_url {
-    char host[LEONOS_NET_HOSTNAME_LEN];
-    char path[LEONOS_NET_HTTP_PATH_LEN];
+    char host[RELIEFOS_NET_HOSTNAME_LEN];
+    char path[RELIEFOS_NET_HTTP_PATH_LEN];
     uint32_t port;
     uint8_t secure;
 };
@@ -501,15 +501,15 @@ static void http_parent_path(const char *path, char *dst, uint32_t cap)
     http_copy_bytes(dst, cap, path, last_slash + 1U);
 }
 
-int leonos_http_resolve_url(const char *base_url, const char *location,
+int reliefos_http_resolve_url(const char *base_url, const char *location,
                             char *out, uint32_t capacity)
 {
-    char base_copy[LEONOS_HTTP_URL_LEN];
-    char location_copy[LEONOS_HTTP_URL_LEN];
+    char base_copy[RELIEFOS_HTTP_URL_LEN];
+    char location_copy[RELIEFOS_HTTP_URL_LEN];
     const char *base_text = base_url;
     const char *location_text = location;
     struct libc_http_url base;
-    char dir[LEONOS_NET_HTTP_PATH_LEN];
+    char dir[RELIEFOS_NET_HTTP_PATH_LEN];
     uint32_t pos = 0;
     if (!out || capacity == 0) {
         return -1;
@@ -740,13 +740,13 @@ static uint32_t http_decode_chunked(char *buffer, uint32_t body_offset,
         if (src + chunk_size > raw_len) {
             chunk_size = raw_len > src ? raw_len - src : 0;
             if (flags) {
-                *flags |= LEONOS_HTTP_FLAG_TRUNCATED;
+                *flags |= RELIEFOS_HTTP_FLAG_TRUNCATED;
             }
         }
         for (uint32_t i = 0; i < chunk_size; ++i) {
             if (dst + 1U >= capacity) {
                 if (flags) {
-                    *flags |= LEONOS_HTTP_FLAG_TRUNCATED;
+                    *flags |= RELIEFOS_HTTP_FLAG_TRUNCATED;
                 }
                 break;
             }
@@ -770,12 +770,12 @@ static uint32_t http_copy_body(char *buffer, uint32_t body_offset,
         copy_len = wanted_len;
     }
     if (wanted_len && available < wanted_len && flags) {
-        *flags |= LEONOS_HTTP_FLAG_TRUNCATED;
+        *flags |= RELIEFOS_HTTP_FLAG_TRUNCATED;
     }
     if (copy_len + 1U > capacity) {
         copy_len = capacity ? capacity - 1U : 0;
         if (flags) {
-            *flags |= LEONOS_HTTP_FLAG_TRUNCATED;
+            *flags |= RELIEFOS_HTTP_FLAG_TRUNCATED;
         }
     }
     for (uint32_t i = 0; i < copy_len; ++i) {
@@ -820,7 +820,7 @@ static int http_extra_header_present(const char *headers, const char *name)
 
 static uint32_t http_build_request_text(char *dst, uint32_t cap,
                                         const struct libc_http_url *url,
-                                        const struct leonos_http_request *request)
+                                        const struct reliefos_http_request *request)
 {
     const char *method = request->method && request->method[0]
                              ? request->method
@@ -841,7 +841,7 @@ static uint32_t http_build_request_text(char *dst, uint32_t cap,
     }
     http_append_text(dst, &pos, cap, "\r\n");
     if (!http_extra_header_present(request->extra_headers, "User-Agent")) {
-        http_append_text(dst, &pos, cap, "User-Agent: LeonOS/4\r\n");
+        http_append_text(dst, &pos, cap, "User-Agent: ReliefOS/4\r\n");
     }
     if (!http_extra_header_present(request->extra_headers, "Accept")) {
         http_append_text(dst, &pos, cap, "Accept: */*\r\n");
@@ -868,22 +868,22 @@ static uint32_t http_build_request_text(char *dst, uint32_t cap,
 }
 
 static int http_fetch_once(const char *url_text,
-                           const struct leonos_http_request *request,
-                           struct leonos_http_response *response,
+                           const struct reliefos_http_request *request,
+                           struct reliefos_http_response *response,
                            char *location, uint32_t location_cap)
 {
     struct libc_http_url url;
-    struct leonos_net_socket_connect conn;
+    struct reliefos_net_socket_connect conn;
     char request_text[HTTP_REQUEST_MAX];
     char transfer_encoding[48];
     char content_length_text[32];
     uint32_t request_len;
-    uint32_t net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+    uint32_t net_status = RELIEFOS_NET_STATUS_HTTP_FAILED;
     uint32_t raw_len = 0;
     uint32_t body_offset;
     uint32_t header_len;
     uint32_t timeout_ms = request->timeout_ms ? request->timeout_ms
-                                              : LEONOS_HTTP_DEFAULT_TIMEOUT_MS;
+                                              : RELIEFOS_HTTP_DEFAULT_TIMEOUT_MS;
     char *raw_response = request->response_body;
     uint32_t raw_capacity = request->response_body_capacity;
     int raw_response_owned = 0;
@@ -896,12 +896,12 @@ static int http_fetch_once(const char *url_text,
     if (!http_starts_with_ignore_case(url_text, "http://") &&
         !http_starts_with_ignore_case(url_text, "https://")) {
         printf("[http] request rejected unsupported scheme\n");
-        response->net_status = LEONOS_NET_STATUS_PROTOCOL_UNSUPPORTED;
+        response->net_status = RELIEFOS_NET_STATUS_PROTOCOL_UNSUPPORTED;
         return 0;
     }
     if (!http_parse_url(url_text, &url)) {
         printf("[http] request rejected invalid url\n");
-        response->net_status = LEONOS_NET_STATUS_BAD_ARGUMENT;
+        response->net_status = RELIEFOS_NET_STATUS_BAD_ARGUMENT;
         return 0;
     }
     printf("[http] request host=%s port=%u secure=%u timeout=%u\n", url.host,
@@ -910,41 +910,41 @@ static int http_fetch_once(const char *url_text,
                                           &url, request);
     if (!request_len) {
         printf("[http] request build failed host=%s\n", url.host);
-        response->net_status = LEONOS_NET_STATUS_BAD_ARGUMENT;
+        response->net_status = RELIEFOS_NET_STATUS_BAD_ARGUMENT;
         return 0;
     }
-    socket = leonos_socket_tcp();
+    socket = reliefos_socket_tcp();
     if (socket < 0) {
         printf("[http] socket open failed host=%s\n", url.host);
-        response->net_status = LEONOS_NET_STATUS_SOCKET_LIMIT;
+        response->net_status = RELIEFOS_NET_STATUS_SOCKET_LIMIT;
         return 0;
     }
-    ret = leonos_socket_connect(socket, url.host, url.port, timeout_ms, &conn);
-    if (ret < 0 || conn.status != LEONOS_NET_STATUS_OK) {
+    ret = reliefos_socket_connect(socket, url.host, url.port, timeout_ms, &conn);
+    if (ret < 0 || conn.status != RELIEFOS_NET_STATUS_OK) {
         printf("[http] connect failed host=%s ret=%d status=%u\n", url.host,
                ret, conn.status);
-        leonos_socket_close(socket);
-        response->net_status = ret < 0 ? LEONOS_NET_STATUS_TCP_FAILED
+        reliefos_socket_close(socket);
+        response->net_status = ret < 0 ? RELIEFOS_NET_STATUS_TCP_FAILED
                                        : conn.status;
         return 0;
     }
     printf("[http] connected host=%s socket=%d remote_ip=%u\n", url.host,
            socket, conn.remote_ip);
     if (url.secure) {
-        if (raw_capacity > UINT32_MAX - LEONOS_HTTP_HEADER_MAX - 1U) {
-            leonos_socket_close(socket);
-            response->net_status = LEONOS_NET_STATUS_HTTP_TOO_LARGE;
+        if (raw_capacity > UINT32_MAX - RELIEFOS_HTTP_HEADER_MAX - 1U) {
+            reliefos_socket_close(socket);
+            response->net_status = RELIEFOS_NET_STATUS_HTTP_TOO_LARGE;
             return 0;
         }
-        raw_capacity += LEONOS_HTTP_HEADER_MAX + 1U;
+        raw_capacity += RELIEFOS_HTTP_HEADER_MAX + 1U;
         raw_response = malloc(raw_capacity);
         if (!raw_response) {
-            leonos_socket_close(socket);
-            response->net_status = LEONOS_NET_STATUS_SOCKET_LIMIT;
+            reliefos_socket_close(socket);
+            response->net_status = RELIEFOS_NET_STATUS_SOCKET_LIMIT;
             return 0;
         }
         raw_response_owned = 1;
-        if (leonos_tls_http_exchange(socket, url.host, timeout_ms,
+        if (reliefos_tls_http_exchange(socket, url.host, timeout_ms,
                                      request_text, request_len,
                                      request->request_body,
                                      request->request_body_len,
@@ -952,36 +952,36 @@ static int http_fetch_once(const char *url_text,
                                      &raw_len) < 0) {
             printf("[http] TLS exchange failed host=%s raw=%u\n", url.host,
                    raw_len);
-            leonos_socket_close(socket);
+            reliefos_socket_close(socket);
             free(raw_response);
-            response->net_status = LEONOS_NET_STATUS_TLS_FAILED;
+            response->net_status = RELIEFOS_NET_STATUS_TLS_FAILED;
             return 0;
         }
-        net_status = LEONOS_NET_STATUS_OK;
+        net_status = RELIEFOS_NET_STATUS_OK;
         printf("[http] TLS exchange complete host=%s raw=%u\n", url.host,
                raw_len);
     } else {
-        ret = (int)leonos_socket_send(socket, request_text, request_len,
+        ret = (int)reliefos_socket_send(socket, request_text, request_len,
                                       timeout_ms, &net_status);
-        if (ret < 0 || net_status != LEONOS_NET_STATUS_OK ||
+        if (ret < 0 || net_status != RELIEFOS_NET_STATUS_OK ||
             (uint32_t)ret != request_len) {
-            leonos_socket_close(socket);
+            reliefos_socket_close(socket);
             response->net_status = net_status;
             return 0;
         }
         if (request->request_body && request->request_body_len) {
-            ret = (int)leonos_socket_send(socket, request->request_body,
+            ret = (int)reliefos_socket_send(socket, request->request_body,
                                           request->request_body_len,
                                           timeout_ms, &net_status);
-            if (ret < 0 || net_status != LEONOS_NET_STATUS_OK ||
+            if (ret < 0 || net_status != RELIEFOS_NET_STATUS_OK ||
                 (uint32_t)ret != request->request_body_len) {
-                leonos_socket_close(socket);
+                reliefos_socket_close(socket);
                 response->net_status = net_status;
                 return 0;
             }
         }
         while (raw_len + 1U < raw_capacity) {
-            long got = leonos_socket_recv(socket,
+            long got = reliefos_socket_recv(socket,
                                           raw_response + raw_len,
                                           raw_capacity - raw_len - 1U,
                                           raw_len ? 1200U : timeout_ms,
@@ -989,28 +989,28 @@ static int http_fetch_once(const char *url_text,
             if (got < 0) {
                 printf("[http] response read failed host=%s ret=%ld status=%u raw=%u\n",
                        url.host, got, net_status, raw_len);
-                leonos_socket_close(socket);
+                reliefos_socket_close(socket);
                 if (raw_response_owned) free(raw_response);
-                response->net_status = LEONOS_NET_STATUS_TCP_FAILED;
+                response->net_status = RELIEFOS_NET_STATUS_TCP_FAILED;
                 return 0;
             }
             if (got == 0) {
-                if (net_status == LEONOS_NET_STATUS_OK ||
-                    (net_status == LEONOS_NET_STATUS_TCP_TIMEOUT && raw_len)) {
-                    net_status = LEONOS_NET_STATUS_OK;
+                if (net_status == RELIEFOS_NET_STATUS_OK ||
+                    (net_status == RELIEFOS_NET_STATUS_TCP_TIMEOUT && raw_len)) {
+                    net_status = RELIEFOS_NET_STATUS_OK;
                 }
                 break;
             }
             raw_len += (uint32_t)got;
         }
     }
-    leonos_socket_close(socket);
+    reliefos_socket_close(socket);
     raw_response[raw_len] = 0;
     response->net_status = net_status;
     if (raw_len + 1U >= raw_capacity) {
-        response->flags |= LEONOS_HTTP_FLAG_TRUNCATED;
+        response->flags |= RELIEFOS_HTTP_FLAG_TRUNCATED;
     }
-    if (net_status != LEONOS_NET_STATUS_OK) {
+    if (net_status != RELIEFOS_NET_STATUS_OK) {
         printf("[http] response transport failed host=%s status=%u raw=%u\n",
                url.host, net_status, raw_len);
         if (raw_response_owned) free(raw_response);
@@ -1020,7 +1020,7 @@ static int http_fetch_once(const char *url_text,
     if (!body_offset) {
         printf("[http] response missing header terminator host=%s raw=%u\n",
                url.host, raw_len);
-        response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+        response->net_status = RELIEFOS_NET_STATUS_HTTP_FAILED;
         if (raw_response_owned) free(raw_response);
         return 0;
     }
@@ -1030,7 +1030,7 @@ static int http_fetch_once(const char *url_text,
     if (!response->http_status) {
         printf("[http] response status parse failed host=%s headers=%u raw=%u\n",
                url.host, header_len, raw_len);
-        response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+        response->net_status = RELIEFOS_NET_STATUS_HTTP_FAILED;
         if (raw_response_owned) free(raw_response);
         return 0;
     }
@@ -1038,7 +1038,7 @@ static int http_fetch_once(const char *url_text,
     if (request->response_headers && request->response_headers_capacity) {
         if (header_len + 1U > request->response_headers_capacity) {
             response->headers_len = request->response_headers_capacity - 1U;
-            response->flags |= LEONOS_HTTP_FLAG_TRUNCATED;
+            response->flags |= RELIEFOS_HTTP_FLAG_TRUNCATED;
         }
         http_copy_bytes(request->response_headers,
                         request->response_headers_capacity,
@@ -1058,11 +1058,11 @@ static int http_fetch_once(const char *url_text,
         int ok = 0;
         response->content_length = http_parse_decimal(content_length_text, &ok);
         if (ok) {
-            response->flags |= LEONOS_HTTP_FLAG_CONTENT_LENGTH;
+            response->flags |= RELIEFOS_HTTP_FLAG_CONTENT_LENGTH;
         }
     }
     if (http_contains_ignore_case(transfer_encoding, "chunked")) {
-        response->flags |= LEONOS_HTTP_FLAG_CHUNKED;
+        response->flags |= RELIEFOS_HTTP_FLAG_CHUNKED;
         response->body_len = http_decode_chunked(raw_response,
                                                 body_offset, raw_len,
                                                 raw_capacity,
@@ -1079,7 +1079,7 @@ static int http_fetch_once(const char *url_text,
         if (body_len + 1U > request->response_body_capacity) {
             body_len = request->response_body_capacity
                            ? request->response_body_capacity - 1U : 0;
-            response->flags |= LEONOS_HTTP_FLAG_TRUNCATED;
+            response->flags |= RELIEFOS_HTTP_FLAG_TRUNCATED;
         }
         if (body_len) memcpy(request->response_body, raw_response, body_len);
         if (request->response_body_capacity) request->response_body[body_len] = 0;
@@ -1099,32 +1099,32 @@ static int http_is_redirect(uint32_t status)
            status == 307U || status == 308U;
 }
 
-int leonos_http_request(const struct leonos_http_request *request,
-                        struct leonos_http_response *response)
+int reliefos_http_request(const struct reliefos_http_request *request,
+                        struct reliefos_http_response *response)
 {
-    char current_url[LEONOS_HTTP_URL_LEN];
-    char location[LEONOS_HTTP_URL_LEN];
-    char next_url[LEONOS_HTTP_URL_LEN];
+    char current_url[RELIEFOS_HTTP_URL_LEN];
+    char location[RELIEFOS_HTTP_URL_LEN];
+    char next_url[RELIEFOS_HTTP_URL_LEN];
     uint32_t max_redirects;
     if (!request || !response || !request->url ||
         !request->response_body || request->response_body_capacity == 0) {
         return -1;
     }
-    *response = (struct leonos_http_response){0};
-    max_redirects = request->max_redirects == LEONOS_HTTP_NO_REDIRECTS
+    *response = (struct reliefos_http_response){0};
+    max_redirects = request->max_redirects == RELIEFOS_HTTP_NO_REDIRECTS
                         ? 0
                         : request->max_redirects
                               ? request->max_redirects
-                              : LEONOS_HTTP_DEFAULT_REDIRECTS;
+                              : RELIEFOS_HTTP_DEFAULT_REDIRECTS;
     http_copy_text(current_url, sizeof(current_url), request->url);
     http_copy_text(response->final_url, sizeof(response->final_url),
                    current_url);
     for (;;) {
         location[0] = 0;
         uint32_t preserved_flags =
-            response->flags & LEONOS_HTTP_FLAG_REDIRECTED;
+            response->flags & RELIEFOS_HTTP_FLAG_REDIRECTED;
         uint32_t redirect_count = response->redirect_count;
-        response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+        response->net_status = RELIEFOS_NET_STATUS_HTTP_FAILED;
         response->http_status = 0;
         response->flags = preserved_flags;
         response->body_len = 0;
@@ -1139,7 +1139,7 @@ int leonos_http_request(const struct leonos_http_request *request,
         printf("[http] request result url=%s status=%u net=%u body=%u redirects=%u flags=0x%x\n",
                current_url, response->http_status, response->net_status,
                response->body_len, response->redirect_count, response->flags);
-        if (response->net_status != LEONOS_NET_STATUS_OK ||
+        if (response->net_status != RELIEFOS_NET_STATUS_OK ||
             !http_is_redirect(response->http_status) ||
             !location[0]) {
             return 0;
@@ -1150,48 +1150,48 @@ int leonos_http_request(const struct leonos_http_request *request,
             return 0;
         }
         if (response->redirect_count >= max_redirects) {
-            response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+            response->net_status = RELIEFOS_NET_STATUS_HTTP_FAILED;
             return 0;
         }
-        if (leonos_http_resolve_url(current_url, location,
+        if (reliefos_http_resolve_url(current_url, location,
                                     next_url, sizeof(next_url)) < 0) {
-            response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+            response->net_status = RELIEFOS_NET_STATUS_HTTP_FAILED;
             return 0;
         }
         if (http_url_is_secure(current_url) &&
             !http_url_is_secure(next_url)) {
             printf("[http] rejected HTTPS downgrade redirect\n");
-            response->net_status = LEONOS_NET_STATUS_TLS_FAILED;
+            response->net_status = RELIEFOS_NET_STATUS_TLS_FAILED;
             return 0;
         }
         http_copy_text(current_url, sizeof(current_url), next_url);
         ++response->redirect_count;
-        response->flags |= LEONOS_HTTP_FLAG_REDIRECTED;
+        response->flags |= RELIEFOS_HTTP_FLAG_REDIRECTED;
     }
 }
 
-int leonos_http_get(const char *url, uint32_t timeout_ms,
+int reliefos_http_get(const char *url, uint32_t timeout_ms,
                     char *response_body, uint32_t response_body_capacity,
                     char *response_headers, uint32_t response_headers_capacity,
-                    struct leonos_http_response *response)
+                    struct reliefos_http_response *response)
 {
-    struct leonos_http_request request = {
+    struct reliefos_http_request request = {
         .url = url,
         .method = "GET",
         .extra_headers = 0,
         .request_body = 0,
         .request_body_len = 0,
         .timeout_ms = timeout_ms,
-        .max_redirects = LEONOS_HTTP_DEFAULT_REDIRECTS,
+        .max_redirects = RELIEFOS_HTTP_DEFAULT_REDIRECTS,
         .response_body = response_body,
         .response_body_capacity = response_body_capacity,
         .response_headers = response_headers,
         .response_headers_capacity = response_headers_capacity,
     };
-    return leonos_http_request(&request, response);
+    return reliefos_http_request(&request, response);
 }
 
-#define HTTP_DOWNLOAD_HEADER_MAX LEONOS_HTTP_HEADER_MAX
+#define HTTP_DOWNLOAD_HEADER_MAX RELIEFOS_HTTP_HEADER_MAX
 #define HTTP_DOWNLOAD_READ_SIZE 4096U
 
 enum http_download_body_state {
@@ -1203,9 +1203,9 @@ enum http_download_body_state {
 
 struct http_download_stream {
     char headers[HTTP_DOWNLOAD_HEADER_MAX + 1U];
-    char location[LEONOS_HTTP_URL_LEN];
-    struct leonos_http_response *response;
-    leonos_http_download_progress_fn progress;
+    char location[RELIEFOS_HTTP_URL_LEN];
+    struct reliefos_http_response *response;
+    reliefos_http_download_progress_fn progress;
     void *progress_context;
     uint32_t headers_len;
     uint32_t total;
@@ -1282,7 +1282,7 @@ static int http_download_parse_headers(struct http_download_stream *stream)
         stream->failed = 1;
         return -1;
     }
-    stream->response->net_status = LEONOS_NET_STATUS_OK;
+    stream->response->net_status = RELIEFOS_NET_STATUS_OK;
     http_header_value(stream->headers, stream->headers_len, "Content-Type",
                       stream->response->content_type,
                       sizeof(stream->response->content_type));
@@ -1299,11 +1299,11 @@ static int http_download_parse_headers(struct http_download_stream *stream)
         stream->response->content_length =
             http_parse_decimal(content_length_text, &valid_length);
         if (valid_length) {
-            stream->response->flags |= LEONOS_HTTP_FLAG_CONTENT_LENGTH;
+            stream->response->flags |= RELIEFOS_HTTP_FLAG_CONTENT_LENGTH;
         }
     }
     if (http_contains_ignore_case(transfer_encoding, "chunked")) {
-        stream->response->flags |= LEONOS_HTTP_FLAG_CHUNKED;
+        stream->response->flags |= RELIEFOS_HTTP_FLAG_CHUNKED;
         stream->body_state = HTTP_DOWNLOAD_BODY_CHUNK_SIZE;
     } else {
         stream->body_state = HTTP_DOWNLOAD_BODY_IDENTITY;
@@ -1323,7 +1323,7 @@ static int http_download_parse_headers(struct http_download_stream *stream)
         return -1;
     }
     if (stream->total == 0 &&
-        (stream->response->flags & LEONOS_HTTP_FLAG_CONTENT_LENGTH)) {
+        (stream->response->flags & RELIEFOS_HTTP_FLAG_CONTENT_LENGTH)) {
         stream->complete = 1;
         return -1;
     }
@@ -1460,11 +1460,11 @@ static int http_download_fetch_once(const char *url_text,
                                     struct http_download_stream *stream)
 {
     struct libc_http_url url;
-    struct leonos_net_socket_connect connection;
-    struct leonos_http_request request = {0};
+    struct reliefos_net_socket_connect connection;
+    struct reliefos_http_request request = {0};
     char request_text[HTTP_REQUEST_MAX];
     uint32_t request_len;
-    uint32_t net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+    uint32_t net_status = RELIEFOS_NET_STATUS_HTTP_FAILED;
     int socket;
     int ret = -1;
     if (!url_text || !stream || !stream->response ||
@@ -1477,30 +1477,30 @@ static int http_download_fetch_once(const char *url_text,
     if (!request_len || http_download_report(stream) < 0) {
         return -1;
     }
-    socket = leonos_socket_tcp();
+    socket = reliefos_socket_tcp();
     if (socket < 0) {
-        stream->response->net_status = LEONOS_NET_STATUS_SOCKET_LIMIT;
+        stream->response->net_status = RELIEFOS_NET_STATUS_SOCKET_LIMIT;
         return -1;
     }
-    ret = leonos_socket_connect(socket, url.host, url.port, timeout_ms,
+    ret = reliefos_socket_connect(socket, url.host, url.port, timeout_ms,
                                 &connection);
-    if (ret < 0 || connection.status != LEONOS_NET_STATUS_OK) {
-        stream->response->net_status = ret < 0 ? LEONOS_NET_STATUS_TCP_FAILED
+    if (ret < 0 || connection.status != RELIEFOS_NET_STATUS_OK) {
+        stream->response->net_status = ret < 0 ? RELIEFOS_NET_STATUS_TCP_FAILED
                                                 : connection.status;
-        leonos_socket_close(socket);
+        reliefos_socket_close(socket);
         return -1;
     }
     if (url.secure) {
-        ret = leonos_tls_http_stream(socket, url.host, timeout_ms,
+        ret = reliefos_tls_http_stream(socket, url.host, timeout_ms,
                                      request_text, request_len, 0, 0,
                                      http_download_stream_data, stream);
     } else {
-        ret = (int)leonos_socket_send(socket, request_text, request_len,
+        ret = (int)reliefos_socket_send(socket, request_text, request_len,
                                       timeout_ms, &net_status);
-        if (ret >= 0 && net_status == LEONOS_NET_STATUS_OK &&
+        if (ret >= 0 && net_status == RELIEFOS_NET_STATUS_OK &&
             (uint32_t)ret == request_len) {
             char buffer[HTTP_DOWNLOAD_READ_SIZE];
-            unsigned long last_data = leonos_uptime_ms();
+            unsigned long last_data = reliefos_uptime_ms();
             ret = 0;
             for (;;) {
                 long got;
@@ -1508,12 +1508,12 @@ static int http_download_fetch_once(const char *url_text,
                     ret = -1;
                     break;
                 }
-                got = leonos_socket_recv(socket, buffer, sizeof(buffer),
+                got = reliefos_socket_recv(socket, buffer, sizeof(buffer),
                                          200U,
                                          &net_status);
                 if (got == 0) {
-                    if (net_status == LEONOS_NET_STATUS_TCP_TIMEOUT) {
-                        if (leonos_uptime_ms() - last_data < timeout_ms) {
+                    if (net_status == RELIEFOS_NET_STATUS_TCP_TIMEOUT) {
+                        if (reliefos_uptime_ms() - last_data < timeout_ms) {
                             continue;
                         }
                     }
@@ -1525,9 +1525,9 @@ static int http_download_fetch_once(const char *url_text,
                     ret = -1;
                     break;
                 }
-                last_data = leonos_uptime_ms();
+                last_data = reliefos_uptime_ms();
             }
-            if (net_status != LEONOS_NET_STATUS_OK &&
+            if (net_status != RELIEFOS_NET_STATUS_OK &&
                 !stream->complete && !stream->redirect && !stream->failed &&
                 !stream->cancelled) {
                 ret = -1;
@@ -1537,16 +1537,16 @@ static int http_download_fetch_once(const char *url_text,
             ret = -1;
         }
     }
-    leonos_socket_close(socket);
+    reliefos_socket_close(socket);
     if (stream->redirect || stream->complete) {
         return 0;
     }
     if (ret < 0 || stream->failed || stream->cancelled ||
         !stream->headers_ready) {
-        if (stream->response->net_status == LEONOS_NET_STATUS_HTTP_FAILED) {
+        if (stream->response->net_status == RELIEFOS_NET_STATUS_HTTP_FAILED) {
             stream->response->net_status = url.secure
-                                               ? LEONOS_NET_STATUS_TLS_FAILED
-                                               : LEONOS_NET_STATUS_TCP_FAILED;
+                                               ? RELIEFOS_NET_STATUS_TLS_FAILED
+                                               : RELIEFOS_NET_STATUS_TCP_FAILED;
         }
         return -1;
     }
@@ -1555,7 +1555,7 @@ static int http_download_fetch_once(const char *url_text,
         stream->complete = 1;
         return 0;
     }
-    stream->response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+    stream->response->net_status = RELIEFOS_NET_STATUS_HTTP_FAILED;
     return -1;
 }
 
@@ -1575,76 +1575,76 @@ static int http_download_temp_path(const char *output_path, char *temp_path,
     return 1;
 }
 
-int leonos_http_download(const char *url, const char *output_path,
+int reliefos_http_download(const char *url, const char *output_path,
                          uint32_t timeout_ms,
-                         leonos_http_download_progress_fn progress,
+                         reliefos_http_download_progress_fn progress,
                          void *context,
-                         struct leonos_http_response *response)
+                         struct reliefos_http_response *response)
 {
-    char current_url[LEONOS_HTTP_URL_LEN];
-    char next_url[LEONOS_HTTP_URL_LEN];
-    char temp_path[LEONOS_FS_PATH_LEN];
+    char current_url[RELIEFOS_HTTP_URL_LEN];
+    char next_url[RELIEFOS_HTTP_URL_LEN];
+    char temp_path[RELIEFOS_FS_PATH_LEN];
     uint32_t redirects = 0;
     if (!url || !output_path || !response ||
         !http_download_temp_path(output_path, temp_path, sizeof(temp_path))) {
         return -1;
     }
-    *response = (struct leonos_http_response){0};
+    *response = (struct reliefos_http_response){0};
     http_copy_text(current_url, sizeof(current_url), url);
     for (;;) {
         struct http_download_stream stream = {0};
         stream.response = response;
         stream.progress = progress;
         stream.progress_context = context;
-        stream.fd = open(temp_path, LEONOS_O_WRONLY | LEONOS_O_CREAT |
-                         LEONOS_O_TRUNC, 0666);
+        stream.fd = open(temp_path, RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT |
+                         RELIEFOS_O_TRUNC, 0666);
         if (stream.fd < 0) {
-            response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+            response->net_status = RELIEFOS_NET_STATUS_HTTP_FAILED;
             return -1;
         }
-        response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+        response->net_status = RELIEFOS_NET_STATUS_HTTP_FAILED;
         response->http_status = 0;
-        response->flags &= LEONOS_HTTP_FLAG_REDIRECTED;
+        response->flags &= RELIEFOS_HTTP_FLAG_REDIRECTED;
         response->body_len = 0;
         response->headers_len = 0;
         response->content_length = 0;
         response->content_type[0] = 0;
         (void)http_download_fetch_once(current_url,
                                        timeout_ms ? timeout_ms
-                                                  : LEONOS_HTTP_DEFAULT_TIMEOUT_MS,
+                                                  : RELIEFOS_HTTP_DEFAULT_TIMEOUT_MS,
                                        &stream);
         close(stream.fd);
         http_copy_text(response->final_url, sizeof(response->final_url),
                        current_url);
         if (stream.redirect) {
             unlink(temp_path);
-            if (redirects >= LEONOS_HTTP_DEFAULT_REDIRECTS ||
-                leonos_http_resolve_url(current_url, stream.location,
+            if (redirects >= RELIEFOS_HTTP_DEFAULT_REDIRECTS ||
+                reliefos_http_resolve_url(current_url, stream.location,
                                         next_url, sizeof(next_url)) < 0) {
-                response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+                response->net_status = RELIEFOS_NET_STATUS_HTTP_FAILED;
                 return -1;
             }
             if (http_url_is_secure(current_url) &&
                 !http_url_is_secure(next_url)) {
                 printf("[http] rejected HTTPS download downgrade redirect\n");
-                response->net_status = LEONOS_NET_STATUS_TLS_FAILED;
+                response->net_status = RELIEFOS_NET_STATUS_TLS_FAILED;
                 return -1;
             }
             http_copy_text(current_url, sizeof(current_url), next_url);
             ++redirects;
             response->redirect_count = redirects;
-            response->flags |= LEONOS_HTTP_FLAG_REDIRECTED;
+            response->flags |= RELIEFOS_HTTP_FLAG_REDIRECTED;
             continue;
         }
         if (!stream.complete || stream.failed || stream.cancelled ||
-            response->net_status != LEONOS_NET_STATUS_OK) {
+            response->net_status != RELIEFOS_NET_STATUS_OK) {
             unlink(temp_path);
             return -1;
         }
         response->body_len = stream.received;
         if (rename(temp_path, output_path) < 0) {
             unlink(temp_path);
-            response->net_status = LEONOS_NET_STATUS_HTTP_FAILED;
+            response->net_status = RELIEFOS_NET_STATUS_HTTP_FAILED;
             return -1;
         }
         if (http_download_report(&stream) < 0) {
@@ -1676,31 +1676,31 @@ static void libc_clear_secret(void *data, uint32_t len)
     }
 }
 
-int leonos_system_reboot(void)
+int reliefos_system_reboot(void)
 {
-    return leonos_auth_request_power(RB_AUTOBOOT);
+    return reliefos_auth_request_power(RB_AUTOBOOT);
 }
 
-int leonos_system_shutdown(void)
+int reliefos_system_shutdown(void)
 {
-    return leonos_auth_request_power(RB_POWER_OFF);
+    return reliefos_auth_request_power(RB_POWER_OFF);
 }
 
-int leonos_kernel_debug_get_state(uint32_t *flags)
+int reliefos_kernel_debug_get_state(uint32_t *flags)
 {
     char buffer[128] = {0};
     int fd;
     if (!flags) return -1;
     *flags = 0;
-    fd = open(LEONOS_PATH_KERNELDEBUG_CONTROL, LEONOS_O_RDONLY, 0);
+    fd = open(RELIEFOS_PATH_KERNELDEBUG_CONTROL, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) return 0;
     {
         long got = read(fd, buffer, sizeof(buffer) - 1u);
         if (got > 0) {
-            if (buffer[0] == '1') *flags |= LEONOS_KERNEL_DEBUG_STATE_ENABLED;
+            if (buffer[0] == '1') *flags |= RELIEFOS_KERNEL_DEBUG_STATE_ENABLED;
             for (long i = 0; i + 1 < got; ++i) {
                 if (buffer[i] == 'a' && buffer[i+1] == 'r' && buffer[i+2] == 'm') {
-                    *flags |= LEONOS_KERNEL_DEBUG_STATE_NEXT_BOOT;
+                    *flags |= RELIEFOS_KERNEL_DEBUG_STATE_NEXT_BOOT;
                 }
             }
         }
@@ -1709,10 +1709,10 @@ int leonos_kernel_debug_get_state(uint32_t *flags)
     return 0;
 }
 
-static int leonos_kernel_debug_write(const char *text)
+static int reliefos_kernel_debug_write(const char *text)
 {
-    int fd = open(LEONOS_PATH_KERNELDEBUG_CONTROL,
-                  LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
+    int fd = open(RELIEFOS_PATH_KERNELDEBUG_CONTROL,
+                  RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0666);
     uint32_t len = 0;
     if (fd < 0) return fd;
     while (text && text[len]) ++len;
@@ -1723,22 +1723,22 @@ static int leonos_kernel_debug_write(const char *text)
     }
 }
 
-int leonos_kernel_debug_set_enabled(int enabled)
+int reliefos_kernel_debug_set_enabled(int enabled)
 {
-    return leonos_kernel_debug_write(enabled ? "1\n" : "0\n");
+    return reliefos_kernel_debug_write(enabled ? "1\n" : "0\n");
 }
 
-int leonos_kernel_debug_arm_next_boot(void)
+int reliefos_kernel_debug_arm_next_boot(void)
 {
-    return leonos_kernel_debug_write("arm\n");
+    return reliefos_kernel_debug_write("arm\n");
 }
 
-int leonos_kernel_debug_clear(void)
+int reliefos_kernel_debug_clear(void)
 {
-    return leonos_kernel_debug_write("");
+    return reliefos_kernel_debug_write("");
 }
 
-int leonos_readdir(int fd, struct leonos_dir_entry *entry)
+int reliefos_readdir(int fd, struct reliefos_dir_entry *entry)
 {
     long got;
     if (!entry) {
@@ -1753,3 +1753,23 @@ int leonos_readdir(int fd, struct leonos_dir_entry *entry)
     }
     return got == (long)sizeof(*entry) ? 1 : -1;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_fs_acl_get) leonos_fs_acl_get __attribute__((alias("reliefos_fs_acl_get")));
+extern __typeof__(reliefos_fs_acl_repair) leonos_fs_acl_repair __attribute__((alias("reliefos_fs_acl_repair")));
+extern __typeof__(reliefos_fs_acl_set) leonos_fs_acl_set __attribute__((alias("reliefos_fs_acl_set")));
+extern __typeof__(reliefos_fs_acl_take_ownership) leonos_fs_acl_take_ownership __attribute__((alias("reliefos_fs_acl_take_ownership")));
+extern __typeof__(reliefos_fstat_legacy) leonos_fstat_legacy __attribute__((alias("reliefos_fstat_legacy")));
+extern __typeof__(reliefos_http_download) leonos_http_download __attribute__((alias("reliefos_http_download")));
+extern __typeof__(reliefos_http_get) leonos_http_get __attribute__((alias("reliefos_http_get")));
+extern __typeof__(reliefos_http_request) leonos_http_request __attribute__((alias("reliefos_http_request")));
+extern __typeof__(reliefos_http_resolve_url) leonos_http_resolve_url __attribute__((alias("reliefos_http_resolve_url")));
+extern __typeof__(reliefos_kernel_debug_arm_next_boot) leonos_kernel_debug_arm_next_boot __attribute__((alias("reliefos_kernel_debug_arm_next_boot")));
+extern __typeof__(reliefos_kernel_debug_clear) leonos_kernel_debug_clear __attribute__((alias("reliefos_kernel_debug_clear")));
+extern __typeof__(reliefos_kernel_debug_get_state) leonos_kernel_debug_get_state __attribute__((alias("reliefos_kernel_debug_get_state")));
+extern __typeof__(reliefos_kernel_debug_set_enabled) leonos_kernel_debug_set_enabled __attribute__((alias("reliefos_kernel_debug_set_enabled")));
+extern __typeof__(reliefos_list_dir) leonos_list_dir __attribute__((alias("reliefos_list_dir")));
+extern __typeof__(reliefos_readdir) leonos_readdir __attribute__((alias("reliefos_readdir")));
+extern __typeof__(reliefos_stat_legacy) leonos_stat_legacy __attribute__((alias("reliefos_stat_legacy")));
+extern __typeof__(reliefos_system_reboot) leonos_system_reboot __attribute__((alias("reliefos_system_reboot")));
+extern __typeof__(reliefos_system_shutdown) leonos_system_shutdown __attribute__((alias("reliefos_system_shutdown")));
+extern __typeof__(reliefos_text_layout_utf8) leonos_text_layout_utf8 __attribute__((alias("reliefos_text_layout_utf8")));

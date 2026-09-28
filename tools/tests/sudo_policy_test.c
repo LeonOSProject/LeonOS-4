@@ -12,29 +12,29 @@
 #include "../../userland/apps/authd/sudo_policy.h"
 
 /* Keep the test independent of the authd wire header; these values are
- * asserted against LEONOS_FILEOP_* in the authd unit test instead. */
+ * asserted against RELIEFOS_FILEOP_* in the authd unit test instead. */
 enum { OP_LIST = 1, OP_MKDIR = 2, OP_RENAME = 3, OP_UNLINK = 4 };
 
-static struct leonos_auth_record records[3];
+static struct reliefos_auth_record records[3];
 
 static void records_init(void)
 {
     memset(records, 0, sizeof(records));
     records[0].user.uid = 0;
-    records[0].user.role = LEONOS_AUTH_ROLE_ADMIN;
+    records[0].user.role = RELIEFOS_AUTH_ROLE_ADMIN;
     strcpy(records[0].user.username, "root");
     strcpy(records[0].user.home, "/root");
     records[1].user.uid = 1000;
-    records[1].user.role = LEONOS_AUTH_ROLE_USER;
+    records[1].user.role = RELIEFOS_AUTH_ROLE_USER;
     strcpy(records[1].user.username, "alice");
     strcpy(records[1].user.home, "/home/alice");
     records[2].user.uid = 1001;
-    records[2].user.role = LEONOS_AUTH_ROLE_USER;
+    records[2].user.role = RELIEFOS_AUTH_ROLE_USER;
     strcpy(records[2].user.username, "xiaobai");
     strcpy(records[2].user.home, "/home/xiaobai");
 }
 
-static const struct leonos_auth_record *lookup(const char *name, void *context)
+static const struct reliefos_auth_record *lookup(const char *name, void *context)
 {
     (void)context;
     if (!name) {
@@ -75,13 +75,13 @@ static void test_target_resolution(void)
 static void test_disabled_account_rejected(void)
 {
     struct sudo_target target;
-    records[2].user.flags = LEONOS_AUTH_USER_DISABLED;
+    records[2].user.flags = RELIEFOS_AUTH_USER_DISABLED;
     /* A disabled account cannot be authenticated into, in either direction,
      * and the empty name must not smuggle it in as "root". */
     assert(sudo_target_resolve("xiaobai", lookup, NULL, &target) == SUDO_RESOLVE_DISABLED);
     assert(sudo_target_resolve("", lookup, NULL, &target) == SUDO_RESOLVE_OK);
     assert(target.user.uid == 0);
-    records[0].user.flags = LEONOS_AUTH_USER_DISABLED;
+    records[0].user.flags = RELIEFOS_AUTH_USER_DISABLED;
     assert(sudo_target_resolve("root", lookup, NULL, &target) == SUDO_RESOLVE_DISABLED);
     assert(sudo_target_resolve("", lookup, NULL, &target) == SUDO_RESOLVE_DISABLED);
     records[0].user.flags = 0;

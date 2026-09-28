@@ -53,12 +53,15 @@ syscall6:
  * frame_base as rsp - 8 and restores the interrupted context.
  */
 .section .text, "ax"
-.global leonos_rt_sigreturn_trampoline
-.type leonos_rt_sigreturn_trampoline, @function
-leonos_rt_sigreturn_trampoline:
+.global reliefos_rt_sigreturn_trampoline
+.type reliefos_rt_sigreturn_trampoline, @function
+reliefos_rt_sigreturn_trampoline:
     mov $15, %rax
     syscall
 1:
     hlt
     jmp 1b
-.size leonos_rt_sigreturn_trampoline, .-leonos_rt_sigreturn_trampoline
+.size reliefos_rt_sigreturn_trampoline, .-reliefos_rt_sigreturn_trampoline
+.global leonos_rt_sigreturn_trampoline
+.type leonos_rt_sigreturn_trampoline, @function
+.set leonos_rt_sigreturn_trampoline, reliefos_rt_sigreturn_trampoline

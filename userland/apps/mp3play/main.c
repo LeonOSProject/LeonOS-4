@@ -1,11 +1,11 @@
-#include <leonos/fs.h>
-#include <leonos/gui.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -29,7 +29,7 @@
 
 struct mp3_player {
     mp3dec_t decoder;
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     char status[96];
     char detail[96];
     uint8_t input[MP3PLAY_INPUT_BYTES];
@@ -313,18 +313,18 @@ static int player_decode_step(struct mp3_player *player)
 
 static int player_start(struct mp3_player *player, const char *path)
 {
-    struct leonos_stat stat_info;
+    struct reliefos_stat stat_info;
     int fd;
     player_stop(player, 0);
     copy_text(player->path, sizeof(player->path), path);
-    fd = open(player->path, LEONOS_O_RDONLY, 0);
+    fd = open(player->path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         copy_text(player->status, sizeof(player->status), "Could not open MP3 file");
         return -1;
     }
     player->fd = fd;
     player->file_size = 0;
-    if (leonos_fstat_legacy(fd, &stat_info) == 0 && stat_info.type == LEONOS_FS_TYPE_FILE) {
+    if (reliefos_fstat_legacy(fd, &stat_info) == 0 && stat_info.type == RELIEFOS_FS_TYPE_FILE) {
         player->file_size = stat_info.size;
     }
     player->read_bytes = 0;
@@ -340,10 +340,10 @@ static int player_start(struct mp3_player *player, const char *path)
 
 static int player_open_dialog(struct mp3_player *player)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     player_stop(player, "Playback stopped");
     path[0] = 0;
-    if (leonos_ui_show_open_dialog(T("Open MP3"), path, sizeof(path),
+    if (reliefos_ui_show_open_dialog(T("Open MP3"), path, sizeof(path),
                                    T("MP3 audio (*.mp3)"),
                                    ".mp3") <= 0 || !path[0]) {
         if (!player->path[0]) {
@@ -354,75 +354,75 @@ static int player_open_dialog(struct mp3_player *player)
     return player_start(player, path) == 0;
 }
 
-static void present(int window_id, struct leonos_ui_surface *ui,
+static void present(int window_id, struct reliefos_ui_surface *ui,
                     const struct mp3_player *player)
 {
-    uint32_t stop_flags = player->playing ? 0U : LEONOS_UI_BUTTON_DISABLED;
-    leonos_ui_bind(ui, pixels, MP3PLAY_W, MP3PLAY_H, MP3PLAY_W);
-    leonos_ui_rect(ui, 0, 0, MP3PLAY_W, MP3PLAY_H, LEONOS_UI_WHITE);
-    leonos_ui_toolbar(ui, 0, 0, MP3PLAY_W, 40U);
-    leonos_ui_button(ui, MP3PLAY_OPEN_X, MP3PLAY_BUTTON_Y, MP3PLAY_BUTTON_W,
-                     LEONOS_UI_BUTTON_H, "Open", 0);
-    leonos_ui_button(ui, MP3PLAY_STOP_X, MP3PLAY_BUTTON_Y, MP3PLAY_BUTTON_W,
-                     LEONOS_UI_BUTTON_H, "Stop", stop_flags);
-    leonos_ui_panel(ui, 16U, 54U, MP3PLAY_W - 32U, 106U, LEONOS_UI_LIGHT);
-    leonos_ui_text(ui, 28U, 68U, "MP3 file", LEONOS_UI_DARK, LEONOS_UI_LIGHT);
-    leonos_ui_text_clipped(ui, 28U, 88U, MP3PLAY_W - 56U,
+    uint32_t stop_flags = player->playing ? 0U : RELIEFOS_UI_BUTTON_DISABLED;
+    reliefos_ui_bind(ui, pixels, MP3PLAY_W, MP3PLAY_H, MP3PLAY_W);
+    reliefos_ui_rect(ui, 0, 0, MP3PLAY_W, MP3PLAY_H, RELIEFOS_UI_WHITE);
+    reliefos_ui_toolbar(ui, 0, 0, MP3PLAY_W, 40U);
+    reliefos_ui_button(ui, MP3PLAY_OPEN_X, MP3PLAY_BUTTON_Y, MP3PLAY_BUTTON_W,
+                     RELIEFOS_UI_BUTTON_H, "Open", 0);
+    reliefos_ui_button(ui, MP3PLAY_STOP_X, MP3PLAY_BUTTON_Y, MP3PLAY_BUTTON_W,
+                     RELIEFOS_UI_BUTTON_H, "Stop", stop_flags);
+    reliefos_ui_panel(ui, 16U, 54U, MP3PLAY_W - 32U, 106U, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text(ui, 28U, 68U, "MP3 file", RELIEFOS_UI_DARK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text_clipped(ui, 28U, 88U, MP3PLAY_W - 56U,
                            player->path[0] ? player->path : "No file selected",
-                           LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
-    leonos_ui_progress(ui, 28U, 112U, MP3PLAY_W - 56U, 18U,
+                           RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_progress(ui, 28U, 112U, MP3PLAY_W - 56U, 18U,
                        player->progress, 100U);
-    leonos_ui_text_clipped(ui, 28U, 138U, MP3PLAY_W - 56U, player->detail,
-                           LEONOS_UI_DARK, LEONOS_UI_LIGHT);
-    leonos_ui_statusbar(ui, MP3PLAY_H - 28U, 28U, player->status);
-    leonos_gui_present_window((uint32_t)window_id, MP3PLAY_W, MP3PLAY_H,
+    reliefos_ui_text_clipped(ui, 28U, 138U, MP3PLAY_W - 56U, player->detail,
+                           RELIEFOS_UI_DARK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_statusbar(ui, MP3PLAY_H - 28U, 28U, player->status);
+    reliefos_gui_present_window((uint32_t)window_id, MP3PLAY_W, MP3PLAY_H,
                               MP3PLAY_W, pixels);
 }
 
 static int handle_event(struct mp3_player *player,
-                        const struct leonos_gui_app_event *event, int *running)
+                        const struct reliefos_gui_app_event *event, int *running)
 {
-    if (event->type == LEONOS_GUI_APP_EVENT_CLOSE ||
-        (event->type == LEONOS_GUI_APP_EVENT_KEY_DOWN && event->pressed &&
+    if (event->type == RELIEFOS_GUI_APP_EVENT_CLOSE ||
+        (event->type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN && event->pressed &&
          event->keycode == 1U)) {
         player_stop(player, "Playback stopped");
         *running = 0;
         return 0;
     }
-    if (event->type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON && (event->buttons & 1U)) {
+    if (event->type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON && (event->buttons & 1U)) {
         if (hit_rect(event->x, event->y, MP3PLAY_OPEN_X, MP3PLAY_BUTTON_Y,
-                     MP3PLAY_BUTTON_W, LEONOS_UI_BUTTON_H)) {
+                     MP3PLAY_BUTTON_W, RELIEFOS_UI_BUTTON_H)) {
             player_open_dialog(player);
             return 1;
         }
         if (player->playing && hit_rect(event->x, event->y, MP3PLAY_STOP_X,
                                         MP3PLAY_BUTTON_Y, MP3PLAY_BUTTON_W,
-                                        LEONOS_UI_BUTTON_H)) {
+                                        RELIEFOS_UI_BUTTON_H)) {
             player_stop(player, "Playback stopped");
             return 1;
         }
     }
-    if (event->type == LEONOS_GUI_APP_EVENT_KEY_DOWN && event->pressed) {
-        if (event->keycode == LEONOS_KEY_ENTER) {
+    if (event->type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN && event->pressed) {
+        if (event->keycode == RELIEFOS_KEY_ENTER) {
             player_open_dialog(player);
             return 1;
         }
-        if (event->keycode == LEONOS_KEY_SPACE && player->playing) {
+        if (event->keycode == RELIEFOS_KEY_SPACE && player->playing) {
             player_stop(player, "Playback stopped");
             return 1;
         }
     }
-    return event->type == LEONOS_GUI_APP_EVENT_FOCUS ||
-           event->type == LEONOS_GUI_APP_EVENT_THEME_CHANGED;
+    return event->type == RELIEFOS_GUI_APP_EVENT_FOCUS ||
+           event->type == RELIEFOS_GUI_APP_EVENT_THEME_CHANGED;
 }
 
 int main(int argc, char **argv, char **envp)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     struct mp3_player player = {.fd = -1, .dsp_fd = -1};
     int window_id;
     int running = 1;
@@ -430,9 +430,9 @@ int main(int argc, char **argv, char **envp)
 
     copy_text(player.status, sizeof(player.status), "Select an MP3 file to begin");
     copy_text(player.detail, sizeof(player.detail), "16-bit stereo PCM output");
-    window_id = leonos_gui_create_app_window_ex("MP3 Player", "MP3 audio playback",
+    window_id = reliefos_gui_create_app_window_ex("MP3 Player", "MP3 audio playback",
                                                 MP3PLAY_W, MP3PLAY_H,
-                                                LEONOS_GUI_WINDOW_NO_RESIZE);
+                                                RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[mp3play.elf] create window failed=%d\n", window_id);
         return 1;
@@ -449,7 +449,7 @@ int main(int argc, char **argv, char **envp)
         int changed = 0;
         event.window_id = (uint32_t)window_id;
         if (player.playing) {
-            while (leonos_gui_poll_app_event(&event) > 0) {
+            while (reliefos_gui_poll_app_event(&event) > 0) {
                 changed |= handle_event(&player, &event, &running);
                 if (!running || !player.playing) {
                     break;
@@ -459,7 +459,7 @@ int main(int argc, char **argv, char **envp)
             if (running && player.playing) {
                 changed |= player_decode_step(&player);
             }
-        } else if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
+        } else if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
             changed |= handle_event(&player, &event, &running);
         }
         if (running && changed) {
@@ -471,6 +471,6 @@ int main(int argc, char **argv, char **envp)
     }
 
     player_stop(&player, 0);
-    leonos_gui_destroy_app_window((uint32_t)window_id);
+    reliefos_gui_destroy_app_window((uint32_t)window_id);
     return 0;
 }

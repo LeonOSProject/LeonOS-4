@@ -361,7 +361,7 @@ static void consume(void)
                 packet_copy(&decl, stop, 2 + sizeof(SVGA3dCmdDrawPrimitives) / 4, sizeof(decl));
                 if (decl.identity.type == SVGA3D_DECLTYPE_FLOAT3) {
                     assert(decl.identity.usage == SVGA3D_DECLUSAGE_POSITION);
-                    assert(decl.array.stride == sizeof(struct leonos_gpu_vertex));
+                    assert(decl.array.stride == sizeof(struct reliefos_gpu_vertex));
                     uint32_t cid = peek(stop, 2), sid = host_targets[cid][SVGA3D_RT_COLOR0];
                     struct host_surface *surface = &host_surfaces[sid];
                     assert(host_targets[cid][SVGA3D_RT_DEPTH] != SVGA3D_INVALID_ID);
@@ -730,15 +730,15 @@ static void test_resources(void)
         assert(!svga3d_shutdown());
     }
 }
-static struct leonos_gpu_context gpu_request(void)
+static struct reliefos_gpu_context gpu_request(void)
 {
-    return (struct leonos_gpu_context){
-        .size = sizeof(struct leonos_gpu_context), .version = LEONOS_GPU_ABI_VERSION,
+    return (struct reliefos_gpu_context){
+        .size = sizeof(struct reliefos_gpu_context), .version = RELIEFOS_GPU_ABI_VERSION,
         .width = 16, .height = 8, .vertex_capacity = 6};
 }
 static void test_gpu(void)
 {
-    struct leonos_gpu_context request = gpu_request();
+    struct reliefos_gpu_context request = gpu_request();
     setup(SVGA_CAP_EXTENDED_FIFO, 0, 0);
     assert(svga_gpu_create(17, &request) == SVGA_ENODEV && !request.handle);
     for (uint32_t gmr2 = 0; gmr2 < 3; ++gmr2) {
@@ -756,23 +756,23 @@ static void test_gpu(void)
         request = gpu_request();
         assert(!svga_gpu_create(17, &request) && request.handle);
         uint64_t stale = request.handle;
-        struct leonos_gpu_vertex vertices[6] = {
+        struct reliefos_gpu_vertex vertices[6] = {
             {-1, -1, 0.5f, 0xffff0000}, {1, -1, 0.5f, 0xff00ff00}, {0, 1, 0.5f, 0xff0000ff},
             {-1, -1, 0.5f, 0xffff0000}, {1, -1, 0.5f, 0xff00ff00}, {0, 1, 0.5f, 0xff0000ff}};
-        struct leonos_gpu_draw draws[2] = {
+        struct reliefos_gpu_draw draws[2] = {
             {.first = 0, .count = 3, .transform = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0.25f,0,0,1}},
             {.first = 3, .count = 3, .transform = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0.5f,0,0,1}}};
         uint32_t pixels[129];
         memset(pixels, 0xa5, sizeof(pixels));
-        struct leonos_gpu_frame frame = {
-            .size = sizeof(frame), .version = LEONOS_GPU_ABI_VERSION, .handle = request.handle,
+        struct reliefos_gpu_frame frame = {
+            .size = sizeof(frame), .version = RELIEFOS_GPU_ABI_VERSION, .handle = request.handle,
             .vertices = UINT64_MAX, .draws = UINT64_MAX, .pixels = UINT64_MAX,
             .vertex_count = 6, .draw_count = 2, .pixel_capacity = 128,
-            .fill_mode = LEONOS_GPU_FILL_SOLID, .clear_color = 0xff324456};
-        struct leonos_gpu_info before, after;
+            .fill_mode = RELIEFOS_GPU_FILL_SOLID, .clear_color = 0xff324456};
+        struct reliefos_gpu_info before, after;
         svga_gpu_get_info(&before);
         assert(before.contexts == 1 && before.surface_bytes && before.guest_bytes);
-        assert((before.flags & (LEONOS_GPU_AVAILABLE | LEONOS_GPU_BUSY_ESTIMATED)) == 3);
+        assert((before.flags & (RELIEFOS_GPU_AVAILABLE | RELIEFOS_GPU_BUSY_ESTIMATED)) == 3);
         uint32_t commands = command_count;
         assert(svga_gpu_destroy(18, request.handle) == SVGA_EINVAL);
         assert(svga_gpu_render(18, &frame, vertices, draws, pixels) == SVGA_EINVAL);
@@ -803,7 +803,7 @@ static void test_gpu(void)
         frame.draw_count = 2;
         frame.fill_mode = 0;
         assert(svga_gpu_render(17, &frame, vertices, draws, pixels) == SVGA_EINVAL);
-        frame.fill_mode = LEONOS_GPU_FILL_SOLID;
+        frame.fill_mode = RELIEFOS_GPU_FILL_SOLID;
         assert(command_count == commands);
         for (uint32_t i = 0; i < 129; ++i) assert(pixels[i] == 0xa5a5a5a5);
         uint32_t presents = present_count, reads = readback_count, uploads = allocation_calls;
@@ -839,7 +839,7 @@ static void test_gpu(void)
             assert(live_pages == baseline && !svga.surface_bytes);
         }
         fail_after = UINT32_MAX;
-        struct leonos_gpu_context quota[5];
+        struct reliefos_gpu_context quota[5];
         for (uint32_t i = 0; i < 4; ++i) {
             quota[i] = gpu_request();
             assert(!svga_gpu_create(17, &quota[i]));
@@ -863,10 +863,10 @@ static void test_gpu(void)
         memset(pixels, 0xa5, sizeof(pixels));
         assert(svga_gpu_render(17, &frame, vertices, draws, pixels) == SVGA_ETIMEDOUT);
         for (uint32_t i = 0; i < 129; ++i) assert(pixels[i] == 0xa5a5a5a5);
-        struct leonos_gpu_diagnostics diagnostic;
+        struct reliefos_gpu_diagnostics diagnostic;
         uint32_t diagnostic_reads = busy_reads, diagnostic_wakes = sync_writes;
         svga_gpu_get_diagnostics(17, &diagnostic);
-        assert(diagnostic.status == -110 && diagnostic.stage == LEONOS_GPU_ERROR_FENCE);
+        assert(diagnostic.status == -110 && diagnostic.stage == RELIEFOS_GPU_ERROR_FENCE);
         assert(diagnostic.size == sizeof(diagnostic) && diagnostic.version == 1);
         assert(diagnostic.handle == frame.handle && diagnostic.generation == svga.generation);
         assert(diagnostic.fifo_next != diagnostic.fifo_stop);
@@ -898,7 +898,7 @@ static void test_gpu(void)
         assert(svga_gpu_render(17, &frame, vertices, draws, pixels) == SVGA_ETIMEDOUT);
         for (uint32_t i = 0; i < 129; ++i) assert(pixels[i] == 0xa5a5a5a5);
         svga_gpu_get_diagnostics(17, &diagnostic);
-        assert(diagnostic.status == -110 && diagnostic.stage == LEONOS_GPU_ERROR_FENCE);
+        assert(diagnostic.status == -110 && diagnostic.stage == RELIEFOS_GPU_ERROR_FENCE);
         assert(diagnostic.handle == frame.handle && diagnostic.fifo_next != diagnostic.fifo_stop);
         assert(diagnostic.completed_frames == before.completed_frames);
         assert(diagnostic.submitted_frames == before.submitted_frames + 1);
@@ -991,7 +991,7 @@ static void test_gb_recovery(void)
 
     const uint32_t create_stalls[] = {1093, 1107, 1109, 1097, 1099, 1102};
     for (uint32_t i = 0; i < sizeof(create_stalls) / sizeof(create_stalls[0]); ++i) {
-        struct leonos_gpu_context request = gpu_request();
+        struct reliefos_gpu_context request = gpu_request();
         stall_command = create_stalls[i];
         assert(svga_gpu_create(17, &request) == SVGA_ETIMEDOUT && !request.handle);
         assert(live_pages > baseline);

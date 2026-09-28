@@ -122,7 +122,7 @@ def gui_dhcp(qmp, work, serial, process):
             offset = len(serial.read_text(errors="replace"))
             probe.click(*button)
             deadline = time.monotonic() + 20
-            while "path=/usr/lib/leonos/apps/sudod/sudod.elf" not in serial.read_text(errors="replace")[offset:]:
+            while "path=/usr/lib/reliefos/apps/sudod/sudod.elf" not in serial.read_text(errors="replace")[offset:]:
                 if process.poll() is not None or time.monotonic() >= deadline:
                     probe.frame("authorization-missing")
                     raise AssertionError("DHCP button did not request sudo authorization")
@@ -191,7 +191,7 @@ def main():
     if not args.reuse:
         compiler = ROOT / "build/musl-gcc/root/opt/dyne/gcc-musl/bin/x86_64-linux-musl-gcc"
         probe = work / "network.elf"
-        subprocess.run([str(compiler), "-static", "-O2", "-Wall", "-D_GNU_SOURCE", "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi",
+        subprocess.run([str(compiler), "-static", "-O2", "-Wall", "-D_GNU_SOURCE", "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi",
                         "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
                         "-idirafter", "userland/runtime/include", "tools/tests/network_guest_test.c",
                         "userland/runtime/src/ntp.c", "userland/runtime/src/netsock.c", "userland/runtime/src/unix_ipc.c",
@@ -205,23 +205,23 @@ def main():
                               certificate.read_bytes())
         image = work / "root.ext2"
         shutil.copy2(ROOT / "build/live/root.ext2", image)
-        subprocess.run(["debugfs", "-w", "-R", "mkdir /usr/lib/leonos/tests", str(image)], check=True, capture_output=True)
-        for source, destination in ((probe, "/usr/lib/leonos/tests/linux-inventory.elf"),
-                (ROOT / "build/drivers/e1000.drv", "/usr/lib/leonos/drivers/e1000.drv"),
+        subprocess.run(["debugfs", "-w", "-R", "mkdir /usr/lib/reliefos/tests", str(image)], check=True, capture_output=True)
+        for source, destination in ((probe, "/usr/lib/reliefos/tests/linux-inventory.elf"),
+                (ROOT / "build/drivers/e1000.drv", "/usr/lib/reliefos/drivers/e1000.drv"),
                 (ROOT / "build/userland/busybox.elf", "/bin/busybox"),
                 (ROOT / "build/system/lib/libleonos.so.2", "/usr/lib/leonos/libleonos.so.2"),
-                (ROOT / "build/userland/netctl.elf", "/usr/lib/leonos/apps/netctl/netctl.elf"),
-                (ROOT / "build/userland/sudod.elf", "/usr/lib/leonos/apps/sudod/sudod.elf"),
-                (ROOT / "build/userland/rcctl.elf", "/usr/lib/leonos/apps/rcctl/rcctl.elf")):
+                (ROOT / "build/userland/netctl.elf", "/usr/lib/reliefos/apps/netctl/netctl.elf"),
+                (ROOT / "build/userland/sudod.elf", "/usr/lib/reliefos/apps/sudod/sudod.elf"),
+                (ROOT / "build/userland/rcctl.elf", "/usr/lib/reliefos/apps/rcctl/rcctl.elf")):
             inject(image, source, destination, "0100755")
         inject(image, ca_bundle, "/etc/ssl/certs/ca-certificates.crt")
         config = work / "ntp.conf"
         config.write_text("server 10.37.0.2\n")
         inject(image, config, "/etc/ntp.conf")
-        inject(image, ROOT / "system/config/network.conf", "/etc/leonos/network.conf")
+        inject(image, ROOT / "system/config/network.conf", "/etc/reliefos/network.conf")
         if not args.gui:
             policy = work / "network-sudoers"
-            policy.write_text("test ALL=(root) NOPASSWD: /usr/lib/leonos/apps/netctl/netctl.elf --renew-dhcp\n")
+            policy.write_text("test ALL=(root) NOPASSWD: /usr/lib/reliefos/apps/netctl/netctl.elf --renew-dhcp\n")
             inject(image, policy, "/etc/sudoers.d/network-test", "0100440")
         inject(image, certificate, "/tmp/net-cert.pem")
         script = work / "https.py"

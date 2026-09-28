@@ -1,4 +1,4 @@
-#include <leonos/auth.h>
+#include <reliefos/auth.h>
 #include <stddef.h>
 #include <security/pam_modules.h>
 #include <security/pam_ext.h>
@@ -14,7 +14,7 @@ int pam_sm_chauthtok(pam_handle_t *handle, int flags, int argc, const char **arg
     const char *password = NULL;
     int result = pam_get_authtok(handle, PAM_AUTHTOK, &password, NULL);
     if (result != PAM_SUCCESS) return result;
-    if (leonos_auth_password_valid(password, LEONOS_AUTH_PASSWORD_LEN))
+    if (reliefos_auth_password_valid(password, RELIEFOS_AUTH_PASSWORD_LEN))
         return PAM_SUCCESS;
 
     /* PAM owns and erases the token; keep an invalid value out of later modules. */

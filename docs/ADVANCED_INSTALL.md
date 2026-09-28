@@ -1,4 +1,4 @@
-# LeonOS 4 高级安装教程
+# ReliefOS 高级安装教程
 
 Installer ISO 的 TTY 模式直接进入 root Ash shell，允许使用标准 Linux 命令手动
 完成 GPT 分区、格式化、检查、挂载、系统复制和 UEFI 启动文件安装。它不会自动
@@ -6,12 +6,12 @@ Installer ISO 的 TTY 模式直接进入 root Ash shell，允许使用标准 Lin
 
 当前介质提供上游 util-linux 2.41.6、e2fsprogs 1.47.3、dosfstools 4.2、
 exfatprogs 1.4.3 和 BusyBox 1.36.1。本文使用这些工具的上游命令行，不再使用
-旧版 LeonOS 私有 `fdisk`/`mkfs` 参数。存储操作通过 `/dev/*`、Linux block
+旧版私有 `fdisk`/`mkfs` 参数。存储操作通过 `/dev/*`、Linux block
 ioctl、标准文件 I/O 和 `mount(2)`/`umount2(2)` 完成。
 
 > [!WARNING]
 > 手动复制 payload 不会调用安装器的账户事务，也不会创建安装完成标记。
-> 它适合底层安装、修复和开发；若需要由 LeonOS 正式支持的 root/普通账户、
+> 它适合底层安装、修复和开发；若需要由 ReliefOS 正式支持的 root/普通账户、
 > wheel/sudo 策略和可直接登录的系统，请使用普通安装器。账户规则参见
 > [安装器账户与组件](INSTALLER_ACCOUNTS.md)。
 
@@ -26,7 +26,7 @@ less /root/ADVANCED_INSTALL.txt
 | 分区 | 文件系统 | GPT 类型 | 建议名称 | 用途 |
 | --- | --- | --- | --- | --- |
 | 1 | FAT32 | EFI System | `LeonOS 4 ESP` | UEFI、GRUB、loader 和内核 |
-| 2 | ext2 | Linux filesystem | `LEONOS4_ROOT` | LeonOS 4 根文件系统 |
+| 2 | ext2 | Linux filesystem | `LEONOS4_ROOT` | ReliefOS 根文件系统 |
 
 ESP 建议至少 128 MiB。根分区应使用剩余空间，并确保能容纳 `/install/root`
 及后续用户数据。分区名称只是便于识别，不参与启动；GPT 类型和文件系统才是
@@ -36,7 +36,7 @@ ESP 建议至少 128 MiB。根分区应使用剩余空间，并确保能容纳 `
 
 - `g`、`d`、`w`、`mkfs.*` 会破坏目标磁盘上的数据。
 - 根据容量和控制器信息确认目标磁盘；不要把安装 ISO 或其他数据盘当成目标盘。
-- LeonOS 磁盘命名为 `/dev/disk0`、`/dev/disk0p1`，不使用 `/dev/sda`。
+- ReliefOS 磁盘命名为 `/dev/disk0`、`/dev/disk0p1`，不使用 `/dev/sda`。
 - 以下示例假定目标是 `/dev/disk0`，实际编号不同时必须替换所有相关命令。
 - Installer ISO 根目录是可写的临时 ext2 ramdisk，但重启后其中的修改会丢失；
   已写入目标磁盘的内容会保留。
@@ -46,7 +46,7 @@ ESP 建议至少 128 MiB。根分区应使用剩余空间，并确保能容纳 `
 从 Installer ISO 的 GRUB 菜单选择：
 
 ```text
-Install LeonOS 4 (TTY mode)
+Install ReliefOS (TTY mode)
 ```
 
 进入 shell 后，可以运行自动 TTY 安装器：
@@ -190,7 +190,7 @@ cp -a /install/root/. /mnt/root/
 检查核心文件：
 
 ```sh
-ls -l /mnt/root/usr/lib/leonos/apps/desktop/desktop.elf
+ls -l /mnt/root/usr/lib/reliefos/apps/desktop/desktop.elf
 ls -l /mnt/root/lib/ld-musl-x86_64.so.1
 ```
 
@@ -224,7 +224,7 @@ EOF
 cat /mnt/root/etc/fstab
 ```
 
-## 9. 安装 LeonOS UEFI/GRUB payload
+## 9. 安装 ReliefOS UEFI/GRUB payload
 
 确认 ESP 的实际挂载点是 `/mnt/esp`：
 
@@ -233,12 +233,12 @@ mount
 leonos-grub-installer /mnt/esp
 ```
 
-该工具复制已经构建好的 LeonOS 启动 payload，并不是 GNU `grub-install`。它会
+该工具复制已经构建好的 ReliefOS 启动 payload，并不是 GNU `grub-install`。它会
 验证并复制：
 
 - `EFI/BOOT/BOOTX64.EFI`；
 - `loader.elf`；
-- `leonos/kernel.sys`；
+- `reliefos/kernel.sys`（并保留旧布局回滚入口）；
 - 完整的 `grub/` 配置、字体和主题。
 
 工具不会格式化或挂载 ESP，也不会写入固件 NVRAM。它安装标准 UEFI fallback
@@ -283,7 +283,7 @@ mount -t exfat /dev/disk0p2 /mnt/root
 | `mkfs.fat`, `fsck.fat` | dosfstools | FAT32 创建和检查 |
 | `mkfs.exfat`, `fsck.exfat` | exfatprogs | exFAT 创建和检查 |
 | `sync`, `cp`, `mkdir`, `cat`, `less` | BusyBox | 文件复制、同步和教程阅读 |
-| `leonos-grub-installer` | LeonOS | 复制预构建 UEFI/GRUB payload |
+| `leonos-grub-installer` | ReliefOS | 复制预构建 UEFI/GRUB payload |
 
 ## 常见失败原因
 

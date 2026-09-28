@@ -6,7 +6,7 @@
 #include <string.h>
 #include <poll.h>
 #include <sys/socket.h>
-#include <leonos/unix_ipc.h>
+#include <reliefos/unix_ipc.h>
 
 static uint8_t wire[4096];
 static size_t written;
@@ -36,10 +36,10 @@ int poll(struct pollfd *fds, nfds_t count, int timeout)
 
 static size_t check_frame(size_t offset, uint32_t type, const char *payload)
 {
-    struct leonos_ipc_frame header;
+    struct reliefos_ipc_frame header;
     uint32_t actual_type;
     memcpy(&header, wire + offset, sizeof(header));
-    assert(header.magic == LEONOS_IPC_MAGIC && header.version == LEONOS_IPC_VERSION);
+    assert(header.magic == RELIEFOS_IPC_MAGIC && header.version == RELIEFOS_IPC_VERSION);
     assert(header.length == sizeof(type) + strlen(payload) + 1);
     offset += sizeof(header);
     memcpy(&actual_type, wire + offset, sizeof(actual_type));
@@ -51,29 +51,29 @@ static size_t check_frame(size_t offset, uint32_t type, const char *payload)
 
 int main(void)
 {
-    assert(leonos_ipc_send_fd(42, 10, "window", 7, 73) == 0);
+    assert(reliefos_ipc_send_fd(42, 10, "window", 7, 73) == 0);
     assert(written == 7 && rights_count == 1);
     /* Backpressure must reject the new message without discarding the tail. */
-    assert(leonos_ipc_send(42, 20, "input", 6) == -1 && errno == EAGAIN);
+    assert(reliefos_ipc_send(42, 20, "input", 6) == -1 && errno == EAGAIN);
     assert(written == 7);
     allowance = sizeof(wire) - written;
-    assert(leonos_ipc_send(42, 20, "input", 6) == 0);
+    assert(reliefos_ipc_send(42, 20, "input", 6) == 0);
     size_t end = check_frame(0, 10, "window");
     end = check_frame(end, 20, "input");
     assert(end == written && rights_count == 1);
     /* The final queued frame must finish without requiring a new message. */
     allowance = 3;
-    assert(leonos_ipc_send(42, 30, "last", 5) == 0);
-    assert(leonos_ipc_flush(42) == -1 && errno == EAGAIN);
+    assert(reliefos_ipc_send(42, 30, "last", 5) == 0);
+    assert(reliefos_ipc_flush(42) == -1 && errno == EAGAIN);
     allowance = sizeof(wire) - written;
-    assert(leonos_ipc_flush(42) == 0);
+    assert(reliefos_ipc_flush(42) == 0);
     assert(check_frame(end, 30, "last") == written);
-    assert(leonos_ipc_flush(42) == 0);
+    assert(reliefos_ipc_flush(42) == 0);
     /* Closing a paused connection discards its tail before fd reuse. */
     allowance = 1;
-    assert(leonos_ipc_send(42, 40, "closed", 7) == 0);
-    (void)leonos_ipc_close(42);
-    assert(leonos_ipc_flush(42) == 0);
+    assert(reliefos_ipc_send(42, 40, "closed", 7) == 0);
+    (void)reliefos_ipc_close(42);
+    assert(reliefos_ipc_flush(42) == 0);
     puts("PASS IPC partial send: paused peer, ordered resume and one SCM_RIGHTS delivery");
     return 0;
 }

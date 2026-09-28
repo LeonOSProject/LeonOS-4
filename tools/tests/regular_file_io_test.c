@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../kernel/ntclks/kernel/ntclks/syscall_file_io.c"
+#include "../../kernel/reliefnt/kernel/reliefnt/syscall_file_io.c"
 
 static unsigned char disk[1048576], data[1048576];
 static uint64_t disk_size = sizeof(disk), error_offset = UINT64_MAX;
@@ -76,7 +76,7 @@ int storage_lookup_path(const char *path, struct storage_node *node)
 int main(void)
 {
     struct task *task = calloc(1, sizeof(*task)), *other = calloc(1, sizeof(*other));
-    struct task_file file = {.used = 1, .flags = LEONOS_O_RDWR, .node.first_cluster = 2};
+    struct task_file file = {.used = 1, .flags = RELIEFOS_O_RDWR, .node.first_cluster = 2};
     assert(task && other);
     task->pid = 10;
     other->pid = 11;

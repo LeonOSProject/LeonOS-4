@@ -1,5 +1,0 @@
-#!/bin/sh
-if test -f /etc/leonos/installer-runtime; then
-    exec /sbin/openrc installer
-fi
-exec /sbin/openrc default

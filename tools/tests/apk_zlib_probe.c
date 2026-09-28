@@ -7,7 +7,7 @@ int main(void)
     if (!library) { puts(dlerror()); return 1; }
     int (*compress)(unsigned char *, unsigned long *, const unsigned char *, unsigned long, int) = dlsym(library, "compress2");
     int (*expand)(unsigned char *, unsigned long *, const unsigned char *, unsigned long) = dlsym(library, "uncompress");
-    const unsigned char source[] = "Alpine APK library running on NTCLKS";
+    const unsigned char source[] = "Alpine APK library running on ReliefNT";
     unsigned char packed[256], restored[256];
     unsigned long packed_size = sizeof(packed), restored_size = sizeof(restored);
     if (!compress || !expand || compress(packed, &packed_size, source, sizeof(source), 6) ||

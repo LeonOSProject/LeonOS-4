@@ -1,6 +1,6 @@
 # Linux-PAM 1.7.2 Make adapter
 
-This is the LeonOS musl build profile, not a general replacement for upstream
+This is the ReliefOS musl build profile, not a general replacement for upstream
 Meson. Its source lists and install policy follow Linux-PAM 1.7.2's checked-in
 Meson files. It builds all 39 modules enabled in the former musl configuration,
 libpam 0.85.1, libpam_misc/libpamc 0.82.1, five installed ELF sbin helpers,

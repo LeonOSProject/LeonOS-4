@@ -1,19 +1,19 @@
-LeonOS 4 NOTICE
+ReliefOS NOTICE
 ===============
 
-This NOTICE file records attribution and license information for the LeonOS 4
+This NOTICE file records attribution and license information for the ReliefOS
 distribution. It is not a license and does not change the license of any
-component. LeonOS-owned source is governed by the root LICENSE file. Each
+component. Project-owned source is governed by the root LICENSE file. Each
 third-party component remains governed by its own license.
 
 Complete license texts are kept with the corresponding source, submodule,
 generated SDK, or installed program package. The paths below refer to the
 repository unless an installed path is explicitly shown.
 
-LeonOS-owned code
+ReliefOS-owned code
 -----------------
 
-Copyright and licensing terms for code written for LeonOS 4 are specified by
+Copyright and licensing terms for code written for ReliefOS are specified by
 the root LICENSE file. Third-party source must not be relicensed under that
 file merely because it is distributed in the same repository or image.
 
@@ -83,13 +83,13 @@ Data, dictionaries, and visual resources
 
 * Freedoom IWAD: BSD-3-Clause. See
   third_party/doomgeneric/FREEDOOM-COPYING.txt. The same notice is bundled in
-  the optional leonos-doom APK.
+  the optional reliefos-doom APK.
 * rime-pinyin-simp dictionary: Apache-2.0. See
   third_party/rime-pinyin-simp/LICENSE and ATTRIBUTION.txt. Both files are
-  bundled in the optional leonos-oschinpt APK.
+  bundled in the optional reliefos-oschinpt APK.
 * Microsoft font files in system/fonts (Deng.ttf, times.ttf, and simsun.ttc)
   are subject to the applicable Microsoft license terms. They are not covered
-  by the LeonOS root license; verify redistribution rights before publishing
+  by the root LICENSE; verify redistribution rights before publishing
   an image containing them.
 * Metro desktop wallpaper: NASA Image and Video Library asset PIA18033.
   Source and credit are recorded in
@@ -108,4 +108,4 @@ the corresponding source and build/porting changes required by that component's
 license. Preserve copyright notices, license texts, disclaimers, and required
 attribution in the source tree and in the installed image. Do not describe the
 entire distribution as Apache-2.0 unless the statement is explicitly limited
-to LeonOS-owned code and all third-party terms remain visible.
+to ReliefOS-owned code and all third-party terms remain visible.

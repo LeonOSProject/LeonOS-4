@@ -71,7 +71,7 @@ requirement is added. The fixture stack uses requisite pam_leonos_password and
 required pam_unix with use_authtok/yescrypt. Production service activation is
 still pending. Linux 6.12 reference password-policy run02 verifies accepted and
 rejected inputs, cancellation, history, protected shadow and actual root/nonroot
-passwd changes; LeonOS verification is tracked separately.
+passwd changes; ReliefOS verification is tracked separately.
 
 musl's fixed `src/passwd/lckpwdf.c` returns success without locking. This is a
 deliberate upstream stub, insufficient for the required concurrent account
@@ -87,7 +87,7 @@ metadata and SDK must identify this platform difference.
 
 Inventory source: `sudo-1.9.17p2/src/parse_args.c`, `docs/sudo.man.in`.
 "Built" means the official option handler is present. It does not certify the
-underlying LeonOS syscall or the normal image entry point. Focused nonroot sudo
+underlying ReliefOS syscall or the normal image entry point. Focused nonroot sudo
 entry tests now pass on fixed Linux v6.12 and LeonOS; normal account/consumer
 migration and full CLI coverage remain incomplete.
 

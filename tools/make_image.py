@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a LeonOS GPT disk with a FAT32 ESP and an ext2 runtime root.
+"""Create a ReliefOS GPT disk with a FAT32 ESP and an ext2 runtime root.
 
 The default root filesystem is ext2 because the Alpine-shaped root layout
 requires real symlinks (for example /var/run and command entries) and
@@ -26,12 +26,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 from make_ext2_root import populate_ext2
 from image_test_accounts import seed_test_accounts
-from leonos_layout import (  # noqa: E402  (tools directory is not a package)
-    ETC_LEONOS,
+from reliefos_layout import (  # noqa: E402  (tools directory is not a package)
+    ETC_RELIEFOS,
     layout_directories,
     apply_root_symlinks,
     ESP_DISPLAY_CONF,
+    ESP_DISPLAY_CONF_LEGACY,
     ESP_KERNEL,
+    ESP_KERNEL_LEGACY,
 )
 SECTOR_SIZE = 512
 ESP_FIRST_SECTOR = 2048
@@ -84,7 +86,7 @@ def image_lock(raw: Path):
 def gpt_header(current_lba: int, backup_lba: int, first_usable_lba: int,
                last_usable_lba: int, disk_guid: uuid.UUID,
                entries_lba: int, entries_crc: int) -> bytes:
-    """Build one CRC-protected GPT header for the fixed LeonOS table layout."""
+    """Build one CRC-protected GPT header for the fixed ReliefOS table layout."""
     header = bytearray(GPT_HEADER_SIZE)
     struct.pack_into(
         "<8sIIIIQQQQ16sQIII", header, 0,
@@ -171,23 +173,25 @@ def write_root_fstab(root: Path, root_uuid: uuid.UUID, esp_uuid: uuid.UUID) -> N
 
 
 def make_boot_tree(staging: Path, destination: Path) -> None:
-    """Stage only files GRUB and the LeonOS loader need before the root mounts.
+    """Stage only files GRUB and the ReliefOS loader need before the root mounts.
 
-    The ESP-internal namespace is /leonos; because the ESP is mounted at
-    /boot, the same files are visible as /boot/leonos at runtime.
+    The canonical ESP namespace is /reliefos. Byte-identical /leonos payloads
+    are also staged for the legacy rollback GRUB entry.
     """
     copy_file(staging / "EFI/BOOT/BOOTX64.EFI", destination / "EFI/BOOT/BOOTX64.EFI")
     copy_file(staging / "loader.elf", destination / "loader.elf")
     shutil.copytree(staging / "grub", destination / "grub", symlinks=True,
                     dirs_exist_ok=True)
     copy_file(staging / ESP_KERNEL.lstrip("/"), destination / ESP_KERNEL.lstrip("/"))
+    copy_file(staging / ESP_KERNEL_LEGACY.lstrip("/"),
+              destination / ESP_KERNEL_LEGACY.lstrip("/"))
     # The loader reads the boot theme from the ESP copy before any root
-    # filesystem exists, so the generated display.conf is duplicated at its
-    # ESP-internal path.  It is generated from the same source as the root
-    # /etc/leonos/display.conf, not maintained as a second configuration.
-    display = staging / ETC_LEONOS / "display.conf"
+    # filesystem exists, so the generated display.conf is duplicated at both
+    # ESP paths. It comes from the same source as /etc/reliefos/display.conf.
+    display = staging / ETC_RELIEFOS / "display.conf"
     if display.is_file():
         copy_file(display, destination / ESP_DISPLAY_CONF.lstrip("/"))
+        copy_file(display, destination / ESP_DISPLAY_CONF_LEGACY.lstrip("/"))
 
 
 def make_root_tree(staging: Path, destination: Path, language: str) -> None:
@@ -199,20 +203,21 @@ def make_root_tree(staging: Path, destination: Path, language: str) -> None:
     shutil.copytree(staging, destination, symlinks=True, dirs_exist_ok=True)
     shutil.rmtree(destination / "EFI", ignore_errors=True)
     shutil.rmtree(destination / "grub", ignore_errors=True)
+    shutil.rmtree(destination / "reliefos", ignore_errors=True)
     shutil.rmtree(destination / "leonos", ignore_errors=True)
     (destination / "loader.elf").unlink(missing_ok=True)
     layout_directories(destination)
     apply_root_symlinks(destination)
-    locale = destination / ETC_LEONOS / "locale.conf"
+    locale = destination / ETC_RELIEFOS / "locale.conf"
     locale.parent.mkdir(parents=True, exist_ok=True)
     locale.write_text(f"LANG={language}\n", encoding="utf-8")
     seed_test_accounts(destination)
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Create LeonOS 4 GPT FAT32-ESP/ext2-root VMDK")
-    parser.add_argument("--out", default="build/images/leonos4.vmdk")
-    parser.add_argument("--raw", default="build/images/leonos4.raw")
+    parser = argparse.ArgumentParser(description="Create ReliefOS GPT FAT32-ESP/ext2-root VMDK")
+    parser.add_argument("--out", default="build/images/reliefos.vmdk")
+    parser.add_argument("--raw", default="build/images/reliefos.raw")
     parser.add_argument("--esp-tree", default="build/esp")
     parser.add_argument("--root-image")
     parser.add_argument("--root-fs", choices=("ext2",), default="ext2",
@@ -258,12 +263,12 @@ def main() -> int:
             if root_last <= root_first or root_last - root_first + 1 < 262144:
                 raise SystemExit("VMDK root partition is smaller than the 128 MiB minimum")
             partition_uuids = write_gpt(raw_temp, [
-                (EFI_SYSTEM_PARTITION_GUID, ESP_FIRST_SECTOR, esp_last, "LEONOS4_ESP"),
+                (EFI_SYSTEM_PARTITION_GUID, ESP_FIRST_SECTOR, esp_last, "RELIEFOS_ESP"),
                 (LINUX_FILESYSTEM_GUID,
-                 root_first, root_last, "LEONOS4_ROOT"),
+                 root_first, root_last, "RELIEFOS_ROOT"),
             ])
 
-            with tempfile.TemporaryDirectory(prefix="leonos-vmdk-") as temp_dir:
+            with tempfile.TemporaryDirectory(prefix="reliefos-vmdk-") as temp_dir:
                 temp = Path(temp_dir)
                 boot_tree = temp / "esp"
                 root_tree = temp / "root"
@@ -272,7 +277,7 @@ def main() -> int:
                 write_root_fstab(root_tree, partition_uuids[1], partition_uuids[0])
 
                 run(["truncate", "-s", str(esp_sectors * SECTOR_SIZE), str(esp_temp)])
-                run(["mkfs.fat", "-F", "32", "-s", "2", "-n", "LEONOS4ESP", str(esp_temp)])
+                run(["mkfs.fat", "-F", "32", "-s", "2", "-n", "RELIEFOS", str(esp_temp)])
                 for item in sorted(boot_tree.iterdir()):
                     run(["mcopy", "-s", "-i", str(esp_temp), str(item), "::/"])
 

@@ -1,4 +1,4 @@
-menu "LeonOS 4"
+menu "ReliefOS"
 
 menu "Build"
 
@@ -8,7 +8,7 @@ config VMDK_DEFAULT_LANG
     string "Default system locale"
     default "zh_CN.UTF-8"
     help
-      Locale name written into /etc/leonos/locale.conf of standalone images.
+      Locale name written into /etc/reliefos/locale.conf of standalone images.
       Use a real locale name: C.UTF-8 leaves gettext inert.
 
 config VMDK_REQUIRE_LICENSE
@@ -20,8 +20,8 @@ config INSTALLER_INSTALLED_REQUIRE_LICENSE
     default y
 
 config RPR_BASE_URL
-    string "LeonOS remote package repository URL"
-    default "https://leonosproject.github.io/LeonOS-4/rpr"
+    string "ReliefOS remote package repository URL"
+    default "https://reliefosproject.github.io/ReliefOS/rpr"
     help
       HTTPS base URL of the RPR directory inside the GitHub Pages site. The
       client appends /apk for signed APK metadata and /kernel for kernel and

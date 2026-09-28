@@ -1,18 +1,18 @@
 #include <signal.h>
 #include <sys/wait.h>
-/* sessiond, LeonOS business protocol: startup approval and session launch policy
- * over /run/leonos/session.sock. */
+/* sessiond, ReliefOS business protocol: startup approval and session launch policy
+ * over /run/reliefos/session.sock. */
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
-#include <leonos/fs.h>
-#include <leonos/launch.h>
-#include <leonos/pam_session.h>
-#include <leonos/sessiond.h>
-#include <leonos/startup.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/unix_ipc.h>
+#include <reliefos/fs.h>
+#include <reliefos/launch.h>
+#include <reliefos/pam_session.h>
+#include <reliefos/sessiond.h>
+#include <reliefos/startup.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/unix_ipc.h>
 #include <poll.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -22,12 +22,12 @@
 #include <unistd.h>
 
 
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 
-#define SESSIOND_DB_PATH LEONOS_PATH_STARTUP_DB
+#define SESSIOND_DB_PATH RELIEFOS_PATH_STARTUP_DB
 #define SESSIOND_MAGIC 0x53533132U /* SS12: entries have an owning UID. */
 #define SESSIOND_MAX_CLIENTS 16u
-#define SESSIOND_MAX_ENTRIES LEONOS_STARTUP_MAX_ENTRIES
+#define SESSIOND_MAX_ENTRIES RELIEFOS_STARTUP_MAX_ENTRIES
 #define SESSIOND_FRAME_CAP 4096u
 
 struct sessiond_client {
@@ -43,7 +43,7 @@ struct sessiond_entry {
     uint32_t id;
     uint32_t enabled;
     uint32_t uid;
-    struct leonos_startup_command command;
+    struct reliefos_startup_command command;
 };
 
 struct sessiond_db {
@@ -71,9 +71,9 @@ static int sessiond_io(int fd, void *buffer, size_t size, int writing)
     return 0;
 }
 
-static int sessiond_command_valid(const struct leonos_startup_command *command)
+static int sessiond_command_valid(const struct reliefos_startup_command *command)
 {
-    if (command->argc > LEONOS_STARTUP_MAX_ARGS || command->path[0] != '/' ||
+    if (command->argc > RELIEFOS_STARTUP_MAX_ARGS || command->path[0] != '/' ||
         !memchr(command->path, 0, sizeof(command->path))) return 0;
     for (uint32_t i = 0; i < command->argc; ++i)
         if (!memchr(command->args[i], 0, sizeof(command->args[i]))) return 0;
@@ -111,14 +111,14 @@ out:
 
 static int sessiond_save(void)
 {
-    char temporary[] = LEONOS_LAYOUT_VAR_LIB_LEONOS "/.startup.XXXXXX";
+    char temporary[] = RELIEFOS_LAYOUT_VAR_LIB_RELIEFOS "/.startup.XXXXXX";
     int fd = mkstemp(temporary);
     if (fd < 0) return -1;
     int result = -1;
     if (fchown(fd, 0, 0) < 0 || fchmod(fd, 0600) < 0 ||
         sessiond_io(fd, &db, 12 + db.count * sizeof(db.entries[0]), 1) < 0 ||
         fsync(fd) < 0 || rename(temporary, SESSIOND_DB_PATH) < 0) goto out;
-    int directory = open(LEONOS_LAYOUT_VAR_LIB_LEONOS, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    int directory = open(RELIEFOS_LAYOUT_VAR_LIB_RELIEFOS, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
     if (directory >= 0) { result = fsync(directory); close(directory); }
 out:;
     int error = errno;
@@ -128,19 +128,19 @@ out:;
 
 static void sessiond_send_ack(int slot, int32_t code, uint32_t value)
 {
-    struct leonos_sessiond_ack ack = {.code = code, .value = value};
+    struct reliefos_sessiond_ack ack = {.code = code, .value = value};
     if (slot >= 0 && slot < SESSIOND_MAX_CLIENTS && clients[slot].used) {
-        (void)leonos_ipc_send(clients[slot].fd, LEONOS_SESSIOND_MSG_ACK,
+        (void)reliefos_ipc_send(clients[slot].fd, RELIEFOS_SESSIOND_MSG_ACK,
                               &ack, sizeof(ack));
     }
 }
 
 static void sessiond_request(int slot, const uint8_t *buffer, uint32_t length)
 {
-    struct leonos_startup_command command;
+    struct reliefos_startup_command command;
     uint32_t uid = clients[slot].uid;
     if (length != sizeof(command) || db.count >= SESSIOND_MAX_ENTRIES || db.next_id == UINT32_MAX) {
-        sessiond_send_ack(slot, LEONOS_STARTUP_STATUS_FAILED, 0);
+        sessiond_send_ack(slot, RELIEFOS_STARTUP_STATUS_FAILED, 0);
         return;
     }
     memcpy(&command, buffer, sizeof(command));
@@ -152,18 +152,18 @@ static void sessiond_request(int slot, const uint8_t *buffer, uint32_t length)
     ++db.count;
     if (sessiond_save() < 0) {
         --db.count;
-        sessiond_send_ack(slot, LEONOS_STARTUP_STATUS_FAILED, 0);
+        sessiond_send_ack(slot, RELIEFOS_STARTUP_STATUS_FAILED, 0);
         return;
     }
-    sessiond_send_ack(slot, LEONOS_STARTUP_STATUS_APPROVED,
+    sessiond_send_ack(slot, RELIEFOS_STARTUP_STATUS_APPROVED,
                       db.entries[db.count - 1u].id);
 }
 
 static void sessiond_list(int slot, const uint8_t *buffer, uint32_t length)
 {
-    struct leonos_startup_list request;
+    struct reliefos_startup_list request;
     uint8_t payload[SESSIOND_FRAME_CAP];
-    struct leonos_sessiond_list_ack ack;
+    struct reliefos_sessiond_list_ack ack;
     uint32_t offset = sizeof(ack);
     uint32_t count = 0;
     if (length != sizeof(request)) { sessiond_send_ack(slot, -EINVAL, 0); return; }
@@ -175,13 +175,13 @@ static void sessiond_list(int slot, const uint8_t *buffer, uint32_t length)
     ack.uid = request.uid;
     for (uint32_t i = 0; i < db.count; ++i) {
         if (db.entries[i].uid != request.uid) continue;
-        struct leonos_startup_entry entry = {
+        struct reliefos_startup_entry entry = {
             .id = db.entries[i].id,
             .enabled = db.entries[i].enabled,
             .command = db.entries[i].command,
         };
         if (request.capacity > 0 && count < request.capacity &&
-            offset + sizeof(struct leonos_startup_entry) <= sizeof(payload)) {
+            offset + sizeof(struct reliefos_startup_entry) <= sizeof(payload)) {
             memcpy(payload + offset, &entry, sizeof(entry));
             offset += sizeof(entry);
             ++count;
@@ -189,24 +189,24 @@ static void sessiond_list(int slot, const uint8_t *buffer, uint32_t length)
     }
     ack.count = count;
     memcpy(payload, &ack, sizeof(ack));
-    (void)leonos_ipc_send(clients[slot].fd, LEONOS_SESSIOND_MSG_LIST,
+    (void)reliefos_ipc_send(clients[slot].fd, RELIEFOS_SESSIOND_MSG_LIST,
                           payload, offset);
 }
 
 static int sessiond_launch_current(void)
 {
-    struct leonos_user_info user;
-    if (leonos_session_current(&user) < 0) return -1;
+    struct reliefos_user_info user;
+    if (reliefos_session_current(&user) < 0) return -1;
     struct stat identity;
-    if (lstat("/run/leonos/session-user", &identity) < 0 || identity.st_uid || !S_ISREG(identity.st_mode)) return -1;
+    if (lstat("/run/reliefos/session-user", &identity) < 0 || identity.st_uid || !S_ISREG(identity.st_mode)) return -1;
     char marker[128];
-    snprintf(marker, sizeof(marker), "/run/leonos/startup-%llu-%llu", 
+    snprintf(marker, sizeof(marker), "/run/reliefos/startup-%llu-%llu",
              (unsigned long long)identity.st_dev, (unsigned long long)identity.st_ino);
     int once = open(marker, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
     if (once < 0) return errno == EEXIST ? 0 : -1;
     close(once);
     for (uint32_t i = 0; i < db.count; ++i) {
-        char *argv[LEONOS_STARTUP_MAX_ARGS + 2u];
+        char *argv[RELIEFOS_STARTUP_MAX_ARGS + 2u];
         uint32_t argc = db.entries[i].command.argc;
         if (!db.entries[i].enabled || db.entries[i].uid != user.uid ||
             !sessiond_command_valid(&db.entries[i].command)) continue;
@@ -220,10 +220,10 @@ static int sessiond_launch_current(void)
         if (!child) {
             /* A logout/login race must never execute another user's entry. */
             struct stat current;
-            if (lstat("/run/leonos/session-user", &current) < 0 ||
+            if (lstat("/run/reliefos/session-user", &current) < 0 ||
                 current.st_ino != identity.st_ino || current.st_dev != identity.st_dev ||
-                leonos_session_apply() < 0 || getuid() != db.entries[i].uid ||
-                lstat("/run/leonos/session-user", &current) < 0 ||
+                reliefos_session_apply() < 0 || getuid() != db.entries[i].uid ||
+                lstat("/run/reliefos/session-user", &current) < 0 ||
                 current.st_ino != identity.st_ino || current.st_dev != identity.st_dev ||
                 syscall(SYS_close_range, 3u, ~0u, 0u) < 0) _exit(126);
             execv(argv[0], argv);
@@ -242,10 +242,10 @@ static void sessiond_handle_client(int slot)
     for (;;) {
         struct pollfd descriptor = {.fd = client->fd, .events = POLLIN, .revents = 0};
         if (poll(&descriptor, 1, 0) <= 0) return;
-        if (leonos_ipc_recv_cred_fd(client->fd, &type, buffer, sizeof(buffer), &length,
+        if (reliefos_ipc_recv_cred_fd(client->fd, &type, buffer, sizeof(buffer), &length,
                                    NULL, &client->credentials) < 0) {
             if (errno == EAGAIN) return;
-            leonos_ipc_close(client->fd);
+            reliefos_ipc_close(client->fd);
             memset(client, 0, sizeof(*client));
             client->fd = -1;
             return;
@@ -253,12 +253,12 @@ static void sessiond_handle_client(int slot)
         if (client->credentials.pid != (pid_t)client->pid || client->credentials.uid != client->uid) {
             close(client->fd); memset(client, 0, sizeof(*client)); client->fd = -1; return;
         }
-        if (type == LEONOS_SESSIOND_MSG_HELLO) {
-            struct leonos_sessiond_hello hello;
-            if (length < sizeof(hello)) { leonos_ipc_close(client->fd); memset(client,0,sizeof(*client)); client->fd=-1; return; }
+        if (type == RELIEFOS_SESSIOND_MSG_HELLO) {
+            struct reliefos_sessiond_hello hello;
+            if (length < sizeof(hello)) { reliefos_ipc_close(client->fd); memset(client,0,sizeof(*client)); client->fd=-1; return; }
             memcpy(&hello, buffer, sizeof(hello));
             if (hello.pid != client->pid || hello.uid != client->uid) {
-                leonos_ipc_close(client->fd);
+                reliefos_ipc_close(client->fd);
                 memset(client, 0, sizeof(*client));
                 client->fd = -1;
                 return;
@@ -266,31 +266,31 @@ static void sessiond_handle_client(int slot)
             sessiond_send_ack(slot, 1, 0);
             continue;
         }
-        if (type == LEONOS_SESSIOND_MSG_REQUEST) { sessiond_request(slot, buffer, length); continue; }
-        if (type == LEONOS_SESSIOND_MSG_REQUEST_STATUS) {
-            struct leonos_startup_request_status request;
+        if (type == RELIEFOS_SESSIOND_MSG_REQUEST) { sessiond_request(slot, buffer, length); continue; }
+        if (type == RELIEFOS_SESSIOND_MSG_REQUEST_STATUS) {
+            struct reliefos_startup_request_status request;
             if (length < sizeof(request)) continue;
             memcpy(&request, buffer, sizeof(request));
-            request.status = LEONOS_STARTUP_STATUS_DENIED;
+            request.status = RELIEFOS_STARTUP_STATUS_DENIED;
             for (uint32_t i = 0; i < db.count; ++i)
                 if (db.entries[i].id == request.request_id &&
                     (!client->uid || client->uid == db.entries[i].uid))
-                    request.status = LEONOS_STARTUP_STATUS_APPROVED;
-            (void)leonos_ipc_send(client->fd, LEONOS_SESSIOND_MSG_REQUEST_STATUS,
+                    request.status = RELIEFOS_STARTUP_STATUS_APPROVED;
+            (void)reliefos_ipc_send(client->fd, RELIEFOS_SESSIOND_MSG_REQUEST_STATUS,
                                   &request, sizeof(request));
             continue;
         }
-        if (type == LEONOS_SESSIOND_MSG_DIALOG_GET) {
+        if (type == RELIEFOS_SESSIOND_MSG_DIALOG_GET) {
             sessiond_send_ack(slot, 0, 0);
             continue;
         }
-        if (type == LEONOS_SESSIOND_MSG_DIALOG_RESOLVE) {
+        if (type == RELIEFOS_SESSIOND_MSG_DIALOG_RESOLVE) {
             sessiond_send_ack(slot, -ENOTSUP, 0);
             continue;
         }
-        if (type == LEONOS_SESSIOND_MSG_LIST) { sessiond_list(slot, buffer, length); continue; }
-        if (type == LEONOS_SESSIOND_MSG_SET_ENABLED) {
-            struct leonos_startup_update update;
+        if (type == RELIEFOS_SESSIOND_MSG_LIST) { sessiond_list(slot, buffer, length); continue; }
+        if (type == RELIEFOS_SESSIOND_MSG_SET_ENABLED) {
+            struct reliefos_startup_update update;
             if (length < sizeof(update)) continue;
             memcpy(&update, buffer, sizeof(update));
             if (client->uid && client->uid != update.uid) { sessiond_send_ack(slot, -EACCES, 0); continue; }
@@ -307,8 +307,8 @@ static void sessiond_handle_client(int slot)
             sessiond_send_ack(slot, result < 0 ? result : 1, 0);
             continue;
         }
-        if (type == LEONOS_SESSIOND_MSG_REMOVE) {
-            struct leonos_startup_update update;
+        if (type == RELIEFOS_SESSIOND_MSG_REMOVE) {
+            struct reliefos_startup_update update;
             if (length < sizeof(update)) continue;
             memcpy(&update, buffer, sizeof(update));
             if (client->uid && client->uid != update.uid) { sessiond_send_ack(slot, -EACCES, 0); continue; }
@@ -328,7 +328,7 @@ static void sessiond_handle_client(int slot)
             sessiond_send_ack(slot, result < 0 ? result : 1, 0);
             continue;
         }
-        if (type == LEONOS_SESSIOND_MSG_LAUNCH_CURRENT) {
+        if (type == RELIEFOS_SESSIOND_MSG_LAUNCH_CURRENT) {
             if (client->uid) sessiond_send_ack(slot, -EACCES, 0);
             else sessiond_send_ack(slot, sessiond_launch_current() < 0 ? -EIO : 1, 0);
             continue;
@@ -345,7 +345,7 @@ static void sessiond_poll(void)
             database_failed = 1;
             return;
         }
-        listen_fd = leonos_ipc_bind_listen_mode(LEONOS_IPC_SOCK_SESSION, 8, 0666);
+        listen_fd = reliefos_ipc_bind_listen_mode(RELIEFOS_IPC_SOCK_SESSION, 8, 0666);
         if (listen_fd < 0) {
             printf("[sessiond] bind failed errno=%d\n", errno);
             return;
@@ -354,26 +354,26 @@ static void sessiond_poll(void)
         if (setsockopt(listen_fd, SOL_SOCKET, SO_PASSCRED, &passcred, sizeof(passcred)) < 0) {
             close(listen_fd); listen_fd = -1; return;
         }
-        (void)leonos_ipc_set_nonblock(listen_fd, 1);
-        printf("[sessiond] listening on %s\n", LEONOS_IPC_SOCK_SESSION);
+        (void)reliefos_ipc_set_nonblock(listen_fd, 1);
+        printf("[sessiond] listening on %s\n", RELIEFOS_IPC_SOCK_SESSION);
     }
     {
         struct pollfd descriptor = {.fd = listen_fd, .events = POLLIN, .revents = 0};
         if (poll(&descriptor, 1, 0) > 0 && (descriptor.revents & POLLIN)) {
             int fd;
-            while ((fd = leonos_ipc_accept(listen_fd, 0)) >= 0) {
+            while ((fd = reliefos_ipc_accept(listen_fd, 0)) >= 0) {
                 struct ucred credentials;
                 int passcred = 1;
                 int slot = -1;
                 for (uint32_t i = 0; i < SESSIOND_MAX_CLIENTS; ++i) {
                     if (!clients[i].used) { slot = (int)i; break; }
                 }
-                if (slot < 0 || leonos_ipc_peer_credentials(fd, &credentials) < 0 ||
+                if (slot < 0 || reliefos_ipc_peer_credentials(fd, &credentials) < 0 ||
                     setsockopt(fd, SOL_SOCKET, SO_PASSCRED, &passcred, sizeof(passcred)) < 0) {
                     close(fd);
                     continue;
                 }
-                (void)leonos_ipc_set_nonblock(fd, 1);
+                (void)reliefos_ipc_set_nonblock(fd, 1);
                 clients[slot].used = 1;
                 clients[slot].fd = fd;
                 clients[slot].pid = (uint32_t)credentials.pid;
@@ -408,6 +408,6 @@ int main(void)
     }
     for (unsigned i = 0; i < 16; ++i) if (clients[i].used) close(clients[i].fd);
     close(listen_fd);
-    unlink(LEONOS_IPC_SOCK_SESSION);
+    unlink(RELIEFOS_IPC_SOCK_SESSION);
     return stopping ? 0 : 1;
 }

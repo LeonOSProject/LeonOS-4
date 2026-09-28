@@ -1,4 +1,4 @@
-# LeonOS 4 Docs
+# ReliefOS Documentation
 
 This directory tracks the architecture and operational notes that are useful
 when changing the kernel, loader, installer, or user ABI.
@@ -71,7 +71,7 @@ components are not reported as missing:
 ```sh
 python tools/check_licenses.py
 python tools/check_licenses.py --strict
-python tools/check_licenses.py --sdk LeonOS4-Developer-SDK.zip \
+python tools/check_licenses.py --sdk reliefos-musl-sdk.tar.gz \
   --json tools/dist/license-report.json
 python tools/check_licenses.py --self-test
 ```

@@ -7,14 +7,14 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 def main():
-    with tempfile.TemporaryDirectory(prefix="leonos-openrc-network-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-openrc-network-") as directory:
         for name in ("net_interface", "net_packet", "time_discipline", "timekeeper_discipline", "driver_control"):
             binary = Path(directory) / name
             subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                 "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
+                "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ikernel/reliefnt/kernel/reliefnt/include",
                 f"tools/tests/{name}_test.c",
-                *(["kernel/ntclks/kernel/ntclks/time_discipline.c"] if name == "timekeeper_discipline" else []),
+                *(["kernel/reliefnt/kernel/reliefnt/time_discipline.c"] if name == "timekeeper_discipline" else []),
                 "-o", str(binary)], cwd=ROOT, check=True)
             subprocess.run([str(binary)], check=True, timeout=15)
 

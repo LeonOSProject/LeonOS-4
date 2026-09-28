@@ -1,9 +1,9 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "../../kernel/ntclks/kernel/ntclks/sched/sched.c"
-#include "../../kernel/ntclks/kernel/ntclks/syscall_time.c"
-#include "../../kernel/ntclks/kernel/ntclks/signal_queue.c"
+#include "../../kernel/reliefnt/kernel/reliefnt/sched/sched.c"
+#include "../../kernel/reliefnt/kernel/reliefnt/syscall_time.c"
+#include "../../kernel/reliefnt/kernel/reliefnt/signal_queue.c"
 
 static struct task members[3];
 static struct task *table[] = {&members[0], &members[1], &members[2]};
@@ -13,8 +13,8 @@ uint64_t time_ticks(void) { return scheduler_ticks; }
 int time_clock_get(int32_t clock, struct linux_timespec *out)
 {
     (void)clock;
-    *out = (struct linux_timespec){scheduler_ticks / NTCLKS_TICK_HZ,
-        (scheduler_ticks % NTCLKS_TICK_HZ) * (1000000000 / NTCLKS_TICK_HZ)};
+    *out = (struct linux_timespec){scheduler_ticks / RELIEFNT_TICK_HZ,
+        (scheduler_ticks % RELIEFNT_TICK_HZ) * (1000000000 / RELIEFNT_TICK_HZ)};
     return 0;
 }
 int user_copy_to_task(struct task *task, uint64_t address, const void *source, uint64_t size)

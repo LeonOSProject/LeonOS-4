@@ -1,30 +1,30 @@
-#include <leonos/fs.h>
-#include <leonos/gui.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/png.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/text.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/png.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/text.h>
+#include <reliefos/ui.h>
 
 #define NOTEPAD_W 720
 #define NOTEPAD_H 460
 #define NOTEPAD_MIN_W 320
 #define NOTEPAD_MIN_H 240
-#define NOTEPAD_MAX_W LEONOS_GUI_MAX_WINDOW_WIDTH
-#define NOTEPAD_MAX_H LEONOS_GUI_MAX_WINDOW_HEIGHT
+#define NOTEPAD_MAX_W RELIEFOS_GUI_MAX_WINDOW_WIDTH
+#define NOTEPAD_MAX_H RELIEFOS_GUI_MAX_WINDOW_HEIGHT
 #define NOTEPAD_TEXT_CAP 32768
 #define NOTEPAD_ENCODED_CAP (NOTEPAD_TEXT_CAP * 2 + 4)
 #define STATUS_CAP 128
-#define PATH_CAP LEONOS_FS_PATH_LEN
+#define PATH_CAP RELIEFOS_FS_PATH_LEN
 #define VIEW_X 10
 #define STATUS_H 28
 #define MENU_BAR_H 28
 #define VIEW_Y (MENU_BAR_H + 10)
-#define MENU_ITEM_H (LEONOS_FONT_H + 8)
+#define MENU_ITEM_H (RELIEFOS_FONT_H + 8)
 #define UNTITLED_NAME "Untitled"
 #define NOTEPAD_WINDOW_TITLE_CAP 48
 #define T(s) gettext(s)
@@ -51,13 +51,13 @@ static uint8_t truncated;
 static uint8_t menu_open;
 static uint8_t document_dirty;
 static uint8_t document_kind;
-static uint32_t document_encoding = LEONOS_TEXT_ENCODING_UTF8;
+static uint32_t document_encoding = RELIEFOS_TEXT_ENCODING_UTF8;
 static uint32_t decode_replacements;
 static uint32_t saved_hash;
 static uint32_t *png_pixels;
 static uint32_t png_width;
 static uint32_t png_height;
-static struct leonos_ui_text_area_state document;
+static struct reliefos_ui_text_area_state document;
 static uint32_t view_w = NOTEPAD_W;
 static uint32_t view_h = NOTEPAD_H;
 
@@ -66,17 +66,17 @@ static int confirm_dirty_action(const char *message);
 static const char *encoding_name(uint32_t encoding)
 {
     switch (encoding) {
-    case LEONOS_TEXT_ENCODING_UTF8_BOM:
+    case RELIEFOS_TEXT_ENCODING_UTF8_BOM:
         return "UTF-8 BOM";
-    case LEONOS_TEXT_ENCODING_UTF16LE:
+    case RELIEFOS_TEXT_ENCODING_UTF16LE:
         return "UTF-16 LE";
-    case LEONOS_TEXT_ENCODING_UTF16BE:
+    case RELIEFOS_TEXT_ENCODING_UTF16BE:
         return "UTF-16 BE";
-    case LEONOS_TEXT_ENCODING_GBK:
+    case RELIEFOS_TEXT_ENCODING_GBK:
         return "GBK";
-    case LEONOS_TEXT_ENCODING_GB2312:
+    case RELIEFOS_TEXT_ENCODING_GB2312:
         return "GB2312";
-    case LEONOS_TEXT_ENCODING_UTF8:
+    case RELIEFOS_TEXT_ENCODING_UTF8:
     default:
         return "UTF-8";
     }
@@ -211,7 +211,7 @@ static uint32_t text_view_w(void)
 
 static uint32_t text_view_h(void)
 {
-    return view_h > VIEW_Y + STATUS_H + 10 ? view_h - VIEW_Y - STATUS_H - 10 : LEONOS_FONT_H;
+    return view_h > VIEW_Y + STATUS_H + 10 ? view_h - VIEW_Y - STATUS_H - 10 : RELIEFOS_FONT_H;
 }
 
 static uint32_t scrollbar_x(void)
@@ -221,7 +221,7 @@ static uint32_t scrollbar_x(void)
 
 static uint32_t visible_rows(void)
 {
-    uint32_t rows = text_view_h() / LEONOS_FONT_H;
+    uint32_t rows = text_view_h() / RELIEFOS_FONT_H;
     return rows ? rows : 1;
 }
 
@@ -249,7 +249,7 @@ static void rebuild_status(void)
         append_text(status_text, &pos, sizeof(status_text), T("  Read-only"));
         return;
     }
-    leonos_ui_text_area_state_sync(&document, text_view_w());
+    reliefos_ui_text_area_state_sync(&document, text_view_w());
     status_text[0] = 0;
     append_text(status_text, &pos, sizeof(status_text), T("Lines "));
     append_u32(status_text, &pos, sizeof(status_text), document.line_count);
@@ -274,7 +274,7 @@ static void rebuild_status(void)
 static void clamp_scroll(void)
 {
     uint32_t rows = visible_rows();
-    leonos_ui_text_area_state_sync(&document, text_view_w());
+    reliefos_ui_text_area_state_sync(&document, text_view_w());
     if (rows == 0) {
         document.scroll_line = 0;
         return;
@@ -320,12 +320,12 @@ static void clear_document_contents(void)
     document.scroll_line = 0;
     text_data[0] = 0;
     truncated = 0;
-    leonos_ui_text_area_state_sync(&document, text_view_w());
+    reliefos_ui_text_area_state_sync(&document, text_view_w());
 }
 
 static void clear_png_preview(void)
 {
-    leonos_png_free(png_pixels);
+    reliefos_png_free(png_pixels);
     png_pixels = 0;
     png_width = 0;
     png_height = 0;
@@ -339,36 +339,36 @@ static void begin_new_document(void)
     document.focused = 1;
     copy_text(file_path, sizeof(file_path), UNTITLED_NAME);
     clear_document_contents();
-    document_encoding = LEONOS_TEXT_ENCODING_UTF8;
+    document_encoding = RELIEFOS_TEXT_ENCODING_UTF8;
     decode_replacements = 0;
     mark_document_clean();
 }
 
 static int load_document(const char *path)
 {
-    struct leonos_stat st;
+    struct reliefos_stat st;
     int fd;
     int ret;
     int decode_ret;
     uint32_t loaded_length = 0;
     uint32_t decoded_length = 0;
-    uint32_t detected_encoding = LEONOS_TEXT_ENCODING_UTF8;
+    uint32_t detected_encoding = RELIEFOS_TEXT_ENCODING_UTF8;
     uint32_t replacements = 0;
     uint8_t loaded_truncated = 0;
     if (!path || !path[0]) {
         begin_new_document();
         return 0;
     }
-    ret = leonos_stat_legacy(path, &st);
+    ret = reliefos_stat_legacy(path, &st);
     if (ret < 0) {
         set_error_status(T("stat failed "), ret);
         return ret;
     }
-    if (st.type != LEONOS_FS_TYPE_FILE) {
+    if (st.type != RELIEFOS_FS_TYPE_FILE) {
         copy_text(status_text, sizeof(status_text), T("Selected path is not a file"));
         return -1;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         set_error_status(T("open failed "), fd);
         saved_hash = document_hash();
@@ -404,14 +404,14 @@ static int load_document(const char *path)
     document.readonly = 0;
     document.focused = 1;
     clear_document_contents();
-    if (leonos_text_detect_encoding(loaded_text, loaded_length, &detected_encoding) < 0) {
+    if (reliefos_text_detect_encoding(loaded_text, loaded_length, &detected_encoding) < 0) {
         copy_text(status_text, sizeof(status_text), T("Unsupported text encoding"));
         return -1;
     }
-    decode_ret = leonos_text_decode(loaded_text, loaded_length, detected_encoding,
+    decode_ret = reliefos_text_decode(loaded_text, loaded_length, detected_encoding,
                                     text_data, sizeof(text_data) - 1U,
                                     &decoded_length, &replacements);
-    if (decode_ret < 0 && decode_ret != LEONOS_TEXT_ENCODING_NO_SPACE) {
+    if (decode_ret < 0 && decode_ret != RELIEFOS_TEXT_ENCODING_NO_SPACE) {
         copy_text(status_text, sizeof(status_text), T("Could not decode text file"));
         return decode_ret;
     }
@@ -419,11 +419,11 @@ static int load_document(const char *path)
     document.length = decoded_length;
     document_encoding = detected_encoding;
     decode_replacements = replacements;
-    truncated = loaded_truncated || decode_ret == LEONOS_TEXT_ENCODING_NO_SPACE;
+    truncated = loaded_truncated || decode_ret == RELIEFOS_TEXT_ENCODING_NO_SPACE;
     copy_text(file_path, sizeof(file_path), path);
     document.cursor = 0;
     document.scroll_line = 0;
-    leonos_ui_text_area_state_sync(&document, text_view_w());
+    reliefos_ui_text_area_state_sync(&document, text_view_w());
     clamp_scroll();
     mark_document_clean();
     printf("[notepad.elf] open path=%s bytes=%d encoding=%s lines=%d truncated=%d\n",
@@ -437,7 +437,7 @@ static int load_png_document(const char *path)
     uint32_t *decoded = 0;
     uint32_t decoded_width = 0;
     uint32_t decoded_height = 0;
-    int ret = leonos_png_decode_file(path, &decoded, &decoded_width, &decoded_height);
+    int ret = reliefos_png_decode_file(path, &decoded, &decoded_width, &decoded_height);
     if (ret < 0) {
         copy_text(status_text, sizeof(status_text),
                   T("Could not decode PNG (maximum 1024x1024)."));
@@ -474,7 +474,7 @@ static int save_document_to_path(const char *path, uint32_t encoding)
                   T("PNG preview cannot be saved as text"));
         return 0;
     }
-    encode_ret = leonos_text_encode(text_data, document.length, encoding,
+    encode_ret = reliefos_text_encode(text_data, document.length, encoding,
                                     encoded_text, sizeof(encoded_text),
                                     &encoded_length, &replacements);
     if (encode_ret < 0) {
@@ -482,12 +482,12 @@ static int save_document_to_path(const char *path, uint32_t encoding)
                   T("Text is too large for selected encoding"));
         return 0;
     }
-    if (replacements && !leonos_ui_show_confirm_dialog(
+    if (replacements && !reliefos_ui_show_confirm_dialog(
             T("Notepad"),
             T("Some characters are not available in this encoding. Save them as '?'?"), 0)) {
         return 0;
     }
-    flags = LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC;
+    flags = RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC;
     fd = open(path, flags, 0666);
     if (fd < 0) {
         set_error_status(T("save open failed "), fd);
@@ -521,17 +521,17 @@ static int save_document_as(void)
 {
     char path[PATH_CAP];
     uint32_t encoding = document_encoding;
-    static const struct leonos_ui_dropdown_item encoding_items[] = {
-        {"UTF-8", LEONOS_TEXT_ENCODING_UTF8, 0},
-        {"UTF-8 with BOM", LEONOS_TEXT_ENCODING_UTF8_BOM, 0},
-        {"UTF-16 LE", LEONOS_TEXT_ENCODING_UTF16LE, 0},
-        {"UTF-16 BE", LEONOS_TEXT_ENCODING_UTF16BE, 0},
-        {"GBK", LEONOS_TEXT_ENCODING_GBK, 0},
-        {"GB2312", LEONOS_TEXT_ENCODING_GB2312, 0},
+    static const struct reliefos_ui_dropdown_item encoding_items[] = {
+        {"UTF-8", RELIEFOS_TEXT_ENCODING_UTF8, 0},
+        {"UTF-8 with BOM", RELIEFOS_TEXT_ENCODING_UTF8_BOM, 0},
+        {"UTF-16 LE", RELIEFOS_TEXT_ENCODING_UTF16LE, 0},
+        {"UTF-16 BE", RELIEFOS_TEXT_ENCODING_UTF16BE, 0},
+        {"GBK", RELIEFOS_TEXT_ENCODING_GBK, 0},
+        {"GB2312", RELIEFOS_TEXT_ENCODING_GB2312, 0},
     };
-    const struct leonos_ui_file_dialog_input inputs[] = {
+    const struct reliefos_ui_file_dialog_input inputs[] = {
         {
-            .type = LEONOS_UI_FILE_DIALOG_INPUT_DROPDOWN,
+            .type = RELIEFOS_UI_FILE_DIALOG_INPUT_DROPDOWN,
             .id = 1,
             .label = T("Encoding"),
             .value = &encoding,
@@ -539,7 +539,7 @@ static int save_document_as(void)
             .item_count = sizeof(encoding_items) / sizeof(encoding_items[0]),
         },
     };
-    const struct leonos_ui_file_dialog_options options = {
+    const struct reliefos_ui_file_dialog_options options = {
         .inputs = inputs,
         .input_count = sizeof(inputs) / sizeof(inputs[0]),
     };
@@ -553,7 +553,7 @@ static int save_document_as(void)
     } else {
         copy_text(path, sizeof(path), file_path);
     }
-    if (leonos_ui_show_save_dialog_with_options(
+    if (reliefos_ui_show_save_dialog_with_options(
             T("Save As"), path, sizeof(path),
             T("Text files (*.txt)"), ".txt", &options) <= 0) {
         return 0;
@@ -568,7 +568,7 @@ static int open_document_via_dialog(void)
 {
     char path[PATH_CAP];
     path[0] = 0;
-    if (leonos_ui_show_open_dialog(T("Open"), path, sizeof(path),
+    if (reliefos_ui_show_open_dialog(T("Open"), path, sizeof(path),
                                     T("Text and PNG (*.txt; *.png)"),
                                     ".txt;.png") <= 0) {
         return 0;
@@ -600,13 +600,13 @@ static int confirm_dirty_action(const char *message)
     if (!document_dirty) {
         return 1;
     }
-    if (!leonos_ui_show_confirm_dialog(T("Notepad"), message, 1)) {
+    if (!reliefos_ui_show_confirm_dialog(T("Notepad"), message, 1)) {
         return 1;
     }
     return save_document() && !document_dirty;
 }
 
-static void draw_png_preview(struct leonos_ui_surface *ui, uint32_t x0,
+static void draw_png_preview(struct reliefos_ui_surface *ui, uint32_t x0,
                              uint32_t y0, uint32_t w0, uint32_t h0)
 {
     uint32_t content_x = x0 + 3U;
@@ -618,12 +618,12 @@ static void draw_png_preview(struct leonos_ui_surface *ui, uint32_t x0,
     uint32_t dst_x;
     uint32_t dst_y;
 
-    leonos_ui_inset(ui, x0, y0, w0, h0, LEONOS_UI_WHITE);
+    reliefos_ui_inset(ui, x0, y0, w0, h0, RELIEFOS_UI_WHITE);
     if (!png_pixels || !png_width || !png_height) {
-        leonos_ui_text_clipped(ui, x0 + 12U, y0 + 12U,
+        reliefos_ui_text_clipped(ui, x0 + 12U, y0 + 12U,
                                 w0 > 24U ? w0 - 24U : w0,
                                 T("PNG preview is unavailable."),
-                                LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                                RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
         return;
     }
     draw_h = (uint32_t)(((uint64_t)draw_w * png_height) / png_width);
@@ -643,53 +643,53 @@ static void draw_png_preview(struct leonos_ui_surface *ui, uint32_t x0,
         uint32_t source_y = (uint32_t)(((uint64_t)y * png_height) / draw_h);
         for (uint32_t x = 0; x < draw_w; ++x) {
             uint32_t source_x = (uint32_t)(((uint64_t)x * png_width) / draw_w);
-            leonos_ui_pixel(ui, dst_x + x, dst_y + y,
+            reliefos_ui_pixel(ui, dst_x + x, dst_y + y,
                             png_pixels[source_y * png_width + source_x]);
         }
     }
 }
 
-static void draw_notepad(struct leonos_ui_surface *ui)
+static void draw_notepad(struct reliefos_ui_surface *ui)
 {
     uint32_t rows = visible_rows();
     uint32_t edit_w = text_view_w();
     uint32_t edit_h = text_view_h();
     uint32_t scroll_x = scrollbar_x();
-    leonos_ui_text_area_state_sync(&document, edit_w);
-    leonos_ui_rect(ui, 0, 0, view_w, view_h, LEONOS_UI_WHITE);
-    leonos_ui_menubar(ui, 0, 0, view_w);
-    leonos_ui_menubar_item(ui, 8, 0, 54, T("File"), menu_open == NOTEPAD_MENU_FILE);
-    leonos_ui_menubar_item(ui, 64, 0, 54, T("Edit"), menu_open == NOTEPAD_MENU_EDIT);
-    leonos_ui_menubar_item(ui, 120, 0, 54, T("View"), menu_open == NOTEPAD_MENU_VIEW);
+    reliefos_ui_text_area_state_sync(&document, edit_w);
+    reliefos_ui_rect(ui, 0, 0, view_w, view_h, RELIEFOS_UI_WHITE);
+    reliefos_ui_menubar(ui, 0, 0, view_w);
+    reliefos_ui_menubar_item(ui, 8, 0, 54, T("File"), menu_open == NOTEPAD_MENU_FILE);
+    reliefos_ui_menubar_item(ui, 64, 0, 54, T("Edit"), menu_open == NOTEPAD_MENU_EDIT);
+    reliefos_ui_menubar_item(ui, 120, 0, 54, T("View"), menu_open == NOTEPAD_MENU_VIEW);
     if (document_kind == NOTEPAD_DOCUMENT_PNG) {
         draw_png_preview(ui, VIEW_X, VIEW_Y, edit_w + 18U, edit_h);
     } else {
-        leonos_ui_text_area_state_draw(ui, VIEW_X, VIEW_Y, edit_w, edit_h, &document, 0);
-        leonos_ui_vscrollbar(ui, scroll_x, VIEW_Y, 18, edit_h, document.scroll_line,
+        reliefos_ui_text_area_state_draw(ui, VIEW_X, VIEW_Y, edit_w, edit_h, &document, 0);
+        reliefos_ui_vscrollbar(ui, scroll_x, VIEW_Y, 18, edit_h, document.scroll_line,
                              document.line_count > 0 ? document.line_count : 1, rows,
-                             document.line_count <= rows ? LEONOS_UI_SCROLLBAR_DISABLED : 0);
+                             document.line_count <= rows ? RELIEFOS_UI_SCROLLBAR_DISABLED : 0);
     }
-    leonos_ui_statusbar(ui, view_h - STATUS_H, STATUS_H, status_text);
+    reliefos_ui_statusbar(ui, view_h - STATUS_H, STATUS_H, status_text);
 
     if (menu_open == NOTEPAD_MENU_FILE) {
-        leonos_ui_menu(ui, 8, MENU_BAR_H, 154, 112);
-        leonos_ui_menu_item(ui, 42, MENU_BAR_H + 8, 116, T("Choose file"), 0);
-        leonos_ui_menu_item(ui, 42, MENU_BAR_H + 34, 116, T("New"), 0);
-        leonos_ui_menu_item(ui, 42, MENU_BAR_H + 60, 116, T("Save"), 0);
-        leonos_ui_menu_item(ui, 42, MENU_BAR_H + 86, 116, T("Save As"), 0);
+        reliefos_ui_menu(ui, 8, MENU_BAR_H, 154, 112);
+        reliefos_ui_menu_item(ui, 42, MENU_BAR_H + 8, 116, T("Choose file"), 0);
+        reliefos_ui_menu_item(ui, 42, MENU_BAR_H + 34, 116, T("New"), 0);
+        reliefos_ui_menu_item(ui, 42, MENU_BAR_H + 60, 116, T("Save"), 0);
+        reliefos_ui_menu_item(ui, 42, MENU_BAR_H + 86, 116, T("Save As"), 0);
     } else if (menu_open == NOTEPAD_MENU_EDIT) {
-        leonos_ui_menu(ui, 64, MENU_BAR_H, 154, 86);
-        leonos_ui_menu_item(ui, 98, MENU_BAR_H + 8, 116, T("Clear"), 0);
-        leonos_ui_menu_item(ui, 98, MENU_BAR_H + 34, 116, T("Beginning"), 0);
-        leonos_ui_menu_item(ui, 98, MENU_BAR_H + 60, 116, T("End"), 0);
+        reliefos_ui_menu(ui, 64, MENU_BAR_H, 154, 86);
+        reliefos_ui_menu_item(ui, 98, MENU_BAR_H + 8, 116, T("Clear"), 0);
+        reliefos_ui_menu_item(ui, 98, MENU_BAR_H + 34, 116, T("Beginning"), 0);
+        reliefos_ui_menu_item(ui, 98, MENU_BAR_H + 60, 116, T("End"), 0);
     } else if (menu_open == NOTEPAD_MENU_VIEW) {
-        leonos_ui_menu(ui, 120, MENU_BAR_H, 154, 60);
-        leonos_ui_menu_item(ui, 154, MENU_BAR_H + 8, 116, T("Top"), 0);
-        leonos_ui_menu_item(ui, 154, MENU_BAR_H + 34, 116, T("About"), 0);
+        reliefos_ui_menu(ui, 120, MENU_BAR_H, 154, 60);
+        reliefos_ui_menu_item(ui, 154, MENU_BAR_H + 8, 116, T("Top"), 0);
+        reliefos_ui_menu_item(ui, 154, MENU_BAR_H + 34, 116, T("About"), 0);
     }
 }
 
-static void present_notepad(uint32_t window_id, struct leonos_ui_surface *ui)
+static void present_notepad(uint32_t window_id, struct reliefos_ui_surface *ui)
 {
     char title[NOTEPAD_WINDOW_TITLE_CAP];
     uint32_t title_pos = 0;
@@ -699,10 +699,10 @@ static void present_notepad(uint32_t window_id, struct leonos_ui_surface *ui)
     if (document_dirty) {
         append_text(title, &title_pos, sizeof(title), " *");
     }
-    (void)leonos_gui_set_window_title(window_id, title);
-    leonos_ui_bind(ui, pixels, view_w, view_h, NOTEPAD_MAX_W);
+    (void)reliefos_gui_set_window_title(window_id, title);
+    reliefos_ui_bind(ui, pixels, view_w, view_h, NOTEPAD_MAX_W);
     draw_notepad(ui);
-    leonos_gui_present_window(window_id, view_w, view_h, NOTEPAD_MAX_W, pixels);
+    reliefos_gui_present_window(window_id, view_w, view_h, NOTEPAD_MAX_W, pixels);
 }
 
 static int handle_menu_click(int32_t x, int32_t y)
@@ -785,7 +785,7 @@ static int handle_menu_click(int32_t x, int32_t y)
         }
         if (hit_rect_i(x, y, 154, (int32_t)MENU_BAR_H + 34, 116, (int32_t)MENU_ITEM_H)) {
             menu_open = NOTEPAD_MENU_NONE;
-            leonos_ui_show_message_box(T("Notepad"), T("Open files from File Manager or Run."), T("OK"));
+            reliefos_ui_show_message_box(T("Notepad"), T("Open files from File Manager or Run."), T("OK"));
             return 1;
         }
         menu_open = NOTEPAD_MENU_NONE;
@@ -797,25 +797,25 @@ static int handle_menu_click(int32_t x, int32_t y)
 int main(int argc, char **argv, char **envp)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
     (void)envp;
 
     puts("[notepad.elf] notepad starting");
     copy_text(status_text, sizeof(status_text),
               T("Choose a text file or PNG image"));
-    window_id = leonos_gui_create_app_window_ex(T("Notepad"), T("LeonOS text viewer"),
+    window_id = reliefos_gui_create_app_window_ex(T("Notepad"), T("ReliefOS text viewer"),
                                                 NOTEPAD_W, NOTEPAD_H, 0);
     if (window_id <= 0) {
         printf("[notepad.elf] create window failed=%d\n", window_id);
         return 1;
     }
 
-    leonos_ui_bind(&ui, pixels, view_w, view_h, NOTEPAD_MAX_W);
-    leonos_ui_text_area_state_init(&document, text_data, sizeof(text_data));
+    reliefos_ui_bind(&ui, pixels, view_w, view_h, NOTEPAD_MAX_W);
+    reliefos_ui_text_area_state_init(&document, text_data, sizeof(text_data));
     document.focused = 1;
     document.readonly = 0;
     begin_new_document();
@@ -826,8 +826,8 @@ int main(int argc, char **argv, char **envp)
 
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 if (confirm_dirty_action(T("Save changes before closing?"))) {
                     clear_png_preview();
                     return 0;
@@ -835,7 +835,7 @@ int main(int argc, char **argv, char **envp)
                 present_notepad((uint32_t)window_id, &ui);
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON) {
                 if (event.buttons & 1u) {
                     if (handle_menu_click(event.x, event.y)) {
                         present_notepad((uint32_t)window_id, &ui);
@@ -852,12 +852,12 @@ int main(int argc, char **argv, char **envp)
                         uint32_t scroll_x = scrollbar_x();
                         if (event.x >= (int32_t)scroll_x && event.y >= VIEW_Y &&
                             event.y < (int32_t)(VIEW_Y + edit_h)) {
-                            leonos_ui_vscrollbar_handle_mouse(&document.scroll_line,
+                            reliefos_ui_vscrollbar_handle_mouse(&document.scroll_line,
                                                               document.line_count, visible_rows(),
                                                               scroll_x, VIEW_Y, 18, edit_h,
                                                               event.x, event.y);
                         } else {
-                            leonos_ui_text_area_state_handle_mouse(&document, event.x, event.y,
+                            reliefos_ui_text_area_state_handle_mouse(&document, event.x, event.y,
                                                                    VIEW_X, VIEW_Y, edit_w, edit_h,
                                                                    event.buttons);
                         }
@@ -868,42 +868,42 @@ int main(int argc, char **argv, char **envp)
                 }
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_MOVE) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_MOVE) {
                 if (document_kind == NOTEPAD_DOCUMENT_PNG) {
                     continue;
                 }
                 if (event.buttons & 1u) {
                     uint32_t before = document.scroll_line;
-                    leonos_ui_text_area_state_handle_mouse(&document, event.x, event.y,
+                    reliefos_ui_text_area_state_handle_mouse(&document, event.x, event.y,
                                                            VIEW_X, VIEW_Y, text_view_w(), text_view_h(),
                                                            event.buttons);
                     if (before != document.scroll_line || document.focused) {
                         present_notepad((uint32_t)window_id, &ui);
                     }
                 } else if (document.selecting) {
-                    leonos_ui_text_area_state_handle_mouse(&document, event.x, event.y,
+                    reliefos_ui_text_area_state_handle_mouse(&document, event.x, event.y,
                                                            VIEW_X, VIEW_Y, text_view_w(), text_view_h(), 0);
                 }
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_WHEEL) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_WHEEL) {
                 if (document_kind == NOTEPAD_DOCUMENT_PNG) {
                     continue;
                 }
-                if (leonos_ui_vscrollbar_handle_wheel(&document.scroll_line,
+                if (reliefos_ui_vscrollbar_handle_wheel(&document.scroll_line,
                                                       document.line_count, visible_rows(),
                                                       event.dy)) {
                     present_notepad((uint32_t)window_id, &ui);
                 }
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN || event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN || event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
                 if (document_kind == NOTEPAD_DOCUMENT_PNG) {
                     continue;
                 }
                 uint32_t before_hash = document_hash();
                 menu_open = NOTEPAD_MENU_NONE;
-                if (leonos_ui_text_area_state_handle_key(&document, event.keycode, event.pressed,
+                if (reliefos_ui_text_area_state_handle_key(&document, event.keycode, event.pressed,
                                                          text_view_w(), text_view_h())) {
                     clamp_scroll();
                     if (before_hash != document_hash()) {
@@ -915,7 +915,7 @@ int main(int argc, char **argv, char **envp)
                 }
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_RESIZE || event.type == LEONOS_GUI_APP_EVENT_FOCUS) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_RESIZE || event.type == RELIEFOS_GUI_APP_EVENT_FOCUS) {
                 if (event.width) {
                     view_w = event.width > NOTEPAD_MAX_W ? NOTEPAD_MAX_W : event.width;
                     if (view_w < NOTEPAD_MIN_W) {

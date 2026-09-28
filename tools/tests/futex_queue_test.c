@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <linux/time.h>
-#include <ntclks/paging.h>
-#undef NTCLKS_KERNEL_DIRECT_MAP_BASE
-#define NTCLKS_KERNEL_DIRECT_MAP_BASE 0
-#include "../../kernel/ntclks/kernel/ntclks/futex.c"
+#include <reliefnt/paging.h>
+#undef RELIEFNT_KERNEL_DIRECT_MAP_BASE
+#define RELIEFNT_KERNEL_DIRECT_MAP_BASE 0
+#include "../../kernel/reliefnt/kernel/reliefnt/futex.c"
 
 static struct task tasks_test[4], *current;
 static uint64_t ticks = 100;
@@ -26,7 +26,7 @@ void sched_sleep_current_until(uint64_t deadline)
 void sched_mark_ready(uint32_t pid)
 { assert(pid && pid <= 4); tasks_test[pid - 1].state = TASK_READY; ++wakes; }
 uint64_t time_ticks(void) { return ticks; }
-int time_wall_clock(struct leonos_time_info *out)
+int time_wall_clock(struct reliefos_time_info *out)
 { out->unix_seconds = 1000; return 0; }
 int time_clock_get(int32_t clock, struct linux_timespec *out)
 { assert(clock == LINUX_CLOCK_REALTIME); *out = (struct linux_timespec){1000, 700000000}; return 0; }

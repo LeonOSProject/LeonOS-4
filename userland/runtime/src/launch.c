@@ -1,55 +1,55 @@
-#include <leonos/pam_session.h>
-#include <leonos/fs.h>
-#include <leonos/app.h>
-#include <leonos/device.h>
-#include <leonos/environment.h>
-#include <leonos/launch.h>
-#include <leonos/launch_result.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
+#include <reliefos/pam_session.h>
+#include <reliefos/fs.h>
+#include <reliefos/app.h>
+#include <reliefos/device.h>
+#include <reliefos/environment.h>
+#include <reliefos/launch.h>
+#include <reliefos/launch_result.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 #include <grp.h>
 #include <pwd.h>
 #include <sys/stat.h>
 #include <stdlib.h>
 
-#define LEONOS_ASSOC_CONFIG_PATH LEONOS_PATH_FILEASSOC_CFG
-#define LEONOS_ASSOC_CONFIG_MAX 1024U
-#define LEONOS_SHORTCUT_MAX_BYTES 384U
-#define LEONOS_SHORTCUT_MAX_DEPTH 8U
-#define LEONOS_TERMINAL_APP_PATH LEONOS_LAYOUT_LEONOS_APPS "/terminal/terminal.elf"
+#define RELIEFOS_ASSOC_CONFIG_PATH RELIEFOS_PATH_FILEASSOC_CFG
+#define RELIEFOS_ASSOC_CONFIG_MAX 1024U
+#define RELIEFOS_SHORTCUT_MAX_BYTES 384U
+#define RELIEFOS_SHORTCUT_MAX_DEPTH 8U
+#define RELIEFOS_TERMINAL_APP_PATH RELIEFOS_LAYOUT_RELIEFOS_APPS "/terminal/terminal.elf"
 
 static int launch_fail(int code)
 {
     switch (code) {
-    case LEONOS_LAUNCH_ERR_EMPTY:
+    case RELIEFOS_LAUNCH_ERR_EMPTY:
         errno = EINVAL;
         break;
-    case LEONOS_LAUNCH_ERR_TOO_MANY_ARGS:
+    case RELIEFOS_LAUNCH_ERR_TOO_MANY_ARGS:
         errno = E2BIG;
         break;
-    case LEONOS_LAUNCH_ERR_UNCLOSED_QUOTE:
+    case RELIEFOS_LAUNCH_ERR_UNCLOSED_QUOTE:
         errno = EINVAL;
         break;
-    case LEONOS_LAUNCH_ERR_NOT_FOUND:
+    case RELIEFOS_LAUNCH_ERR_NOT_FOUND:
         errno = ENOENT;
         break;
-    case LEONOS_LAUNCH_ERR_NO_ASSOCIATION:
+    case RELIEFOS_LAUNCH_ERR_NO_ASSOCIATION:
         errno = ENOSYS;
         break;
-    case LEONOS_LAUNCH_ERR_INVALID_SHORTCUT:
+    case RELIEFOS_LAUNCH_ERR_INVALID_SHORTCUT:
         errno = EINVAL;
         break;
-    case LEONOS_LAUNCH_ERR_SHORTCUT_LOOP:
+    case RELIEFOS_LAUNCH_ERR_SHORTCUT_LOOP:
         errno = ELOOP;
         break;
-    case LEONOS_LAUNCH_ERR_EXISTS:
+    case RELIEFOS_LAUNCH_ERR_EXISTS:
         errno = EEXIST;
         break;
-    case LEONOS_LAUNCH_ERR_ALREADY_RUNNING:
+    case RELIEFOS_LAUNCH_ERR_ALREADY_RUNNING:
         errno = EALREADY;
         break;
     default:
@@ -58,9 +58,9 @@ static int launch_fail(int code)
     return code;
 }
 
-#define LEONOS_LAUNCH_ASSOC_CACHE_MAX LEONOS_APP_REGISTRY_MAX
-static struct leonos_launch_assoc_app assoc_cache[LEONOS_LAUNCH_ASSOC_CACHE_MAX];
-static struct leonos_app_info assoc_info_cache[LEONOS_LAUNCH_ASSOC_CACHE_MAX];
+#define RELIEFOS_LAUNCH_ASSOC_CACHE_MAX RELIEFOS_APP_REGISTRY_MAX
+static struct reliefos_launch_assoc_app assoc_cache[RELIEFOS_LAUNCH_ASSOC_CACHE_MAX];
+static struct reliefos_app_info assoc_info_cache[RELIEFOS_LAUNCH_ASSOC_CACHE_MAX];
 static uint32_t assoc_cache_count;
 
 static uint32_t text_len(const char *text)
@@ -150,7 +150,7 @@ static int ends_with_ignore_case(const char *text, const char *suffix)
 
 static int is_system_desktop_path(const char *path)
 {
-    return text_eq_ignore_case(path, LEONOS_LAYOUT_LEONOS_APPS "/desktop/desktop.elf");
+    return text_eq_ignore_case(path, RELIEFOS_LAYOUT_RELIEFOS_APPS "/desktop/desktop.elf");
 }
 
 static const char *path_basename(const char *path)
@@ -189,52 +189,52 @@ static void build_parent_path(char *dst, uint32_t capacity, const char *path)
 
 static int app_requires_terminal(const char *program_path)
 {
-    struct leonos_app_info info;
-    return leonos_app_registry_find(program_path, &info) == 0 &&
-           (info.flags & LEONOS_APP_FLAG_TERMINAL) != 0;
+    struct reliefos_app_info info;
+    return reliefos_app_registry_find(program_path, &info) == 0 &&
+           (info.flags & RELIEFOS_APP_FLAG_TERMINAL) != 0;
 }
 
 static int launch_in_terminal(char *argv[])
 {
-    char *terminal_argv[LEONOS_LAUNCH_MAX_ARGS + 3U];
-    char terminal_path[LEONOS_APP_PATH_LEN];
-    const char *terminal = LEONOS_TERMINAL_APP_PATH;
+    char *terminal_argv[RELIEFOS_LAUNCH_MAX_ARGS + 3U];
+    char terminal_path[RELIEFOS_APP_PATH_LEN];
+    const char *terminal = RELIEFOS_TERMINAL_APP_PATH;
     uint32_t argc = 0;
-    if (leonos_app_registry_resolve("terminal", terminal_path,
+    if (reliefos_app_registry_resolve("terminal", terminal_path,
                                     sizeof(terminal_path)) == 0) {
         terminal = terminal_path;
     }
     terminal_argv[0] = (char *)terminal;
     terminal_argv[1] = "--run";
     while (argv[argc]) {
-        if (argc >= LEONOS_LAUNCH_MAX_ARGS) {
-            return launch_fail(LEONOS_LAUNCH_ERR_TOO_MANY_ARGS);
+        if (argc >= RELIEFOS_LAUNCH_MAX_ARGS) {
+            return launch_fail(RELIEFOS_LAUNCH_ERR_TOO_MANY_ARGS);
         }
         terminal_argv[argc + 2U] = argv[argc];
         ++argc;
     }
     terminal_argv[argc + 2U] = 0;
-    return leonos_spawn_argv(terminal_argv[0], terminal_argv);
+    return reliefos_spawn_argv(terminal_argv[0], terminal_argv);
 }
 
 static int launch_session;
-void leonos_launch_use_session(int enabled) { launch_session = !!enabled; }
+void reliefos_launch_use_session(int enabled) { launch_session = !!enabled; }
 
-int leonos_spawn_argv(const char *path, char *const argv[])
+int reliefos_spawn_argv(const char *path, char *const argv[])
 {
     if (!path || !path[0] || !argv || !argv[0])
-        return launch_fail(LEONOS_LAUNCH_ERR_EMPTY);
+        return launch_fail(RELIEFOS_LAUNCH_ERR_EMPTY);
     pid_t pid = fork();
     if (pid == 0) {
         char **envp = NULL;
         if (launch_session && getuid() == 0 &&
-            strcmp(path, LEONOS_LAYOUT_LEONOS_APPS "/login/login.elf")) {
+            strcmp(path, RELIEFOS_LAYOUT_RELIEFOS_APPS "/login/login.elf")) {
             struct stat installed;
-            int present = lstat("/etc/leonos/installed", &installed);
+            int present = lstat("/etc/reliefos/installed", &installed);
             if ((present < 0 && errno != ENOENT) ||
-                (present == 0 && leonos_session_apply() < 0)) _exit(126);
+                (present == 0 && reliefos_session_apply() < 0)) _exit(126);
         }
-        if (leonos_environment_build(NULL, &envp) < 0) _exit(126);
+        if (reliefos_environment_build(NULL, &envp) < 0) _exit(126);
         execve(path, argv, envp);
         _exit(127);
     }
@@ -288,7 +288,7 @@ static void append_shortcut_base(char *dst, uint32_t *pos, uint32_t capacity,
     }
 }
 
-void leonos_launch_default_shortcut_name(const char *target_path, char *buffer,
+void reliefos_launch_default_shortcut_name(const char *target_path, char *buffer,
                                          uint32_t capacity)
 {
     uint32_t pos = 0;
@@ -319,31 +319,31 @@ static void build_numbered_shortcut_name(char *dst, uint32_t capacity,
     append_text(dst, &pos, capacity, ".lnk");
 }
 
-int leonos_launch_create_shortcut(const char *shortcut_path, const char *target_path)
+int reliefos_launch_create_shortcut(const char *shortcut_path, const char *target_path)
 {
-    struct leonos_stat st;
-    char body[LEONOS_SHORTCUT_MAX_BYTES];
+    struct reliefos_stat st;
+    char body[RELIEFOS_SHORTCUT_MAX_BYTES];
     uint32_t pos = 0;
     int fd;
     long wrote;
     if (!shortcut_path || !shortcut_path[0] || !target_path || !target_path[0]) {
-        return launch_fail(LEONOS_LAUNCH_ERR_EMPTY);
+        return launch_fail(RELIEFOS_LAUNCH_ERR_EMPTY);
     }
     if (!ends_with_ignore_case(shortcut_path, ".lnk")) {
-        return launch_fail(LEONOS_LAUNCH_ERR_INVALID_SHORTCUT);
+        return launch_fail(RELIEFOS_LAUNCH_ERR_INVALID_SHORTCUT);
     }
-    if (leonos_stat_legacy(target_path, &st) < 0) {
-        return launch_fail(LEONOS_LAUNCH_ERR_NOT_FOUND);
+    if (reliefos_stat_legacy(target_path, &st) < 0) {
+        return launch_fail(RELIEFOS_LAUNCH_ERR_NOT_FOUND);
     }
-    if (leonos_stat_legacy(shortcut_path, &st) == 0) {
-        return launch_fail(LEONOS_LAUNCH_ERR_EXISTS);
+    if (reliefos_stat_legacy(shortcut_path, &st) == 0) {
+        return launch_fail(RELIEFOS_LAUNCH_ERR_EXISTS);
     }
     body[0] = 0;
-    append_text(body, &pos, sizeof(body), "# LeonOS shortcut\n");
+    append_text(body, &pos, sizeof(body), "# ReliefOS shortcut\n");
     append_text(body, &pos, sizeof(body), "target=");
     append_text(body, &pos, sizeof(body), target_path);
     append_char(body, &pos, sizeof(body), '\n');
-    fd = open(shortcut_path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
+    fd = open(shortcut_path, RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0666);
     if (fd < 0) {
         return fd;
     }
@@ -355,44 +355,44 @@ int leonos_launch_create_shortcut(const char *shortcut_path, const char *target_
     return (uint32_t)wrote == pos ? 0 : -1;
 }
 
-int leonos_launch_create_shortcut_in_dir(const char *dir_path, const char *target_path,
+int reliefos_launch_create_shortcut_in_dir(const char *dir_path, const char *target_path,
                                          char *out_path, uint32_t out_capacity)
 {
-    struct leonos_stat st;
-    char name[LEONOS_FS_NAME_LEN];
-    char path[LEONOS_FS_PATH_LEN];
+    struct reliefos_stat st;
+    char name[RELIEFOS_FS_NAME_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     int ret;
     if (!dir_path || !dir_path[0] || !target_path || !target_path[0]) {
-        return launch_fail(LEONOS_LAUNCH_ERR_EMPTY);
+        return launch_fail(RELIEFOS_LAUNCH_ERR_EMPTY);
     }
-    if (leonos_stat_legacy(dir_path, &st) < 0 || st.type != LEONOS_FS_TYPE_DIR) {
-        return launch_fail(LEONOS_LAUNCH_ERR_NOT_FOUND);
+    if (reliefos_stat_legacy(dir_path, &st) < 0 || st.type != RELIEFOS_FS_TYPE_DIR) {
+        return launch_fail(RELIEFOS_LAUNCH_ERR_NOT_FOUND);
     }
-    leonos_launch_default_shortcut_name(target_path, name, sizeof(name));
+    reliefos_launch_default_shortcut_name(target_path, name, sizeof(name));
     for (uint32_t i = 0; i < 100; ++i) {
         if (i > 0) {
             build_numbered_shortcut_name(name, sizeof(name), target_path, i + 1);
         }
         build_child_path(path, sizeof(path), dir_path, name);
-        if (leonos_stat_legacy(path, &st) == 0) {
+        if (reliefos_stat_legacy(path, &st) == 0) {
             continue;
         }
-        ret = leonos_launch_create_shortcut(path, target_path);
+        ret = reliefos_launch_create_shortcut(path, target_path);
         if (ret == 0 && out_path && out_capacity) {
             copy_text(out_path, out_capacity, path);
         }
         return ret;
     }
-    return launch_fail(LEONOS_LAUNCH_ERR_EXISTS);
+    return launch_fail(RELIEFOS_LAUNCH_ERR_EXISTS);
 }
 
-static const struct leonos_launch_assoc_app *find_assoc_app(const char *program_path)
+static const struct reliefos_launch_assoc_app *find_assoc_app(const char *program_path)
 {
-    struct leonos_app_info info;
-    if (leonos_app_registry_find(program_path, &info) < 0) {
+    struct reliefos_app_info info;
+    if (reliefos_app_registry_find(program_path, &info) < 0) {
         return 0;
     }
-    if ((info.flags & LEONOS_APP_FLAG_OPEN_WITH) == 0 &&
+    if ((info.flags & RELIEFOS_APP_FLAG_OPEN_WITH) == 0 &&
         !text_eq(info.id, "terminal")) {
         return 0;
     }
@@ -401,8 +401,8 @@ static const struct leonos_launch_assoc_app *find_assoc_app(const char *program_
     assoc_cache[0].detail = assoc_info_cache[0].category;
     assoc_cache[0].program_path = assoc_info_cache[0].exec;
     assoc_cache[0].mode = text_eq(info.id, "terminal")
-                              ? LEONOS_LAUNCH_ASSOC_MODE_TERMINAL_CAT
-                              : LEONOS_LAUNCH_ASSOC_MODE_EXEC;
+                              ? RELIEFOS_LAUNCH_ASSOC_MODE_TERMINAL_CAT
+                              : RELIEFOS_LAUNCH_ASSOC_MODE_EXEC;
     return &assoc_cache[0];
 }
 
@@ -441,7 +441,7 @@ static int read_assoc_config(char *buffer, uint32_t capacity, uint32_t *out_len)
         return -1;
     }
     buffer[0] = 0;
-    fd = open(LEONOS_ASSOC_CONFIG_PATH, LEONOS_O_RDONLY, 0);
+    fd = open(RELIEFOS_ASSOC_CONFIG_PATH, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         if (out_len) {
             *out_len = 0;
@@ -474,8 +474,8 @@ static int read_assoc_config(char *buffer, uint32_t capacity, uint32_t *out_len)
 
 static int write_assoc_config(const char *buffer, uint32_t len)
 {
-    int fd = open(LEONOS_ASSOC_CONFIG_PATH,
-                  LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
+    int fd = open(RELIEFOS_ASSOC_CONFIG_PATH,
+                  RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0666);
     if (fd < 0) {
         return fd;
     }
@@ -562,17 +562,17 @@ static int parse_assoc_line(const char *line, uint32_t len,
     return pos != 0;
 }
 
-const char *leonos_launch_builtin_path(const char *name_or_path)
+const char *reliefos_launch_builtin_path(const char *name_or_path)
 {
-    static char resolved[LEONOS_APP_PATH_LEN];
+    static char resolved[RELIEFOS_APP_PATH_LEN];
     if (name_or_path && name_or_path[0] &&
-        leonos_app_registry_resolve(name_or_path, resolved, sizeof(resolved)) == 0) {
+        reliefos_app_registry_resolve(name_or_path, resolved, sizeof(resolved)) == 0) {
         return resolved;
     }
     return name_or_path;
 }
 
-const char *leonos_launch_get_extension_for_path(const char *path, char *buffer,
+const char *reliefos_launch_get_extension_for_path(const char *path, char *buffer,
                                                  uint32_t capacity)
 {
     uint32_t len;
@@ -603,11 +603,11 @@ const char *leonos_launch_get_extension_for_path(const char *path, char *buffer,
     return buffer;
 }
 
-int leonos_launch_get_extension_association(const char *extension, char *program_path,
+int reliefos_launch_get_extension_association(const char *extension, char *program_path,
                                             uint32_t capacity)
 {
     char wanted[16];
-    char config[LEONOS_ASSOC_CONFIG_MAX];
+    char config[RELIEFOS_ASSOC_CONFIG_MAX];
     uint32_t len = 0;
     uint32_t pos = 0;
     if (!program_path || capacity == 0) {
@@ -622,7 +622,7 @@ int leonos_launch_get_extension_association(const char *extension, char *program
     }
     while (pos < len) {
         char ext[16];
-        char program[LEONOS_FS_PATH_LEN];
+        char program[RELIEFOS_FS_PATH_LEN];
         uint32_t start = pos;
         while (pos < len && config[pos] != '\n' && config[pos] != '\r') {
             ++pos;
@@ -630,7 +630,7 @@ int leonos_launch_get_extension_association(const char *extension, char *program
         if (parse_assoc_line(config + start, pos - start, ext, sizeof(ext),
                              program, sizeof(program)) &&
             text_eq_ignore_case(ext, wanted)) {
-            copy_text(program_path, capacity, leonos_launch_builtin_path(program));
+            copy_text(program_path, capacity, reliefos_launch_builtin_path(program));
             return 1;
         }
         while (pos < len && (config[pos] == '\n' || config[pos] == '\r')) {
@@ -640,12 +640,12 @@ int leonos_launch_get_extension_association(const char *extension, char *program
     return 0;
 }
 
-int leonos_launch_set_extension_association(const char *extension, const char *program_path)
+int reliefos_launch_set_extension_association(const char *extension, const char *program_path)
 {
     char wanted[16];
-    char old_cfg[LEONOS_ASSOC_CONFIG_MAX];
-    char new_cfg[LEONOS_ASSOC_CONFIG_MAX];
-    char normalized_program[LEONOS_FS_PATH_LEN];
+    char old_cfg[RELIEFOS_ASSOC_CONFIG_MAX];
+    char new_cfg[RELIEFOS_ASSOC_CONFIG_MAX];
+    char normalized_program[RELIEFOS_FS_PATH_LEN];
     uint32_t old_len = 0;
     uint32_t new_len = 0;
     uint32_t pos = 0;
@@ -656,7 +656,7 @@ int leonos_launch_set_extension_association(const char *extension, const char *p
     }
     normalized_program[0] = 0;
     if (program_path && program_path[0]) {
-        resolved_program = leonos_launch_builtin_path(program_path);
+        resolved_program = reliefos_launch_builtin_path(program_path);
         copy_text(normalized_program, sizeof(normalized_program), resolved_program);
     }
     if (read_assoc_config(old_cfg, sizeof(old_cfg), &old_len) < 0) {
@@ -666,7 +666,7 @@ int leonos_launch_set_extension_association(const char *extension, const char *p
     new_cfg[0] = 0;
     while (pos < old_len) {
         char ext[16];
-        char program[LEONOS_FS_PATH_LEN];
+        char program[RELIEFOS_FS_PATH_LEN];
         uint32_t start = pos;
         uint32_t end;
         while (pos < old_len && old_cfg[pos] != '\n' && old_cfg[pos] != '\r') {
@@ -702,21 +702,21 @@ int leonos_launch_set_extension_association(const char *extension, const char *p
     return write_assoc_config(new_cfg, new_len);
 }
 
-const struct leonos_launch_assoc_app *leonos_launch_assoc_apps(uint32_t *count)
+const struct reliefos_launch_assoc_app *reliefos_launch_assoc_apps(uint32_t *count)
 {
-    uint32_t total = leonos_app_registry_count();
+    uint32_t total = reliefos_app_registry_count();
     assoc_cache_count = 0;
-    for (uint32_t i = 0; i < total && assoc_cache_count < LEONOS_LAUNCH_ASSOC_CACHE_MAX; ++i) {
-        if (leonos_app_registry_get(i, &assoc_info_cache[assoc_cache_count]) < 0) continue;
-        if ((assoc_info_cache[assoc_cache_count].flags & LEONOS_APP_FLAG_OPEN_WITH) == 0 &&
+    for (uint32_t i = 0; i < total && assoc_cache_count < RELIEFOS_LAUNCH_ASSOC_CACHE_MAX; ++i) {
+        if (reliefos_app_registry_get(i, &assoc_info_cache[assoc_cache_count]) < 0) continue;
+        if ((assoc_info_cache[assoc_cache_count].flags & RELIEFOS_APP_FLAG_OPEN_WITH) == 0 &&
             !text_eq(assoc_info_cache[assoc_cache_count].id, "terminal") &&
             !text_eq(assoc_info_cache[assoc_cache_count].id, "run")) continue;
         assoc_cache[assoc_cache_count].name = assoc_info_cache[assoc_cache_count].name;
         assoc_cache[assoc_cache_count].detail = assoc_info_cache[assoc_cache_count].category;
         assoc_cache[assoc_cache_count].program_path = assoc_info_cache[assoc_cache_count].exec;
         assoc_cache[assoc_cache_count].mode = text_eq(assoc_info_cache[assoc_cache_count].id, "terminal")
-                                                  ? LEONOS_LAUNCH_ASSOC_MODE_TERMINAL_CAT
-                                                  : LEONOS_LAUNCH_ASSOC_MODE_EXEC;
+                                                  ? RELIEFOS_LAUNCH_ASSOC_MODE_TERMINAL_CAT
+                                                  : RELIEFOS_LAUNCH_ASSOC_MODE_EXEC;
         ++assoc_cache_count;
     }
     if (count) {
@@ -725,17 +725,17 @@ const struct leonos_launch_assoc_app *leonos_launch_assoc_apps(uint32_t *count)
     return assoc_cache;
 }
 
-const char *leonos_launch_resolve_default_app_for_path(const char *path)
+const char *reliefos_launch_resolve_default_app_for_path(const char *path)
 {
-    static char program[LEONOS_FS_PATH_LEN];
+    static char program[RELIEFOS_FS_PATH_LEN];
     char extension[16];
-    if (!leonos_launch_get_extension_for_path(path, extension, sizeof(extension))) {
+    if (!reliefos_launch_get_extension_for_path(path, extension, sizeof(extension))) {
         return 0;
     }
-    if (leonos_launch_get_extension_association(extension, program, sizeof(program)) > 0) {
+    if (reliefos_launch_get_extension_association(extension, program, sizeof(program)) > 0) {
         return program;
     }
-    return leonos_app_registry_default_for_extension(extension, program,
+    return reliefos_app_registry_default_for_extension(extension, program,
                                                      sizeof(program)) == 0
                ? program : 0;
 }
@@ -757,7 +757,7 @@ static int parse_shortcut_target(const char *buffer, uint32_t len,
 {
     uint32_t pos = 0;
     if (!target || capacity == 0) {
-        return launch_fail(LEONOS_LAUNCH_ERR_INVALID_SHORTCUT);
+        return launch_fail(RELIEFOS_LAUNCH_ERR_INVALID_SHORTCUT);
     }
     target[0] = 0;
     while (pos < len) {
@@ -791,23 +791,23 @@ static int parse_shortcut_target(const char *buffer, uint32_t len,
             target[out++] = buffer[text_start++];
         }
         target[out] = 0;
-        return target[0] ? 0 : LEONOS_LAUNCH_ERR_INVALID_SHORTCUT;
+        return target[0] ? 0 : RELIEFOS_LAUNCH_ERR_INVALID_SHORTCUT;
     }
-    return launch_fail(LEONOS_LAUNCH_ERR_INVALID_SHORTCUT);
+    return launch_fail(RELIEFOS_LAUNCH_ERR_INVALID_SHORTCUT);
 }
 
 static int read_shortcut_target(const char *shortcut_path, char *target, uint32_t capacity)
 {
-    char buffer[LEONOS_SHORTCUT_MAX_BYTES];
+    char buffer[RELIEFOS_SHORTCUT_MAX_BYTES];
     uint32_t len = 0;
     int fd;
     int ret;
-    struct leonos_stat st;
+    struct reliefos_stat st;
     if (!shortcut_path || !target || capacity == 0) {
-        return launch_fail(LEONOS_LAUNCH_ERR_EMPTY);
+        return launch_fail(RELIEFOS_LAUNCH_ERR_EMPTY);
     }
     target[0] = 0;
-    fd = open(shortcut_path, LEONOS_O_RDONLY, 0);
+    fd = open(shortcut_path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return fd;
     }
@@ -828,25 +828,25 @@ static int read_shortcut_target(const char *shortcut_path, char *target, uint32_
     if (ret < 0) {
         return ret;
     }
-    return leonos_stat_legacy(target, &st) < 0 ? LEONOS_LAUNCH_ERR_NOT_FOUND : 0;
+    return reliefos_stat_legacy(target, &st) < 0 ? RELIEFOS_LAUNCH_ERR_NOT_FOUND : 0;
 }
 
-int leonos_launch_file_with_app(const char *target_path, const char *program_path)
+int reliefos_launch_file_with_app(const char *target_path, const char *program_path)
 {
     const char *resolved_program;
-    const struct leonos_launch_assoc_app *app;
-    struct leonos_stat st;
+    const struct reliefos_launch_assoc_app *app;
+    struct reliefos_stat st;
     if (!target_path || !target_path[0] || !program_path || !program_path[0]) {
-        return launch_fail(LEONOS_LAUNCH_ERR_EMPTY);
+        return launch_fail(RELIEFOS_LAUNCH_ERR_EMPTY);
     }
-    resolved_program = leonos_launch_builtin_path(program_path);
-    if (leonos_stat_legacy(resolved_program, &st) < 0) {
-        return launch_fail(LEONOS_LAUNCH_ERR_NOT_FOUND);
+    resolved_program = reliefos_launch_builtin_path(program_path);
+    if (reliefos_stat_legacy(resolved_program, &st) < 0) {
+        return launch_fail(RELIEFOS_LAUNCH_ERR_NOT_FOUND);
     }
     app = find_assoc_app(resolved_program);
-    if (app && app->mode == LEONOS_LAUNCH_ASSOC_MODE_TERMINAL_CAT) {
-        char cwd[LEONOS_FS_PATH_LEN];
-        char command[LEONOS_FS_PATH_LEN + 16];
+    if (app && app->mode == RELIEFOS_LAUNCH_ASSOC_MODE_TERMINAL_CAT) {
+        char cwd[RELIEFOS_FS_PATH_LEN];
+        char command[RELIEFOS_FS_PATH_LEN + 16];
         char *argv[4];
         build_parent_path(cwd, sizeof(cwd), target_path);
         build_cat_command(command, sizeof(command), target_path);
@@ -854,7 +854,7 @@ int leonos_launch_file_with_app(const char *target_path, const char *program_pat
         argv[1] = cwd;
         argv[2] = command;
         argv[3] = 0;
-        return leonos_spawn_argv(resolved_program, argv);
+        return reliefos_spawn_argv(resolved_program, argv);
     }
     {
         char *argv[3];
@@ -862,23 +862,23 @@ int leonos_launch_file_with_app(const char *target_path, const char *program_pat
         argv[1] = (char *)target_path;
         argv[2] = 0;
         /* The caller explicitly selected this executable as the handler.
-         * Do not feed it back through leonos_launch_argv(): that routine is
+         * Do not feed it back through reliefos_launch_argv(): that routine is
          * for user-entered paths and may reinterpret its first argument as a
          * directory or another associated document.  An explicit handler
          * must be spawned directly, otherwise selecting Notepad can fall
          * through to File Manager when the path is re-resolved. */
-        return leonos_spawn_argv(resolved_program, argv);
+        return reliefos_spawn_argv(resolved_program, argv);
     }
 }
 
-int leonos_cmdline_split(char *line, char *argv[], uint32_t max_args)
+int reliefos_cmdline_split(char *line, char *argv[], uint32_t max_args)
 {
     uint32_t argc = 0;
     char quote = 0;
     char *src;
     char *dst;
     if (!line || !argv || max_args == 0) {
-        return launch_fail(LEONOS_LAUNCH_ERR_EMPTY);
+        return launch_fail(RELIEFOS_LAUNCH_ERR_EMPTY);
     }
     src = line;
     while (*src) {
@@ -890,7 +890,7 @@ int leonos_cmdline_split(char *line, char *argv[], uint32_t max_args)
         }
         if (argc + 1 >= max_args) {
             argv[0] = 0;
-            return launch_fail(LEONOS_LAUNCH_ERR_TOO_MANY_ARGS);
+            return launch_fail(RELIEFOS_LAUNCH_ERR_TOO_MANY_ARGS);
         }
         argv[argc++] = src;
         dst = src;
@@ -916,7 +916,7 @@ int leonos_cmdline_split(char *line, char *argv[], uint32_t max_args)
         }
         if (quote) {
             argv[0] = 0;
-            return launch_fail(LEONOS_LAUNCH_ERR_UNCLOSED_QUOTE);
+            return launch_fail(RELIEFOS_LAUNCH_ERR_UNCLOSED_QUOTE);
         }
         *dst = 0;
         while (*src == ' ' || *src == '\t' || *src == '\r' || *src == '\n') {
@@ -925,137 +925,137 @@ int leonos_cmdline_split(char *line, char *argv[], uint32_t max_args)
     }
     if (argc == 0) {
         argv[0] = 0;
-        return launch_fail(LEONOS_LAUNCH_ERR_EMPTY);
+        return launch_fail(RELIEFOS_LAUNCH_ERR_EMPTY);
     }
     argv[argc] = 0;
     return (int)argc;
 }
 
-static int leonos_launch_argv_depth(char *argv[], uint32_t depth)
+static int reliefos_launch_argv_depth(char *argv[], uint32_t depth)
 {
-    struct leonos_stat st;
+    struct reliefos_stat st;
     char extension[16];
-    char associated_program[LEONOS_FS_PATH_LEN];
+    char associated_program[RELIEFOS_FS_PATH_LEN];
     char *path;
     const char *default_program;
     if (!argv || !argv[0] || !argv[0][0]) {
-        return launch_fail(LEONOS_LAUNCH_ERR_EMPTY);
+        return launch_fail(RELIEFOS_LAUNCH_ERR_EMPTY);
     }
     path = argv[0];
-    path = (char *)leonos_launch_builtin_path(path);
+    path = (char *)reliefos_launch_builtin_path(path);
     argv[0] = path;
     if (ends_with_ignore_case(path, ".lnk")) {
-        char target[LEONOS_FS_PATH_LEN];
-        char *target_argv[LEONOS_LAUNCH_MAX_ARGS];
+        char target[RELIEFOS_FS_PATH_LEN];
+        char *target_argv[RELIEFOS_LAUNCH_MAX_ARGS];
         uint32_t i = 1;
         int ret;
-        if (depth >= LEONOS_SHORTCUT_MAX_DEPTH) {
-            return launch_fail(LEONOS_LAUNCH_ERR_SHORTCUT_LOOP);
+        if (depth >= RELIEFOS_SHORTCUT_MAX_DEPTH) {
+            return launch_fail(RELIEFOS_LAUNCH_ERR_SHORTCUT_LOOP);
         }
         ret = read_shortcut_target(path, target, sizeof(target));
         if (ret < 0) {
             return ret;
         }
         target_argv[0] = target;
-        while (i + 1 < LEONOS_LAUNCH_MAX_ARGS && argv[i]) {
+        while (i + 1 < RELIEFOS_LAUNCH_MAX_ARGS && argv[i]) {
             target_argv[i] = argv[i];
             ++i;
         }
         target_argv[i] = 0;
-        return leonos_launch_argv_depth(target_argv, depth + 1);
+        return reliefos_launch_argv_depth(target_argv, depth + 1);
     }
     if (ends_with_ignore_case(path, ".elf")) {
         if (app_requires_terminal(path)) {
             return launch_in_terminal(argv);
         }
-        int ret = leonos_spawn_argv(path, argv);
-        if (ret == -LEONOS_EEXIST && is_system_desktop_path(path)) {
-            return launch_fail(LEONOS_LAUNCH_ERR_ALREADY_RUNNING);
+        int ret = reliefos_spawn_argv(path, argv);
+        if (ret == -RELIEFOS_EEXIST && is_system_desktop_path(path)) {
+            return launch_fail(RELIEFOS_LAUNCH_ERR_ALREADY_RUNNING);
         }
         return ret;
     }
-    if (leonos_stat_legacy(path, &st) < 0) {
-        return launch_fail(LEONOS_LAUNCH_ERR_NOT_FOUND);
+    if (reliefos_stat_legacy(path, &st) < 0) {
+        return launch_fail(RELIEFOS_LAUNCH_ERR_NOT_FOUND);
     }
-    if (st.type == LEONOS_FS_TYPE_DIR) {
+    if (st.type == RELIEFOS_FS_TYPE_DIR) {
         char *dir_argv[3];
-        char fileman_path[LEONOS_APP_PATH_LEN];
-        if (leonos_app_registry_resolve("fileman", fileman_path,
+        char fileman_path[RELIEFOS_APP_PATH_LEN];
+        if (reliefos_app_registry_resolve("fileman", fileman_path,
                                         sizeof(fileman_path)) < 0) {
-            return launch_fail(LEONOS_LAUNCH_ERR_NOT_FOUND);
+            return launch_fail(RELIEFOS_LAUNCH_ERR_NOT_FOUND);
         }
         dir_argv[0] = fileman_path;
         dir_argv[1] = path;
         dir_argv[2] = 0;
-        return leonos_spawn_argv(dir_argv[0], dir_argv);
+        return reliefos_spawn_argv(dir_argv[0], dir_argv);
     }
-    default_program = leonos_launch_resolve_default_app_for_path(path);
+    default_program = reliefos_launch_resolve_default_app_for_path(path);
     if (default_program) {
-        return leonos_launch_file_with_app(path, default_program);
+        return reliefos_launch_file_with_app(path, default_program);
     }
-    if (leonos_launch_get_extension_for_path(path, extension, sizeof(extension))) {
-        if (leonos_app_registry_default_for_extension(extension, associated_program,
+    if (reliefos_launch_get_extension_for_path(path, extension, sizeof(extension))) {
+        if (reliefos_app_registry_default_for_extension(extension, associated_program,
                                                       sizeof(associated_program)) == 0) {
             default_program = associated_program;
-            return leonos_launch_file_with_app(path, default_program);
+            return reliefos_launch_file_with_app(path, default_program);
         }
     }
-    return launch_fail(LEONOS_LAUNCH_ERR_NO_ASSOCIATION);
+    return launch_fail(RELIEFOS_LAUNCH_ERR_NO_ASSOCIATION);
 }
 
-int leonos_launch_argv(char *argv[])
+int reliefos_launch_argv(char *argv[])
 {
-    return leonos_launch_argv_depth(argv, 0);
+    return reliefos_launch_argv_depth(argv, 0);
 }
 
-int leonos_launch_command_line(char *line, char *argv[], uint32_t max_args)
+int reliefos_launch_command_line(char *line, char *argv[], uint32_t max_args)
 {
-    int argc = leonos_cmdline_split(line, argv, max_args);
+    int argc = reliefos_cmdline_split(line, argv, max_args);
     if (argc < 0) {
         return argc;
     }
-    return leonos_launch_argv(argv);
+    return reliefos_launch_argv(argv);
 }
 
-const char *leonos_launch_error_text(int code)
+const char *reliefos_launch_error_text(int code)
 {
     switch (code) {
-    case LEONOS_LAUNCH_ERR_EMPTY:
+    case RELIEFOS_LAUNCH_ERR_EMPTY:
         return "Command line is empty";
-    case LEONOS_LAUNCH_ERR_TOO_MANY_ARGS:
+    case RELIEFOS_LAUNCH_ERR_TOO_MANY_ARGS:
         return "Too many arguments";
-    case LEONOS_LAUNCH_ERR_UNCLOSED_QUOTE:
+    case RELIEFOS_LAUNCH_ERR_UNCLOSED_QUOTE:
         return "Missing closing quote";
-    case LEONOS_LAUNCH_ERR_NOT_FOUND:
+    case RELIEFOS_LAUNCH_ERR_NOT_FOUND:
         return "Program or path not found";
-    case LEONOS_LAUNCH_ERR_NO_ASSOCIATION:
+    case RELIEFOS_LAUNCH_ERR_NO_ASSOCIATION:
         return "No file association for this item";
-    case LEONOS_LAUNCH_ERR_INVALID_SHORTCUT:
+    case RELIEFOS_LAUNCH_ERR_INVALID_SHORTCUT:
         return "Invalid shortcut";
-    case LEONOS_LAUNCH_ERR_SHORTCUT_LOOP:
+    case RELIEFOS_LAUNCH_ERR_SHORTCUT_LOOP:
         return "Shortcut loop detected";
-    case LEONOS_LAUNCH_ERR_EXISTS:
+    case RELIEFOS_LAUNCH_ERR_EXISTS:
         return "Shortcut already exists";
-    case LEONOS_LAUNCH_ERR_ALREADY_RUNNING:
+    case RELIEFOS_LAUNCH_ERR_ALREADY_RUNNING:
         return "Desktop is already running";
     default:
         return "Launch failed";
     }
 }
 
-int leonos_launch_is_error(int result)
+int reliefos_launch_is_error(int result)
 {
-    return result <= LEONOS_LAUNCH_ERR_EMPTY && result >= LEONOS_LAUNCH_ERR_ALREADY_RUNNING;
+    return result <= RELIEFOS_LAUNCH_ERR_EMPTY && result >= RELIEFOS_LAUNCH_ERR_ALREADY_RUNNING;
 }
 
-int leonos_launch_error_kind(int result)
+int reliefos_launch_error_kind(int result)
 {
-    return leonos_launch_is_error(result) ? result : 0;
+    return reliefos_launch_is_error(result) ? result : 0;
 }
 
-int leonos_launch_errno(int result)
+int reliefos_launch_errno(int result)
 {
-    (void)leonos_launch_error_kind(result);
+    (void)reliefos_launch_error_kind(result);
     switch (result) {
     case LAUNCH_RESULT_EMPTY:
     case LAUNCH_RESULT_UNCLOSED_QUOTE:
@@ -1077,3 +1077,23 @@ int leonos_launch_errno(int result)
         return result < 0 ? -result : 0;
     }
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_cmdline_split) leonos_cmdline_split __attribute__((alias("reliefos_cmdline_split")));
+extern __typeof__(reliefos_launch_argv) leonos_launch_argv __attribute__((alias("reliefos_launch_argv")));
+extern __typeof__(reliefos_launch_assoc_apps) leonos_launch_assoc_apps __attribute__((alias("reliefos_launch_assoc_apps")));
+extern __typeof__(reliefos_launch_builtin_path) leonos_launch_builtin_path __attribute__((alias("reliefos_launch_builtin_path")));
+extern __typeof__(reliefos_launch_command_line) leonos_launch_command_line __attribute__((alias("reliefos_launch_command_line")));
+extern __typeof__(reliefos_launch_create_shortcut) leonos_launch_create_shortcut __attribute__((alias("reliefos_launch_create_shortcut")));
+extern __typeof__(reliefos_launch_create_shortcut_in_dir) leonos_launch_create_shortcut_in_dir __attribute__((alias("reliefos_launch_create_shortcut_in_dir")));
+extern __typeof__(reliefos_launch_default_shortcut_name) leonos_launch_default_shortcut_name __attribute__((alias("reliefos_launch_default_shortcut_name")));
+extern __typeof__(reliefos_launch_errno) leonos_launch_errno __attribute__((alias("reliefos_launch_errno")));
+extern __typeof__(reliefos_launch_error_kind) leonos_launch_error_kind __attribute__((alias("reliefos_launch_error_kind")));
+extern __typeof__(reliefos_launch_error_text) leonos_launch_error_text __attribute__((alias("reliefos_launch_error_text")));
+extern __typeof__(reliefos_launch_file_with_app) leonos_launch_file_with_app __attribute__((alias("reliefos_launch_file_with_app")));
+extern __typeof__(reliefos_launch_get_extension_association) leonos_launch_get_extension_association __attribute__((alias("reliefos_launch_get_extension_association")));
+extern __typeof__(reliefos_launch_get_extension_for_path) leonos_launch_get_extension_for_path __attribute__((alias("reliefos_launch_get_extension_for_path")));
+extern __typeof__(reliefos_launch_is_error) leonos_launch_is_error __attribute__((alias("reliefos_launch_is_error")));
+extern __typeof__(reliefos_launch_resolve_default_app_for_path) leonos_launch_resolve_default_app_for_path __attribute__((alias("reliefos_launch_resolve_default_app_for_path")));
+extern __typeof__(reliefos_launch_set_extension_association) leonos_launch_set_extension_association __attribute__((alias("reliefos_launch_set_extension_association")));
+extern __typeof__(reliefos_launch_use_session) leonos_launch_use_session __attribute__((alias("reliefos_launch_use_session")));
+extern __typeof__(reliefos_spawn_argv) leonos_spawn_argv __attribute__((alias("reliefos_spawn_argv")));

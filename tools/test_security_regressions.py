@@ -15,14 +15,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 FORBIDDEN_KERNEL_RE = re.compile(
-    r"\b(?:LEONOS_GUI_IOCTL|LEONOS_AUTH_IOCTL|LEONOS_IOCTL_NET_|"
-    r"LEONOS_INPUTM_IOCTL|LEONOS_STARTUP_IOCTL|LEONOS_FS_IOCTL_|"
-    r"LEONOS_IOCTL_AUDIO_|LEONOS_IOCTL_DEVICE_LIST|LEONOS_IOCTL_DRIVER_|"
-    r"LEONOS_TEXT_IOCTL|LEONOS_IOCTL_LIST_DIR|LEONOS_KERNEL_DEBUG_IOCTL)"
+    r"\b(?:(?:LEONOS|RELIEFOS)_GUI_IOCTL|(?:LEONOS|RELIEFOS)_AUTH_IOCTL|(?:LEONOS|RELIEFOS)_IOCTL_NET_|"
+    r"(?:LEONOS|RELIEFOS)_INPUTM_IOCTL|(?:LEONOS|RELIEFOS)_STARTUP_IOCTL|(?:LEONOS|RELIEFOS)_FS_IOCTL_|"
+    r"(?:LEONOS|RELIEFOS)_IOCTL_AUDIO_|(?:LEONOS|RELIEFOS)_IOCTL_DEVICE_LIST|(?:LEONOS|RELIEFOS)_IOCTL_DRIVER_|"
+    r"(?:LEONOS|RELIEFOS)_TEXT_IOCTL|(?:LEONOS|RELIEFOS)_IOCTL_LIST_DIR|(?:LEONOS|RELIEFOS)_KERNEL_DEBUG_IOCTL)"
     r"[A-Z0-9_]*\b"
 )
 
-KERNEL_ROOTS = ("kernel/ntclks/kernel/ntclks", "kernel/ntclks/drivers/bootstrap")
+KERNEL_ROOTS = ("kernel/reliefnt/kernel/reliefnt", "kernel/reliefnt/drivers/bootstrap")
 PEERCRED_PATHS = (
     "userland/apps/windowd/main.c",
     "userland/apps/device-agent/main.c",
@@ -51,7 +51,7 @@ def missing_peercred() -> list[str]:
     missing = []
     for path in PEERCRED_PATHS:
         text = read(path)
-        if "SO_PEERCRED" not in text or "leonos_ipc_peer_credentials" not in text:
+        if "SO_PEERCRED" not in text or "reliefos_ipc_peer_credentials" not in text:
             missing.append(path)
     return missing
 
@@ -104,7 +104,7 @@ def main() -> int:
             "authorization_regression_failures": from_peer,
         }, indent=2))
     else:
-        print("LeonOS 4 Unix-IPC 安全回归源码检测")
+        print("ReliefOS Unix-IPC 安全回归源码检测")
         print(f"私有 ioctl 残留: {len(violations)}")
         for item in violations:
             print(f"  FAIL {item}")

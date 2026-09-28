@@ -3,7 +3,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 ROOT = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-rcctl-") as directory:
+with tempfile.TemporaryDirectory(prefix="reliefos-rcctl-") as directory:
     binary = Path(directory) / "test"
     subprocess.run(["cc", "-Wall", "-Wextra", "-Werror", "-O1", "-g",
                     "-fsanitize=address,undefined", "tools/tests/openrc_authorization_test.c",

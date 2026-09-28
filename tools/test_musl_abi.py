@@ -23,7 +23,7 @@ def main():
     resource = subprocess.check_output(["clang", "-print-resource-dir"], text=True).strip()
     cc = ["clang", "--target=x86_64-linux-musl", "-O2", "-fPIC", "-nostdinc",
           "-isystem", prefix / "include", "-isystem", Path(resource) / "include"]
-    with tempfile.TemporaryDirectory(prefix="leonos-musl-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-musl-") as directory:
         temp = Path(directory)
         checks = ["#define _GNU_SOURCE", "#include <fcntl.h>", "#include <sys/stat.h>",
                   "#include <sys/syscall.h>", "#include <stddef.h>",
@@ -176,7 +176,7 @@ def main():
                        f'offsetof(struct linux_stat_abi, {raw}), "{libc} offset");']
         source = temp / "uapi.c"
         source.write_text("\n".join(checks) + "\n")
-        run([*cc, "-I", ROOT / "kernel/ntclks/include/uapi", "-Werror", "-fsyntax-only", source])
+        run([*cc, "-I", ROOT / "kernel/reliefnt/include/uapi", "-Werror", "-fsyntax-only", source])
         print("PASS musl installed headers vs Linux v6.12 numbers and shared UAPI", flush=True)
         obj = temp / "runtime.o"
         run([*cc, "-c", ROOT / "tools/tests/musl_runtime_test.c", "-o", obj])

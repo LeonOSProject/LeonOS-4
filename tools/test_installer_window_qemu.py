@@ -154,12 +154,13 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     serial, qmp = out / "serial.log", out / "qmp.sock"
     qmp.unlink(missing_ok=True)
-    iso = ROOT / "build/images" / ("leonos4.iso" if args.case == "desktop" else "leonos4-installer.iso")
+    iso = ROOT / "build/images" / ("reliefos-live.iso" if args.case == "desktop" else "reliefos-installer.iso")
     if args.iso:
         iso = args.iso.resolve()
     disk = out / "scratch.raw"
-    if args.case == "tty":
-        subprocess.run(["truncate", "-s", "2G", str(disk)], check=True)
+    if args.case in ("tty", "installer"):
+        with disk.open("xb") as file:
+            file.truncate(2 * 1024**3)
     command = ["qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-machine", "q35",
                "-m", "4096", "-smp", "2", "-bios", "/usr/share/edk2/x64/OVMF.4m.fd",
                "-display", "none", "-serial", f"file:{serial}",
@@ -171,7 +172,7 @@ def main():
         command += ["-drive", f"file={args.disk.resolve()},format=raw,if=ide", "-boot", "c"]
     else:
         command += ["-cdrom", str(iso), "-boot", "d"]
-    if args.case == "tty":
+    if args.case in ("tty", "installer"):
         command += ["-drive", f"file={disk},format=raw,if=ide"]
     with (out / "qemu.log").open("w") as errors:
         process = subprocess.Popen(command, stdout=errors, stderr=errors, cwd=ROOT)
@@ -206,7 +207,12 @@ def main():
                 else:
                     wait_log(serial, "Installation not confirmed", process, 10)
             else:
-                wait_log(serial, "name=installer.elf" if args.case == "installer" else "[oobe.elf] starting first-run", process)
+                wait_log(
+                    serial,
+                    "path=/usr/lib/reliefos/apps/installer/installer.elf"
+                    if args.case == "installer" else "[oobe.elf] starting first-run",
+                    process,
+                )
                 time.sleep(8)
                 (installer if args.case == "installer" else desktop)(probe)
             assert "KERNEL PANIC" not in serial.read_text(errors="replace")

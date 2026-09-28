@@ -2,10 +2,10 @@
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #endif
-#include <leonos/fs.h>
-#include <leonos/gui.h>
-#include <leonos/syscall.h>
-#include <leonos/system.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
+#include <reliefos/syscall.h>
+#include <reliefos/system.h>
 #include <errno.h>
 #include <pwd.h>
 #include <stdint.h>
@@ -27,7 +27,7 @@ static void ps_copy(char *dst, uint32_t capacity, const char *src)
 
 static int ps_read_file(const char *path, char *buffer, uint32_t capacity)
 {
-    int fd = open(path, LEONOS_O_RDONLY, 0);
+    int fd = open(path, RELIEFOS_O_RDONLY, 0);
     uint32_t len = 0;
     if (fd < 0) return -1;
     buffer[0] = 0;
@@ -54,7 +54,7 @@ static uint64_t ps_parse_number(const char *text, uint32_t *position)
     return value;
 }
 
-int leonos_system_info(struct leonos_system_info *info)
+int reliefos_system_info(struct reliefos_system_info *info)
 {
     struct utsname uts;
     if (!info) return -1;
@@ -73,24 +73,24 @@ int leonos_system_info(struct leonos_system_info *info)
 
 static uint32_t ps_count_proc_tasks(void)
 {
-    int fd = open("/proc", LEONOS_O_RDONLY, 0);
-    struct leonos_dir_entry entry;
+    int fd = open("/proc", RELIEFOS_O_RDONLY, 0);
+    struct reliefos_dir_entry entry;
     uint32_t count = 0;
     if (fd < 0) return 0;
-    while (leonos_readdir(fd, &entry) > 0) {
+    while (reliefos_readdir(fd, &entry) > 0) {
         if (entry.name[0] >= '0' && entry.name[0] <= '9') ++count;
     }
     close(fd);
     return count;
 }
 
-int leonos_perf_info(struct leonos_perf_info *info)
+int reliefos_perf_info(struct reliefos_perf_info *info)
 {
     char text[256];
     uint32_t pos = 0;
     if (!info) return -1;
     memset(info, 0, sizeof(*info));
-    info->uptime_ms = leonos_uptime_ms();
+    info->uptime_ms = reliefos_uptime_ms();
     if (ps_read_file("/proc/meminfo", text, sizeof(text)) == 0) {
         /* Minimal parser: first number is MemTotal, second is MemFree. */
         while (text[pos] && (text[pos] < '0' || text[pos] > '9')) ++pos;
@@ -123,7 +123,7 @@ int leonos_perf_info(struct leonos_perf_info *info)
                     ++cursor;
                     ++digits;
                 }
-                if (digits && cpu_index < LEONOS_PERF_MAX_CPUS && text[cursor] == ' ') {
+                if (digits && cpu_index < RELIEFOS_PERF_MAX_CPUS && text[cursor] == ' ') {
                     ++cursor;
                     info->cpus[cpu_index].busy_ticks = ps_parse_number(text, &cursor);
                     (void)ps_parse_number(text, &cursor);
@@ -150,13 +150,13 @@ int leonos_perf_info(struct leonos_perf_info *info)
     return 0;
 }
 
-int leonos_time_info(struct leonos_time_info *info)
+int reliefos_time_info(struct reliefos_time_info *info)
 {
     struct timeval tv;
     struct tm calendar;
     if (!info) { errno = EINVAL; return -1; }
     memset(info, 0, sizeof(*info));
-    info->uptime_ms = leonos_uptime_ms();
+    info->uptime_ms = reliefos_uptime_ms();
     if (gettimeofday(&tv, 0) < 0) return -1;
     if (tv.tv_sec < 0) { errno = EOVERFLOW; return -1; }
     if (!gmtime_r(&tv.tv_sec, &calendar)) return -1;
@@ -171,7 +171,7 @@ int leonos_time_info(struct leonos_time_info *info)
     return 0;
 }
 
-int leonos_machine_identity(struct leonos_machine_identity *identity)
+int reliefos_machine_identity(struct reliefos_machine_identity *identity)
 {
     char id[40];
     if (!identity) { errno = EINVAL; return -1; }
@@ -182,13 +182,13 @@ int leonos_machine_identity(struct leonos_machine_identity *identity)
     id[strcspn(id, "\r\n")] = 0;
     if (strlen(id) != 36) { errno = EIO; return -1; }
     ps_copy(identity->platform_uuid, sizeof(identity->platform_uuid), id);
-    identity->flags |= LEONOS_MACHINE_IDENTITY_FLAG_PLATFORM_UUID;
+    identity->flags |= RELIEFOS_MACHINE_IDENTITY_FLAG_PLATFORM_UUID;
     return 0;
 }
 
 /* Linux stat's comm may contain spaces and closing parentheses. The final
  * closing parenthesis delimits it; token positions after state are fixed. */
-static int ps_parse_stat(const char *path, struct leonos_task_info *task)
+static int ps_parse_stat(const char *path, struct reliefos_task_info *task)
 {
     char text[1024];
     uint32_t pos = 0;
@@ -216,18 +216,18 @@ static int ps_parse_stat(const char *path, struct leonos_task_info *task)
     return 0;
 }
 
-int leonos_task_snapshot(struct leonos_task_info *tasks, uint32_t capacity,
+int reliefos_task_snapshot(struct reliefos_task_info *tasks, uint32_t capacity,
                          uint64_t *tick)
 {
     int fd;
-    struct leonos_dir_entry entry;
+    struct reliefos_dir_entry entry;
     uint32_t count = 0;
-    if (tick) *tick = leonos_uptime_ms();
+    if (tick) *tick = reliefos_uptime_ms();
     if (!tasks || !capacity) return 0;
-    fd = open("/proc", LEONOS_O_RDONLY, 0);
+    fd = open("/proc", RELIEFOS_O_RDONLY, 0);
     if (fd < 0) return -1;
-    while (leonos_readdir(fd, &entry) > 0 && count < capacity) {
-        char path[LEONOS_FS_PATH_LEN];
+    while (reliefos_readdir(fd, &entry) > 0 && count < capacity) {
+        char path[RELIEFOS_FS_PATH_LEN];
         if (entry.name[0] < '0' || entry.name[0] > '9') continue;
         {
             uint32_t pos = 0;
@@ -240,7 +240,7 @@ int leonos_task_snapshot(struct leonos_task_info *tasks, uint32_t capacity,
         if (ps_parse_stat(path, &tasks[count]) == 0) {
             char status[512], password_buffer[1024];
             struct passwd record, *account = NULL;
-            /* Identity and LeonOS-specific metadata are named status fields,
+            /* Identity and ReliefOS-specific metadata are named status fields,
              * never extra columns in the Linux stat ABI. */
             char *suffix = strrchr(path, '/');
             ps_copy(suffix + 1, (uint32_t)(sizeof(path) - (suffix + 1 - path)), "status");
@@ -271,3 +271,9 @@ int leonos_task_snapshot(struct leonos_task_info *tasks, uint32_t capacity,
     close(fd);
     return (int)count;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_machine_identity) leonos_machine_identity __attribute__((alias("reliefos_machine_identity")));
+extern __typeof__(reliefos_perf_info) leonos_perf_info __attribute__((alias("reliefos_perf_info")));
+extern __typeof__(reliefos_system_info) leonos_system_info __attribute__((alias("reliefos_system_info")));
+extern __typeof__(reliefos_task_snapshot) leonos_task_snapshot __attribute__((alias("reliefos_task_snapshot")));
+extern __typeof__(reliefos_time_info) leonos_time_info __attribute__((alias("reliefos_time_info")));

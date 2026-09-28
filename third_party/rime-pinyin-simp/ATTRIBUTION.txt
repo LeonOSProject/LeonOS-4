@@ -1,4 +1,4 @@
-LeonOS 4 Chinese Input packages pinyin_simp.dict.yaml from:
+ReliefOS Chinese Input packages pinyin_simp.dict.yaml from:
 https://github.com/rime/rime-pinyin-simp
 
 Copyright and license terms for the dictionary are preserved in LICENSE.

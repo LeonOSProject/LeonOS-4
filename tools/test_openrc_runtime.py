@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Exercise the packaged upstream OpenRC in a disposable Linux PID namespace.
 
-This is a reference test, not an NTCLKS acceptance result. All service fixtures
+This is a reference test, not a ReliefNT acceptance result. All service fixtures
 and runlevels live only in the temporary root. Never invoke host rc-service.
 """
 from pathlib import Path
@@ -12,7 +12,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "build/apk/root"
-with tempfile.TemporaryDirectory(prefix="leonos-openrc-") as directory:
+with tempfile.TemporaryDirectory(prefix="reliefos-openrc-") as directory:
     root = Path(directory)
     for name in ("bin", "sbin", "etc", "usr/libexec/rc"):
         shutil.copytree(SOURCE / name, root / name, symlinks=True)

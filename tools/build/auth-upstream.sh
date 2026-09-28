@@ -161,7 +161,7 @@ if [ "$inputs_changed" = 0 ]; then
     # the configured tree below when Make requests repair.
     :
 else
-    leonos_log RESET "$work/build"
+    reliefos_log RESET "$work/build"
     rm -rf "$work/build" "$work/src" "$stage"
 fi
 
@@ -265,4 +265,4 @@ done
 } >"$work/.leonos-auth.json.tmp"
 mv "$work/.leonos-auth.json.tmp" "$work/.leonos-auth.json"
 
-leonos_log AUTH "$stage"
+reliefos_log AUTH "$stage"

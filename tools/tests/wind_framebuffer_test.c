@@ -10,10 +10,10 @@
 
 static uint32_t vram[1920 * 1080];
 static uint32_t display_width = 1280, display_height = 800;
-static struct leonos_fb_capabilities hardware = {
-    .bytes_per_pixel = 4, .capabilities = LEONOS_FB_CAP_MODE_SET,
+static struct reliefos_fb_capabilities hardware = {
+    .bytes_per_pixel = 4, .capabilities = RELIEFOS_FB_CAP_MODE_SET,
     .max_width = 4096, .max_height = 4096, .max_bytes = 128 * 1024 * 1024,
-    .backend = LEONOS_FB_BACKEND_VMWARE_SVGA};
+    .backend = RELIEFOS_FB_BACKEND_VMWARE_SVGA};
 static size_t mapped_bytes;
 static unsigned maps, unmaps;
 static int map_failure;
@@ -23,7 +23,7 @@ static int reject_presentation;
 int open(const char *path, int flags, ...)
 {
     (void)flags;
-    assert(strcmp(path, LEONOS_DEV_FB0) == 0);
+    assert(strcmp(path, RELIEFOS_DEV_FB0) == 0);
     return 42;
 }
 
@@ -45,9 +45,9 @@ int ioctl(int fd, unsigned long request, ...)
         if (mode->xres == 1234) { errno = EINVAL; return -1; }
         display_width = mode->xres;
         display_height = mode->yres;
-    } else if (request == LEONOS_FBIOBLIT) {
+    } else if (request == RELIEFOS_FBIOBLIT) {
         if (reject_presentation) { errno = EAGAIN; return -1; }
-        const struct leonos_fb_present *r = arg;
+        const struct reliefos_fb_present *r = arg;
         const uint32_t *pixels = (const void *)(uintptr_t)r->pixels;
         for (uint32_t y = 0; y < r->height && r->y + y < display_height; ++y)
             for (uint32_t x = 0; x < r->width && r->x + x < display_width; ++x)
@@ -59,7 +59,7 @@ int ioctl(int fd, unsigned long request, ...)
     } else {
         /* The device capability query must carry the real VRAM limits. */
         assert(request == 0x46f0UL);
-        *(struct leonos_fb_capabilities *)arg = hardware;
+        *(struct reliefos_fb_capabilities *)arg = hardware;
     }
     return 0;
 }
@@ -86,47 +86,47 @@ int test_munmap(void *addr, size_t bytes)
 
 int main(void)
 {
-    struct leonos_fb_capabilities caps;
-    assert(leonos_fb_capabilities(&caps) == 0);
+    struct reliefos_fb_capabilities caps;
+    assert(reliefos_fb_capabilities(&caps) == 0);
     assert(caps.max_bytes == 128 * 1024 * 1024 && caps.max_width == 4096 &&
-           caps.max_height == 4096 && caps.backend == LEONOS_FB_BACKEND_VMWARE_SVGA);
+           caps.max_height == 4096 && caps.backend == RELIEFOS_FB_BACKEND_VMWARE_SVGA);
     assert(caps.max_bytes >= 1920 * 1080 * 4);
-    assert(leonos_fb_rect(1279, 799, 1, 1, 0x123456) == 0);
+    assert(reliefos_fb_rect(1279, 799, 1, 1, 0x123456) == 0);
     assert(vram[1280 * 800 - 1] == 0x123456 && maps == 0);
-    assert(leonos_fb_pixel(1279, 799) == 0x123456 && maps == 1);
-    assert(leonos_fb_set_mode(1234, 800) < 0);
-    assert(unmaps == 0 && leonos_fb_pixel(1279, 799) == 0x123456);
-    assert(leonos_fb_set_mode(1920, 1080) == 0);
+    assert(reliefos_fb_pixel(1279, 799) == 0x123456 && maps == 1);
+    assert(reliefos_fb_set_mode(1234, 800) < 0);
+    assert(unmaps == 0 && reliefos_fb_pixel(1279, 799) == 0x123456);
+    assert(reliefos_fb_set_mode(1920, 1080) == 0);
     const uint32_t pixel = 0xabcdef;
-    assert(leonos_fb_blit(1919, 1079, 1, 1, 1, &pixel) == 0);
-    assert(leonos_fb_pixel(1919, 1079) == pixel);
+    assert(reliefos_fb_blit(1919, 1079, 1, 1, 1, &pixel) == 0);
+    assert(reliefos_fb_pixel(1919, 1079) == pixel);
     assert(mapped_bytes == sizeof(vram) && maps == 2 && unmaps == 1);
     assert(vram[1920 * 1080 - 1] == pixel);
     assert(damage_calls == 2);
     reject_presentation = 1;
     const uint32_t other = 0x123123;
-    assert(leonos_fb_blit(1919, 1079, 1, 1, 1, &other) < 0 && errno == EAGAIN);
+    assert(reliefos_fb_blit(1919, 1079, 1, 1, 1, &other) < 0 && errno == EAGAIN);
     assert(vram[1920 * 1080 - 1] == pixel);
     reject_presentation = 0;
-    assert(leonos_fb_set_mode(1280, 800) == 0);
-    assert(leonos_fb_pixel(0, 0) == 0 && maps == 3 && unmaps == 2);
+    assert(reliefos_fb_set_mode(1280, 800) == 0);
+    assert(reliefos_fb_pixel(0, 0) == 0 && maps == 3 && unmaps == 2);
 
     /* A mode change by another process must also refresh our mapping. */
     display_width = 1024;
     display_height = 768;
-    assert(leonos_fb_rect(1023, 767, 1, 1, 42) == 0);
-    assert(leonos_fb_pixel(1023, 767) == 42);
+    assert(reliefos_fb_rect(1023, 767, 1, 1, 42) == 0);
+    assert(reliefos_fb_pixel(1023, 767) == 42);
     assert(mapped_bytes == 1024 * 768 * 4 && maps == 4 && unmaps == 3);
-    assert(leonos_fb_set_mode(1280, 800) == 0);
+    assert(reliefos_fb_set_mode(1280, 800) == 0);
     map_failure = 1;
-    assert(leonos_fb_pixel(0, 0) == 0 && !mapped_bytes);
+    assert(reliefos_fb_pixel(0, 0) == 0 && !mapped_bytes);
     map_failure = 0;
-    assert(leonos_fb_rect(0, 0, 1, 1, 42) == 0);
+    assert(reliefos_fb_rect(0, 0, 1, 1, 42) == 0);
 
-    hardware = (struct leonos_fb_capabilities){.bytes_per_pixel = 4,
+    hardware = (struct reliefos_fb_capabilities){.bytes_per_pixel = 4,
         .max_width = 1280, .max_height = 800, .max_bytes = 1280 * 800 * 4};
-    assert(leonos_fb_capabilities(&caps) == 0);
-    assert(!caps.capabilities && caps.backend == LEONOS_FB_BACKEND_BOOT &&
+    assert(reliefos_fb_capabilities(&caps) == 0);
+    assert(!caps.capabilities && caps.backend == RELIEFOS_FB_BACKEND_BOOT &&
            caps.max_width == 1280 && caps.max_bytes == 1280 * 800 * 4);
     puts("Framebuffer capabilities and remapping survive grow/shrink, failed and external mode changes");
     return 0;

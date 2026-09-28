@@ -1,7 +1,7 @@
 #!/bin/sh
 # Reviewed source-only equivalent of the former cmd adapter.
 set -eu
-patch --batch --fuzz=0 -p1 -d "$1" <<'LEONOS_PATCH'
+patch --batch --fuzz=0 -p1 -d "$1" <<'RELIEFOS_PATCH'
 --- a/cinterp.c
 +++ b/cinterp.c
 @@ -782,8 +782,6 @@
@@ -19,7 +19,7 @@ patch --batch --fuzz=0 -p1 -d "$1" <<'LEONOS_PATCH'
 
 -        /* Render the prompt and hand it to the line editor, so it knows where
 -         * the input area starts (fixes backspace eating the prompt) */
-+        /* LeonOS exposes canonical PTY input. Render the prompt directly and
++        /* ReliefOS exposes canonical PTY input. Render the prompt directly and
 +         * let the small port reader consume the completed line. */
          if (is_tty)
          {
@@ -58,17 +58,17 @@ patch --batch --fuzz=0 -p1 -d "$1" <<'LEONOS_PATCH'
                         int stdin_fd, int stdout_fd, int stderr_fd);
  static int exec_node_fds(cmd_context_t *ctx, cmd_node_t *node,
                           int stdin_fd, int stdout_fd, int stderr_fd);
-+static int leonos_start_background(cmd_node_t *node,
++static int reliefos_start_background(cmd_node_t *node,
 +                                   int stdin_fd, int stdout_fd, int stderr_fd);
 +
-+/* LeonOS background-job adapter backed by COW fork/waitpid. */
-+extern int leonos_cmd_builtin(int argc, char **argv, int *handled);
-+extern int leonos_cmd_register_job(const int pids[], int count, int last_pid,
++/* ReliefOS background-job adapter backed by COW fork/waitpid. */
++extern int reliefos_cmd_builtin(int argc, char **argv, int *handled);
++extern int reliefos_cmd_register_job(const int pids[], int count, int last_pid,
 +                                   const char *text);
-+extern void leonos_cmd_job_append_word(char *out, size_t cap, const char *word);
-+extern int leonos_cmd_set_process_group(int pid, int process_group);
-+extern int leonos_cmd_foreground_enter(int fd, int process_group, int *saved_group);
-+extern void leonos_cmd_foreground_leave(int fd, int saved_group);
++extern void reliefos_cmd_job_append_word(char *out, size_t cap, const char *word);
++extern int reliefos_cmd_set_process_group(int pid, int process_group);
++extern int reliefos_cmd_foreground_enter(int fd, int process_group, int *saved_group);
++extern void reliefos_cmd_foreground_leave(int fd, int saved_group);
 +
 
  static int exec_simple(cmd_context_t *ctx, cmd_node_t *node,
@@ -78,7 +78,7 @@ patch --batch --fuzz=0 -p1 -d "$1" <<'LEONOS_PATCH'
 +    int result;
      if (node == NULL || node->argc == 0)
          return 0;
-+    result = leonos_cmd_builtin(node->argc, node->argv, &handled);
++    result = reliefos_cmd_builtin(node->argc, node->argv, &handled);
 +    if (handled)
 +        return result;
      return cmd_dispatch(ctx, node->argc, node->argv,
@@ -99,7 +99,7 @@ patch --batch --fuzz=0 -p1 -d "$1" <<'LEONOS_PATCH'
              pids[i] = (int)pid;
 +            if (process_group == 0)
 +                process_group = (int)pid;
-+            (void)leonos_cmd_set_process_group((int)pid, process_group);
++            (void)reliefos_cmd_set_process_group((int)pid, process_group);
              if (prev_read >= 0 && prev_read != stdin_fd)
                  libcmd_close(prev_read);
              if (i + 1 < n) {
@@ -107,13 +107,13 @@ patch --batch --fuzz=0 -p1 -d "$1" <<'LEONOS_PATCH'
 
          /* Wait for all children; the exit code is the last stage's */
          ret = 0;
-+        (void)leonos_cmd_foreground_enter(stdin_fd, process_group, &saved_group);
++        (void)reliefos_cmd_foreground_enter(stdin_fd, process_group, &saved_group);
          for (i = 0; i < n; i++) {
              libcmd_exit_info_t ei;
              if (libcmd_wait_pid(pids[i], &ei) == 0 && i == n - 1)
                  ret = ei.exit_code;
          }
-+        leonos_cmd_foreground_leave(stdin_fd, saved_group);
++        reliefos_cmd_foreground_leave(stdin_fd, saved_group);
          break;
      }
 
@@ -123,7 +123,7 @@ patch --batch --fuzz=0 -p1 -d "$1" <<'LEONOS_PATCH'
      case NODE_SEQ:
 -        exec_node_fds(ctx, node->left, stdin_fd, stdout_fd, stderr_fd);
 -        ret = exec_node_fds(ctx, node->right, stdin_fd, stdout_fd, stderr_fd);
-+        ret = leonos_start_background(node->left, stdin_fd, stdout_fd, stderr_fd);
++        ret = reliefos_start_background(node->left, stdin_fd, stdout_fd, stderr_fd);
 +        if (node->right)
 +            ret = exec_node_fds(ctx, node->right, stdin_fd, stdout_fd, stderr_fd);
          break;
@@ -132,7 +132,7 @@ patch --batch --fuzz=0 -p1 -d "$1" <<'LEONOS_PATCH'
      return ret;
  }
 
-+static int leonos_start_background(cmd_node_t *node,
++static int reliefos_start_background(cmd_node_t *node,
 +                                   int stdin_fd, int stdout_fd, int stderr_fd)
 +{
 +    static char resolved[64][CMD_MAX_PATH];
@@ -159,8 +159,8 @@ patch --batch --fuzz=0 -p1 -d "$1" <<'LEONOS_PATCH'
 +            return 1;
 +        }
 +        for (i = 0; i < node->argc; ++i)
-+            leonos_cmd_job_append_word(text, sizeof(text), node->argv[i]);
-+        if (leonos_cmd_register_job(pids, 1, pids[0], text) < 0) {
++            reliefos_cmd_job_append_word(text, sizeof(text), node->argv[i]);
++        if (reliefos_cmd_register_job(pids, 1, pids[0], text) < 0) {
 +            (void)kill(pids[0], SIGTERM);
 +            fputs("cmd: job table is full\n", stderr);
 +            return 1;
@@ -184,9 +184,9 @@ patch --batch --fuzz=0 -p1 -d "$1" <<'LEONOS_PATCH'
 +        }
 +        argvs[i] = stages[i]->argv;
 +        paths[i] = resolved[i];
-+        if (i) leonos_cmd_job_append_word(text, sizeof(text), "|");
++        if (i) reliefos_cmd_job_append_word(text, sizeof(text), "|");
 +        for (j = 0; j < stages[i]->argc; ++j)
-+            leonos_cmd_job_append_word(text, sizeof(text), stages[i]->argv[j]);
++            reliefos_cmd_job_append_word(text, sizeof(text), stages[i]->argv[j]);
 +    }
 +    n = libcmd_exec_pipeline_async(argvs, paths, n, libcmd_get_environ(),
 +                                   stdin_fd, stdout_fd, pids, 64);
@@ -194,7 +194,7 @@ patch --batch --fuzz=0 -p1 -d "$1" <<'LEONOS_PATCH'
 +        fputs("cmd: unable to start background pipeline\n", stderr);
 +        return 1;
 +    }
-+    if (leonos_cmd_register_job(pids, n, pids[n - 1], text) < 0) {
++    if (reliefos_cmd_register_job(pids, n, pids[n - 1], text) < 0) {
 +        for (i = 0; i < n; ++i) (void)kill(pids[i], SIGTERM);
 +        fputs("cmd: job table is full\n", stderr);
 +        return 1;
@@ -275,7 +275,7 @@ patch --batch --fuzz=0 -p1 -d "$1" <<'LEONOS_PATCH'
      if (de == NULL)
          return -1;
 
-+    /* A LeonOS directory read already supplies the name and type.  Reset all
++    /* A ReliefOS directory read already supplies the name and type.  Reset all
 +     * optional fields before a best-effort stat so an error cannot reuse the
 +     * preceding entry's metadata or suppress this entry from DIR output. */
 +    memset(entry, 0, sizeof(*entry));
@@ -365,4 +365,4 @@ patch --batch --fuzz=0 -p1 -d "$1" <<'LEONOS_PATCH'
      return 0;
  }
 
-LEONOS_PATCH
+RELIEFOS_PATCH

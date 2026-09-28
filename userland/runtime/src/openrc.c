@@ -1,5 +1,5 @@
-#include <leonos/openrc.h>
-#include <leonos/sudo.h>
+#include <reliefos/openrc.h>
+#include <reliefos/sudo.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -7,14 +7,14 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-int leonos_openrc_run(const char *service, const char *action)
+int reliefos_openrc_run(const char *service, const char *action)
 {
     if (!service || !action || strchr(service, '/') || strlen(service) > 63) { errno = EINVAL; return -1; }
-    char *args[] = {"/usr/lib/leonos/apps/rcctl/rcctl.elf", (char *)service, (char *)action, NULL};
+    char *args[] = {"/usr/lib/reliefos/apps/rcctl/rcctl.elf", (char *)service, (char *)action, NULL};
     uint32_t child;
     int status;
     if (geteuid() && strcmp(action, "status")) {
-        if (leonos_sudo_run(NULL, NULL, args, &child) < 0 || leonos_sudo_wait_command(child, &status) < 0) return -1;
+        if (reliefos_sudo_run(NULL, NULL, args, &child) < 0 || reliefos_sudo_wait_command(child, &status) < 0) return -1;
     } else {
         pid_t pid = fork();
         if (pid < 0) return -1;
@@ -26,7 +26,7 @@ int leonos_openrc_run(const char *service, const char *action)
     return WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
 }
 
-int leonos_openrc_enabled(const char *service)
+int reliefos_openrc_enabled(const char *service)
 {
     if (!service || strchr(service, '/') || strlen(service) > 63) { errno = EINVAL; return -1; }
     char path[128];
@@ -36,15 +36,15 @@ int leonos_openrc_enabled(const char *service)
     return errno == ENOENT ? 0 : -1;
 }
 
-int leonos_openrc_spawn(const char *service, const char *action)
+int reliefos_openrc_spawn(const char *service, const char *action)
 {
     pid_t child = fork();
     if (child != 0) return child;
-    int result = leonos_openrc_run(service, action);
+    int result = reliefos_openrc_run(service, action);
     _exit(result < 0 ? 125 : result);
 }
 
-int leonos_openrc_poll(int child, int *result)
+int reliefos_openrc_poll(int child, int *result)
 {
     if (child <= 0 || !result) { errno = EINVAL; return -1; }
     int status;
@@ -54,3 +54,8 @@ int leonos_openrc_poll(int child, int *result)
     *result = WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
     return 1;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_openrc_enabled) leonos_openrc_enabled __attribute__((alias("reliefos_openrc_enabled")));
+extern __typeof__(reliefos_openrc_poll) leonos_openrc_poll __attribute__((alias("reliefos_openrc_poll")));
+extern __typeof__(reliefos_openrc_run) leonos_openrc_run __attribute__((alias("reliefos_openrc_run")));
+extern __typeof__(reliefos_openrc_spawn) leonos_openrc_spawn __attribute__((alias("reliefos_openrc_spawn")));

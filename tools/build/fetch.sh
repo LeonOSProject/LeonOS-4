@@ -79,7 +79,7 @@ while IFS=$TAB read -r id digest url name; do
     if [ -f "$target" ]; then
         actual=$(digest_of "$target")
         if [ "$actual" = "$digest" ]; then
-            leonos_log FETCH "$id (cached)"
+            reliefos_log FETCH "$id (cached)"
             continue
         fi
         if [ "$verify_only" -eq 1 ]; then
@@ -88,7 +88,7 @@ while IFS=$TAB read -r id digest url name; do
         fi
         # A cached file that disagrees with the lock is never accepted, and the
         # freshly downloaded copy replaces it below.
-        leonos_log STALE "$id does not match the lock, refetching"
+        reliefos_log STALE "$id does not match the lock, refetching"
         rm -f "$target"
     fi
 
@@ -100,7 +100,7 @@ while IFS=$TAB read -r id digest url name; do
     command -v curl >/dev/null 2>&1 || die "curl is required to fetch $id"
     partial="$cache/.$name.partial.$$"
     partials="$partials $partial"
-    leonos_log FETCH "$id"
+    reliefos_log FETCH "$id"
     # The standard proxy variables are inherited by curl, TLS validation stays
     # on, and https is required because the lock file only carries https URLs.
     if ! curl --fail --location --proto '=https' --tlsv1.2 \

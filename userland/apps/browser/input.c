@@ -35,16 +35,16 @@ int activate_link_at(int32_t mx, int32_t my)
     hit_x = (uint32_t)mx + scroll_x;
     cell_w = browser_line_cell_w(line->kind);
     if (!cell_w) {
-        cell_w = LEONOS_FONT_W;
+        cell_w = RELIEFOS_FONT_W;
     }
-    content_x = text_x() + (uint32_t)line->indent * LEONOS_FONT_W;
+    content_x = text_x() + (uint32_t)line->indent * RELIEFOS_FONT_W;
     align_shift_px = line_align_shift_px(line, document_text_w());
     if (hit_x < content_x + align_shift_px) {
         return 0;
     }
     col = (hit_x - content_x - align_shift_px) / cell_w;
     if (line->kind == BROWSER_LINE_IMAGE) {
-        uint32_t image_cols = 20U / LEONOS_FONT_W;
+        uint32_t image_cols = 20U / RELIEFOS_FONT_W;
         if (col < image_cols) {
             return 0;
         }
@@ -75,22 +75,22 @@ int handle_toolbar_click(int32_t x, int32_t y)
             return 0;
         }
         if (hit_rect_i(x, y, BROWSER_BACK_X, button_y(),
-                       BROWSER_BACK_W, LEONOS_UI_BUTTON_H)) {
+                       BROWSER_BACK_W, RELIEFOS_UI_BUTTON_H)) {
             go_back();
             return 1;
         }
         if (hit_rect_i(x, y, toolbar_forward_x(), button_y(),
-                       BROWSER_FORWARD_W, LEONOS_UI_BUTTON_H)) {
+                       BROWSER_FORWARD_W, RELIEFOS_UI_BUTTON_H)) {
             go_forward();
             return 1;
         }
         if (hit_rect_i(x, y, toolbar_refresh_x(), button_y(),
-                       BROWSER_REFRESH_W, LEONOS_UI_BUTTON_H)) {
+                       BROWSER_REFRESH_W, RELIEFOS_UI_BUTTON_H)) {
             navigate_to(current_location, 0);
             return 1;
         }
         if (hit_rect_i(x, y, toolbar_home_x(), button_y(),
-                       BROWSER_HOME_W, LEONOS_UI_BUTTON_H)) {
+                       BROWSER_HOME_W, RELIEFOS_UI_BUTTON_H)) {
             browser_should_exit = 1;
             return 1;
         }
@@ -99,23 +99,23 @@ int handle_toolbar_click(int32_t x, int32_t y)
     if (!hit_rect_i(x, y, 0, BROWSER_MENU_H, view_w, BROWSER_TOOLBAR_H + BROWSER_ADDR_H)) {
         return 0;
     }
-    if (hit_rect_i(x, y, BROWSER_BACK_X, button_y(), BROWSER_BACK_W, LEONOS_UI_BUTTON_H)) {
+    if (hit_rect_i(x, y, BROWSER_BACK_X, button_y(), BROWSER_BACK_W, RELIEFOS_UI_BUTTON_H)) {
         go_back();
         return 1;
     }
-    if (hit_rect_i(x, y, toolbar_forward_x(), button_y(), BROWSER_FORWARD_W, LEONOS_UI_BUTTON_H)) {
+    if (hit_rect_i(x, y, toolbar_forward_x(), button_y(), BROWSER_FORWARD_W, RELIEFOS_UI_BUTTON_H)) {
         go_forward();
         return 1;
     }
-    if (hit_rect_i(x, y, toolbar_refresh_x(), button_y(), BROWSER_REFRESH_W, LEONOS_UI_BUTTON_H)) {
+    if (hit_rect_i(x, y, toolbar_refresh_x(), button_y(), BROWSER_REFRESH_W, RELIEFOS_UI_BUTTON_H)) {
         navigate_to(current_location, 0);
         return 1;
     }
-    if (hit_rect_i(x, y, toolbar_home_x(), button_y(), BROWSER_HOME_W, LEONOS_UI_BUTTON_H)) {
-        navigate_to("about:leonos", 1);
+    if (hit_rect_i(x, y, toolbar_home_x(), button_y(), BROWSER_HOME_W, RELIEFOS_UI_BUTTON_H)) {
+        navigate_to("about:reliefos", 1);
         return 1;
     }
-    if (hit_rect_i(x, y, go_x(), address_y(), BROWSER_GO_W, LEONOS_UI_BUTTON_H)) {
+    if (hit_rect_i(x, y, go_x(), address_y(), BROWSER_GO_W, RELIEFOS_UI_BUTTON_H)) {
         navigate_to(address_input, 1);
         return 1;
     }
@@ -127,12 +127,12 @@ int address_edit_hit(int32_t x, int32_t y)
     if (browser_embedded) {
         return 0;
     }
-    return hit_rect_i(x, y, 74, address_y(), address_w(), LEONOS_FONT_H + 8U);
+    return hit_rect_i(x, y, 74, address_y(), address_w(), RELIEFOS_FONT_H + 8U);
 }
 
 void select_address_text(void)
 {
-    leonos_ui_edit_state_sync(&address_edit);
+    reliefos_ui_edit_state_sync(&address_edit);
     address_edit.focused = 1;
     address_edit.selection_anchor = 0;
     address_edit.cursor = address_edit.length;
@@ -146,16 +146,16 @@ int handle_menu_click(int32_t x, int32_t y)
     if (browser_embedded) {
         return 0;
     }
-    struct leonos_ui_menubar_item top_items[] = {
+    struct reliefos_ui_menubar_item top_items[] = {
         {T("File"), BROWSER_MENU_FILE, BROWSER_MENU_FILE_W, 0},
         {T("Edit"), BROWSER_MENU_EDIT, BROWSER_MENU_EDIT_W, 0},
         {T("View"), BROWSER_MENU_VIEW, BROWSER_MENU_VIEW_W, 0},
         {T("Favorites"), BROWSER_MENU_FAVORITES, BROWSER_MENU_FAVORITES_W, 0},
         {T("Help"), BROWSER_MENU_HELP, BROWSER_MENU_HELP_W, 0},
     };
-    struct leonos_ui_rect r;
+    struct reliefos_ui_rect r;
     uint32_t id = 0;
-    if (leonos_ui_menubar_hit(x, y, 0, 0, top_items,
+    if (reliefos_ui_menubar_hit(x, y, 0, 0, top_items,
                               sizeof(top_items) / sizeof(top_items[0]),
                               &id)) {
         if (id) {
@@ -167,21 +167,21 @@ int handle_menu_click(int32_t x, int32_t y)
         return 1;
     }
     if (menu_open == BROWSER_MENU_FILE) {
-        struct leonos_ui_context_menu_item items[] = {
+        struct reliefos_ui_context_menu_item items[] = {
             {T("Home"), BROWSER_CMD_HOME, 0},
             {T("Refresh"), BROWSER_CMD_REFRESH, 0},
             {T("Download Current Page"), BROWSER_CMD_DOWNLOAD, 0},
             {T("Close"), BROWSER_CMD_CLOSE, 0},
         };
-        leonos_ui_menubar_item_rect(0, 0, top_items,
+        reliefos_ui_menubar_item_rect(0, 0, top_items,
                                     sizeof(top_items) / sizeof(top_items[0]),
                                     BROWSER_MENU_FILE, &r);
-        if (leonos_ui_menu_popup_hit(x, y, (uint32_t)r.x, BROWSER_MENU_H,
+        if (reliefos_ui_menu_popup_hit(x, y, (uint32_t)r.x, BROWSER_MENU_H,
                                      188U, items,
                                      sizeof(items) / sizeof(items[0]), &id)) {
             menu_open = BROWSER_MENU_NONE;
             if (id == BROWSER_CMD_HOME) {
-                navigate_to("about:leonos", 1);
+                navigate_to("about:reliefos", 1);
             } else if (id == BROWSER_CMD_REFRESH) {
                 navigate_to(current_location, 0);
             } else if (id == BROWSER_CMD_DOWNLOAD) {
@@ -195,16 +195,16 @@ int handle_menu_click(int32_t x, int32_t y)
         return 1;
     }
     if (menu_open == BROWSER_MENU_EDIT) {
-        struct leonos_ui_context_menu_item items[] = {
+        struct reliefos_ui_context_menu_item items[] = {
             {T("Select Address"), BROWSER_CMD_SELECT_ADDRESS, 0},
             {T("Clear Address"), BROWSER_CMD_CLEAR_ADDRESS, 0},
             {T("Find in Page..."), BROWSER_CMD_FIND, 0},
             {T("Find Next"), BROWSER_CMD_FIND_NEXT, 0},
         };
-        leonos_ui_menubar_item_rect(0, 0, top_items,
+        reliefos_ui_menubar_item_rect(0, 0, top_items,
                                     sizeof(top_items) / sizeof(top_items[0]),
                                     BROWSER_MENU_EDIT, &r);
-        if (leonos_ui_menu_popup_hit(x, y, (uint32_t)r.x, BROWSER_MENU_H,
+        if (reliefos_ui_menu_popup_hit(x, y, (uint32_t)r.x, BROWSER_MENU_H,
                                      192U, items,
                                      sizeof(items) / sizeof(items[0]), &id)) {
             menu_open = BROWSER_MENU_NONE;
@@ -212,7 +212,7 @@ int handle_menu_click(int32_t x, int32_t y)
                 select_address_text();
             } else if (id == BROWSER_CMD_CLEAR_ADDRESS) {
                 address_input[0] = 0;
-                leonos_ui_edit_state_sync(&address_edit);
+                reliefos_ui_edit_state_sync(&address_edit);
                 address_edit.focused = 1;
                 set_status(T("Address cleared"));
             } else if (id == BROWSER_CMD_FIND) {
@@ -226,15 +226,15 @@ int handle_menu_click(int32_t x, int32_t y)
         return 1;
     }
     if (menu_open == BROWSER_MENU_VIEW) {
-        struct leonos_ui_context_menu_item items[] = {
+        struct reliefos_ui_context_menu_item items[] = {
             {T("Refresh"), BROWSER_CMD_REFRESH, 0},
             {T("Top"), BROWSER_CMD_TOP, 0},
             {T("Bottom"), BROWSER_CMD_BOTTOM, 0},
         };
-        leonos_ui_menubar_item_rect(0, 0, top_items,
+        reliefos_ui_menubar_item_rect(0, 0, top_items,
                                     sizeof(top_items) / sizeof(top_items[0]),
                                     BROWSER_MENU_VIEW, &r);
-        if (leonos_ui_menu_popup_hit(x, y, (uint32_t)r.x, BROWSER_MENU_H,
+        if (reliefos_ui_menu_popup_hit(x, y, (uint32_t)r.x, BROWSER_MENU_H,
                                      166U, items,
                                      sizeof(items) / sizeof(items[0]), &id)) {
             menu_open = BROWSER_MENU_NONE;
@@ -254,15 +254,15 @@ int handle_menu_click(int32_t x, int32_t y)
         return 1;
     }
     if (menu_open == BROWSER_MENU_FAVORITES) {
-        struct leonos_ui_context_menu_item items[BROWSER_MAX_BOOKMARKS + 4U];
+        struct reliefos_ui_context_menu_item items[BROWSER_MAX_BOOKMARKS + 4U];
         char url[BROWSER_URL_CAP];
         uint32_t count = 0;
         browser_bookmarks_build_menu(items, sizeof(items) / sizeof(items[0]),
                                      &count);
-        leonos_ui_menubar_item_rect(0, 0, top_items,
+        reliefos_ui_menubar_item_rect(0, 0, top_items,
                                     sizeof(top_items) / sizeof(top_items[0]),
                                     BROWSER_MENU_FAVORITES, &r);
-        if (leonos_ui_menu_popup_hit(x, y, (uint32_t)r.x, BROWSER_MENU_H,
+        if (reliefos_ui_menu_popup_hit(x, y, (uint32_t)r.x, BROWSER_MENU_H,
                                      204U, items,
                                      count, &id)) {
             menu_open = BROWSER_MENU_NONE;
@@ -276,19 +276,19 @@ int handle_menu_click(int32_t x, int32_t y)
         return 1;
     }
     if (menu_open == BROWSER_MENU_HELP) {
-        struct leonos_ui_context_menu_item items[] = {
+        struct reliefos_ui_context_menu_item items[] = {
             {T("About Browser"), BROWSER_CMD_ABOUT, 0},
         };
-        leonos_ui_menubar_item_rect(0, 0, top_items,
+        reliefos_ui_menubar_item_rect(0, 0, top_items,
                                     sizeof(top_items) / sizeof(top_items[0]),
                                     BROWSER_MENU_HELP, &r);
-        if (leonos_ui_menu_popup_hit(x, y, (uint32_t)r.x, BROWSER_MENU_H,
+        if (reliefos_ui_menu_popup_hit(x, y, (uint32_t)r.x, BROWSER_MENU_H,
                                      176U, items,
                                      sizeof(items) / sizeof(items[0]), &id)) {
             menu_open = BROWSER_MENU_NONE;
             if (id == BROWSER_CMD_ABOUT) {
-                leonos_ui_show_message_box(T("LeonOS Browser"),
-                                           T("Classic HTTP browser for LeonOS 4."),
+                reliefos_ui_show_message_box(T("ReliefOS Browser"),
+                                           T("Classic HTTP browser for ReliefOS."),
                                            T("OK"));
             }
             return 1;
@@ -299,7 +299,7 @@ int handle_menu_click(int32_t x, int32_t y)
     return 0;
 }
 
-void handle_mouse_button(struct leonos_gui_app_event *event)
+void handle_mouse_button(struct reliefos_gui_app_event *event)
 {
     uint32_t p_y = page_y();
     uint32_t p_w = page_w();
@@ -319,7 +319,7 @@ void handle_mouse_button(struct leonos_gui_app_event *event)
         return;
     }
     if (address_edit_hit(event->x, event->y) &&
-        leonos_ui_edit_state_handle_mouse(&address_edit, event->x, event->y,
+        reliefos_ui_edit_state_handle_mouse(&address_edit, event->x, event->y,
                                           74, address_y(), address_w(),
                                           buttons)) {
         browser_form_clear_focus();
@@ -341,7 +341,7 @@ void handle_mouse_button(struct leonos_gui_app_event *event)
     menu_open = BROWSER_MENU_NONE;
     if (hit_rect_i(event->x, event->y, vscroll_x, p_y + 2U,
                    BROWSER_SCROLL_W, p_h > 4U ? p_h - 4U : p_h)) {
-        if (leonos_ui_vscrollbar_handle_mouse(&scroll_line,
+        if (reliefos_ui_vscrollbar_handle_mouse(&scroll_line,
                                               line_count ? line_count : 1U,
                                               visible_rows(),
                                               vscroll_x, p_y + 2U,
@@ -355,7 +355,7 @@ void handle_mouse_button(struct leonos_gui_app_event *event)
     if (document_content_w() > document_text_w() &&
         hit_rect_i(event->x, event->y, text_x(), hscroll_y,
                    document_text_w(), BROWSER_SCROLL_W)) {
-        if (leonos_ui_hscrollbar_handle_mouse(&scroll_x,
+        if (reliefos_ui_hscrollbar_handle_mouse(&scroll_x,
                                               document_content_w(),
                                               document_text_w(),
                                               text_x(), hscroll_y,
@@ -372,9 +372,9 @@ void handle_mouse_button(struct leonos_gui_app_event *event)
     present_browser();
 }
 
-void handle_key(struct leonos_gui_app_event *event)
+void handle_key(struct reliefos_gui_app_event *event)
 {
-    if (!browser_embedded && event->pressed && event->keycode == LEONOS_KEY_F12) {
+    if (!browser_embedded && event->pressed && event->keycode == RELIEFOS_KEY_F12) {
         browser_devtools_open = browser_devtools_open ? 0 : 1;
         clamp_scroll();
         present_browser();
@@ -386,7 +386,7 @@ void handle_key(struct leonos_gui_app_event *event)
     }
     if (!event->pressed) {
         if (!browser_embedded) {
-            leonos_ui_edit_state_handle_key(&address_edit, event->keycode,
+            reliefos_ui_edit_state_handle_key(&address_edit, event->keycode,
                                             event->pressed);
         }
         return;
@@ -395,13 +395,13 @@ void handle_key(struct leonos_gui_app_event *event)
         return;
     }
     if (!browser_embedded &&
-        event->keycode == LEONOS_KEY_ENTER && address_edit.focused) {
+        event->keycode == RELIEFOS_KEY_ENTER && address_edit.focused) {
         navigate_to(address_input, 1);
         present_browser();
         return;
     }
     if (!browser_embedded &&
-        leonos_ui_edit_state_handle_key(&address_edit, event->keycode, event->pressed)) {
+        reliefos_ui_edit_state_handle_key(&address_edit, event->keycode, event->pressed)) {
         present_browser();
         return;
     }

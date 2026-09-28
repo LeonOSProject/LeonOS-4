@@ -1,34 +1,34 @@
-#include <leonos/gui.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/auth.h>
-#include <leonos/psf_font.h>
-#include <leonos/startup.h>
-#include <leonos/launch.h>
-#include <leonos/stdio.h>
-#include <leonos/system.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/auth.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/startup.h>
+#include <reliefos/launch.h>
+#include <reliefos/stdio.h>
+#include <reliefos/system.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 
 #include "gpu_sample.h"
 
 #define TASKMGR_W 720
 #define TASKMGR_H 560
-#define TASKMGR_MAX_W LEONOS_GUI_MAX_WINDOW_WIDTH
-#define TASKMGR_MAX_H LEONOS_GUI_MAX_WINDOW_HEIGHT
+#define TASKMGR_MAX_W RELIEFOS_GUI_MAX_WINDOW_WIDTH
+#define TASKMGR_MAX_H RELIEFOS_GUI_MAX_WINDOW_HEIGHT
 #define TASKMGR_DETAILS_W 430
 #define TASKMGR_DETAILS_H 380
 #define TASKMGR_STATUS_H 28
 #define TASKMGR_MENU_BAR_H 28
-#define TASKMGR_MENU_ITEM_H (LEONOS_FONT_H + 8)
+#define TASKMGR_MENU_ITEM_H (RELIEFOS_FONT_H + 8)
 #define TASKMGR_CONTEXT_MENU_W 140
 #define TASKMGR_CONTEXT_MENU_COUNT 3
 #define TASKMGR_STARTUP_USER_ROW_H 24U
 #define TASKMGR_PERF_HISTORY 120U
 #define TASKMGR_PERF_MISSING 255U
 #define TASKMGR_KEY_ESCAPE 1U
-#define LEONOS_KEY_DELETE 83U
+#define RELIEFOS_KEY_DELETE 83U
 #define T(s) gettext(s)
 
 enum {
@@ -55,46 +55,46 @@ enum {
 
 static uint32_t pixels[TASKMGR_MAX_W * TASKMGR_MAX_H];
 static uint32_t details_pixels[TASKMGR_DETAILS_W * TASKMGR_DETAILS_H];
-static struct leonos_task_info tasks[LEONOS_TASK_MAX];
-static struct leonos_task_info previous_tasks[LEONOS_TASK_MAX];
-static struct leonos_ui_treeview_item process_tree_items[LEONOS_TASK_MAX];
-static const char *process_tree_cells[LEONOS_TASK_MAX][7];
-static char process_tree_pid[LEONOS_TASK_MAX][16];
-static char process_tree_cpu[LEONOS_TASK_MAX][16];
-static char process_tree_memory[LEONOS_TASK_MAX][24];
+static struct reliefos_task_info tasks[RELIEFOS_TASK_MAX];
+static struct reliefos_task_info previous_tasks[RELIEFOS_TASK_MAX];
+static struct reliefos_ui_treeview_item process_tree_items[RELIEFOS_TASK_MAX];
+static const char *process_tree_cells[RELIEFOS_TASK_MAX][7];
+static char process_tree_pid[RELIEFOS_TASK_MAX][16];
+static char process_tree_cpu[RELIEFOS_TASK_MAX][16];
+static char process_tree_memory[RELIEFOS_TASK_MAX][24];
 static uint32_t task_count;
 static uint32_t previous_task_count;
 static uint64_t task_tick;
 static uint64_t previous_task_tick;
-static uint32_t task_cpu_percent[LEONOS_TASK_MAX];
-static uint32_t previous_task_cpu_percent[LEONOS_TASK_MAX];
-static struct leonos_perf_info perf_info;
+static uint32_t task_cpu_percent[RELIEFOS_TASK_MAX];
+static uint32_t previous_task_cpu_percent[RELIEFOS_TASK_MAX];
+static struct reliefos_perf_info perf_info;
 static uint64_t last_busy_ticks;
 static uint64_t last_idle_ticks;
-static uint64_t last_cpu_busy_ticks[LEONOS_PERF_MAX_CPUS];
-static uint64_t last_cpu_idle_ticks[LEONOS_PERF_MAX_CPUS];
-static uint32_t cpu_percent_by_core[LEONOS_PERF_MAX_CPUS];
+static uint64_t last_cpu_busy_ticks[RELIEFOS_PERF_MAX_CPUS];
+static uint64_t last_cpu_idle_ticks[RELIEFOS_PERF_MAX_CPUS];
+static uint32_t cpu_percent_by_core[RELIEFOS_PERF_MAX_CPUS];
 static uint8_t cpu_snapshot_valid;
 static uint32_t cpu_percent;
 static uint32_t mem_percent;
 static uint8_t perf_valid;
 static uint8_t perf_mem_history[TASKMGR_PERF_HISTORY];
 static uint8_t perf_gpu_history[TASKMGR_PERF_HISTORY];
-static uint8_t perf_core_history[LEONOS_PERF_MAX_CPUS][TASKMGR_PERF_HISTORY];
+static uint8_t perf_core_history[RELIEFOS_PERF_MAX_CPUS][TASKMGR_PERF_HISTORY];
 static struct taskmgr_gpu_sample gpu_sample;
 static uint32_t perf_history_head;
 static uint32_t perf_history_count;
-static struct leonos_ui_treeview_state process_tree;
-static struct leonos_startup_entry startup_entries[LEONOS_STARTUP_MAX_ENTRIES];
+static struct reliefos_ui_treeview_state process_tree;
+static struct reliefos_startup_entry startup_entries[RELIEFOS_STARTUP_MAX_ENTRIES];
 static uint32_t startup_entry_count;
-static struct leonos_ui_listview_state startup_list;
-static struct leonos_user_info *startup_users;
+static struct reliefos_ui_listview_state startup_list;
+static struct reliefos_user_info *startup_users;
 static uint32_t startup_user_count;
 static uint32_t startup_selected_uid;
 static uint8_t startup_user_dropdown_open;
 static uint32_t startup_user_dropdown_scroll;
 static uint8_t active_tab = TASKMGR_TAB_PROCESSES;
-static struct leonos_ui_tab_state taskmgr_tabs;
+static struct reliefos_ui_tab_state taskmgr_tabs;
 static uint8_t menu_open;
 static uint8_t context_menu_active;
 static uint8_t context_menu_animating;
@@ -103,11 +103,11 @@ static unsigned long context_menu_anim_start;
 static uint32_t context_menu_x;
 static uint32_t context_menu_y;
 
-static void taskmgr_tab_items(struct leonos_ui_tab_item items[3])
+static void taskmgr_tab_items(struct reliefos_ui_tab_item items[3])
 {
-    items[0] = (struct leonos_ui_tab_item){T("Processes"), TASKMGR_TAB_PROCESSES, 0};
-    items[1] = (struct leonos_ui_tab_item){T("Performance"), TASKMGR_TAB_PERFORMANCE, 0};
-    items[2] = (struct leonos_ui_tab_item){T("Service Manager"), TASKMGR_TAB_STARTUP, 0};
+    items[0] = (struct reliefos_ui_tab_item){T("Processes"), TASKMGR_TAB_PROCESSES, 0};
+    items[1] = (struct reliefos_ui_tab_item){T("Performance"), TASKMGR_TAB_PERFORMANCE, 0};
+    items[2] = (struct reliefos_ui_tab_item){T("Service Manager"), TASKMGR_TAB_STARTUP, 0};
 }
 static uint32_t view_w = TASKMGR_W;
 static uint32_t view_h = TASKMGR_H;
@@ -162,7 +162,7 @@ static void context_menu_set_active(uint8_t active)
     context_menu_active = active;
     context_menu_opening = active;
     context_menu_animating = 1;
-    context_menu_anim_start = leonos_uptime_ms();
+    context_menu_anim_start = reliefos_uptime_ms();
 }
 
 static void append_char(char *buf, uint32_t *pos, uint32_t cap, char ch)
@@ -232,7 +232,7 @@ static const char *kind_name(uint32_t kind)
     return kind == 1 ? "user" : "kern";
 }
 
-static const char *task_user_name(const struct leonos_task_info *task)
+static const char *task_user_name(const struct reliefos_task_info *task)
 {
     if (task && task->username[0]) {
         return task->username;
@@ -240,21 +240,21 @@ static const char *task_user_name(const struct leonos_task_info *task)
     return task && task->uid ? T("Unknown") : T("System");
 }
 
-static const char *task_privilege_name(const struct leonos_task_info *task)
+static const char *task_privilege_name(const struct reliefos_task_info *task)
 {
     if (!task || !task->uid) {
         return T("System");
     }
-    if (task->flags & LEONOS_TASK_SNAPSHOT_FLAG_ELEVATED_ADMIN) {
+    if (task->flags & RELIEFOS_TASK_SNAPSHOT_FLAG_ELEVATED_ADMIN) {
         return T("Elevated");
     }
-    if (task->role == LEONOS_AUTH_ROLE_ADMIN) {
+    if (task->role == RELIEFOS_AUTH_ROLE_ADMIN) {
         return T("Admin");
     }
     return T("Standard");
 }
 
-static int task_index_by_pid(const struct leonos_task_info *list,
+static int task_index_by_pid(const struct reliefos_task_info *list,
                              uint32_t count, uint32_t pid)
 {
     for (uint32_t i = 0; i < count; ++i) {
@@ -328,7 +328,7 @@ static void rebuild_process_tree_items(void)
         process_tree_items[i].cells = process_tree_cells[i];
         process_tree_items[i].flags = 0;
     }
-    leonos_ui_treeview_state_sync(&process_tree, process_tree_items, task_count);
+    reliefos_ui_treeview_state_sync(&process_tree, process_tree_items, task_count);
 }
 
 static void refresh_tasks(void)
@@ -337,7 +337,7 @@ static void refresh_tasks(void)
     uint64_t tick_delta = 0;
     uint64_t sample_total;
     int count;
-    count = leonos_task_snapshot(tasks, LEONOS_TASK_MAX, &next_tick);
+    count = reliefos_task_snapshot(tasks, RELIEFOS_TASK_MAX, &next_tick);
     task_count = count > 0 ? (uint32_t)count : 0;
     /* cpu_ticks is charged by every CPU's local scheduling tick.  The BSP
      * wall-clock tick is not necessarily phase- or frequency-identical to
@@ -377,16 +377,16 @@ static void refresh_tasks(void)
 
 static void refresh_startup_users(void)
 {
-    struct leonos_user_info current;
+    struct reliefos_user_info current;
     uint32_t count = 0;
-    current = (struct leonos_user_info){0};
+    current = (struct reliefos_user_info){0};
     startup_user_count = 0;
-    if (leonos_auth_current(&current) < 0) {
+    if (reliefos_auth_current(&current) < 0) {
         startup_selected_uid = 0;
         return;
     }
-    if (current.role == LEONOS_AUTH_ROLE_ADMIN &&
-        leonos_auth_users_alloc(&startup_users, 0, &count) == 0) {
+    if (current.role == RELIEFOS_AUTH_ROLE_ADMIN &&
+        reliefos_auth_users_alloc(&startup_users, 0, &count) == 0) {
         startup_user_count = count;
     } else {
         if (!startup_users) startup_users = calloc(1, sizeof(*startup_users));
@@ -419,13 +419,13 @@ static void refresh_startup_entries(void)
         startup_entry_count = 0;
         return;
     }
-    if (leonos_startup_list(startup_selected_uid, startup_entries,
-                            LEONOS_STARTUP_MAX_ENTRIES, &count) < 0) {
+    if (reliefos_startup_list(startup_selected_uid, startup_entries,
+                            RELIEFOS_STARTUP_MAX_ENTRIES, &count) < 0) {
         count = 0;
     }
-    startup_entry_count = count > LEONOS_STARTUP_MAX_ENTRIES ?
-                              LEONOS_STARTUP_MAX_ENTRIES : count;
-    leonos_ui_listview_state_set_count(&startup_list, startup_entry_count);
+    startup_entry_count = count > RELIEFOS_STARTUP_MAX_ENTRIES ?
+                              RELIEFOS_STARTUP_MAX_ENTRIES : count;
+    reliefos_ui_listview_state_set_count(&startup_list, startup_entry_count);
     if (startup_list.selected < 0 && startup_entry_count) {
         startup_list.selected = 0;
     }
@@ -449,9 +449,9 @@ static void set_status(const char *text)
 
 static void open_service_manager(void)
 {
-    const char *path = leonos_launch_builtin_path("servicemgr");
+    const char *path = reliefos_launch_builtin_path("servicemgr");
     char *argv[] = {(char *)path, 0};
-    int pid = leonos_launch_argv(argv);
+    int pid = reliefos_launch_argv(argv);
     if (pid < 0) {
         set_status(T("Could not open Service Manager"));
         return;
@@ -461,7 +461,7 @@ static void open_service_manager(void)
 
 static void refresh_performance(void)
 {
-    struct leonos_perf_info next;
+    struct reliefos_perf_info next;
     gpu_sdk_info_t next_gpu = {
         .size = sizeof(gpu_sdk_info_t),
         .version = GPU_SDK_ABI_VERSION,
@@ -478,7 +478,7 @@ static void refresh_performance(void)
             perf_gpu_history[i] = TASKMGR_PERF_MISSING;
         }
     }
-    if (leonos_perf_info(&next) < 0) {
+    if (reliefos_perf_info(&next) < 0) {
         perf_valid = 0;
         set_status(T("Performance data unavailable"));
         return;
@@ -507,13 +507,13 @@ static void refresh_performance(void)
     /* All plots advance together; unavailable GPU samples leave a gap. */
     perf_history_push(mem_percent);
     cpu_count = next.cpu_count;
-    if (cpu_count > LEONOS_PERF_MAX_CPUS) {
-        cpu_count = LEONOS_PERF_MAX_CPUS;
+    if (cpu_count > RELIEFOS_PERF_MAX_CPUS) {
+        cpu_count = RELIEFOS_PERF_MAX_CPUS;
     }
     /* perf_history_push already advanced the head; every core shares this
      * same ring slot so the per-core lines stay aligned with the CPU plot. */
     core_slot = (perf_history_head + TASKMGR_PERF_HISTORY - 1U) % TASKMGR_PERF_HISTORY;
-    for (uint32_t i = 0; i < LEONOS_PERF_MAX_CPUS; ++i) {
+    for (uint32_t i = 0; i < RELIEFOS_PERF_MAX_CPUS; ++i) {
         uint64_t old_cpu_total = last_cpu_busy_ticks[i] + last_cpu_idle_ticks[i];
         uint64_t new_cpu_total = next.cpus[i].busy_ticks + next.cpus[i].idle_ticks;
         uint64_t cpu_delta_total;
@@ -561,7 +561,7 @@ static void refresh_all(void)
     }
 }
 
-static struct leonos_task_info *selected_task(void)
+static struct reliefos_task_info *selected_task(void)
 {
     int index;
     if (active_tab != TASKMGR_TAB_PROCESSES) {
@@ -574,7 +574,7 @@ static struct leonos_task_info *selected_task(void)
     return index >= 0 ? &tasks[index] : 0;
 }
 
-static struct leonos_startup_entry *selected_startup_entry(void)
+static struct reliefos_startup_entry *selected_startup_entry(void)
 {
     if (active_tab != TASKMGR_TAB_STARTUP || startup_list.selected < 0 ||
         (uint32_t)startup_list.selected >= startup_entry_count) {
@@ -585,12 +585,12 @@ static struct leonos_startup_entry *selected_startup_entry(void)
 
 static void toggle_selected_startup_entry(void)
 {
-    struct leonos_startup_entry *entry = selected_startup_entry();
+    struct reliefos_startup_entry *entry = selected_startup_entry();
     if (!entry) {
         set_status(T("No startup app selected"));
         return;
     }
-    if (leonos_startup_set_enabled(startup_selected_uid, entry->id, !entry->enabled) < 0) {
+    if (reliefos_startup_set_enabled(startup_selected_uid, entry->id, !entry->enabled) < 0) {
         set_status(T("Could not change startup app"));
         return;
     }
@@ -601,16 +601,16 @@ static void toggle_selected_startup_entry(void)
 
 static void remove_selected_startup_entry(void)
 {
-    struct leonos_startup_entry *entry = selected_startup_entry();
+    struct reliefos_startup_entry *entry = selected_startup_entry();
     if (!entry) {
         set_status(T("No startup app selected"));
         return;
     }
-    if (!leonos_ui_show_confirm_dialog(T("Remove Startup App"),
+    if (!reliefos_ui_show_confirm_dialog(T("Remove Startup App"),
                                        T("Remove the selected startup app?"), 0)) {
         return;
     }
-    if (leonos_startup_remove(startup_selected_uid, entry->id) < 0) {
+    if (reliefos_startup_remove(startup_selected_uid, entry->id) < 0) {
         set_status(T("Could not remove startup app"));
         return;
     }
@@ -620,7 +620,7 @@ static void remove_selected_startup_entry(void)
 
 static int selected_task_killable(void)
 {
-    struct leonos_task_info *task = selected_task();
+    struct reliefos_task_info *task = selected_task();
     if (!task || task->pid == 0 || task->kind != 1 || task->state == 3 ||
         (task->flags & 1u) || task->pid == (uint32_t)getpid()) {
         return 0;
@@ -630,7 +630,7 @@ static int selected_task_killable(void)
 
 static void kill_selected_task(void)
 {
-    struct leonos_task_info *task = selected_task();
+    struct reliefos_task_info *task = selected_task();
     uint32_t pid;
     if (!task) {
         set_status(T("No task selected"));
@@ -641,7 +641,7 @@ static void kill_selected_task(void)
         return;
     }
     pid = task->pid;
-    if (leonos_task_kill(pid) < 0) {
+    if (reliefos_task_kill(pid) < 0) {
         set_status(T("End Task failed"));
         return;
     }
@@ -649,21 +649,21 @@ static void kill_selected_task(void)
     refresh_all();
 }
 
-static void build_context_menu_items(struct leonos_ui_context_menu_item *items)
+static void build_context_menu_items(struct reliefos_ui_context_menu_item *items)
 {
-    items[0] = (struct leonos_ui_context_menu_item){T("End Task"), TASKMGR_ACTION_END,
-                                                    selected_task_killable() ? 0 : LEONOS_UI_MENU_DISABLED};
-    items[1] = (struct leonos_ui_context_menu_item){T("Details"), TASKMGR_ACTION_DETAILS,
-                                                    selected_task() ? 0 : LEONOS_UI_MENU_DISABLED};
-    items[2] = (struct leonos_ui_context_menu_item){T("Refresh"), TASKMGR_ACTION_REFRESH, 0};
+    items[0] = (struct reliefos_ui_context_menu_item){T("End Task"), TASKMGR_ACTION_END,
+                                                    selected_task_killable() ? 0 : RELIEFOS_UI_MENU_DISABLED};
+    items[1] = (struct reliefos_ui_context_menu_item){T("Details"), TASKMGR_ACTION_DETAILS,
+                                                    selected_task() ? 0 : RELIEFOS_UI_MENU_DISABLED};
+    items[2] = (struct reliefos_ui_context_menu_item){T("Refresh"), TASKMGR_ACTION_REFRESH, 0};
 }
 
 static void show_task_details(void)
 {
-    struct leonos_task_info *task = selected_task();
-    struct leonos_task_info snapshot;
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_task_info *task = selected_task();
+    struct reliefos_task_info snapshot;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     char pid[24];
     char ppid[24];
     char cr3[24];
@@ -699,17 +699,17 @@ static void show_task_details(void)
     append_text(cpu_ticks, &pos, sizeof(cpu_ticks), " ticks");
     format_process_memory(memory, sizeof(memory), snapshot.memory_kib);
 
-    window_id = leonos_gui_create_app_window_ex(T("Task Details"), snapshot.name,
+    window_id = reliefos_gui_create_app_window_ex(T("Task Details"), snapshot.name,
                                                 TASKMGR_DETAILS_W, TASKMGR_DETAILS_H,
-                                                LEONOS_GUI_WINDOW_NO_RESIZE);
+                                                RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         set_status(T("Details failed"));
         return;
     }
-    leonos_ui_bind(&ui, details_pixels, TASKMGR_DETAILS_W, TASKMGR_DETAILS_H,
+    reliefos_ui_bind(&ui, details_pixels, TASKMGR_DETAILS_W, TASKMGR_DETAILS_H,
                    TASKMGR_DETAILS_W);
     for (;;) {
-        struct leonos_ui_property_item props[] = {
+        struct reliefos_ui_property_item props[] = {
             {T("Name:"), snapshot.name, 0},
             {"PID:", pid, 0},
             {T("Parent PID:"), ppid, 0},
@@ -723,36 +723,36 @@ static void show_task_details(void)
             {"Entry:", entry, 0},
             {T("Wake tick:"), wake, 0},
         };
-        leonos_ui_rect(&ui, 0, 0, TASKMGR_DETAILS_W, TASKMGR_DETAILS_H,
-                       LEONOS_UI_GRAY);
-        leonos_ui_property_grid(&ui, 16, 16, TASKMGR_DETAILS_W - 32,
+        reliefos_ui_rect(&ui, 0, 0, TASKMGR_DETAILS_W, TASKMGR_DETAILS_H,
+                       RELIEFOS_UI_GRAY);
+        reliefos_ui_property_grid(&ui, 16, 16, TASKMGR_DETAILS_W - 32,
                                 props, sizeof(props) / sizeof(props[0]),
                                 110, 23);
-        leonos_ui_button(&ui, TASKMGR_DETAILS_W - 90, TASKMGR_DETAILS_H - 38,
-                         72, LEONOS_UI_BUTTON_H, "OK", 0);
-        leonos_gui_present_window((uint32_t)window_id, TASKMGR_DETAILS_W,
+        reliefos_ui_button(&ui, TASKMGR_DETAILS_W - 90, TASKMGR_DETAILS_H - 38,
+                         72, RELIEFOS_UI_BUTTON_H, "OK", 0);
+        reliefos_gui_present_window((uint32_t)window_id, TASKMGR_DETAILS_W,
                                   TASKMGR_DETAILS_H, TASKMGR_DETAILS_W,
                                   details_pixels);
         event.window_id = (uint32_t)window_id;
-        if (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        if (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 break;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN &&
-                (event.keycode == LEONOS_KEY_ENTER || event.keycode == TASKMGR_KEY_ESCAPE)) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN &&
+                (event.keycode == RELIEFOS_KEY_ENTER || event.keycode == TASKMGR_KEY_ESCAPE)) {
                 break;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u) &&
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 1u) &&
                 hit_rect_i(event.x, event.y, TASKMGR_DETAILS_W - 90,
                            TASKMGR_DETAILS_H - 38, 72,
-                           (int32_t)LEONOS_UI_BUTTON_H)) {
+                           (int32_t)RELIEFOS_UI_BUTTON_H)) {
                 break;
             }
         } else {
             sleep_ms(10);
         }
     }
-    leonos_gui_destroy_app_window((uint32_t)window_id);
+    reliefos_gui_destroy_app_window((uint32_t)window_id);
 }
 
 static void execute_context_action(uint32_t action)
@@ -804,18 +804,18 @@ static void format_uptime(char *buf, uint32_t cap, uint64_t ms)
     append_dec(buf, &pos, cap, secs);
 }
 
-static void draw_perf_text_line(struct leonos_ui_surface *ui, uint32_t x, uint32_t y,
+static void draw_perf_text_line(struct reliefos_ui_surface *ui, uint32_t x, uint32_t y,
                                 const char *label, const char *value)
 {
-    if (y + LEONOS_FONT_H > view_h - TASKMGR_STATUS_H - 8U) {
+    if (y + RELIEFOS_FONT_H > view_h - TASKMGR_STATUS_H - 8U) {
         return;
     }
-    leonos_ui_text_clipped(ui, x, y, 146U, label, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text_clipped(ui, x + 150, y, view_w > x + 174 ? view_w - x - 174 : 80,
-                           value ? value : "", LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+    reliefos_ui_text_clipped(ui, x, y, 146U, label, RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text_clipped(ui, x + 150, y, view_w > x + 174 ? view_w - x - 174 : 80,
+                           value ? value : "", RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
 }
 
-static void draw_perf_segment(struct leonos_ui_surface *ui, int32_t x0, int32_t y0,
+static void draw_perf_segment(struct reliefos_ui_surface *ui, int32_t x0, int32_t y0,
                               int32_t x1, int32_t y1, uint32_t color)
 {
     int32_t dx = x1 >= x0 ? x1 - x0 : x0 - x1;
@@ -825,7 +825,7 @@ static void draw_perf_segment(struct leonos_ui_surface *ui, int32_t x0, int32_t 
     int32_t error = dx + dy;
     for (;;) {
         if (x0 >= 0 && y0 >= 0) {
-            leonos_ui_pixel(ui, (uint32_t)x0, (uint32_t)y0, color);
+            reliefos_ui_pixel(ui, (uint32_t)x0, (uint32_t)y0, color);
         }
         if (x0 == x1 && y0 == y1) {
             break;
@@ -894,7 +894,7 @@ static struct perf_plot_rect perf_plot_rect_at(uint32_t x, uint32_t y,
 
 /* Draw one history ring as a polyline; TASKMGR_PERF_MISSING samples leave
  * gaps exactly like the single-series graphs. */
-static void draw_perf_history_line(struct leonos_ui_surface *ui,
+static void draw_perf_history_line(struct reliefos_ui_surface *ui,
                                    const struct perf_plot_rect *plot,
                                    const uint8_t *history, uint32_t color)
 {
@@ -921,7 +921,7 @@ static void draw_perf_history_line(struct leonos_ui_surface *ui,
             uint32_t previous_index = (perf_history_head + TASKMGR_PERF_HISTORY - count + i - 1U) %
                                        TASKMGR_PERF_HISTORY;
             if (history[previous_index] == TASKMGR_PERF_MISSING) {
-                leonos_ui_pixel(ui, px, py, color);
+                reliefos_ui_pixel(ui, px, py, color);
                 continue;
             }
             uint32_t previous_value = history[previous_index] > 100U ? 100U : history[previous_index];
@@ -934,49 +934,49 @@ static void draw_perf_history_line(struct leonos_ui_surface *ui,
             draw_perf_segment(ui, (int32_t)previous_x, (int32_t)previous_y,
                               (int32_t)px, (int32_t)py, color);
         }
-        leonos_ui_pixel(ui, px, py, color);
+        reliefos_ui_pixel(ui, px, py, color);
     }
 }
 
-static void draw_perf_graph_frame(struct leonos_ui_surface *ui, uint32_t x, uint32_t y,
+static void draw_perf_graph_frame(struct reliefos_ui_surface *ui, uint32_t x, uint32_t y,
                                   uint32_t w, uint32_t h, const char *title,
                                   const char *current, int available,
                                   struct perf_plot_rect *plot)
 {
-    uint32_t grid_color = leonos_ui_color(LEONOS_UI_COLOR_BORDER);
-    uint32_t muted_color = leonos_ui_color(LEONOS_UI_COLOR_MUTED);
-    uint32_t text_color = available ? LEONOS_UI_BLACK : muted_color;
+    uint32_t grid_color = reliefos_ui_color(RELIEFOS_UI_COLOR_BORDER);
+    uint32_t muted_color = reliefos_ui_color(RELIEFOS_UI_COLOR_MUTED);
+    uint32_t text_color = available ? RELIEFOS_UI_BLACK : muted_color;
     if (h < 64U && w >= 280U) {
         uint32_t label_w = w / 2U;
-        leonos_ui_text_clipped(ui, x + 8U, y + 6U, label_w - 62U, title,
-                               text_color, LEONOS_UI_WHITE);
-        leonos_ui_text_clipped(ui, x + label_w - 48U, y + 6U, 44U, current,
-                               text_color, LEONOS_UI_WHITE);
+        reliefos_ui_text_clipped(ui, x + 8U, y + 6U, label_w - 62U, title,
+                               text_color, RELIEFOS_UI_WHITE);
+        reliefos_ui_text_clipped(ui, x + label_w - 48U, y + 6U, 44U, current,
+                               text_color, RELIEFOS_UI_WHITE);
     } else {
-        leonos_ui_text_clipped(ui, x + 8U, y + 6U, w - 76U, title,
-                               text_color, LEONOS_UI_WHITE);
-        leonos_ui_text_clipped(ui, x + w - 60U, y + 6U, 52U, current,
-                               text_color, LEONOS_UI_WHITE);
+        reliefos_ui_text_clipped(ui, x + 8U, y + 6U, w - 76U, title,
+                               text_color, RELIEFOS_UI_WHITE);
+        reliefos_ui_text_clipped(ui, x + w - 60U, y + 6U, 52U, current,
+                               text_color, RELIEFOS_UI_WHITE);
     }
     *plot = perf_plot_rect_at(x, y, w, h);
-    leonos_ui_inset(ui, plot->x, plot->y, plot->w, plot->h, LEONOS_UI_WHITE);
+    reliefos_ui_inset(ui, plot->x, plot->y, plot->w, plot->h, RELIEFOS_UI_WHITE);
     if (plot->w < 4U || plot->h < 4U) {
         return;
     }
     for (uint32_t step = 1U; step < 4U; ++step) {
         uint32_t gy = plot->y + ((plot->h - 1U) * step) / 4U;
-        leonos_ui_rect(ui, plot->x + 1U, gy, plot->w - 2U, 1U, grid_color);
+        reliefos_ui_rect(ui, plot->x + 1U, gy, plot->w - 2U, 1U, grid_color);
     }
     if (plot->h >= 40U) {
-        leonos_ui_text_clipped(ui, plot->x + 3U, plot->y + 2U, 34U, "100%",
-                               muted_color, LEONOS_UI_WHITE);
-        leonos_ui_text_clipped(ui, plot->x + 3U,
-                               plot->y + plot->h - LEONOS_FONT_H - 2U,
-                               34U, "0%", muted_color, LEONOS_UI_WHITE);
+        reliefos_ui_text_clipped(ui, plot->x + 3U, plot->y + 2U, 34U, "100%",
+                               muted_color, RELIEFOS_UI_WHITE);
+        reliefos_ui_text_clipped(ui, plot->x + 3U,
+                               plot->y + plot->h - RELIEFOS_FONT_H - 2U,
+                               34U, "0%", muted_color, RELIEFOS_UI_WHITE);
     }
 }
 
-static void draw_perf_graph_core(struct leonos_ui_surface *ui, uint32_t x, uint32_t y,
+static void draw_perf_graph_core(struct reliefos_ui_surface *ui, uint32_t x, uint32_t y,
                                  uint32_t w, uint32_t h, const char *title,
                                  const char *current, uint32_t core_count)
 {
@@ -988,8 +988,8 @@ static void draw_perf_graph_core(struct leonos_ui_surface *ui, uint32_t x, uint3
     if (plot.w < 4U || plot.h < 4U || !perf_history_count) {
         return;
     }
-    if (core_count > LEONOS_PERF_MAX_CPUS) {
-        core_count = LEONOS_PERF_MAX_CPUS;
+    if (core_count > RELIEFOS_PERF_MAX_CPUS) {
+        core_count = RELIEFOS_PERF_MAX_CPUS;
     }
     /* Core 0 first so later lines overdraw earlier ones; each core keeps
      * its stable palette color regardless of the draw order. */
@@ -1001,7 +1001,7 @@ static void draw_perf_graph_core(struct leonos_ui_surface *ui, uint32_t x, uint3
      * entries at these sizes. */
 }
 
-static void draw_perf_graph(struct leonos_ui_surface *ui, uint32_t x, uint32_t y,
+static void draw_perf_graph(struct reliefos_ui_surface *ui, uint32_t x, uint32_t y,
                             uint32_t w, uint32_t h, const char *title,
                             const char *current, const uint8_t *history, uint32_t color)
 {
@@ -1016,7 +1016,7 @@ static void draw_perf_graph(struct leonos_ui_surface *ui, uint32_t x, uint32_t y
     draw_perf_history_line(ui, &plot, history, color);
 }
 
-static void draw_performance(struct leonos_ui_surface *ui)
+static void draw_performance(struct reliefos_ui_surface *ui)
 {
     char value[64];
     char value2[64];
@@ -1037,12 +1037,12 @@ static void draw_performance(struct leonos_ui_surface *ui)
     uint64_t used_kib = perf_info.total_memory_kib >= perf_info.free_memory_kib
                             ? perf_info.total_memory_kib - perf_info.free_memory_kib
                             : 0;
-    leonos_ui_panel(ui, 8, 72, view_w > 16 ? view_w - 16 : view_w,
-                    view_h > 112 ? view_h - 108 : 96, LEONOS_UI_WHITE);
+    reliefos_ui_panel(ui, 8, 72, view_w > 16 ? view_w - 16 : view_w,
+                    view_h > 112 ? view_h - 108 : 96, RELIEFOS_UI_WHITE);
     if (!perf_valid) {
-        leonos_ui_text_clipped(ui, 24, y + 20, content_w,
+        reliefos_ui_text_clipped(ui, 24, y + 20, content_w,
                                T("Performance data unavailable"),
-                               LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+                               RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
         return;
     }
 
@@ -1071,14 +1071,14 @@ static void draw_performance(struct leonos_ui_surface *ui)
         } else if (i == 1U) {
             title = graph_h < 64U ? "RAM" : T("Memory Usage");
             history = perf_mem_history;
-            color = leonos_ui_color(LEONOS_UI_COLOR_TEXT);
+            color = reliefos_ui_color(RELIEFOS_UI_COLOR_TEXT);
             format_percent(value, sizeof(value), mem_percent);
         } else {
             title = graph_h < 64U || graph_w < 210U ?
                         T("GPU (est.)") :
                         T("GPU (estimated)");
             history = gpu_sample.available ? perf_gpu_history : 0;
-            color = leonos_ui_color(LEONOS_UI_COLOR_ACCENT);
+            color = reliefos_ui_color(RELIEFOS_UI_COLOR_ACCENT);
             if (gpu_sample.valid) {
                 format_percent(value, sizeof(value), gpu_sample.percent);
             } else {
@@ -1093,11 +1093,11 @@ static void draw_performance(struct leonos_ui_surface *ui)
     graph_bottom = y + graph_rows * graph_h + (graph_rows - 1U) * graph_gap;
 
     y = graph_bottom + 10U;
-    if (y + LEONOS_FONT_H > content_bottom) {
+    if (y + RELIEFOS_FONT_H > content_bottom) {
         return;
     }
-    if (cpu_count > LEONOS_PERF_MAX_CPUS) {
-        cpu_count = LEONOS_PERF_MAX_CPUS;
+    if (cpu_count > RELIEFOS_PERF_MAX_CPUS) {
+        cpu_count = RELIEFOS_PERF_MAX_CPUS;
     }
     columns = cpu_count > 16U ? 4U : (cpu_count > 8U ? 3U : 2U);
     if (cpu_count == 1U) {
@@ -1110,8 +1110,8 @@ static void draw_performance(struct leonos_ui_surface *ui)
         columns = 1U;
     }
     rows = cpu_count ? (cpu_count + columns - 1U) / columns : 1U;
-    leonos_ui_text(ui, 24, y, T("Per-core usage"),
-                   LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+    reliefos_ui_text(ui, 24, y, T("Per-core usage"),
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     cpu_start_y = y + 22U;
     {
         uint32_t available_w = content_w;
@@ -1132,14 +1132,14 @@ static void draw_performance(struct leonos_ui_surface *ui)
             append_text(core_label, &pos, sizeof(core_label), "CPU ");
             append_dec(core_label, &pos, sizeof(core_label), i);
             /* Swatch matches this core's line color in the CPU graph. */
-            leonos_ui_rect(ui, x, row_y + 5U, 6U, 8U, core_color(i));
-            leonos_ui_text_clipped(ui, x + 10U, row_y + 2U, 36U, core_label,
-                                   LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-            leonos_ui_progress(ui, progress_x, row_y, progress_w, 18U,
+            reliefos_ui_rect(ui, x, row_y + 5U, 6U, 8U, core_color(i));
+            reliefos_ui_text_clipped(ui, x + 10U, row_y + 2U, 36U, core_label,
+                                   RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+            reliefos_ui_progress(ui, progress_x, row_y, progress_w, 18U,
                                cpu_percent_by_core[i], 100U);
             format_percent(value, sizeof(value), cpu_percent_by_core[i]);
-            leonos_ui_text_clipped(ui, percent_x, row_y + 2U, 46U, value,
-                                   LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+            reliefos_ui_text_clipped(ui, percent_x, row_y + 2U, 46U, value,
+                                   RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
         }
     }
     y = cpu_start_y + rows * 30U + 8U;
@@ -1190,7 +1190,7 @@ static uint32_t startup_dropdown_rows(void)
 }
 
 static void startup_command_line(char *text, uint32_t cap,
-                                 const struct leonos_startup_command *command)
+                                 const struct reliefos_startup_command *command)
 {
     uint32_t pos = 0;
     text[0] = 0;
@@ -1201,7 +1201,7 @@ static void startup_command_line(char *text, uint32_t cap,
     }
 }
 
-static void draw_startup(struct leonos_ui_surface *ui)
+static void draw_startup(struct reliefos_ui_surface *ui)
 {
     uint32_t list_w = view_w > 38 ? view_w - 38 : 320;
     uint32_t list_h = view_h > 112 + TASKMGR_STATUS_H + 4 ?
@@ -1209,20 +1209,20 @@ static void draw_startup(struct leonos_ui_surface *ui)
     uint32_t scroll_h = list_h > 2 ? list_h - 2 : 24;
     uint32_t rows = startup_entry_count > startup_list.visible_rows ?
                         startup_list.visible_rows : startup_entry_count;
-    struct leonos_ui_list_column cols[] = {
+    struct reliefos_ui_list_column cols[] = {
         {T("STATUS"), 88},
         {T("COMMAND"), list_w > 88 ? list_w - 88 : 80},
     };
 
     startup_list.visible_rows = startup_visible_rows();
-    leonos_ui_listview_state_set_count(&startup_list, startup_entry_count);
-    leonos_ui_panel(ui, 8, 72, view_w > 16 ? view_w - 16 : view_w,
-                    view_h > 112 ? view_h - 108 : 96, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, 24, 84, T("User"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_combobox(ui, 70, 78, 180, startup_selected_username(),
+    reliefos_ui_listview_state_set_count(&startup_list, startup_entry_count);
+    reliefos_ui_panel(ui, 8, 72, view_w > 16 ? view_w - 16 : view_w,
+                    view_h > 112 ? view_h - 108 : 96, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, 24, 84, T("User"), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_combobox(ui, 70, 78, 180, startup_selected_username(),
                         startup_user_dropdown_open, 0);
-    leonos_ui_scroll_view_frame(ui, 8, 112, view_w - 16, list_h);
-    leonos_ui_listview_header(ui, 10, 114, list_w, cols, 2);
+    reliefos_ui_scroll_view_frame(ui, 8, 112, view_w - 16, list_h);
+    reliefos_ui_listview_header(ui, 10, 114, list_w, cols, 2);
     for (uint32_t row = 0; row < rows; ++row) {
         uint32_t i = startup_list.scroll + row;
         const char *cells[2];
@@ -1234,17 +1234,17 @@ static void draw_startup(struct leonos_ui_surface *ui)
                                                 T("Disabled");
         startup_command_line(command, sizeof(command), &startup_entries[i].command);
         cells[1] = command;
-        leonos_ui_listview_row(ui, 10, 142 + row * 24, list_w, cols, cells, 2,
+        reliefos_ui_listview_row(ui, 10, 142 + row * 24, list_w, cols, cells, 2,
                                startup_list.selected == (int32_t)i
-                                   ? LEONOS_UI_MENU_SELECTED : 0);
+                                   ? RELIEFOS_UI_MENU_SELECTED : 0);
     }
-    leonos_ui_vscrollbar(ui, view_w - 26, 114, 18, scroll_h,
+    reliefos_ui_vscrollbar(ui, view_w - 26, 114, 18, scroll_h,
                          startup_list.scroll,
                          startup_entry_count > startup_list.visible_rows
                              ? startup_entry_count : startup_list.visible_rows,
                          startup_list.visible_rows,
                          startup_entry_count <= startup_list.visible_rows
-                             ? LEONOS_UI_SCROLLBAR_DISABLED : 0);
+                             ? RELIEFOS_UI_SCROLLBAR_DISABLED : 0);
 
     if (startup_user_dropdown_open) {
         uint32_t visible = startup_dropdown_rows();
@@ -1255,30 +1255,30 @@ static void draw_startup(struct leonos_ui_surface *ui)
             rows_to_draw = visible;
         }
         height = rows_to_draw * TASKMGR_STARTUP_USER_ROW_H;
-        leonos_ui_menu(ui, 70, 102, 180, height);
+        reliefos_ui_menu(ui, 70, 102, 180, height);
         for (uint32_t row = 0; row < rows_to_draw; ++row) {
             uint32_t i = startup_user_dropdown_scroll + row;
-            leonos_ui_menu_item(ui, 72, 103 + row * TASKMGR_STARTUP_USER_ROW_H,
+            reliefos_ui_menu_item(ui, 72, 103 + row * TASKMGR_STARTUP_USER_ROW_H,
                                 156, startup_users[i].username,
                                 startup_users[i].uid == startup_selected_uid
-                                    ? LEONOS_UI_MENU_SELECTED : 0);
+                                    ? RELIEFOS_UI_MENU_SELECTED : 0);
         }
         if (startup_user_count > visible) {
-            leonos_ui_vscrollbar(ui, 232, 102, 16, height,
+            reliefos_ui_vscrollbar(ui, 232, 102, 16, height,
                                  startup_user_dropdown_scroll, startup_user_count,
                                  visible, 0);
         }
     }
 }
 
-static void draw_taskmgr(struct leonos_ui_surface *ui)
+static void draw_taskmgr(struct reliefos_ui_surface *ui)
 {
     char line[128];
     uint32_t pos = 0;
     uint32_t list_w = view_w > 38 ? view_w - 38 : 320;
     uint32_t list_h = view_h > 72 + TASKMGR_STATUS_H + 4 ? view_h - 72 - TASKMGR_STATUS_H - 4 : 80;
     uint32_t vis_rows = visible_rows();
-    struct leonos_ui_list_column cols[] = {
+    struct reliefos_ui_list_column cols[] = {
         {T("PROCESS"), list_w > 382 ? list_w - 382 : 80},
         {"PID", 44},
         {T("CPU"), 48},
@@ -1287,40 +1287,40 @@ static void draw_taskmgr(struct leonos_ui_surface *ui)
         {T("USER"), 80},
         {T("PRIV"), 88},
     };
-    struct leonos_ui_menubar_item menu_items[] = {
+    struct reliefos_ui_menubar_item menu_items[] = {
         {T("File"), TASKMGR_MENU_FILE, 64, 0},
         {T("Options"), TASKMGR_MENU_OPTIONS, 80, 0},
     };
-    struct leonos_ui_tab_item tabs[3];
+    struct reliefos_ui_tab_item tabs[3];
     uint32_t tab_w;
     uint32_t action_x;
     taskmgr_tab_items(tabs);
-    leonos_ui_treeview_state_set_viewport(&process_tree, vis_rows);
+    reliefos_ui_treeview_state_set_viewport(&process_tree, vis_rows);
 
-    leonos_ui_rect(ui, 0, 0, view_w, view_h, LEONOS_UI_WHITE);
-    leonos_ui_menubar_draw(ui, 0, 0, view_w, menu_items,
+    reliefos_ui_rect(ui, 0, 0, view_w, view_h, RELIEFOS_UI_WHITE);
+    reliefos_ui_menubar_draw(ui, 0, 0, view_w, menu_items,
                            sizeof(menu_items) / sizeof(menu_items[0]),
                            menu_open);
-    leonos_ui_toolbar(ui, 0, 28, view_w, 36);
-    leonos_ui_toolbar_button(ui, 8, 34, 88, T("Refresh"), 0);
+    reliefos_ui_toolbar(ui, 0, 28, view_w, 36);
+    reliefos_ui_toolbar_button(ui, 8, 34, 88, T("Refresh"), 0);
     taskmgr_tabs.selected_id = active_tab;
     tab_w = toolbar_tab_width();
     action_x = toolbar_action_x();
-    leonos_ui_tab_control(ui, 104, 34, tab_w, tabs, 3, &taskmgr_tabs);
+    reliefos_ui_tab_control(ui, 104, 34, tab_w, tabs, 3, &taskmgr_tabs);
     if (active_tab == TASKMGR_TAB_PROCESSES && action_x + 86 <= view_w) {
-        leonos_ui_toolbar_button(ui, action_x, 34, 86, T("End Task"),
-                                 selected_task_killable() ? 0 : LEONOS_UI_BUTTON_DISABLED);
+        reliefos_ui_toolbar_button(ui, action_x, 34, 86, T("End Task"),
+                                 selected_task_killable() ? 0 : RELIEFOS_UI_BUTTON_DISABLED);
     } else if (active_tab == TASKMGR_TAB_STARTUP) {
-        struct leonos_startup_entry *entry = selected_startup_entry();
+        struct reliefos_startup_entry *entry = selected_startup_entry();
         if (action_x + 92 <= view_w) {
-            leonos_ui_toolbar_button(ui, action_x, 34, 92,
+            reliefos_ui_toolbar_button(ui, action_x, 34, 92,
                                      entry && entry->enabled ? T("Disable") :
                                                                T("Enable"),
-                                     entry ? 0 : LEONOS_UI_BUTTON_DISABLED);
+                                     entry ? 0 : RELIEFOS_UI_BUTTON_DISABLED);
         }
         if (action_x + 192 <= view_w) {
-            leonos_ui_toolbar_button(ui, action_x + 100, 34, 86, T("Remove"),
-                                     entry ? 0 : LEONOS_UI_BUTTON_DISABLED);
+            reliefos_ui_toolbar_button(ui, action_x + 100, 34, 86, T("Remove"),
+                                     entry ? 0 : RELIEFOS_UI_BUTTON_DISABLED);
         }
     }
 
@@ -1332,52 +1332,52 @@ static void draw_taskmgr(struct leonos_ui_surface *ui)
         append_dec(line, &pos, sizeof(line), task_count);
         uint32_t tick_x = action_x + 86 <= view_w ? action_x + 94 : action_x;
         if (tick_x + 64 < view_w) {
-            leonos_ui_text_clipped(ui, tick_x, 40, view_w - tick_x - 8, line,
-                                   LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+            reliefos_ui_text_clipped(ui, tick_x, 40, view_w - tick_x - 8, line,
+                                   RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
         }
 
-        leonos_ui_scroll_view_frame(ui, 8, 72, view_w - 16, list_h);
-        leonos_ui_treeview(ui, 10, 74, list_w, cols, 7,
+        reliefos_ui_scroll_view_frame(ui, 8, 72, view_w - 16, list_h);
+        reliefos_ui_treeview(ui, 10, 74, list_w, cols, 7,
                             process_tree_items, task_count, &process_tree);
-        leonos_ui_vscrollbar(ui, view_w - 26, 74, 18, view_h > 104 ? view_h - 104 : 24,
+        reliefos_ui_vscrollbar(ui, view_w - 26, 74, 18, view_h > 104 ? view_h - 104 : 24,
                              process_tree.scroll,
                              process_tree.visible_count > process_tree.visible_rows
                                  ? process_tree.visible_count : process_tree.visible_rows,
                              process_tree.visible_rows,
                              process_tree.visible_count <= process_tree.visible_rows
-                                 ? LEONOS_UI_SCROLLBAR_DISABLED : 0);
+                                 ? RELIEFOS_UI_SCROLLBAR_DISABLED : 0);
     } else if (active_tab == TASKMGR_TAB_PERFORMANCE) {
         draw_performance(ui);
     } else {
         draw_startup(ui);
     }
-    leonos_ui_statusbar(ui, view_h - TASKMGR_STATUS_H, TASKMGR_STATUS_H, status_text);
+    reliefos_ui_statusbar(ui, view_h - TASKMGR_STATUS_H, TASKMGR_STATUS_H, status_text);
 
     if (menu_open == TASKMGR_MENU_FILE) {
-        struct leonos_ui_context_menu_item items[] = {
+        struct reliefos_ui_context_menu_item items[] = {
             {T("Refresh"), TASKMGR_ACTION_REFRESH, 0},
             {T("End Task"), TASKMGR_ACTION_END,
-             selected_task_killable() ? 0 : LEONOS_UI_MENU_DISABLED},
+             selected_task_killable() ? 0 : RELIEFOS_UI_MENU_DISABLED},
             {T("About"), TASKMGR_ACTION_ABOUT, 0},
         };
-        struct leonos_ui_rect r;
-        leonos_ui_menubar_item_rect(0, 0, menu_items,
+        struct reliefos_ui_rect r;
+        reliefos_ui_menubar_item_rect(0, 0, menu_items,
                                     sizeof(menu_items) / sizeof(menu_items[0]),
                                     TASKMGR_MENU_FILE, &r);
-        leonos_ui_menu_popup(ui, (uint32_t)r.x, TASKMGR_MENU_BAR_H, 154,
+        reliefos_ui_menu_popup(ui, (uint32_t)r.x, TASKMGR_MENU_BAR_H, 154,
                              items, sizeof(items) / sizeof(items[0]), 0);
     } else if (menu_open == TASKMGR_MENU_OPTIONS) {
-        struct leonos_ui_context_menu_item items[] = {
+        struct reliefos_ui_context_menu_item items[] = {
             {T("Processes"), TASKMGR_ACTION_PROCESSES, 0},
             {T("Performance"), TASKMGR_ACTION_PERFORMANCE, 0},
             {T("Service Manager"), TASKMGR_ACTION_STARTUP, 0},
             {T("About"), TASKMGR_ACTION_ABOUT, 0},
         };
-        struct leonos_ui_rect r;
-        leonos_ui_menubar_item_rect(0, 0, menu_items,
+        struct reliefos_ui_rect r;
+        reliefos_ui_menubar_item_rect(0, 0, menu_items,
                                     sizeof(menu_items) / sizeof(menu_items[0]),
                                     TASKMGR_MENU_OPTIONS, &r);
-        leonos_ui_menu_popup(ui, (uint32_t)r.x, TASKMGR_MENU_BAR_H, 178,
+        reliefos_ui_menu_popup(ui, (uint32_t)r.x, TASKMGR_MENU_BAR_H, 178,
                               items, sizeof(items) / sizeof(items[0]),
                               active_tab == TASKMGR_TAB_PROCESSES
                                   ? TASKMGR_ACTION_PROCESSES
@@ -1386,9 +1386,9 @@ static void draw_taskmgr(struct leonos_ui_surface *ui)
                                         : TASKMGR_ACTION_STARTUP);
     }
     if (context_menu_active || context_menu_animating) {
-        struct leonos_ui_context_menu_item items[TASKMGR_CONTEXT_MENU_COUNT];
+        struct reliefos_ui_context_menu_item items[TASKMGR_CONTEXT_MENU_COUNT];
         uint32_t progress = context_menu_animating
-                                ? leonos_ui_anim_progress(leonos_uptime_ms(), context_menu_anim_start, 120)
+                                ? reliefos_ui_anim_progress(reliefos_uptime_ms(), context_menu_anim_start, 120)
                                 : 1000;
         if (progress >= 1000) {
             context_menu_animating = 0;
@@ -1397,7 +1397,7 @@ static void draw_taskmgr(struct leonos_ui_surface *ui)
             progress = 1000 - progress;
         }
         build_context_menu_items(items);
-        leonos_ui_context_menu_animated(ui, context_menu_x, context_menu_y,
+        reliefos_ui_context_menu_animated(ui, context_menu_x, context_menu_y,
                                         TASKMGR_CONTEXT_MENU_W, items,
                                         TASKMGR_CONTEXT_MENU_COUNT, progress);
     }
@@ -1405,12 +1405,12 @@ static void draw_taskmgr(struct leonos_ui_surface *ui)
 
 static int handle_menu_click(int32_t x, int32_t y)
 {
-    struct leonos_ui_menubar_item menu_items[] = {
+    struct reliefos_ui_menubar_item menu_items[] = {
         {T("File"), TASKMGR_MENU_FILE, 64, 0},
         {T("Options"), TASKMGR_MENU_OPTIONS, 80, 0},
     };
     uint32_t action = 0;
-    if (leonos_ui_menubar_hit(x, y, 0, 0, menu_items,
+    if (reliefos_ui_menubar_hit(x, y, 0, 0, menu_items,
                               sizeof(menu_items) / sizeof(menu_items[0]),
                               &action)) {
         if (action) {
@@ -1421,17 +1421,17 @@ static int handle_menu_click(int32_t x, int32_t y)
         return 1;
     }
     if (menu_open == TASKMGR_MENU_FILE) {
-        struct leonos_ui_context_menu_item items[] = {
+        struct reliefos_ui_context_menu_item items[] = {
             {T("Refresh"), TASKMGR_ACTION_REFRESH, 0},
             {T("End Task"), TASKMGR_ACTION_END,
-             selected_task_killable() ? 0 : LEONOS_UI_MENU_DISABLED},
+             selected_task_killable() ? 0 : RELIEFOS_UI_MENU_DISABLED},
             {T("About"), TASKMGR_ACTION_ABOUT, 0},
         };
-        struct leonos_ui_rect r;
-        leonos_ui_menubar_item_rect(0, 0, menu_items,
+        struct reliefos_ui_rect r;
+        reliefos_ui_menubar_item_rect(0, 0, menu_items,
                                     sizeof(menu_items) / sizeof(menu_items[0]),
                                     TASKMGR_MENU_FILE, &r);
-        if (leonos_ui_menu_popup_hit(x, y, (uint32_t)r.x,
+        if (reliefos_ui_menu_popup_hit(x, y, (uint32_t)r.x,
                                      TASKMGR_MENU_BAR_H, 154,
                                      items, sizeof(items) / sizeof(items[0]),
                                      &action)) {
@@ -1441,7 +1441,7 @@ static int handle_menu_click(int32_t x, int32_t y)
             } else if (action == TASKMGR_ACTION_END) {
                 kill_selected_task();
             } else if (action == TASKMGR_ACTION_ABOUT) {
-                leonos_ui_show_message_box(T("Task Manager"), T("Live task snapshot from the scheduler."), "OK");
+                reliefos_ui_show_message_box(T("Task Manager"), T("Live task snapshot from the scheduler."), "OK");
             }
             return 1;
         }
@@ -1449,17 +1449,17 @@ static int handle_menu_click(int32_t x, int32_t y)
         return 1;
     }
     if (menu_open == TASKMGR_MENU_OPTIONS) {
-        struct leonos_ui_context_menu_item items[] = {
+        struct reliefos_ui_context_menu_item items[] = {
             {T("Processes"), TASKMGR_ACTION_PROCESSES, 0},
             {T("Performance"), TASKMGR_ACTION_PERFORMANCE, 0},
             {T("Service Manager"), TASKMGR_ACTION_STARTUP, 0},
             {T("About"), TASKMGR_ACTION_ABOUT, 0},
         };
-        struct leonos_ui_rect r;
-        leonos_ui_menubar_item_rect(0, 0, menu_items,
+        struct reliefos_ui_rect r;
+        reliefos_ui_menubar_item_rect(0, 0, menu_items,
                                     sizeof(menu_items) / sizeof(menu_items[0]),
                                     TASKMGR_MENU_OPTIONS, &r);
-        if (leonos_ui_menu_popup_hit(x, y, (uint32_t)r.x,
+        if (reliefos_ui_menu_popup_hit(x, y, (uint32_t)r.x,
                                      TASKMGR_MENU_BAR_H, 178,
                                      items, sizeof(items) / sizeof(items[0]),
                                      &action)) {
@@ -1475,7 +1475,7 @@ static int handle_menu_click(int32_t x, int32_t y)
             } else if (action == TASKMGR_ACTION_STARTUP) {
                 open_service_manager();
             } else if (action == TASKMGR_ACTION_ABOUT) {
-                leonos_ui_show_message_box(T("Task Manager"), T("Shows runnable, sleeping, and exited tasks."), "OK");
+                reliefos_ui_show_message_box(T("Task Manager"), T("Shows runnable, sleeping, and exited tasks."), "OK");
             }
             return 1;
         }
@@ -1487,13 +1487,13 @@ static int handle_menu_click(int32_t x, int32_t y)
 
 static int handle_context_menu_click(int32_t x, int32_t y)
 {
-    struct leonos_ui_context_menu_item items[TASKMGR_CONTEXT_MENU_COUNT];
+    struct reliefos_ui_context_menu_item items[TASKMGR_CONTEXT_MENU_COUNT];
     uint32_t action = 0;
     if (!context_menu_active) {
         return 0;
     }
     build_context_menu_items(items);
-    if (leonos_ui_context_menu_hit(x, y, context_menu_x, context_menu_y,
+    if (reliefos_ui_context_menu_hit(x, y, context_menu_x, context_menu_y,
                                    TASKMGR_CONTEXT_MENU_W, items,
                                    TASKMGR_CONTEXT_MENU_COUNT, &action)) {
         if (action) {
@@ -1509,7 +1509,7 @@ static int handle_context_menu_click(int32_t x, int32_t y)
 
 static void show_context_menu_at(int32_t x, int32_t y)
 {
-    uint32_t menu_h = leonos_ui_context_menu_height(TASKMGR_CONTEXT_MENU_COUNT);
+    uint32_t menu_h = reliefos_ui_context_menu_height(TASKMGR_CONTEXT_MENU_COUNT);
     menu_open = TASKMGR_MENU_NONE;
     if (x < 0) {
         x = 0;
@@ -1530,16 +1530,16 @@ static void show_context_menu_at(int32_t x, int32_t y)
     context_menu_set_active(1);
 }
 
-static void present_taskmgr(uint32_t window_id, struct leonos_ui_surface *ui)
+static void present_taskmgr(uint32_t window_id, struct reliefos_ui_surface *ui)
 {
-    leonos_ui_bind(ui, pixels, view_w, view_h, TASKMGR_MAX_W);
+    reliefos_ui_bind(ui, pixels, view_w, view_h, TASKMGR_MAX_W);
     draw_taskmgr(ui);
-    leonos_gui_present_window(window_id, view_w, view_h, TASKMGR_MAX_W, pixels);
+    reliefos_gui_present_window(window_id, view_w, view_h, TASKMGR_MAX_W, pixels);
 }
 
-/* Keep thumb geometry identical to leonos_ui_vscrollbar. Capture the drag
+/* Keep thumb geometry identical to reliefos_ui_vscrollbar. Capture the drag
  * until release, including motion outside the narrow scrollbar rectangle. */
-static int process_scroll_event(const struct leonos_gui_app_event *event)
+static int process_scroll_event(const struct reliefos_gui_app_event *event)
 {
     static int dragging;
     static int32_t grab_offset;
@@ -1548,11 +1548,11 @@ static int process_scroll_event(const struct leonos_gui_app_event *event)
     uint32_t track = h - 2 * arrow;
     uint32_t page = process_tree.visible_rows;
     uint32_t count = process_tree.visible_count;
-    if (event->type == LEONOS_GUI_APP_EVENT_BLUR ||
-        event->type == LEONOS_GUI_APP_EVENT_RESIZE ||
+    if (event->type == RELIEFOS_GUI_APP_EVENT_BLUR ||
+        event->type == RELIEFOS_GUI_APP_EVENT_RESIZE ||
         active_tab != TASKMGR_TAB_PROCESSES) dragging = 0;
-    if (event->type != LEONOS_GUI_APP_EVENT_MOUSE_MOVE &&
-        event->type != LEONOS_GUI_APP_EVENT_MOUSE_BUTTON) return 0;
+    if (event->type != RELIEFOS_GUI_APP_EVENT_MOUSE_MOVE &&
+        event->type != RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON) return 0;
     if (!(event->buttons & 1U)) { dragging = 0; return 0; }
     if (count <= page || track < 8) { dragging = 0; return 0; }
     uint32_t thumb = track * page / count;
@@ -1563,14 +1563,14 @@ static int process_scroll_event(const struct leonos_gui_app_event *event)
     uint32_t top = 74 + arrow;
     uint32_t offset = range * process_tree.scroll / max;
     if (!dragging) {
-        if (event->type != LEONOS_GUI_APP_EVENT_MOUSE_BUTTON ||
+        if (event->type != RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON ||
             !hit_rect_i(event->x, event->y, view_w - 26, 74, 18, h)) return 0;
         if (event->y >= (int32_t)(top + offset) &&
             event->y < (int32_t)(top + offset + thumb)) {
             grab_offset = event->y - (int32_t)(top + offset);
             dragging = 1;
         } else {
-            leonos_ui_vscrollbar_handle_mouse(&process_tree.scroll, count, page,
+            reliefos_ui_vscrollbar_handle_mouse(&process_tree.scroll, count, page,
                                               view_w - 26, 74, 18, h,
                                               event->x, event->y);
             return 1;
@@ -1586,46 +1586,46 @@ static int process_scroll_event(const struct leonos_gui_app_event *event)
 int main(void)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     unsigned long last_refresh = 0;
     int window_id;
 
     puts("[taskmgr.elf] task manager starting");
     printf("[taskmgr.elf] pid=%d creating GUI window\n", getpid());
-    window_id = leonos_gui_create_app_window_ex(T("Task Manager"), T("Task snapshot"),
+    window_id = reliefos_gui_create_app_window_ex(T("Task Manager"), T("Task snapshot"),
                                                 TASKMGR_W, TASKMGR_H, 0);
     if (window_id <= 0) {
         printf("[taskmgr.elf] create window failed=%d\n", window_id);
         return 1;
     }
 
-    leonos_ui_bind(&ui, pixels, view_w, view_h, TASKMGR_MAX_W);
-    leonos_ui_treeview_state_init(&process_tree, visible_rows(), 24);
-    leonos_ui_listview_state_init(&startup_list, startup_visible_rows(), 24);
-    leonos_ui_tab_state_init(&taskmgr_tabs, TASKMGR_TAB_PROCESSES);
+    reliefos_ui_bind(&ui, pixels, view_w, view_h, TASKMGR_MAX_W);
+    reliefos_ui_treeview_state_init(&process_tree, visible_rows(), 24);
+    reliefos_ui_listview_state_init(&startup_list, startup_visible_rows(), 24);
+    reliefos_ui_tab_state_init(&taskmgr_tabs, TASKMGR_TAB_PROCESSES);
     process_tree.focused = 1;
     refresh_all();
     present_taskmgr((uint32_t)window_id, &ui);
     for (;;) {
-        unsigned long now = leonos_uptime_ms();
+        unsigned long now = reliefos_uptime_ms();
         event.window_id = (uint32_t)window_id;
-        while (leonos_gui_wait_app_event(&event,
-                                         context_menu_animating ? 20U : LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        while (reliefos_gui_wait_app_event(&event,
+                                         context_menu_animating ? 20U : RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 return 0;
             }
             if (!menu_open && !context_menu_active && process_scroll_event(&event)) {
                 present_taskmgr((uint32_t)window_id, &ui);
                 continue;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 3u)) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON && (event.buttons & 3u)) {
                 if (event.buttons & 2u) {
                     if (active_tab == TASKMGR_TAB_PROCESSES) {
                         uint32_t activate = 0;
-                        leonos_ui_treeview_state_handle_mouse(&process_tree,
+                        reliefos_ui_treeview_state_handle_mouse(&process_tree,
                                                               process_tree_items, task_count,
                                                               event.x, event.y, 10, 102,
                                                               view_w > 38 ? view_w - 38 : 320,
@@ -1646,16 +1646,16 @@ int main(void)
                 }
                 menu_open = TASKMGR_MENU_NONE;
                 context_menu_set_active(0);
-                if (hit_rect_i(event.x, event.y, 8, 34, 88, LEONOS_UI_BUTTON_H)) {
+                if (hit_rect_i(event.x, event.y, 8, 34, 88, RELIEFOS_UI_BUTTON_H)) {
                     refresh_all();
                     present_taskmgr((uint32_t)window_id, &ui);
                     continue;
                 }
                 {
-                    struct leonos_ui_tab_item tabs[3];
+                    struct reliefos_ui_tab_item tabs[3];
                     uint32_t tab_w = toolbar_tab_width();
                     taskmgr_tab_items(tabs);
-                    if (leonos_ui_tab_control_handle_mouse(&taskmgr_tabs, event.x, event.y,
+                    if (reliefos_ui_tab_control_handle_mouse(&taskmgr_tabs, event.x, event.y,
                                                            104, 34, tab_w, tabs, 3)) {
                         active_tab = (uint8_t)taskmgr_tabs.selected_id;
                         if (active_tab == TASKMGR_TAB_STARTUP) {
@@ -1672,7 +1672,7 @@ int main(void)
                 uint32_t action_x = toolbar_action_x();
                 if (active_tab == TASKMGR_TAB_PROCESSES &&
                     action_x + 86 <= view_w &&
-                    hit_rect_i(event.x, event.y, (int32_t)action_x, 34, 86, LEONOS_UI_BUTTON_H)) {
+                    hit_rect_i(event.x, event.y, (int32_t)action_x, 34, 86, RELIEFOS_UI_BUTTON_H)) {
                     kill_selected_task();
                     present_taskmgr((uint32_t)window_id, &ui);
                     continue;
@@ -1695,35 +1695,35 @@ int main(void)
                     }
                     if (startup_user_dropdown_open && startup_user_count > dropdown_rows &&
                         hit_rect_i(event.x, event.y, 232, 102, 16, (int32_t)dropdown_h)) {
-                        leonos_ui_vscrollbar_handle_mouse(&startup_user_dropdown_scroll,
+                        reliefos_ui_vscrollbar_handle_mouse(&startup_user_dropdown_scroll,
                                                           startup_user_count, dropdown_rows,
                                                           232, 102, 16, dropdown_h,
                                                           event.x, event.y);
                         present_taskmgr((uint32_t)window_id, &ui);
                         continue;
                     }
-                    if (hit_rect_i(event.x, event.y, 70, 78, 180, LEONOS_UI_BUTTON_H)) {
+                    if (hit_rect_i(event.x, event.y, 70, 78, 180, RELIEFOS_UI_BUTTON_H)) {
                         startup_user_dropdown_open = startup_user_dropdown_open ? 0U : 1U;
                         present_taskmgr((uint32_t)window_id, &ui);
                         continue;
                     }
                     startup_user_dropdown_open = 0;
                     if (action_x + 92 <= view_w &&
-                        hit_rect_i(event.x, event.y, (int32_t)action_x, 34, 92, LEONOS_UI_BUTTON_H)) {
+                        hit_rect_i(event.x, event.y, (int32_t)action_x, 34, 92, RELIEFOS_UI_BUTTON_H)) {
                         toggle_selected_startup_entry();
                         present_taskmgr((uint32_t)window_id, &ui);
                         continue;
                     }
                     if (action_x + 192 <= view_w &&
                         hit_rect_i(event.x, event.y, (int32_t)action_x + 100, 34, 86,
-                                   LEONOS_UI_BUTTON_H)) {
+                                   RELIEFOS_UI_BUTTON_H)) {
                         remove_selected_startup_entry();
                         present_taskmgr((uint32_t)window_id, &ui);
                         continue;
                     }
                     if (event.x >= (int32_t)(view_w - 26) && event.y >= 114 &&
                         event.y < (int32_t)(view_h - TASKMGR_STATUS_H)) {
-                        leonos_ui_vscrollbar_handle_mouse(&startup_list.scroll,
+                        reliefos_ui_vscrollbar_handle_mouse(&startup_list.scroll,
                                                           startup_entry_count > startup_visible_rows()
                                                               ? startup_entry_count : startup_visible_rows(),
                                                           startup_visible_rows(),
@@ -1733,7 +1733,7 @@ int main(void)
                                                           event.x, event.y);
                     } else {
                         uint32_t activate = 0;
-                        leonos_ui_listview_state_handle_mouse(&startup_list, event.x, event.y,
+                        reliefos_ui_listview_state_handle_mouse(&startup_list, event.x, event.y,
                                                               10, 142,
                                                               view_w > 38 ? view_w - 38 : 320,
                                                               &activate);
@@ -1743,7 +1743,7 @@ int main(void)
                 if (active_tab == TASKMGR_TAB_PROCESSES &&
                     event.x >= (int32_t)(view_w - 26) && event.y >= 74 &&
                     event.y < (int32_t)(view_h - TASKMGR_STATUS_H)) {
-                    leonos_ui_vscrollbar_handle_mouse(&process_tree.scroll,
+                    reliefos_ui_vscrollbar_handle_mouse(&process_tree.scroll,
                                                       process_tree.visible_count > process_tree.visible_rows
                                                           ? process_tree.visible_count
                                                           : process_tree.visible_rows,
@@ -1752,7 +1752,7 @@ int main(void)
                                                       event.x, event.y);
                 } else if (active_tab == TASKMGR_TAB_PROCESSES) {
                     uint32_t activate = 0;
-                    leonos_ui_treeview_state_handle_mouse(&process_tree,
+                    reliefos_ui_treeview_state_handle_mouse(&process_tree,
                                                           process_tree_items, task_count,
                                                           event.x, event.y, 10, 102,
                                                           view_w > 38 ? view_w - 38 : 320,
@@ -1762,55 +1762,55 @@ int main(void)
                 process_tree.focused = 1;
                 present_taskmgr((uint32_t)window_id, &ui);
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_WHEEL) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_WHEEL) {
                 if (active_tab == TASKMGR_TAB_PROCESSES &&
-                    leonos_ui_treeview_state_handle_wheel(&process_tree, event.dy)) {
+                    reliefos_ui_treeview_state_handle_wheel(&process_tree, event.dy)) {
                     present_taskmgr((uint32_t)window_id, &ui);
                 } else if (active_tab == TASKMGR_TAB_STARTUP && startup_user_dropdown_open &&
                            startup_user_count > startup_dropdown_rows()) {
-                    leonos_ui_vscrollbar_handle_wheel(&startup_user_dropdown_scroll,
+                    reliefos_ui_vscrollbar_handle_wheel(&startup_user_dropdown_scroll,
                                                        startup_user_count, startup_dropdown_rows(),
                                                        event.dy);
                     present_taskmgr((uint32_t)window_id, &ui);
                 } else if (active_tab == TASKMGR_TAB_STARTUP &&
-                           leonos_ui_listview_state_handle_wheel(&startup_list, event.dy)) {
+                           reliefos_ui_listview_state_handle_wheel(&startup_list, event.dy)) {
                     present_taskmgr((uint32_t)window_id, &ui);
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN) {
                 menu_open = TASKMGR_MENU_NONE;
                 context_menu_set_active(0);
                 uint32_t activate = 0;
-                if (active_tab == TASKMGR_TAB_PROCESSES && event.keycode == LEONOS_KEY_DELETE) {
+                if (active_tab == TASKMGR_TAB_PROCESSES && event.keycode == RELIEFOS_KEY_DELETE) {
                     kill_selected_task();
                     present_taskmgr((uint32_t)window_id, &ui);
                     continue;
                 }
-                if (active_tab == TASKMGR_TAB_STARTUP && event.keycode == LEONOS_KEY_DELETE) {
+                if (active_tab == TASKMGR_TAB_STARTUP && event.keycode == RELIEFOS_KEY_DELETE) {
                     remove_selected_startup_entry();
                     present_taskmgr((uint32_t)window_id, &ui);
                     continue;
                 }
                 if (active_tab == TASKMGR_TAB_PROCESSES &&
-                    leonos_ui_treeview_state_handle_key(&process_tree, process_tree_items,
+                    reliefos_ui_treeview_state_handle_key(&process_tree, process_tree_items,
                                                         task_count, event.keycode, &activate)) {
                     present_taskmgr((uint32_t)window_id, &ui);
                 } else if (active_tab == TASKMGR_TAB_STARTUP &&
-                           leonos_ui_listview_state_handle_key(&startup_list, event.keycode, &activate)) {
+                           reliefos_ui_listview_state_handle_key(&startup_list, event.keycode, &activate)) {
                     present_taskmgr((uint32_t)window_id, &ui);
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_RESIZE || event.type == LEONOS_GUI_APP_EVENT_FOCUS) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_RESIZE || event.type == RELIEFOS_GUI_APP_EVENT_FOCUS) {
                 if (event.width >= 360) {
                     view_w = event.width > TASKMGR_MAX_W ? TASKMGR_MAX_W : event.width;
                 }
                 if (event.height >= 220) {
                     view_h = event.height > TASKMGR_MAX_H ? TASKMGR_MAX_H : event.height;
                 }
-                leonos_ui_treeview_state_set_viewport(&process_tree, visible_rows());
-                leonos_ui_treeview_state_sync(&process_tree, process_tree_items, task_count);
+                reliefos_ui_treeview_state_set_viewport(&process_tree, visible_rows());
+                reliefos_ui_treeview_state_sync(&process_tree, process_tree_items, task_count);
                 startup_list.visible_rows = startup_visible_rows();
-                leonos_ui_listview_state_set_count(&startup_list, startup_entry_count);
+                reliefos_ui_listview_state_set_count(&startup_list, startup_entry_count);
                 present_taskmgr((uint32_t)window_id, &ui);
             }
             event.window_id = (uint32_t)window_id;

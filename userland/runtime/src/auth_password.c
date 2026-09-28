@@ -1,13 +1,13 @@
-#include <leonos/auth.h>
+#include <reliefos/auth.h>
 
-int leonos_auth_password_valid(const char *password, uint32_t capacity)
+int reliefos_auth_password_valid(const char *password, uint32_t capacity)
 {
     uint32_t offset = 0, count = 0;
     if (!password) return 0;
     while (offset < capacity) {
         uint32_t codepoint = (unsigned char)password[offset++];
-        if (!codepoint) return count >= LEONOS_AUTH_PASSWORD_MIN_CHARS;
-        if (++count > LEONOS_AUTH_PASSWORD_MAX_CHARS) return 0;
+        if (!codepoint) return count >= RELIEFOS_AUTH_PASSWORD_MIN_CHARS;
+        if (++count > RELIEFOS_AUTH_PASSWORD_MAX_CHARS) return 0;
         if (codepoint >= 0x80) {
             unsigned remaining;
             uint32_t minimum;
@@ -35,3 +35,5 @@ int leonos_auth_password_valid(const char *password, uint32_t capacity)
     }
     return 0;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_auth_password_valid) leonos_auth_password_valid __attribute__((alias("reliefos_auth_password_valid")));

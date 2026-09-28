@@ -4,7 +4,7 @@ set -eu
 [ "$#" = 8 ] || exit 2
 src=$1 out=$2 build=$3 index=$4 apk=$5 key=$6 output=$7 epoch=$8
 export SOURCE_DATE_EPOCH=$epoch
-version=$(sed -n 's/^#define LEONOS_KERNEL_VERSION "\([0-9.]*\)"$/\1/p' "$build")
+version=$(sed -n 's/^#define RELIEFOS_KERNEL_VERSION "\([0-9.]*\)"$/\1/p' "$build")
 printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo 'invalid release version' >&2; exit 1; }
 case $epoch in ''|*[!0-9]*) echo 'invalid package epoch' >&2; exit 1;; esac
 # APK revisions retain chronological ordering against previously published
@@ -20,14 +20,14 @@ manifest() {
 }
 for app in helloworld doom oschinpt; do
     payload=$work/$app
-    root=$payload/usr/lib/leonos/apps/$app
+    root=$payload/usr/lib/reliefos/apps/$app
     mkdir -p "$root" "$payload/usr/bin"
     cp "$out/userland/$app.elf" "$root/$app.elf"
     case $app in
     helloworld)
         cp "$src/resources/build-art/app-icons/helloworld.bmp" "$root/"
         manifest helloworld 'Hello World' 'Developer applications' helloworld.elf helloworld.bmp 1 helloworld
-        ln -s ../lib/leonos/apps/helloworld/helloworld.elf "$payload/usr/bin/helloworld"
+        ln -s ../lib/reliefos/apps/helloworld/helloworld.elf "$payload/usr/bin/helloworld"
         ;;
     doom)
         cp "$out/userland/doomlauncher.elf" "$root/"
@@ -35,24 +35,24 @@ for app in helloworld doom oschinpt; do
         cp "$src/third_party/doomgeneric/LICENSE" "$root/DOOMGENERIC-LICENSE"
         cp "$src/resources/build-art/app-icons/doom.bmp" "$root/"
         manifest doom DOOM Games doomlauncher.elf doom.bmp 1 doom,doomlauncher
-        ln -s ../lib/leonos/apps/doom/doomlauncher.elf "$payload/usr/bin/doom"
-        ln -s ../lib/leonos/apps/doom/doomlauncher.elf "$payload/usr/bin/doomlauncher"
+        ln -s ../lib/reliefos/apps/doom/doomlauncher.elf "$payload/usr/bin/doom"
+        ln -s ../lib/reliefos/apps/doom/doomlauncher.elf "$payload/usr/bin/doomlauncher"
         ;;
     oschinpt)
         cp "$src/third_party/rime-pinyin-simp/pinyin_simp.dict.yaml" "$src/third_party/rime-pinyin-simp/LICENSE" "$src/third_party/rime-pinyin-simp/ATTRIBUTION.txt" "$root/"
         cp "$src/userland/apps/oschinpt/settings.ini" "$root/"
         cp "$index" "$root/oscp.idx"
-        manifest oschinpt 'LeonOS 4 Chinese Input' 'Input methods' oschinpt.elf '' 0 oschinpt
+        manifest oschinpt 'ReliefOS Chinese Input' 'Input methods' oschinpt.elf '' 0 oschinpt
         printf 'input_method=1\n' >> "$root/manifest.ini"
-        ln -s ../lib/leonos/apps/oschinpt/oschinpt.elf "$payload/usr/bin/oschinpt"
+        ln -s ../lib/reliefos/apps/oschinpt/oschinpt.elf "$payload/usr/bin/oschinpt"
         ;;
     esac
     find "$payload" -exec touch -h -d "@$epoch" {} +
-    package_file="$work/repository/leonos-$app-$package_version.apk"
-    set -- mkpkg --files "$payload" --output "$package_file" --info "name:leonos-$app" \
-      --info "version:$package_version" --info arch:x86_64 --info "origin:leonos-$app" \
-      --info "description:LeonOS application $app" --info license:LicenseRef-See-Bundled-Notices \
-      --info 'depends:leonos-apps leonos-musl' --sign-key "$key"
+    package_file="$work/repository/reliefos-$app-$package_version.apk"
+    set -- mkpkg --files "$payload" --output "$package_file" --info "name:reliefos-$app" \
+      --info "version:$package_version" --info arch:x86_64 --info "origin:reliefos-$app" \
+      --info "description:ReliefOS application $app" --info license:LicenseRef-See-Bundled-Notices \
+      --info 'depends:reliefos-apps reliefos-musl' --info "replaces:leonos-$app" --sign-key "$key"
     if [ "$app" = oschinpt ]; then
         set -- "$@" --script "post-install:$src/tools/oschinpt-apk-post-install" \
           --script "post-upgrade:$src/tools/oschinpt-apk-post-install" \

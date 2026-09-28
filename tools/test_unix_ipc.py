@@ -5,14 +5,14 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-ipc-") as tmp:
+with tempfile.TemporaryDirectory(prefix="reliefos-ipc-") as tmp:
     tmp = Path(tmp)
-    headers = tmp / "include" / "leonos"
+    headers = tmp / "include" / "reliefos"
     headers.mkdir(parents=True)
-    (headers / "unix_ipc.h").symlink_to(root / "userland/runtime/include/leonos/unix_ipc.h")
+    (headers / "unix_ipc.h").symlink_to(root / "userland/runtime/include/reliefos/unix_ipc.h")
     output = tmp / "ipc"
     subprocess.run([
-        "cc", "-std=c11", "-O1", "-g", "-D_GNU_SOURCE", "-DLEONOS_USE_MUSL",
+        "cc", "-std=c11", "-O1", "-g", "-D_GNU_SOURCE", "-DRELIEFOS_USE_MUSL",
         "-fsanitize=address,undefined", "-I" + str(tmp / "include"),
         "tools/tests/unix_ipc_stream_test.c", "userland/runtime/src/unix_ipc.c", "-o", str(output),
     ], cwd=root, check=True)

@@ -1,6 +1,6 @@
 # Browser and litehtml Porting Notes
 
-LeonOS now ships `browser.elf`, a classic IE-style browser shell. Upstream
+ReliefOS ships `browser.elf`, a classic IE-style browser shell. Upstream
 litehtml is present as a Git submodule under `third_party/litehtml`; the browser
 currently links a freestanding C `litehtml_core` adapter while the full C++
 litehtml runtime prerequisites are still being built.
@@ -16,7 +16,8 @@ Current features:
 - Times New Roman as the browser's Latin font, with SimSun as the Chinese
   fallback; both are loaded at runtime from external font files rather than
   embedded in `browser.elf`.
-- Bilingual `about:leonos` start page.
+- Bilingual `about:reliefos` start page. The generic `about:` route still accepts
+  the old `about:leonos` URI for saved bookmarks.
 - `http://` and `https://` navigation through the libc HTTP client on top of
   TCP sockets. HTTPS uses TLS 1.2 with certificate, hostname, and system-clock
   validation.
@@ -58,8 +59,8 @@ Current limits:
   cache, compression, and true streaming downloads are not implemented yet.
 
 The repository owns the font build inputs: `system/fonts/times.ttf` is copied
-to `/usr/share/fonts/leonos/times-new-roman.ttf`, and `system/fonts/simsun.ttc` is
-packaged as `/usr/share/fonts/leonos/simsun.ttc`. Local and GitHub Actions builds use
+to `/usr/share/fonts/reliefos/times-new-roman.ttf`, and `system/fonts/simsun.ttc` is
+packaged as `/usr/share/fonts/reliefos/simsun.ttc`. Local and GitHub Actions builds use
 these same repository files.
 
 ## litehtml Status
@@ -72,7 +73,7 @@ Upstream litehtml is checked out as:
 
 The current upstream tree is C++ and depends heavily on STL types and library
 facilities such as strings, vectors, maps, smart pointers, variants, algorithms,
-and bundled Gumbo parser support. LeonOS userland is still freestanding C with a
+and bundled Gumbo parser support. ReliefOS userland is still freestanding C with a
 small libc and no C++ runtime or STL build path.
 
 Because of that, the browser app currently owns a small C core with a deliberately
@@ -91,7 +92,7 @@ To integrate real litehtml, do these in order:
 3. Port or provide an STL subset/libc++ profile that satisfies litehtml.
 4. Build Gumbo and upstream litehtml as userland libraries from
    `third_party/litehtml`.
-5. Replace `litehtml_core.c` with a LeonOS litehtml container that maps text measurement, drawing,
+5. Replace `litehtml_core.c` with a ReliefOS litehtml container that maps text measurement, drawing,
    colors, clipping, mouse hit testing, and file/network resource fetches to
    the existing GUI and network APIs.
 6. Keep the browser shell, navigation, address bar, history, and app-launch
@@ -101,15 +102,15 @@ To integrate real litehtml, do these in order:
 
 The browser is registered as:
 
-- `/usr/lib/leonos/apps/browser/browser.elf`
+- `/usr/lib/reliefos/apps/browser/browser.elf`
 - launch alias: `browser`
 - default app for `.html` and `.htm`
 
 Download and image companion apps are registered as:
 
-- `/usr/lib/leonos/apps/downloadmgr/downloadmgr.elf`, launch alias `downloadmgr`
-- `/usr/lib/leonos/apps/imageview/imageview.elf`, launch alias `imageview`
+- `/usr/lib/reliefos/apps/downloadmgr/downloadmgr.elf`, launch alias `downloadmgr`
+- `/usr/lib/reliefos/apps/imageview/imageview.elf`, launch alias `imageview`
 - default app for `.bmp`, `.dib`, and `.png`
 
-The generated icon is `/usr/lib/leonos/apps/browser/browser.bmp`, following the existing
+The generated icon is `/usr/lib/reliefos/apps/browser/browser.bmp`, following the existing
 same-directory/same-basename application icon convention.

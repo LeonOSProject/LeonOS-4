@@ -12,8 +12,8 @@ static bool random_hardware_word(uint64_t *value)
     *value = UINT64_C(0x8877665544332211);
     return calls >= succeed_at && (!fail_from || calls < fail_from);
 }
-#define LEONOS_RANDOM_TEST
-#include "../../kernel/ntclks/kernel/ntclks/random.c"
+#define RELIEFOS_RANDOM_TEST
+#include "../../kernel/reliefnt/kernel/reliefnt/random.c"
 
 int main(void)
 {

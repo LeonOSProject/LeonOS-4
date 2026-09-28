@@ -4,7 +4,7 @@
 #include <stdatomic.h>
 #include <stdio.h>
 #include <time.h>
-#include <ntclks/lock.h>
+#include <reliefnt/lock.h>
 
 static _Thread_local uint32_t cpu;
 static _Thread_local uint64_t irq_flags = 1u << 9;

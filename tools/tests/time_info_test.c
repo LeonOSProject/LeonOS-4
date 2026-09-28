@@ -20,7 +20,7 @@ static int test_gettimeofday(struct timeval *value, void *zone)
 #include "../../userland/runtime/src/procsys.c"
 #undef gettimeofday
 
-unsigned long leonos_uptime_ms(void) { return 123456; }
+unsigned long reliefos_uptime_ms(void) { return 123456; }
 
 int main(void)
 {
@@ -40,23 +40,23 @@ int main(void)
     tzset();
     for (unsigned i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
         wall_seconds = cases[i].epoch;
-        struct leonos_time_info info;
+        struct reliefos_time_info info;
         memset(&info, 0xa5, sizeof(info));
-        assert(leonos_time_info(&info) == 0);
+        assert(reliefos_time_info(&info) == 0);
         assert(info.valid == 1 && info.reserved == 0);
         assert(info.unix_seconds == (uint64_t)wall_seconds && info.uptime_ms == 123456);
         assert(info.year == cases[i].year && info.month == cases[i].month && info.day == cases[i].day);
         assert(info.hour == cases[i].hour && info.minute == cases[i].minute && info.second == cases[i].second);
     }
-    struct leonos_time_info info;
+    struct reliefos_time_info info;
     clock_error = EIO;
-    assert(leonos_time_info(&info) == -1 && errno == EIO);
+    assert(reliefos_time_info(&info) == -1 && errno == EIO);
     assert(!info.valid && !info.unix_seconds && !info.year && !info.hour);
     clock_error = 0;
     wall_seconds = -1;
-    assert(leonos_time_info(&info) == -1 && errno == EOVERFLOW && !info.valid);
+    assert(reliefos_time_info(&info) == -1 && errno == EOVERFLOW && !info.valid);
     wall_seconds = INT64_MAX;
-    assert(leonos_time_info(&info) == -1 && errno == EOVERFLOW && !info.valid);
-    assert(leonos_time_info(NULL) == -1 && errno == EINVAL);
+    assert(reliefos_time_info(&info) == -1 && errno == EOVERFLOW && !info.valid);
+    assert(reliefos_time_info(NULL) == -1 && errno == EINVAL);
     puts("PASS time info: UTC calendar, ticking seconds, leap/century boundaries, errors");
 }

@@ -22,7 +22,7 @@ COMMON_FLAGS = [
     "-std=c11", "-D_GNU_SOURCE", "-O1", "-g",
     "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
     "-Wall", "-Wextra", "-Werror",
-    "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-idirafter", "userland/runtime/include",
+    "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-idirafter", "userland/runtime/include",
     "-Iuserland/apps/authd",
 ]
 
@@ -48,16 +48,16 @@ SUITES = (
 
 
 def main() -> int:
-    with tempfile.TemporaryDirectory(prefix="leonos-sudo-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="reliefos-sudo-") as tmp:
         for name, sources in SUITES:
             executable = str(Path(tmp) / name)
             extra = ["-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections"]
             extra += (["-Ithird_party/mbedtls/include",
                       "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                      '-DMBEDTLS_CONFIG_FILE="leonos_mbedtls_config.h"']
+                      '-DMBEDTLS_CONFIG_FILE="reliefos_mbedtls_config.h"']
                      if name == "sudo-security" else [])
             if name == "sudo-client":
-                extra += ["-Wl,--wrap=leonos_ipc_connect,--wrap=leonos_ipc_peer_credentials"]
+                extra += ["-Wl,--wrap=reliefos_ipc_connect,--wrap=reliefos_ipc_peer_credentials"]
             subprocess.run(["cc", *COMMON_FLAGS, *extra, *sources, "-o", executable],
                            cwd=ROOT, check=True)
             subprocess.run([executable], cwd=ROOT, check=True, timeout=60)

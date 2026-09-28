@@ -1,10 +1,10 @@
-#ifndef LEONOS_GLXGEARS_SDL_COMPAT_H
-#define LEONOS_GLXGEARS_SDL_COMPAT_H
+#ifndef RELIEFOS_GLXGEARS_SDL_COMPAT_H
+#define RELIEFOS_GLXGEARS_SDL_COMPAT_H
 
 /*
  * The upstream gears translation unit keeps its SDL frontend for reference.
- * LeonOS does not link SDL; these compile-only definitions keep that unused
- * frontend available while the LeonOS main function drives the renderer.
+ * ReliefOS does not link SDL; these compile-only definitions keep that unused
+ * frontend available while the ReliefOS main function drives the renderer.
  */
 #include <stddef.h>
 #include <stdint.h>

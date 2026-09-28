@@ -1,38 +1,38 @@
-#include <leonos/ui.h>
-#include <leonos/inputm.h>
+#include <reliefos/ui.h>
+#include <reliefos/inputm.h>
 
 #include "ui_internal.h"
 
-void leonos_ui_edit(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_edit(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                     uint32_t w, const char *text, uint32_t cursor, uint32_t scroll,
                     uint32_t flags)
 {
-    uint32_t h = LEONOS_FONT_H + 8;
-    leonos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w, h,
-                            (flags & LEONOS_UI_EDIT_DISABLED)
-                                ? LEONOS_GUI_CURSOR_NO : LEONOS_GUI_CURSOR_TEXT,
-                            (flags & LEONOS_UI_EDIT_DISABLED)
-                                ? LEONOS_GUI_CURSOR_REGION_DISABLED : 0);
-    uint32_t bg = (flags & LEONOS_UI_EDIT_DISABLED) ? LEONOS_UI_LIGHT : LEONOS_UI_WHITE;
-    uint32_t fg = (flags & LEONOS_UI_EDIT_DISABLED) ? LEONOS_UI_DARK : LEONOS_UI_BLACK;
+    uint32_t h = RELIEFOS_FONT_H + 8;
+    reliefos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w, h,
+                            (flags & RELIEFOS_UI_EDIT_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_NO : RELIEFOS_GUI_CURSOR_TEXT,
+                            (flags & RELIEFOS_UI_EDIT_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_REGION_DISABLED : 0);
+    uint32_t bg = (flags & RELIEFOS_UI_EDIT_DISABLED) ? RELIEFOS_UI_LIGHT : RELIEFOS_UI_WHITE;
+    uint32_t fg = (flags & RELIEFOS_UI_EDIT_DISABLED) ? RELIEFOS_UI_DARK : RELIEFOS_UI_BLACK;
     const char *visible = text ? text : "";
     uint32_t len = ui_strlen(visible);
     if (scroll > len) {
         scroll = len;
     }
-    leonos_ui_inset(surface, x, y, w, h, bg);
-    leonos_ui_text_clipped(surface, x + 4, y + 4, w > 8 ? w - 8 : w, visible + scroll, fg, bg);
-    if ((flags & LEONOS_UI_EDIT_FOCUSED) && !(flags & LEONOS_UI_EDIT_DISABLED)) {
+    reliefos_ui_inset(surface, x, y, w, h, bg);
+    reliefos_ui_text_clipped(surface, x + 4, y + 4, w > 8 ? w - 8 : w, visible + scroll, fg, bg);
+    if ((flags & RELIEFOS_UI_EDIT_FOCUSED) && !(flags & RELIEFOS_UI_EDIT_DISABLED)) {
         if (cursor < scroll) {
             cursor = scroll;
         }
-        leonos_ui_rect(surface,
+        reliefos_ui_rect(surface,
                        x + 4 + ui_text_pixels_between(visible, scroll, cursor),
-                       y + 4, 1, LEONOS_FONT_H, LEONOS_UI_BLACK);
+                       y + 4, 1, RELIEFOS_FONT_H, RELIEFOS_UI_BLACK);
     }
 }
 
-static void edit_delete_range(struct leonos_ui_edit_state *state, uint32_t start, uint32_t end)
+static void edit_delete_range(struct reliefos_ui_edit_state *state, uint32_t start, uint32_t end)
 {
     if (!state || !state->buffer || start >= end || end > state->length) {
         return;
@@ -44,13 +44,13 @@ static void edit_delete_range(struct leonos_ui_edit_state *state, uint32_t start
     state->cursor = start;
 }
 
-static int edit_has_selection(const struct leonos_ui_edit_state *state)
+static int edit_has_selection(const struct reliefos_ui_edit_state *state)
 {
     return state && state->selection_anchor != state->cursor &&
            state->selection_anchor <= state->length && state->cursor <= state->length;
 }
 
-static void edit_selection_range(const struct leonos_ui_edit_state *state,
+static void edit_selection_range(const struct reliefos_ui_edit_state *state,
                                  uint32_t *start, uint32_t *end)
 {
     if (state->selection_anchor < state->cursor) {
@@ -62,12 +62,12 @@ static void edit_selection_range(const struct leonos_ui_edit_state *state,
     }
 }
 
-static void edit_clear_selection(struct leonos_ui_edit_state *state)
+static void edit_clear_selection(struct reliefos_ui_edit_state *state)
 {
     state->selection_anchor = state->cursor;
 }
 
-static void edit_ensure_cursor_visible(struct leonos_ui_edit_state *state, uint32_t w)
+static void edit_ensure_cursor_visible(struct reliefos_ui_edit_state *state, uint32_t w)
 {
     uint32_t visible_width = w > 8 ? w - 8 : 0;
     if (!state || visible_width == 0) {
@@ -82,7 +82,7 @@ static void edit_ensure_cursor_visible(struct leonos_ui_edit_state *state, uint3
     }
 }
 
-void leonos_ui_edit_state_init(struct leonos_ui_edit_state *state, char *buffer,
+void reliefos_ui_edit_state_init(struct reliefos_ui_edit_state *state, char *buffer,
                                uint32_t capacity)
 {
     if (!state) {
@@ -103,7 +103,7 @@ void leonos_ui_edit_state_init(struct leonos_ui_edit_state *state, char *buffer,
     state->selecting = 0;
 }
 
-void leonos_ui_edit_state_sync(struct leonos_ui_edit_state *state)
+void reliefos_ui_edit_state_sync(struct reliefos_ui_edit_state *state)
 {
     if (!state || !state->buffer) {
         return;
@@ -124,18 +124,18 @@ void leonos_ui_edit_state_sync(struct leonos_ui_edit_state *state)
     }
 }
 
-void leonos_ui_edit_state_draw(struct leonos_ui_surface *surface, uint32_t x,
+void reliefos_ui_edit_state_draw(struct reliefos_ui_surface *surface, uint32_t x,
                                uint32_t y, uint32_t w,
-                               struct leonos_ui_edit_state *state,
+                               struct reliefos_ui_edit_state *state,
                                uint32_t flags)
 {
     uint32_t draw_flags = flags;
-    uint32_t h = LEONOS_FONT_H + 8;
+    uint32_t h = RELIEFOS_FONT_H + 8;
     uint32_t text_x = x + 4;
     uint32_t text_y = y + 4;
     uint32_t text_width = w > 8 ? w - 8 : 0;
-    struct leonos_text_glyph glyphs[UI_LAYOUT_GLYPH_MAX];
-    struct leonos_text_layout layout;
+    struct reliefos_text_glyph glyphs[UI_LAYOUT_GLYPH_MAX];
+    struct reliefos_text_layout layout;
     uint32_t sel_start = 0;
     uint32_t sel_end = 0;
     uint32_t draw_x;
@@ -143,34 +143,34 @@ void leonos_ui_edit_state_draw(struct leonos_ui_surface *surface, uint32_t x,
     uint32_t fg;
     uint32_t bg;
     if (!state) {
-        leonos_ui_edit(surface, x, y, w, "", 0, 0, flags);
+        reliefos_ui_edit(surface, x, y, w, "", 0, 0, flags);
         return;
     }
-    leonos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w, h,
-                            (flags & LEONOS_UI_EDIT_DISABLED)
-                                ? LEONOS_GUI_CURSOR_NO : LEONOS_GUI_CURSOR_TEXT,
-                            (flags & LEONOS_UI_EDIT_DISABLED)
-                                ? LEONOS_GUI_CURSOR_REGION_DISABLED : 0);
-    leonos_ui_edit_state_sync(state);
-    if (state->focused && !state->readonly && !(flags & LEONOS_UI_EDIT_DISABLED)) {
-        uint32_t context_flags = LEONOS_INPUTM_CONTEXT_FOCUSED;
-        if (flags & LEONOS_UI_EDIT_SECURE) {
-            context_flags |= LEONOS_INPUTM_CONTEXT_SECURE;
+    reliefos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w, h,
+                            (flags & RELIEFOS_UI_EDIT_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_NO : RELIEFOS_GUI_CURSOR_TEXT,
+                            (flags & RELIEFOS_UI_EDIT_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_REGION_DISABLED : 0);
+    reliefos_ui_edit_state_sync(state);
+    if (state->focused && !state->readonly && !(flags & RELIEFOS_UI_EDIT_DISABLED)) {
+        uint32_t context_flags = RELIEFOS_INPUTM_CONTEXT_FOCUSED;
+        if (flags & RELIEFOS_UI_EDIT_SECURE) {
+            context_flags |= RELIEFOS_INPUTM_CONTEXT_SECURE;
         }
-        (void)leonos_inputm_set_current_context(context_flags,
+        (void)reliefos_inputm_set_current_context(context_flags,
                                                 (int32_t)x, (int32_t)y,
                                                 w, h);
     }
     if (state->focused) {
-        draw_flags |= LEONOS_UI_EDIT_FOCUSED;
+        draw_flags |= RELIEFOS_UI_EDIT_FOCUSED;
     }
     if (state->readonly) {
-        draw_flags |= LEONOS_UI_EDIT_READONLY;
+        draw_flags |= RELIEFOS_UI_EDIT_READONLY;
     }
     edit_ensure_cursor_visible(state, w);
-    bg = (draw_flags & LEONOS_UI_EDIT_DISABLED) ? LEONOS_UI_LIGHT : LEONOS_UI_WHITE;
-    fg = (draw_flags & LEONOS_UI_EDIT_DISABLED) ? LEONOS_UI_DARK : LEONOS_UI_BLACK;
-    leonos_ui_inset(surface, x, y, w, h, bg);
+    bg = (draw_flags & RELIEFOS_UI_EDIT_DISABLED) ? RELIEFOS_UI_LIGHT : RELIEFOS_UI_WHITE;
+    fg = (draw_flags & RELIEFOS_UI_EDIT_DISABLED) ? RELIEFOS_UI_DARK : RELIEFOS_UI_BLACK;
+    reliefos_ui_inset(surface, x, y, w, h, bg);
     if (edit_has_selection(state)) {
         edit_selection_range(state, &sel_start, &sel_end);
     }
@@ -187,25 +187,25 @@ void leonos_ui_edit_state_draw(struct leonos_ui_surface *surface, uint32_t x,
             break;
         }
         if (idx < sel_end && idx + glyphs[i].byte_len > sel_start && edit_has_selection(state)) {
-            ch_bg = LEONOS_UI_ACTIVE_TITLE;
-            ch_fg = LEONOS_UI_WHITE;
+            ch_bg = RELIEFOS_UI_ACTIVE_TITLE;
+            ch_fg = RELIEFOS_UI_WHITE;
         }
         ui_codepoint(surface, draw_x, text_y, glyphs[i].codepoint, glyphs[i].cell_width,
                      ch_fg, ch_bg, 0);
         draw_x += px;
     }
-    if ((draw_flags & LEONOS_UI_EDIT_FOCUSED) && !(draw_flags & LEONOS_UI_EDIT_DISABLED)) {
+    if ((draw_flags & RELIEFOS_UI_EDIT_FOCUSED) && !(draw_flags & RELIEFOS_UI_EDIT_DISABLED)) {
         uint32_t cursor = state->cursor;
         if (cursor < state->scroll) {
             cursor = state->scroll;
         }
-        leonos_ui_rect(surface,
+        reliefos_ui_rect(surface,
                        text_x + ui_text_pixels_between(state->buffer, state->scroll, cursor),
-                       text_y, 1, LEONOS_FONT_H, LEONOS_UI_BLACK);
+                       text_y, 1, RELIEFOS_FONT_H, RELIEFOS_UI_BLACK);
     }
 }
 
-static int edit_insert_char(struct leonos_ui_edit_state *state, char ch)
+static int edit_insert_char(struct reliefos_ui_edit_state *state, char ch)
 {
     if (!state || !state->buffer || state->readonly || state->capacity == 0 || ch < 32) {
         return 0;
@@ -228,7 +228,7 @@ static int edit_insert_char(struct leonos_ui_edit_state *state, char ch)
     return 1;
 }
 
-static int edit_insert_text(struct leonos_ui_edit_state *state, const char *text)
+static int edit_insert_text(struct reliefos_ui_edit_state *state, const char *text)
 {
     uint32_t text_len = 0;
     if (!state || !state->buffer || state->readonly || !text) {
@@ -262,7 +262,7 @@ static int edit_insert_text(struct leonos_ui_edit_state *state, const char *text
     return 1;
 }
 
-int leonos_ui_edit_state_handle_key(struct leonos_ui_edit_state *state,
+int reliefos_ui_edit_state_handle_key(struct reliefos_ui_edit_state *state,
                                     uint8_t keycode, uint8_t pressed)
 {
     char ch;
@@ -273,20 +273,20 @@ int leonos_ui_edit_state_handle_key(struct leonos_ui_edit_state *state,
         ui_shift_down = pressed ? 1 : 0;
         return 0;
     }
-    if (keycode == LEONOS_KEY_CAPS_LOCK) {
+    if (keycode == RELIEFOS_KEY_CAPS_LOCK) {
         return 0;
     }
     if (!pressed) {
         return 0;
     }
-    leonos_ui_edit_state_sync(state);
+    reliefos_ui_edit_state_sync(state);
     if (keycode == 0) {
-        char text[LEONOS_INPUTM_TEXT_LEN];
-        return leonos_inputm_take_text(text, sizeof(text)) ?
+        char text[RELIEFOS_INPUTM_TEXT_LEN];
+        return reliefos_inputm_take_text(text, sizeof(text)) ?
                    edit_insert_text(state, text) : 0;
     }
     switch (keycode) {
-    case LEONOS_KEY_BACKSPACE:
+    case RELIEFOS_KEY_BACKSPACE:
         if (state->readonly) {
             return 0;
         }
@@ -305,7 +305,7 @@ int leonos_ui_edit_state_handle_key(struct leonos_ui_edit_state *state,
             return 1;
         }
         return 0;
-    case LEONOS_KEY_ENTER:
+    case RELIEFOS_KEY_ENTER:
         return 0;
     case 75:
         if (state->cursor > 0) {
@@ -330,27 +330,27 @@ int leonos_ui_edit_state_handle_key(struct leonos_ui_edit_state *state,
         edit_clear_selection(state);
         return 1;
     default:
-        if (leonos_ui_keycode_to_char_shift(keycode, ui_shift_down, &ch) && ch >= 32) {
+        if (reliefos_ui_keycode_to_char_shift(keycode, ui_shift_down, &ch) && ch >= 32) {
             return edit_insert_char(state, ch);
         }
         return 0;
     }
 }
-int leonos_ui_edit_state_handle_mouse(struct leonos_ui_edit_state *state,
+int reliefos_ui_edit_state_handle_mouse(struct reliefos_ui_edit_state *state,
                                       int32_t px, int32_t py, uint32_t x,
                                       uint32_t y, uint32_t w, uint32_t buttons)
 {
-    uint32_t h = LEONOS_FONT_H + 8;
-    uint32_t cols = w > 8 ? leonos_ui_text_fit_chars(w - 8) : 0;
+    uint32_t h = RELIEFOS_FONT_H + 8;
+    uint32_t cols = w > 8 ? reliefos_ui_text_fit_chars(w - 8) : 0;
     uint32_t idx;
     if (!state) {
         return 0;
     }
-    if (!leonos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)x, (int32_t)y, w, h)) {
+    if (!reliefos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)x, (int32_t)y, w, h)) {
         if (buttons & 1u) {
             state->focused = 0;
             state->selecting = 0;
-            (void)leonos_inputm_set_current_context(0, 0, 0, 0, 0);
+            (void)reliefos_inputm_set_current_context(0, 0, 0, 0, 0);
             return 1;
         }
         return 0;
@@ -361,7 +361,7 @@ int leonos_ui_edit_state_handle_mouse(struct leonos_ui_edit_state *state,
     }
     state->focused = 1;
     if (!state->readonly) {
-        (void)leonos_inputm_set_current_context(LEONOS_INPUTM_CONTEXT_FOCUSED,
+        (void)reliefos_inputm_set_current_context(RELIEFOS_INPUTM_CONTEXT_FOCUSED,
                                                 (int32_t)x, (int32_t)y, w, h);
     }
     idx = state->scroll;
@@ -384,16 +384,16 @@ int leonos_ui_edit_state_handle_mouse(struct leonos_ui_edit_state *state,
 
 static uint32_t text_area_text_width(uint32_t w);
 
-void leonos_ui_text_area(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void reliefos_ui_text_area(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                          uint32_t w, uint32_t h, const char *text, uint32_t cursor,
                          uint32_t scroll_line, uint32_t flags)
 {
-    leonos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w, h,
-                            (flags & LEONOS_UI_EDIT_DISABLED)
-                                ? LEONOS_GUI_CURSOR_NO : LEONOS_GUI_CURSOR_TEXT,
-                            (flags & LEONOS_UI_EDIT_DISABLED)
-                                ? LEONOS_GUI_CURSOR_REGION_DISABLED : 0);
-    uint32_t rows = h > 8 ? (h - 8) / LEONOS_FONT_H : 0;
+    reliefos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w, h,
+                            (flags & RELIEFOS_UI_EDIT_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_NO : RELIEFOS_GUI_CURSOR_TEXT,
+                            (flags & RELIEFOS_UI_EDIT_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_REGION_DISABLED : 0);
+    uint32_t rows = h > 8 ? (h - 8) / RELIEFOS_FONT_H : 0;
     uint32_t text_width = text_area_text_width(w);
     uint32_t current = 0;
     uint32_t row = 0;
@@ -402,7 +402,7 @@ void leonos_ui_text_area(struct leonos_ui_surface *surface, uint32_t x, uint32_t
     uint32_t text_pos = 0;
     char line[128];
     (void)cursor;
-    leonos_ui_scroll_view_frame(surface, x, y, w, h);
+    reliefos_ui_scroll_view_frame(surface, x, y, w, h);
     while (text && row < rows) {
         uint32_t byte_len = 1;
         uint32_t cp = ui_decode_utf8(text, ui_strlen(text), text_pos, &byte_len);
@@ -410,10 +410,10 @@ void leonos_ui_text_area(struct leonos_ui_surface *surface, uint32_t x, uint32_t
         if (text[text_pos] == 0) {
             line[line_len] = 0;
             if (current >= scroll_line) {
-                leonos_ui_text_clipped(surface, x + 4, y + 4 + row * LEONOS_FONT_H,
+                reliefos_ui_text_clipped(surface, x + 4, y + 4 + row * RELIEFOS_FONT_H,
                                       w > 8 ? w - 8 : w, line,
-                                      (flags & LEONOS_UI_EDIT_DISABLED) ? LEONOS_UI_DARK : LEONOS_UI_BLACK,
-                                      LEONOS_UI_WHITE);
+                                      (flags & RELIEFOS_UI_EDIT_DISABLED) ? RELIEFOS_UI_DARK : RELIEFOS_UI_BLACK,
+                                      RELIEFOS_UI_WHITE);
                 ++row;
             }
             break;
@@ -426,10 +426,10 @@ void leonos_ui_text_area(struct leonos_ui_surface *surface, uint32_t x, uint32_t
             (line_pixels + pixel_width > text_width && line_len != 0)) {
             line[line_len] = 0;
             if (current >= scroll_line) {
-                leonos_ui_text_clipped(surface, x + 4, y + 4 + row * LEONOS_FONT_H,
+                reliefos_ui_text_clipped(surface, x + 4, y + 4 + row * RELIEFOS_FONT_H,
                                       w > 8 ? w - 8 : w, line,
-                                      (flags & LEONOS_UI_EDIT_DISABLED) ? LEONOS_UI_DARK : LEONOS_UI_BLACK,
-                                      LEONOS_UI_WHITE);
+                                      (flags & RELIEFOS_UI_EDIT_DISABLED) ? RELIEFOS_UI_DARK : RELIEFOS_UI_BLACK,
+                                      RELIEFOS_UI_WHITE);
                 ++row;
             }
             ++current;
@@ -446,8 +446,8 @@ void leonos_ui_text_area(struct leonos_ui_surface *surface, uint32_t x, uint32_t
         line_pixels += pixel_width;
         text_pos += byte_len;
     }
-    if ((flags & LEONOS_UI_EDIT_FOCUSED) && row < rows) {
-        leonos_ui_rect(surface, x + 4, y + 4 + row * LEONOS_FONT_H, 1, LEONOS_FONT_H, LEONOS_UI_BLACK);
+    if ((flags & RELIEFOS_UI_EDIT_FOCUSED) && row < rows) {
+        reliefos_ui_rect(surface, x + 4, y + 4 + row * RELIEFOS_FONT_H, 1, RELIEFOS_FONT_H, RELIEFOS_UI_BLACK);
     }
 }
 
@@ -458,10 +458,10 @@ static uint32_t text_area_text_width(uint32_t w)
 
 static uint32_t text_area_rows(uint32_t h)
 {
-    return h > 8 ? (h - 8) / LEONOS_FONT_H : 0;
+    return h > 8 ? (h - 8) / RELIEFOS_FONT_H : 0;
 }
 
-static void text_area_cursor_line_col(struct leonos_ui_text_area_state *state,
+static void text_area_cursor_line_col(struct reliefos_ui_text_area_state *state,
                                       uint32_t w, uint32_t cursor,
                                       uint32_t *out_line, uint32_t *out_col)
 {
@@ -501,7 +501,7 @@ static void text_area_cursor_line_col(struct leonos_ui_text_area_state *state,
     *out_col = col;
 }
 
-static uint32_t text_area_cursor_from_line_col(struct leonos_ui_text_area_state *state,
+static uint32_t text_area_cursor_from_line_col(struct reliefos_ui_text_area_state *state,
                                                uint32_t w, uint32_t target_line,
                                                uint32_t target_col)
 {
@@ -555,7 +555,7 @@ static uint32_t text_area_cursor_from_line_col(struct leonos_ui_text_area_state 
     return state->length;
 }
 
-static void text_area_ensure_cursor_visible(struct leonos_ui_text_area_state *state,
+static void text_area_ensure_cursor_visible(struct reliefos_ui_text_area_state *state,
                                             uint32_t w, uint32_t h)
 {
     uint32_t line;
@@ -573,7 +573,7 @@ static void text_area_ensure_cursor_visible(struct leonos_ui_text_area_state *st
     }
 }
 
-void leonos_ui_text_area_state_init(struct leonos_ui_text_area_state *state,
+void reliefos_ui_text_area_state_init(struct reliefos_ui_text_area_state *state,
                                     char *buffer, uint32_t capacity)
 {
     if (!state) {
@@ -596,13 +596,13 @@ void leonos_ui_text_area_state_init(struct leonos_ui_text_area_state *state,
     state->selecting = 0;
 }
 
-static int text_area_has_selection(const struct leonos_ui_text_area_state *state)
+static int text_area_has_selection(const struct reliefos_ui_text_area_state *state)
 {
     return state && state->selection_anchor != state->cursor &&
            state->selection_anchor <= state->length && state->cursor <= state->length;
 }
 
-static void text_area_selection_range(const struct leonos_ui_text_area_state *state,
+static void text_area_selection_range(const struct reliefos_ui_text_area_state *state,
                                       uint32_t *start, uint32_t *end)
 {
     if (state->selection_anchor < state->cursor) {
@@ -614,12 +614,12 @@ static void text_area_selection_range(const struct leonos_ui_text_area_state *st
     }
 }
 
-static void text_area_clear_selection(struct leonos_ui_text_area_state *state)
+static void text_area_clear_selection(struct reliefos_ui_text_area_state *state)
 {
     state->selection_anchor = state->cursor;
 }
 
-uint32_t leonos_ui_text_area_line_count(struct leonos_ui_text_area_state *state,
+uint32_t reliefos_ui_text_area_line_count(struct reliefos_ui_text_area_state *state,
                                         uint32_t w)
 {
     uint32_t text_width = text_area_text_width(w);
@@ -652,7 +652,7 @@ uint32_t leonos_ui_text_area_line_count(struct leonos_ui_text_area_state *state,
     return lines ? lines : 1;
 }
 
-void leonos_ui_text_area_state_sync(struct leonos_ui_text_area_state *state,
+void reliefos_ui_text_area_state_sync(struct reliefos_ui_text_area_state *state,
                                     uint32_t w)
 {
     if (!state || !state->buffer) {
@@ -669,15 +669,15 @@ void leonos_ui_text_area_state_sync(struct leonos_ui_text_area_state *state,
     if (state->selection_anchor > state->length) {
         state->selection_anchor = state->cursor;
     }
-    state->line_count = leonos_ui_text_area_line_count(state, w);
+    state->line_count = reliefos_ui_text_area_line_count(state, w);
     if (state->scroll_line >= state->line_count) {
         state->scroll_line = state->line_count ? state->line_count - 1 : 0;
     }
 }
 
-void leonos_ui_text_area_state_draw(struct leonos_ui_surface *surface, uint32_t x,
+void reliefos_ui_text_area_state_draw(struct reliefos_ui_surface *surface, uint32_t x,
                                     uint32_t y, uint32_t w, uint32_t h,
-                                    struct leonos_ui_text_area_state *state,
+                                    struct reliefos_ui_text_area_state *state,
                                     uint32_t flags)
 {
     uint32_t cursor_line;
@@ -688,30 +688,30 @@ void leonos_ui_text_area_state_draw(struct leonos_ui_surface *surface, uint32_t 
     uint32_t sel_start = 0;
     uint32_t sel_end = 0;
     if (!state) {
-        leonos_ui_text_area(surface, x, y, w, h, "", 0, 0, flags);
+        reliefos_ui_text_area(surface, x, y, w, h, "", 0, 0, flags);
         return;
     }
-    leonos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w, h,
-                            (flags & LEONOS_UI_EDIT_DISABLED)
-                                ? LEONOS_GUI_CURSOR_NO : LEONOS_GUI_CURSOR_TEXT,
-                            (flags & LEONOS_UI_EDIT_DISABLED)
-                                ? LEONOS_GUI_CURSOR_REGION_DISABLED : 0);
-    leonos_ui_text_area_state_sync(state, w);
-    if (state->focused && !state->readonly && !(flags & LEONOS_UI_EDIT_DISABLED)) {
-        uint32_t context_flags = LEONOS_INPUTM_CONTEXT_FOCUSED;
-        if (flags & LEONOS_UI_EDIT_SECURE) {
-            context_flags |= LEONOS_INPUTM_CONTEXT_SECURE;
+    reliefos_ui_cursor_region(surface, (int32_t)x, (int32_t)y, w, h,
+                            (flags & RELIEFOS_UI_EDIT_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_NO : RELIEFOS_GUI_CURSOR_TEXT,
+                            (flags & RELIEFOS_UI_EDIT_DISABLED)
+                                ? RELIEFOS_GUI_CURSOR_REGION_DISABLED : 0);
+    reliefos_ui_text_area_state_sync(state, w);
+    if (state->focused && !state->readonly && !(flags & RELIEFOS_UI_EDIT_DISABLED)) {
+        uint32_t context_flags = RELIEFOS_INPUTM_CONTEXT_FOCUSED;
+        if (flags & RELIEFOS_UI_EDIT_SECURE) {
+            context_flags |= RELIEFOS_INPUTM_CONTEXT_SECURE;
         }
-        (void)leonos_inputm_set_current_context(context_flags,
+        (void)reliefos_inputm_set_current_context(context_flags,
                                                 (int32_t)x, (int32_t)y, w, h);
     }
     if (state->focused) {
-        draw_flags |= LEONOS_UI_EDIT_FOCUSED;
+        draw_flags |= RELIEFOS_UI_EDIT_FOCUSED;
     }
     if (state->readonly) {
-        draw_flags |= LEONOS_UI_EDIT_READONLY;
+        draw_flags |= RELIEFOS_UI_EDIT_READONLY;
     }
-    leonos_ui_scroll_view_frame(surface, x, y, w, h);
+    reliefos_ui_scroll_view_frame(surface, x, y, w, h);
     if (text_area_has_selection(state)) {
         text_area_selection_range(state, &sel_start, &sel_end);
     }
@@ -724,8 +724,8 @@ void leonos_ui_text_area_state_draw(struct leonos_ui_surface *surface, uint32_t 
             uint32_t byte_len = 1;
             uint32_t cp = ui_decode_utf8(state->buffer, state->length, pos, &byte_len);
             uint32_t px = ui_codepoint_pixel_width(cp);
-            uint32_t ch_bg = LEONOS_UI_WHITE;
-            uint32_t ch_fg = (draw_flags & LEONOS_UI_EDIT_DISABLED) ? LEONOS_UI_DARK : LEONOS_UI_BLACK;
+            uint32_t ch_bg = RELIEFOS_UI_WHITE;
+            uint32_t ch_fg = (draw_flags & RELIEFOS_UI_EDIT_DISABLED) ? RELIEFOS_UI_DARK : RELIEFOS_UI_BLACK;
             uint32_t next_line;
             uint32_t next_col;
             if (cp == '\r') {
@@ -734,10 +734,10 @@ void leonos_ui_text_area_state_draw(struct leonos_ui_surface *surface, uint32_t 
             }
             if (cp == '\n') {
                 if (pos >= sel_start && pos < sel_end && text_area_has_selection(state)) {
-                    ch_bg = LEONOS_UI_ACTIVE_TITLE;
-                    ch_fg = LEONOS_UI_WHITE;
+                    ch_bg = RELIEFOS_UI_ACTIVE_TITLE;
+                    ch_fg = RELIEFOS_UI_WHITE;
                 }
-                ui_char(surface, draw_x, y + 4 + row * LEONOS_FONT_H,
+                ui_char(surface, draw_x, y + 4 + row * RELIEFOS_FONT_H,
                         ' ', ch_fg, ch_bg, 0);
                 break;
             }
@@ -747,28 +747,28 @@ void leonos_ui_text_area_state_draw(struct leonos_ui_surface *surface, uint32_t 
                 break;
             }
             if (pos < sel_end && pos + byte_len > sel_start && text_area_has_selection(state)) {
-                ch_bg = LEONOS_UI_ACTIVE_TITLE;
-                ch_fg = LEONOS_UI_WHITE;
+                ch_bg = RELIEFOS_UI_ACTIVE_TITLE;
+                ch_fg = RELIEFOS_UI_WHITE;
             }
-            ui_codepoint(surface, draw_x, y + 4 + row * LEONOS_FONT_H,
+            ui_codepoint(surface, draw_x, y + 4 + row * RELIEFOS_FONT_H,
                          cp, ui_cell_width(cp), ch_fg, ch_bg, 0);
             draw_x += px;
             pos += byte_len;
         }
     }
-    if ((draw_flags & LEONOS_UI_EDIT_FOCUSED) && !(draw_flags & LEONOS_UI_EDIT_DISABLED)) {
+    if ((draw_flags & RELIEFOS_UI_EDIT_FOCUSED) && !(draw_flags & RELIEFOS_UI_EDIT_DISABLED)) {
         text_area_cursor_line_col(state, w, state->cursor, &cursor_line, &cursor_col);
         if (cursor_line >= state->scroll_line && cursor_line < state->scroll_line + rows) {
             uint32_t cx = x + 4 + cursor_col;
-            uint32_t cy = y + 4 + (cursor_line - state->scroll_line) * LEONOS_FONT_H;
+            uint32_t cy = y + 4 + (cursor_line - state->scroll_line) * RELIEFOS_FONT_H;
             if (cx < x + w - 2) {
-                leonos_ui_rect(surface, cx, cy, 1, LEONOS_FONT_H, LEONOS_UI_BLACK);
+                reliefos_ui_rect(surface, cx, cy, 1, RELIEFOS_FONT_H, RELIEFOS_UI_BLACK);
             }
         }
     }
 }
 
-static int text_area_delete_range(struct leonos_ui_text_area_state *state,
+static int text_area_delete_range(struct reliefos_ui_text_area_state *state,
                                   uint32_t start, uint32_t end)
 {
     if (!state || !state->buffer || state->readonly || start >= end || end > state->length) {
@@ -783,7 +783,7 @@ static int text_area_delete_range(struct leonos_ui_text_area_state *state,
     return 1;
 }
 
-static int text_area_insert_char(struct leonos_ui_text_area_state *state, char ch)
+static int text_area_insert_char(struct reliefos_ui_text_area_state *state, char ch)
 {
     if (!state || !state->buffer || state->readonly || state->capacity == 0) {
         return 0;
@@ -806,7 +806,7 @@ static int text_area_insert_char(struct leonos_ui_text_area_state *state, char c
     return 1;
 }
 
-static int text_area_insert_text(struct leonos_ui_text_area_state *state, const char *text)
+static int text_area_insert_text(struct reliefos_ui_text_area_state *state, const char *text)
 {
     uint32_t text_len = 0;
     if (!state || !state->buffer || state->readonly || !text) {
@@ -842,7 +842,7 @@ static int text_area_insert_text(struct leonos_ui_text_area_state *state, const 
     return 1;
 }
 
-static int text_area_delete_char(struct leonos_ui_text_area_state *state, uint32_t index)
+static int text_area_delete_char(struct reliefos_ui_text_area_state *state, uint32_t index)
 {
     if (!state) {
         return 0;
@@ -853,7 +853,7 @@ static int text_area_delete_char(struct leonos_ui_text_area_state *state, uint32
                                                            index));
 }
 
-int leonos_ui_text_area_state_handle_key(struct leonos_ui_text_area_state *state,
+int reliefos_ui_text_area_state_handle_key(struct reliefos_ui_text_area_state *state,
                                          uint8_t keycode, uint8_t pressed, uint32_t w,
                                          uint32_t h)
 {
@@ -868,28 +868,28 @@ int leonos_ui_text_area_state_handle_key(struct leonos_ui_text_area_state *state
         ui_shift_down = pressed ? 1 : 0;
         return 0;
     }
-    if (keycode == LEONOS_KEY_CAPS_LOCK) {
+    if (keycode == RELIEFOS_KEY_CAPS_LOCK) {
         return 0;
     }
     if (!pressed) {
         return 0;
     }
-    leonos_ui_text_area_state_sync(state, w);
+    reliefos_ui_text_area_state_sync(state, w);
     if (keycode == 0) {
-        char text[LEONOS_INPUTM_TEXT_LEN];
-        int changed = leonos_inputm_take_text(text, sizeof(text)) ?
+        char text[RELIEFOS_INPUTM_TEXT_LEN];
+        int changed = reliefos_inputm_take_text(text, sizeof(text)) ?
                           text_area_insert_text(state, text) : 0;
         if (changed) {
             text_area_cursor_line_col(state, w, state->cursor, &line, &col);
             state->preferred_column = col;
-            leonos_ui_text_area_state_sync(state, w);
+            reliefos_ui_text_area_state_sync(state, w);
             text_area_ensure_cursor_visible(state, w, h);
         }
         return changed;
     }
     text_area_cursor_line_col(state, w, state->cursor, &line, &col);
     switch (keycode) {
-    case LEONOS_KEY_BACKSPACE:
+    case RELIEFOS_KEY_BACKSPACE:
         if (state->readonly) {
             return 0;
         }
@@ -913,7 +913,7 @@ int leonos_ui_text_area_state_handle_key(struct leonos_ui_text_area_state *state
             }
         }
         return 0;
-    case LEONOS_KEY_ENTER:
+    case RELIEFOS_KEY_ENTER:
         if (state->readonly) {
             return 0;
         }
@@ -991,7 +991,7 @@ int leonos_ui_text_area_state_handle_key(struct leonos_ui_text_area_state *state
         text_area_ensure_cursor_visible(state, w, h);
         return 1;
     default:
-        if (leonos_ui_keycode_to_char_shift(keycode, ui_shift_down, &ch)) {
+        if (reliefos_ui_keycode_to_char_shift(keycode, ui_shift_down, &ch)) {
             if (state->readonly) {
                 return 0;
             }
@@ -1003,7 +1003,7 @@ int leonos_ui_text_area_state_handle_key(struct leonos_ui_text_area_state *state
                 text_area_cursor_line_col(state, w, state->cursor, &line, &col);
                 state->preferred_column = col;
                 if (changed) {
-                    leonos_ui_text_area_state_sync(state, w);
+                    reliefos_ui_text_area_state_sync(state, w);
                     text_area_ensure_cursor_visible(state, w, h);
                 }
                 return changed;
@@ -1012,7 +1012,7 @@ int leonos_ui_text_area_state_handle_key(struct leonos_ui_text_area_state *state
         return 0;
     }
 }
-int leonos_ui_text_area_state_handle_mouse(struct leonos_ui_text_area_state *state,
+int reliefos_ui_text_area_state_handle_mouse(struct reliefos_ui_text_area_state *state,
                                            int32_t px, int32_t py, uint32_t x,
                                            uint32_t y, uint32_t w, uint32_t h,
                                            uint32_t buttons)
@@ -1026,19 +1026,19 @@ int leonos_ui_text_area_state_handle_mouse(struct leonos_ui_text_area_state *sta
         state->selecting = 0;
         return 0;
     }
-    if (!leonos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)x, (int32_t)y, w, h)) {
+    if (!reliefos_ui_hit((uint32_t)px, (uint32_t)py, (int32_t)x, (int32_t)y, w, h)) {
         state->focused = 0;
-        (void)leonos_inputm_set_current_context(0, 0, 0, 0, 0);
+        (void)reliefos_inputm_set_current_context(0, 0, 0, 0, 0);
         return 1;
     }
     state->focused = 1;
     if (!state->readonly) {
-        (void)leonos_inputm_set_current_context(LEONOS_INPUTM_CONTEXT_FOCUSED,
+        (void)reliefos_inputm_set_current_context(RELIEFOS_INPUTM_CONTEXT_FOCUSED,
                                                 (int32_t)x, (int32_t)y, w, h);
     }
     line = state->scroll_line;
     if (py > (int32_t)y + 4) {
-        line += ((uint32_t)py - y - 4) / LEONOS_FONT_H;
+        line += ((uint32_t)py - y - 4) / RELIEFOS_FONT_H;
     }
     col = 0;
     if (px > (int32_t)x + 4) {
@@ -1055,3 +1055,17 @@ int leonos_ui_text_area_state_handle_mouse(struct leonos_ui_text_area_state *sta
     state->preferred_column = col;
     return 1;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_ui_edit) leonos_ui_edit __attribute__((alias("reliefos_ui_edit")));
+extern __typeof__(reliefos_ui_edit_state_draw) leonos_ui_edit_state_draw __attribute__((alias("reliefos_ui_edit_state_draw")));
+extern __typeof__(reliefos_ui_edit_state_handle_key) leonos_ui_edit_state_handle_key __attribute__((alias("reliefos_ui_edit_state_handle_key")));
+extern __typeof__(reliefos_ui_edit_state_handle_mouse) leonos_ui_edit_state_handle_mouse __attribute__((alias("reliefos_ui_edit_state_handle_mouse")));
+extern __typeof__(reliefos_ui_edit_state_init) leonos_ui_edit_state_init __attribute__((alias("reliefos_ui_edit_state_init")));
+extern __typeof__(reliefos_ui_edit_state_sync) leonos_ui_edit_state_sync __attribute__((alias("reliefos_ui_edit_state_sync")));
+extern __typeof__(reliefos_ui_text_area) leonos_ui_text_area __attribute__((alias("reliefos_ui_text_area")));
+extern __typeof__(reliefos_ui_text_area_line_count) leonos_ui_text_area_line_count __attribute__((alias("reliefos_ui_text_area_line_count")));
+extern __typeof__(reliefos_ui_text_area_state_draw) leonos_ui_text_area_state_draw __attribute__((alias("reliefos_ui_text_area_state_draw")));
+extern __typeof__(reliefos_ui_text_area_state_handle_key) leonos_ui_text_area_state_handle_key __attribute__((alias("reliefos_ui_text_area_state_handle_key")));
+extern __typeof__(reliefos_ui_text_area_state_handle_mouse) leonos_ui_text_area_state_handle_mouse __attribute__((alias("reliefos_ui_text_area_state_handle_mouse")));
+extern __typeof__(reliefos_ui_text_area_state_init) leonos_ui_text_area_state_init __attribute__((alias("reliefos_ui_text_area_state_init")));
+extern __typeof__(reliefos_ui_text_area_state_sync) leonos_ui_text_area_state_sync __attribute__((alias("reliefos_ui_text_area_state_sync")));

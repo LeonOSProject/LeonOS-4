@@ -1,8 +1,8 @@
 /*
  * Atomic, change-detecting file publication for generated build outputs.
  */
-#ifndef LEONOS_HOST_COMMON_IO_H
-#define LEONOS_HOST_COMMON_IO_H
+#ifndef RELIEFOS_HOST_COMMON_IO_H
+#define RELIEFOS_HOST_COMMON_IO_H
 
 #include <stddef.h>
 
@@ -41,4 +41,4 @@ int read_file_all(const char *path, struct byte_buffer *out);
 int write_file_if_changed(const char *path, const void *data, size_t size,
               unsigned int mode);
 
-#endif /* LEONOS_HOST_COMMON_IO_H */
+#endif /* RELIEFOS_HOST_COMMON_IO_H */

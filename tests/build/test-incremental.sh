@@ -1,8 +1,8 @@
 #!/bin/sh
-# Incremental-correctness contract tests for the ntclks kernel adapter.
+# Incremental-correctness contract tests for the ReliefNT kernel adapter.
 #
 # Since the kernel/userland separation (phase 3) the kernel is built by the
-# standalone checkout named by NTCLKS_DIR and published into this build's
+# standalone checkout named by RELIEFNT_DIR and published into this build's
 # output tree by mk/kernel.mk. Every assertion below is about the adapter's
 # observed behavior: which actions the delegation emitted, which published
 # products and userland objects changed mtime, and what the sub-build's own
@@ -21,11 +21,11 @@ cd "$repo_root" || exit 1
 # The kernel checkout under test (env-overridable). The default is the phase-5
 # location inside this repository, where the tracked kernel sources live until
 # they are removed; phase-3 verification points it at the standalone checkout.
-ntclks=${NTCLKS_DIR:-$repo_root/kernel/ntclks}
+reliefnt=${RELIEFNT_DIR:-${NTCLKS_DIR:-$repo_root/kernel/reliefnt}}
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-incremental.XXXXXX") || exit 1
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-incremental.XXXXXX") || exit 1
 O="$work/out"
-ntclks_o=${NTCLKS_O:-$O/ntclks}
+reliefnt_o=${RELIEFNT_O:-${NTCLKS_O:-$O/reliefnt}}
 failures=0
 checks=0
 
@@ -78,7 +78,7 @@ count_label() { printf '%s\n' "$1" | grep -cE "^  $2 " || true; }
 # `install` recopies its nine products there on every ask.
 snapshot() {
     {
-        find "$O/obj" "$ntclks_o/obj" -name '*.o' -printf '%p %T@\n' 2>/dev/null
+        find "$O/obj" "$reliefnt_o/obj" -name '*.o' -printf '%p %T@\n' 2>/dev/null
         find "$O/kernel-export" -type f -printf '%p %T@\n' 2>/dev/null
         for product in "$O/generated/system/kernel.sys" \
                        "$O/generated/system/kernel.debug" \
@@ -172,9 +172,9 @@ fi
 # Nothing may be linked in that the deletion-detecting manifest does not list:
 # a leftover object from an earlier source set is the classic way a removed file
 # keeps haunting an image.
-find "$ntclks_o/obj/kernel" \( -name '*.c.o' -o -name '*.S.o' \) |
-        sed "s#^$ntclks_o/obj/kernel/##; s#\.o\$##" | LC_ALL=C sort >"$work/on-disk"
-LC_ALL=C sort "$ntclks_o/obj/kernel/sources.list" >"$work/listed"
+find "$reliefnt_o/obj/kernel" \( -name '*.c.o' -o -name '*.S.o' \) |
+        sed "s#^$reliefnt_o/obj/kernel/##; s#\.o\$##" | LC_ALL=C sort >"$work/on-disk"
+LC_ALL=C sort "$reliefnt_o/obj/kernel/sources.list" >"$work/listed"
 orphans=$(comm -23 "$work/on-disk" "$work/listed" | tr '\n' ' ')
 if [ -z "$orphans" ]; then
     pass 'every object on disk is accounted for by the source manifest'
@@ -183,8 +183,8 @@ else
         "not in the manifest: $orphans"
 fi
 
-kernel_objects=$(find "$ntclks_o/obj/kernel" -name '*.c.o' | wc -l)
-assembly_objects=$(find "$ntclks_o/obj/kernel" -name '*.S.o' | wc -l)
+kernel_objects=$(find "$reliefnt_o/obj/kernel" -name '*.c.o' | wc -l)
+assembly_objects=$(find "$reliefnt_o/obj/kernel" -name '*.S.o' | wc -l)
 if [ "$kernel_objects" -gt 50 ] && [ "$assembly_objects" -gt 0 ]; then
     pass "manifest discovered the kernel sources ($kernel_objects C, $assembly_objects asm)"
 else
@@ -201,14 +201,14 @@ else
     fail 'no-op build emits no compile, link, image or generate action'
     printf '%s\n' "$second" | sed 's/^/       | /'
     # Name the trigger instead of leaving an undiagnosable flake: the version
-    # chain is build_info.h <- {configs/build-version, leonos-version,
+    # chain is build_info.h <- {configs/build-version, reliefos-version,
     # version.sig} and a churn here is one of those reading as newer.
     printf '       | version.sig: %s\n' \
-        "$(cat "$ntclks_o/meta/version.sig" 2>/dev/null || echo missing)"
-    for suspect in "$ntclks_o/include/generated/build_info.h" \
-                   "$ntclks_o/meta/version.sig" \
-                   "$ntclks_o/host/bin/leonos-version" \
-                   "$ntclks/configs/build-version"; do
+        "$(cat "$reliefnt_o/meta/version.sig" 2>/dev/null || echo missing)"
+    for suspect in "$reliefnt_o/include/generated/build_info.h" \
+                   "$reliefnt_o/meta/version.sig" \
+                   "$reliefnt_o/host/bin/reliefos-version" \
+                   "$reliefnt/configs/build-version"; do
         printf '       | %s\n' "$(stat -c 'mtime=%Y size=%s' "$suspect" 2>/dev/null \
             | sed "s|^|$suspect |")"
     done
@@ -216,8 +216,8 @@ fi
 expect_same "$before" "$after" 'no-op build leaves every object and product mtime unchanged'
 
 printf '\n=== A02b: deleted headers in existing dependency files ===\n'
-legacy_object="$ntclks_o/obj/kernel/kernel/ntclks/kernel.c.o"
-legacy_header="$ntclks/kernel/ntclks/include/ntclks/boot_splash.h"
+legacy_object="$reliefnt_o/obj/kernel/kernel/reliefnt/kernel.c.o"
+legacy_header="$reliefnt/kernel/reliefnt/include/ntclks/boot_splash.h"
 # Reproduce a dependency file from before the splash removal and before -MP.
 # No empty header target is present in these old compiler-generated files.
 printf '\n%s: %s\n' "$legacy_object" "$legacy_header" >>"$legacy_object.d"
@@ -236,7 +236,7 @@ fi
 
 # Simulate a later header removal in a real compiler-generated depfile. Retain
 # any empty targets emitted by the compiler, so dropping -MP breaks this case.
-old_header="$ntclks/kernel/ntclks/include/ntclks/arch.h"
+old_header="$reliefnt/kernel/reliefnt/include/reliefnt/arch.h"
 grep -qF "$old_header" "$legacy_object.d" || exit 1
 sed "s|$old_header|$work/removed-header.h|g" "$legacy_object.d" >"$work/removed.d"
 mv "$work/removed.d" "$legacy_object.d"
@@ -255,7 +255,7 @@ else
 fi
 
 printf '\n=== A03: one ordinary source file in the checkout ===\n'
-target_source=$ntclks/kernel/ntclks/futex.c
+target_source=$reliefnt/kernel/reliefnt/futex.c
 before_checksum=$(sha256sum "$O/generated/system/kernel.sys" | cut -d' ' -f1)
 userland_before=$(userland_snapshot)
     advance_clock
@@ -288,7 +288,7 @@ else
         "$before_checksum != $after_checksum"
 fi
 untouched=$(snapshot | grep -c '\.o ' || true)
-tracked=$(( $(find "$O/obj" "$ntclks_o/obj" -name '*.o' 2>/dev/null | wc -l) ))
+tracked=$(( $(find "$O/obj" "$reliefnt_o/obj" -name '*.o' 2>/dev/null | wc -l) ))
 if [ "$untouched" = "$tracked" ] && [ "$tracked" -gt 0 ]; then
     pass "all $tracked kernel and userland objects are tracked by the snapshot"
 else
@@ -299,22 +299,22 @@ printf '\n=== A04: a kernel header several objects share ===\n'
 # The depfiles are the oracle: every object that recorded the header must be
 # rebuilt and no object that did not record it may be. The oracle covers the
 # whole freestanding side of the sub-build (kernel, loader and drivers: they
-# share the ntclks headers); generated headers under the sub-build output tree
+# share the ReliefNT headers); generated headers under the sub-build output tree
 # are excluded so the candidate is a real source header.
-depfiles=$(find "$ntclks_o/obj" -name '*.o.d' | tr '\n' ' ')
+depfiles=$(find "$reliefnt_o/obj" -name '*.o.d' | tr '\n' ' ')
 header=$(for depfile in $depfiles; do
             # Join backslash continuations before splitting: clang emits one
             # prerequisite per word across several lines, and the headers are
             # almost always on the continuation lines.
             sed -e :a -e '/\\$/N; s/\\\n//; ta' "$depfile"
-         done | tr ' ' '\n' | grep -E '\.h$' | grep -v "^$ntclks_o/" |
+         done | tr ' ' '\n' | grep -E '\.h$' | grep -v "^$reliefnt_o/" |
          sort | uniq -c | sort -rn | awk 'NR == 1 { print $2 }')
 
 if [ -z "$header" ] || [ ! -f "$header" ]; then
     fail 'a shared source header was found to test' "candidate: ${header:-none}"
 else
     # Count depfiles that list the header as a whole word. A substring match
-    # would count `ntclks/signal.h` as a consumer of `posix/signal.h` and blame
+    # would count `reliefnt/signal.h` as a consumer of `posix/signal.h` and blame
     # Make for a discrepancy the test invented.
     expected=0
     expected_list=$work/expected-objects
@@ -353,7 +353,7 @@ fi
 
 printf '\n=== A04b: the linker script ===\n'
 advance_clock
-touch "$ntclks/arch/x86_64/linker.ld"
+touch "$reliefnt/arch/x86_64/linker.ld"
 script_build=$(build)
 script_cc=$(printf '%s\n' "$script_build" | grep -cE '^  CC ' || true)
 script_ld=$(printf '%s\n' "$script_build" | grep -cE '^  LD ' || true)
@@ -367,7 +367,7 @@ fi
 printf '\n=== A04c: a kernel-private header never reaches userland ===\n'
 # The userland consumes the exported headers only. A private kernel header is
 # outside that boundary: neither the export nor any userland object may move.
-private_header=$ntclks/kernel/ntclks/include/ntclks/sched.h
+private_header=$reliefnt/kernel/reliefnt/include/reliefnt/sched.h
 export_before=$work/export-before
 export_after=$work/export-after
 find "$O/kernel-export" -type f -printf '%p %T@\n' | LC_ALL=C sort >"$export_before"
@@ -398,12 +398,12 @@ printf '\n=== A05: compile flags, tool identity and profile isolation ===\n'
 # drivers share, so the comparison stays inside the kernel object set).
 advance_clock
 snapshot >"$work/flags-before"
-build KERNEL_CFLAGS=-DLEONOS_SIG_PROBE >/dev/null
+build KERNEL_CFLAGS=-DRELIEFOS_SIG_PROBE >/dev/null
 snapshot >"$work/flags-after"
-find "$ntclks_o/obj/kernel" -name '*.c.o' | LC_ALL=C sort >"$work/all-c"
-find "$ntclks_o/obj/kernel" -name '*.S.o' | LC_ALL=C sort >"$work/all-asm"
+find "$reliefnt_o/obj/kernel" -name '*.c.o' | LC_ALL=C sort >"$work/all-c"
+find "$reliefnt_o/obj/kernel" -name '*.S.o' | LC_ALL=C sort >"$work/all-asm"
 changed_objects "$work/flags-before" "$work/flags-after" |
-        grep "^$ntclks_o/obj/kernel/" >"$work/flag-changed"
+        grep "^$reliefnt_o/obj/kernel/" >"$work/flag-changed"
 missed=$(comm -23 "$work/all-c" "$work/flag-changed" | xargs -n1 basename 2>/dev/null | tr '\n' ' ')
 asm_touched=$(comm -12 "$work/all-asm" "$work/flag-changed" | xargs -n1 basename 2>/dev/null | tr '\n' ' ')
 cc_actions=$(grep -c '' "$work/flag-changed")

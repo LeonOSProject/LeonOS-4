@@ -89,7 +89,7 @@ static size_t W_StdC_ReadExact(FILE *stream, unsigned int offset,
     {
         size_t request = length - done;
 #if defined(LEONOS_DOOM)
-        /* The LeonOS file path is sliced at 32 KiB. Keep a WAD read inside
+        /* The ReliefOS file path is sliced at 32 KiB. Keep a WAD read inside
          * one such window so an unaligned lump directory cannot straddle two
          * filesystem stream transactions. In particular, Freedoom's entry
          * 1615 starts four bytes into the following window. */

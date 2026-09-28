@@ -8,7 +8,7 @@
 
 int main(void)
 {
-    struct leonos_authd_run run;
+    struct reliefos_authd_run run;
     struct authd_sudo_channel channel = {.send = channel_send};
     records_init();
     assert(authd_set_password(&record_storage[0], "actual-root-password") == 0);

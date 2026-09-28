@@ -1,5 +1,22 @@
 # headers_install 导出白名单（唯一权威清单）
 # 格式：仓库相对路径；安装后路径 = 去掉 include/uapi/ 前缀，置于 <O>/kernel-export/include/
+include/uapi/reliefos/audio_abi.h
+include/uapi/reliefos/auth_abi.h
+include/uapi/reliefos/auth_user.h
+include/uapi/reliefos/device_abi.h
+include/uapi/reliefos/driver_abi.h
+include/uapi/reliefos/fs_abi.h
+include/uapi/reliefos/gpu_abi.h
+include/uapi/reliefos/inputm_abi.h
+include/uapi/reliefos/kernel_debug_abi.h
+include/uapi/reliefos/net_abi.h
+include/uapi/reliefos/net_control.h
+include/uapi/reliefos/pty_abi.h
+include/uapi/reliefos/rootfs.h
+include/uapi/reliefos/signal_abi.h
+include/uapi/reliefos/startup_abi.h
+include/uapi/reliefos/syscall_abi.h
+include/uapi/reliefos/system_abi.h
 include/uapi/leonos/audio_abi.h
 include/uapi/leonos/auth_abi.h
 include/uapi/leonos/auth_user.h

@@ -3,13 +3,13 @@ set -eu
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 
-[ "$#" -eq 0 ] || { printf '%s\n' 'Usage: leonos-rpr-ping' >&2; exit 2; }
-config=/etc/leonos/rpr.conf
+[ "$#" -eq 0 ] || { printf '%s\n' 'Usage: reliefos-rpr-ping' >&2; exit 2; }
+config=/etc/reliefos/rpr.conf
 [ -r "$config" ] || { printf 'Missing RPR configuration: %s\n' "$config" >&2; exit 1; }
 rpr_url=$(sed -n 's/^RPR_BASE_URL=//p' "$config")
 case "$rpr_url" in https://*) ;; *) printf '%s\n' 'Invalid RPR URL: HTTPS is required' >&2; exit 1;; esac
 
-temporary=$(mktemp /tmp/leonos-rpr-health.XXXXXX)
+temporary=$(mktemp /tmp/reliefos-rpr-health.XXXXXX)
 trap 'rm -f -- "$temporary"' EXIT HUP INT TERM
 rprfetch "$rpr_url/health.txt" "$temporary"
 status=$(sed -n '1p' "$temporary")
@@ -17,4 +17,4 @@ status=$(sed -n '1p' "$temporary")
     printf '%s\n' 'RPR endpoint returned an invalid health response' >&2
     exit 1
 }
-printf 'LeonOS RPR reachable: %s\n' "$rpr_url"
+printf 'ReliefOS RPR reachable: %s\n' "$rpr_url"

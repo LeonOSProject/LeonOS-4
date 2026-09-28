@@ -16,18 +16,18 @@ int net_service_get_dns_policy(net_service_dns_policy_t *result)
 { *result = (net_service_dns_policy_t){.status = 0, .mode = NET_SERVICE_DNS_MODE_DHCP}; return 0; }
 int net_service_connections(net_service_connection_info_t *entries, uint32_t cap, uint32_t *count)
 { (void)entries; (void)cap; *count = 0; return 0; }
-void leonos_ui_listview_state_set_count(struct leonos_ui_listview_state *view, uint32_t count)
+void reliefos_ui_listview_state_set_count(struct reliefos_ui_listview_state *view, uint32_t count)
 { (void)view; (void)count; }
-int leonos_sudo_run(const char *user, const char *password, char *const args[], uint32_t *pid)
+int reliefos_sudo_run(const char *user, const char *password, char *const args[], uint32_t *pid)
 {
     assert(!user && !password);
-    assert(!strcmp(args[0], "/usr/lib/leonos/apps/netctl/netctl.elf"));
+    assert(!strcmp(args[0], "/usr/lib/reliefos/apps/netctl/netctl.elf"));
     assert(!strcmp(args[1], "--renew-dhcp") && !args[2]);
     ++authorizations;
     *pid = 123;
     return 0;
 }
-int leonos_sudo_wait(uint32_t pid, int *status)
+int reliefos_sudo_wait(uint32_t pid, int *status)
 {
     assert(pid == 123);
     if (worker_pending) { errno = EAGAIN; return -1; }

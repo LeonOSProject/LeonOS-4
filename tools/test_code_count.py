@@ -41,7 +41,7 @@ def git(root: Path, *arguments: str) -> None:
 
 
 def main() -> int:
-    with tempfile.TemporaryDirectory(prefix="leonos-code-count-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="reliefos-code-count-") as temporary:
         root = Path(temporary)
         (root / "src").mkdir()
         (root / "build").mkdir()
@@ -64,7 +64,7 @@ def main() -> int:
 
         markdown = run_markdown(str(root), "--no-config", "--exclude", "third_party",
                                "--exclude-dir", "skip", "--jobs", "1", "--no-progress")
-        assert markdown.startswith("# LeonOS 4 Code Statistics")
+        assert markdown.startswith("# ReliefOS Code Statistics")
         assert "## By Part" in markdown
         assert "| src |" in markdown
         assert "| 1 |" in markdown
@@ -118,7 +118,7 @@ def main() -> int:
 
         history_markdown = run_markdown(str(history_root), "--history", "--no-config",
                                         "--exclude", "third_party/cmd", "--no-progress")
-        assert history_markdown.startswith("# LeonOS 4 Code Growth History")
+        assert history_markdown.startswith("# ReliefOS Code Growth History")
         assert "Cumulative lines" in history_markdown
 
     print("test_code_count: ok")

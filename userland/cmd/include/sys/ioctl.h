@@ -1,5 +1,5 @@
-#ifndef LEONOS_CMD_SYS_IOCTL_H
-#define LEONOS_CMD_SYS_IOCTL_H
+#ifndef RELIEFOS_CMD_SYS_IOCTL_H
+#define RELIEFOS_CMD_SYS_IOCTL_H
 
 struct winsize {
     unsigned short ws_row;

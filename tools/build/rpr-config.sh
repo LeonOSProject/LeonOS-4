@@ -14,5 +14,5 @@ awk '
 END {
     if (!found) exit 1
     print "RPR_BASE_URL=" value
-    print "RPR_PUBLIC_KEY=leonos-rpr.rsa.pub"
+    print "RPR_PUBLIC_KEY=reliefos-rpr.rsa.pub"
 }' "$1" || { echo 'CONFIG_RPR_BASE_URL must be a quoted HTTPS URL without whitespace, quotes or backslashes' >&2; exit 1; }

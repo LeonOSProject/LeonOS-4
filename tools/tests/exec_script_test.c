@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../kernel/ntclks/kernel/ntclks/syscall.c"
+#include "../../kernel/reliefnt/kernel/reliefnt/syscall.c"
 
 static bool fail_allocation;
 bool user_range_ok(uint64_t address, uint64_t size) { return address != 0 || size == 0; }
@@ -24,7 +24,7 @@ int main(void)
     assert(vectors.argc == 1024 && !vectors.argv[1024]);
     arguments[1024] = "x";
     arguments[1025] = NULL;
-    assert(copy_exec_params_from_user((uintptr_t)arguments, 0, &vectors) == -LEONOS_E2BIG);
+    assert(copy_exec_params_from_user((uintptr_t)arguments, 0, &vectors) == -RELIEFOS_E2BIG);
     char *environment[130];
     for (unsigned i = 0; i < 129; ++i) environment[i] = "KEY=value";
     environment[128] = NULL;
@@ -33,7 +33,7 @@ int main(void)
     assert(vectors.argc == 118 && vectors.envc == 128 && !vectors.envp[128]);
     environment[128] = "KEY=value";
     environment[129] = NULL;
-    assert(copy_exec_params_from_user(0, (uintptr_t)environment, &vectors) == -LEONOS_E2BIG);
+    assert(copy_exec_params_from_user(0, (uintptr_t)environment, &vectors) == -RELIEFOS_E2BIG);
     char long_argument[12000];
     memset(long_argument, 'a', sizeof(long_argument) - 1);
     long_argument[sizeof(long_argument) - 1] = 0;
@@ -81,7 +81,7 @@ int main(void)
     assert(!exec_append_string(&params, "NAME=value", true));
     struct exec_params_kernel original = params;
     fail_allocation = true;
-    assert(exec_script_arguments(&params, "/bin/sh", "-e", "script") == -LEONOS_ENOMEM);
+    assert(exec_script_arguments(&params, "/bin/sh", "-e", "script") == -RELIEFOS_ENOMEM);
     assert(!memcmp(&params, &original, sizeof(params)));
     fail_allocation = false;
     assert(!exec_script_arguments(&params, "/bin/sh", "arg one", "script"));
@@ -91,7 +91,7 @@ int main(void)
     assert(!params.argv[4] && !strcmp(params.envp[0], "NAME=value") && !params.envp[1]);
     while (params.argc < SCHED_EXEC_ARG_MAX) assert(!exec_append_string(&params, "x", false));
     original = params;
-    assert(exec_script_arguments(&params, "/bin/sh", "-e", "script") == -LEONOS_E2BIG);
+    assert(exec_script_arguments(&params, "/bin/sh", "-e", "script") == -RELIEFOS_E2BIG);
     assert(!memcmp(&params, &original, sizeof(params)));
     puts("PASS production shebang parser, bounded fuzz, argv rewrite and allocation rollback");
 }

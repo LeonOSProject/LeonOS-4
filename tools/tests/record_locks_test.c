@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../kernel/ntclks/kernel/ntclks/syscall_locks.c"
+#include "../../kernel/reliefnt/kernel/reliefnt/syscall_locks.c"
 
 static struct task first, second, *current = &first;
 static struct task_file file = {.used = 1, .flags = LINUX_O_RDWR,
-    .node = {.type = LEONOS_FS_TYPE_FILE, .volume_id = 1, .first_cluster = 50}};
+    .node = {.type = RELIEFOS_FS_TYPE_FILE, .volume_id = 1, .first_cluster = 50}};
 static int allocation_fails;
 struct task *sched_current_task(void) { return current; }
 struct task_file *task_file_for_fd(struct task *task, int fd)

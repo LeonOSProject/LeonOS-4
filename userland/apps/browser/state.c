@@ -1,15 +1,15 @@
 #include "browser.h"
 
 uint32_t pixels[BROWSER_MAX_W * BROWSER_MAX_H];
-struct leonos_ui_surface ui;
+struct reliefos_ui_surface ui;
 int window_id;
 uint32_t view_w = BROWSER_INITIAL_W;
 uint32_t view_h = BROWSER_INITIAL_H;
-char address_input[BROWSER_URL_CAP] = "about:leonos";
-struct leonos_ui_edit_state address_edit;
+char address_input[BROWSER_URL_CAP] = "about:reliefos";
+struct reliefos_ui_edit_state address_edit;
 char status_text[BROWSER_STATUS_CAP] = "Ready";
-char page_title[BROWSER_TITLE_CAP] = "LeonOS Browser";
-char current_location[BROWSER_URL_CAP] = "about:leonos";
+char page_title[BROWSER_TITLE_CAP] = "ReliefOS Browser";
+char current_location[BROWSER_URL_CAP] = "about:reliefos";
 char page_source[BROWSER_SOURCE_CAP];
 uint8_t page_is_html;
 uint8_t source_truncated;
@@ -33,8 +33,8 @@ uint8_t browser_should_exit;
 uint8_t browser_embedded;
 uint8_t browser_form_focus_active;
 uint32_t browser_form_focus_control;
-struct leonos_ui_edit_state browser_form_edit_state;
-struct leonos_ui_toast_state browser_toast;
+struct reliefos_ui_edit_state browser_form_edit_state;
+struct reliefos_ui_toast_state browser_toast;
 struct browser_bookmark browser_bookmarks[BROWSER_MAX_BOOKMARKS];
 uint32_t browser_bookmark_count;
 char browser_find_query[BROWSER_FIND_CAP];
@@ -106,7 +106,7 @@ uint32_t text_cols(void)
     if (w <= BROWSER_SCROLL_W + 24U) {
         return 16U;
     }
-    cols = (w - BROWSER_SCROLL_W - 24U) / LEONOS_FONT_W;
+    cols = (w - BROWSER_SCROLL_W - 24U) / RELIEFOS_FONT_W;
     if (cols < 16U) {
         cols = 16U;
     }
@@ -157,7 +157,7 @@ void set_status(const char *text)
 {
     copy_text(status_text, sizeof(status_text), text);
     if (text && text[0]) {
-        leonos_ui_toast_show(&browser_toast, text, leonos_uptime_ms(),
-                             2200, LEONOS_UI_TOAST_INFO);
+        reliefos_ui_toast_show(&browser_toast, text, reliefos_uptime_ms(),
+                             2200, RELIEFOS_UI_TOAST_INFO);
     }
 }

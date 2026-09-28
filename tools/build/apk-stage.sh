@@ -33,28 +33,28 @@ cp -a "$raw"/. "$tree"/
 
 # Media-only payloads are copied back after the transaction and never claimed
 # by an installed package. Runtime state is always created by apk itself.
-for name in EFI grub leonos loader.elf install; do rm -rf "$tree/$name"; done
-for name in lib/apk/db var/cache/apk usr/share/leonos/apk/repository; do
+for name in EFI grub reliefos leonos loader.elf install; do rm -rf "$tree/$name"; done
+for name in lib/apk/db var/cache/apk usr/share/reliefos/apk/repository; do
     [ ! -L "$tree/$name" ] || { echo "invalid package-state symlink: $name" >&2; exit 1; }
     rm -rf "$tree/$name"
 done
 rm -f "$tree/etc/apk/world" "$tree/var/log/apk.log"
 rm -f "$tree/.apk-complete" "$tree/.complete"
-sh "$src/tools/build/apk-layout.sh" "$tree" "${APK_LAYOUT_TOOL:-$(dirname "$own")/leonos-layout}"
+sh "$src/tools/build/apk-layout.sh" "$tree" "${APK_LAYOUT_TOOL:-$(dirname "$own")/reliefos-layout}"
 
 # The development headers must describe this exact runtime, not an independently
 # downloaded musl. Keep libxcrypt's header/archive in their existing package.
 development=$scratch/development
 if [ -n "${APK_MUSL_SYSROOT:-}" ]; then
     cmp "$tree/lib/ld-musl-x86_64.so.1" "$APK_MUSL_SYSROOT/lib/libc.so"
-    mkdir -p "$development/usr/include" "$development/usr/lib" "$development/usr/share/licenses/leonos-musl-dev"
+    mkdir -p "$development/usr/include" "$development/usr/lib" "$development/usr/share/licenses/reliefos-musl-dev"
     cp -a "$APK_MUSL_SYSROOT/include/." "$development/usr/include/"
     rm -f "$development/usr/include/crypt.h"
     for name in crt1.o Scrt1.o rcrt1.o crti.o crtn.o libc.a libdl.a libm.a libpthread.a libresolv.a librt.a libutil.a libxnet.a libssp_nonshared.a; do
         cp "$APK_MUSL_SYSROOT/lib/$name" "$development/usr/lib/$name"
     done
     ln -s ../../lib/ld-musl-x86_64.so.1 "$development/usr/lib/libc.so"
-    cp "$src/third_party/musl/COPYRIGHT" "$src/userland/musl-dev/stack_chk_fail_local.c" "$development/usr/share/licenses/leonos-musl-dev/"
+    cp "$src/third_party/musl/COPYRIGHT" "$src/userland/musl-dev/stack_chk_fail_local.c" "$development/usr/share/licenses/reliefos-musl-dev/"
     cp -a "$development/." "$tree/"
 fi
 
@@ -101,18 +101,23 @@ mkdir -p "$tree/usr/share/licenses/apk-tools" "$tree/usr/share/licenses/leonos-o
 } > "$tree/usr/share/licenses/apk-tools/SOURCE.json"
 cp "$src/configs/dependencies.lock.json" "$tree/usr/share/licenses/leonos-openrc/SOURCE.json"
 
-mkdir -p "$tree/sbin" "$tree/usr/lib/leonos" "$tree/usr/share/leonos" \
+mkdir -p "$tree/sbin" "$tree/usr/lib/reliefos" "$tree/usr/share/reliefos" \
     "$tree/etc/apk/keys" "$tree/etc/apk/protected_paths.d"
 cp "$apk" "$tree/sbin/apk"
 chmod 755 "$tree/sbin/apk"
 mkdir -p "$tree/usr/share/licenses/apk-tools"
 cp "$src/resources/licenses/apk-tools-LICENSE" "$tree/usr/share/licenses/apk-tools/LICENSE"
-cp "$src/userland/storage/leonos-apk-update" "$tree/usr/lib/leonos/leonos-apk-update"
-chmod 755 "$tree/usr/lib/leonos/leonos-apk-update"
-cp "$policy" "$tree/usr/share/leonos/apk-ownership.json"
+cp "$src/userland/storage/leonos-apk-update" "$tree/usr/lib/reliefos/reliefos-apk-update"
+chmod 755 "$tree/usr/lib/reliefos/reliefos-apk-update"
+ln -sfn reliefos-apk-update "$tree/usr/lib/reliefos/leonos-apk-update"
+mkdir -p "$tree/usr/lib/leonos"
+ln -sfn ../reliefos/reliefos-apk-update "$tree/usr/lib/leonos/leonos-apk-update"
+cp "$policy" "$tree/usr/share/reliefos/apk-ownership.json"
 cp -a "$src/system/rootfs/etc/apk/keys"/. "$tree/etc/apk/keys"/
 cp "$src/system/rootfs/etc/apk/protected_paths.d/leonos.list" \
     "$tree/etc/apk/protected_paths.d/leonos.list"
+cp "$src/system/rootfs/etc/apk/protected_paths.d/reliefos.list" \
+    "$tree/etc/apk/protected_paths.d/reliefos.list"
 
 if [ ! -e "$key" ]; then
     mkdir -p "$(dirname "$key")"
@@ -127,18 +132,20 @@ fi
 [ "$(stat -c '%a' "$key")" = 600 ] || { echo 'APK signing key must have mode 0600' >&2; exit 1; }
 openssl pkey -in "$key" -pubout -out "$scratch/public.pem" 2>/dev/null
 pub_digest=$(sha256sum "$scratch/public.pem" | cut -d' ' -f1)
-pub_name=leonos-$(printf %.16s "$pub_digest").rsa.pub
+pub_name=reliefos-$(printf %.16s "$pub_digest").rsa.pub
+legacy_pub_name=leonos-$(printf %.16s "$pub_digest").rsa.pub
 cp "$scratch/public.pem" "$tree/etc/apk/keys/$pub_name"
+cp "$scratch/public.pem" "$tree/etc/apk/keys/$legacy_pub_name"
 
 if [ -n "${SOURCE_DATE_EPOCH:-}" ]; then
     case $SOURCE_DATE_EPOCH in *[!0-9]*|'') echo 'SOURCE_DATE_EPOCH must be an integer' >&2; exit 2;; esac
     find "$tree" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
 fi
 
-"$own" --policy "$policy" --root "$tree" --output "$scratch/ownership.tsv" --installed-policy "$tree/usr/share/leonos/apk-ownership.json" --elf-list "$scratch/elf.tsv"
+"$own" --policy "$policy" --root "$tree" --output "$scratch/ownership.tsv" --installed-policy "$tree/usr/share/reliefos/apk-ownership.json" --elf-list "$scratch/elf.tsv"
 if [ -d "$development" ]; then
-    "$own" --policy "$policy" --root "$development" --group leonos-musl-dev --output "$scratch/development.tsv"
-    awk -F '\t' -v OFS='\t' 'FNR==NR {if($2!="dir") paths[$4]=1;next} $4 in paths {$1="leonos-musl-dev"} {print}' \
+    "$own" --policy "$policy" --root "$development" --group reliefos-musl-dev --output "$scratch/development.tsv"
+    awk -F '\t' -v OFS='\t' 'FNR==NR {if($2!="dir") paths[$4]=1;next} $4 in paths {$1="reliefos-musl-dev"} {print}' \
         "$scratch/development.tsv" "$scratch/ownership.tsv" > "$scratch/ownership.new"
     mv "$scratch/ownership.new" "$scratch/ownership.tsv"
 fi
@@ -154,12 +161,12 @@ version=$(printf '%s' "$version" | sed "s/-r[0-9]*$/.${content_number}-r0/")
 
 package_name()
 {
-    case $1 in leonos-*|ca-certificates-bundle) printf '%s\n' "$1";; *) printf 'leonos-%s\n' "$1";; esac
+    case $1 in reliefos-*|ca-certificates-bundle) printf '%s\n' "$1";; *) printf 'reliefos-%s\n' "$1";; esac
 }
 
 # Copy exactly the classified payload. Quoting and tab-delimited reads preserve
 # spaces; the inventory tool rejects tabs/newlines because this is its format.
-leonos_log APK "copying $(wc -l < "$scratch/ownership.tsv") payload entries"
+reliefos_log APK "copying $(wc -l < "$scratch/ownership.tsv") payload entries"
 copied=0
 while IFS="$(printf '\t')" read -r group type mode relative target; do
     package=$(package_name "$group")
@@ -172,7 +179,7 @@ while IFS="$(printf '\t')" read -r group type mode relative target; do
         cp -a "$tree/$relative" "$destination"
     fi
     copied=$((copied + 1))
-    if [ $((copied % 2000)) = 0 ]; then leonos_log APK "copied $copied entries"; fi
+    if [ $((copied % 2000)) = 0 ]; then reliefos_log APK "copied $copied entries"; fi
 done <"$scratch/ownership.tsv"
 # Shared parent directories must have the canonical mode in every package.
 for payload in "$scratch"/payload/*; do
@@ -185,7 +192,7 @@ for payload in "$scratch"/payload/*; do
 done
 
 # Derive real ELF capabilities and dependencies from the package payload.
-leonos_log APK 'scanning ELF dependencies and signing packages'
+reliefos_log APK 'scanning ELF dependencies and signing packages'
 : >"$scratch/providers"
 : >"$scratch/needed"
 while IFS= read -r group; do
@@ -237,28 +244,31 @@ while IFS= read -r group; do
         done <"$scratch/needed"
     fi
     provides=$(awk -F '\t' -v package="$package" '$2 == package { printf " so:%s=0", $1 }' "$scratch/providers")
-    if [ "$package" = leonos-musl ] && [ -f "$tree/lib/ld-musl-x86_64.so.1" ]; then
+    if [ "$package" = reliefos-musl ] && [ -f "$tree/lib/ld-musl-x86_64.so.1" ]; then
         provides="$provides so:libc.musl-x86_64.so.1=1"
     fi
-    if [ "$package" = leonos-busybox ] && [ -x "$tree/bin/busybox" ] && [ -e "$tree/bin/sh" ]; then
+    if [ "$package" = reliefos-busybox ] && [ -x "$tree/bin/busybox" ] && [ -e "$tree/bin/sh" ]; then
         for applet in init ifup ifdown udhcpc ntpd; do
             "$tree/bin/busybox" --list | grep -Fx "$applet" >/dev/null || { echo "BusyBox is missing required applet: $applet" >&2; exit 1; }
         done
         provides="$provides /bin/sh ifupdown-any"
     fi
     case $package in
-        leonos-musl-dev) dependencies="$dependencies leonos-musl=$version"; provides="$provides musl-dev=$version libc-dev=$version" ;;
-        leonos-apk-tools) dependencies="$dependencies leonos-busybox" ;;
-        leonos-trust) dependencies="$dependencies ca-certificates-bundle" ;;
-        leonos-fastfetch) dependencies="$dependencies !fastfetch" ;;
+        reliefos-musl-dev) dependencies="$dependencies reliefos-musl=$version"; provides="$provides musl-dev=$version libc-dev=$version" ;;
+        reliefos-apk-tools) dependencies="$dependencies reliefos-busybox" ;;
+        reliefos-trust) dependencies="$dependencies ca-certificates-bundle" ;;
+        reliefos-fastfetch) dependencies="$dependencies !fastfetch" ;;
     esac
+    replaces=
+    case $package in reliefos-*) replaces="leonos-${package#reliefos-}";; esac
     set -- mkpkg --files "$payload" --output "$repository/$package-$version.apk" \
         --info "name:$package" --info "version:$version" --info arch:x86_64 \
-        --info "origin:$package" --info "description:LeonOS build payload $package" \
+        --info "origin:$package" --info "description:ReliefOS build payload $package" \
         --info license:LicenseRef-See-Bundled-Notices --sign-key "$key"
     [ -z "$dependencies" ] || set -- "$@" --info "depends:$(printf '%s' "$dependencies" | xargs -n1 | LC_ALL=C sort -u | xargs)"
     [ -z "$provides" ] || set -- "$@" --info "provides:$(printf '%s' "$provides" | xargs -n1 | LC_ALL=C sort -u | xargs)"
-    if [ "$package" = leonos-busybox ]; then
+    [ -z "$replaces" ] || set -- "$@" --info "replaces:$replaces"
+    if [ "$package" = reliefos-busybox ]; then
         set -- "$@" --script "post-install:$src/userland/storage/busybox-binutils-links" \
             --script "post-upgrade:$src/userland/storage/busybox-binutils-links" \
             --script "trigger:$src/userland/storage/busybox-binutils-links" --trigger /usr/bin
@@ -279,9 +289,9 @@ set -- --root "$managed" --arch x86_64 --initdb --repositories-file /dev/null \
 while IFS= read -r group; do set -- "$@" "$(package_name "$group")"; done <"$scratch/groups"
 while IFS= read -r request; do set -- "$@" "$request"; done <"$scratch/upstream-requests"
 run_apk "$@"
-mkdir -p "$managed/usr/share/leonos/apk"
-cp -a "$repository" "$managed/usr/share/leonos/apk/repository"
-for name in EFI grub leonos loader.elf install; do [ ! -e "$raw/$name" ] || cp -a "$raw/$name" "$managed/$name"; done
+mkdir -p "$managed/usr/share/reliefos/apk"
+cp -a "$repository" "$managed/usr/share/reliefos/apk/repository"
+for name in EFI grub reliefos leonos loader.elf install; do [ ! -e "$raw/$name" ] || cp -a "$raw/$name" "$managed/$name"; done
 
 mkdir -p "$work/repository.new"
 rm -rf "$work/repository.new"
@@ -294,7 +304,7 @@ cp "$scratch/ownership.tsv" "$work/ownership.tsv.new"
 mv "$work/ownership.tsv.new" "$work/ownership.tsv"
 {
     printf '{\n  "schema_version": 1,\n  "version": "%s",\n' "$version"
-    printf '  "database": "created-by-upstream-apk",\n  "signing_public_key": "%s",\n' "$pub_name"
+    printf '  "database": "created-by-upstream-apk",\n  "signing_public_key": "%s",\n  "legacy_signing_public_key": "%s",\n' "$pub_name" "$legacy_pub_name"
     printf '  "packages": ['
     separator=
     while IFS= read -r group; do package=$(package_name "$group"); printf '%s"%s"' "$separator" "$package"; separator=', '; done <"$scratch/groups"
@@ -307,4 +317,4 @@ rm -rf "$output.previous"
 [ ! -e "$output" ] || mv "$output" "$output.previous"
 mv "$managed" "$output"
 rm -rf "$output.previous"
-leonos_log APK "signed root: $(wc -l <"$scratch/groups") packages -> $output"
+reliefos_log APK "signed root: $(wc -l <"$scratch/groups") packages -> $output"

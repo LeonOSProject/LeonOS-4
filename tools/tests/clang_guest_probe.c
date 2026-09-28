@@ -1,4 +1,4 @@
-/* Guest probe for Alpine Clang on NTCLKS.
+/* Guest probe for Alpine Clang on ReliefNT.
  *
  * clang --version fails with thousands of "Error relocating" lines, so the
  * decisive evidence is the FIRST stderr line and the largest contiguous mmap

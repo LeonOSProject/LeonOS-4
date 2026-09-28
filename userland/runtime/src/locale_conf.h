@@ -1,15 +1,15 @@
-#ifndef LEONOS_LIBC_LOCALE_CONF_H
-#define LEONOS_LIBC_LOCALE_CONF_H
+#ifndef RELIEFOS_LIBC_LOCALE_CONF_H
+#define RELIEFOS_LIBC_LOCALE_CONF_H
 
 #include <stddef.h>
 
-#define LEONOS_LOCALE_NAME_LEN  16
-#define LEONOS_LOCALE_VALUE_LEN 32
-#define LEONOS_LOCALE_MAX       8
+#define RELIEFOS_LOCALE_NAME_LEN  16
+#define RELIEFOS_LOCALE_VALUE_LEN 32
+#define RELIEFOS_LOCALE_MAX       8
 
-struct leonos_locale_setting {
-    char name[LEONOS_LOCALE_NAME_LEN];
-    char value[LEONOS_LOCALE_VALUE_LEN];
+struct reliefos_locale_setting {
+    char name[RELIEFOS_LOCALE_NAME_LEN];
+    char value[RELIEFOS_LOCALE_VALUE_LEN];
 };
 
 /**
@@ -18,10 +18,10 @@ struct leonos_locale_setting {
  * @param text 文件内容，不要求 NUL 结尾。
  * @param length text 字节数。
  * @param out 输出数组，由调用方提供。
- * @param capacity out 的元素个数，须不小于 LEONOS_LOCALE_MAX 才能收满全部类别。
+ * @param capacity out 的元素个数，须不小于 RELIEFOS_LOCALE_MAX 才能收满全部类别。
  * @return 写入的条目数；0 表示无有效条目。同名键后出现者覆盖先出现者。
  */
-int leonos_locale_parse(const char *text, size_t length,
-                        struct leonos_locale_setting *out, int capacity);
+int reliefos_locale_parse(const char *text, size_t length,
+                        struct reliefos_locale_setting *out, int capacity);
 
 #endif

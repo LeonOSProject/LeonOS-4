@@ -5,9 +5,9 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="leonos-e1000-") as work:
+with tempfile.TemporaryDirectory(prefix="reliefos-e1000-") as work:
     binary = Path(work) / "e1000-test"
     subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
-                    "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
+                    "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ikernel/reliefnt/kernel/reliefnt/include",
                     "tools/tests/e1000_init_test.c", "-o", str(binary)], cwd=ROOT, check=True)
     subprocess.run([str(binary)], check=True, timeout=20)

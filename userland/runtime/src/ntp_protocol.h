@@ -1,5 +1,5 @@
-#ifndef LEONOS_NTP_PROTOCOL_H
-#define LEONOS_NTP_PROTOCOL_H
+#ifndef RELIEFOS_NTP_PROTOCOL_H
+#define RELIEFOS_NTP_PROTOCOL_H
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>

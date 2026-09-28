@@ -1,6 +1,6 @@
 # Application Registry
 
-LeonOS 4 discovers runnable applications from package metadata instead of a
+ReliefOS discovers runnable applications from package metadata instead of a
 compiled-in application path table. At boot image creation, the build system
 writes `manifest.ini` next to each staged executable:
 
@@ -25,19 +25,19 @@ commands=notepad
 escape the package directory. Older `<package>.app.ini` files remain accepted
 as a compatibility fallback, but new images use `manifest.ini`.
 
-The registry scans `/usr/lib/leonos/apps`. Shells, the desktop start
+The registry scans `/usr/lib/reliefos/apps`. Shells, the desktop start
 menu, file associations, icons, GUI launch, and API installation all consume
 the same records. API packages write their manifest after extraction, so a
 newly installed application becomes discoverable without rebuilding the
 system.
 
-Applications and SDK clients can include `<leonos/app.h>` and use:
+Applications and SDK clients include `<reliefos/app.h>` and use:
 
 ```c
-leonos_app_registry_refresh();
-leonos_app_registry_resolve("notepad", path, sizeof(path));
-leonos_app_registry_default_for_extension(".txt", path, sizeof(path));
+reliefos_app_registry_refresh();
+reliefos_app_registry_resolve("notepad", path, sizeof(path));
+reliefos_app_registry_default_for_extension(".txt", path, sizeof(path));
 ```
 
-The public SDK header is `userland/runtime/include/leonos/app.h`; it ships in the
+The public SDK header is `userland/runtime/include/reliefos/app.h`; it ships in the
 relocatable musl SDK assembled by `make sdk`.

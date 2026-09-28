@@ -23,7 +23,7 @@ for app in helloworld doom doomlauncher oschinpt; do
     printf '%s\n' "$app" > "$tmp/out/userland/$app.elf"
 done
 cat > "$tmp/build_info.h" <<'EOF'
-#define LEONOS_KERNEL_VERSION "4.7.1"
+#define RELIEFOS_KERNEL_VERSION "4.7.1"
 EOF
 printf 'key\n' > "$tmp/key"
 chmod 600 "$tmp/key"
@@ -34,14 +34,17 @@ cat > "$tmp/fake-bin/apk" <<'EOF'
 #!/bin/sh
 set -eu
 output=
+metadata=
 while [ "$#" -gt 0 ]; do
     case $1 in
         --output) output=$2; shift 2 ;;
+        --info) metadata="$metadata\n$2"; shift 2 ;;
         *) shift ;;
     esac
 done
 [ -n "$output" ]
 : > "$output"
+printf '%b\n' "$metadata" > "$output.metadata"
 EOF
 chmod 755 "$tmp/fake-bin/apk"
 
@@ -49,22 +52,27 @@ sh "$src/tools/build/rpr-apps.sh" "$tmp/src" "$tmp/out" "$tmp/build_info.h" \
     "$tmp/index" "$tmp/fake-bin/apk" "$tmp/key" "$tmp/repository" 123
 
 for app in helloworld doom oschinpt; do
-    test -f "$tmp/repository/leonos-$app-4.7.1-r123.apk"
-    test ! -e "$tmp/repository/leonos-$app.apk"
+    package="$tmp/repository/reliefos-$app-4.7.1-r123.apk"
+    test -f "$package"
+    test ! -e "$tmp/repository/reliefos-$app.apk"
+    grep -Fx "name:reliefos-$app" "$package.metadata"
+    grep -Fx "origin:reliefos-$app" "$package.metadata"
+    grep -F 'depends:reliefos-apps reliefos-musl' "$package.metadata"
+    grep -Fx "replaces:leonos-$app" "$package.metadata"
 done
 printf '%s\n' \
-    leonos-helloworld-4.7.1-r123.apk \
-    leonos-doom-4.7.1-r123.apk \
-    leonos-oschinpt-4.7.1-r123.apk > "$tmp/expected.list"
+    reliefos-helloworld-4.7.1-r123.apk \
+    reliefos-doom-4.7.1-r123.apk \
+    reliefos-oschinpt-4.7.1-r123.apk > "$tmp/expected.list"
 cmp "$tmp/expected.list" "$tmp/repository/packages.list"
 test "$(cat "$tmp/repository/.complete")" = 4.7.1
 
 # The Pages assembler must reject a versionless package before publication;
 # this protects every package source, including future RPR applications.
 mkdir -p "$tmp/pages-repository" "$tmp/pages-apps"
-printf package > "$tmp/pages-repository/leonos-base-1-r0.apk"
-printf package > "$tmp/pages-apps/leonos-broken.apk"
-printf leonos-broken.apk > "$tmp/pages-apps/packages.list"
+printf package > "$tmp/pages-repository/reliefos-base-1-r0.apk"
+printf package > "$tmp/pages-apps/reliefos-broken.apk"
+printf reliefos-broken.apk > "$tmp/pages-apps/packages.list"
 printf kernel > "$tmp/kernel.sys"
 printf loader > "$tmp/loader.elf"
 kernel_hash=$(sha256sum "$tmp/kernel.sys" | cut -d' ' -f1)
@@ -86,4 +94,20 @@ fi
 grep -q 'missing its version' "$tmp/pages-error"
 test ! -e "$tmp/pages-output"
 
-printf 'RPR package filenames and publication validation passed\n'
+# The old RPR public-key URL remains byte-identical for installed clients; the
+# canonical filename points at the same key during the package transition.
+rm "$tmp/pages-apps/reliefos-broken.apk" "$tmp/pages-apps/packages.list"
+printf 'app package\n' > "$tmp/pages-apps/reliefos-helloworld-1-r0.apk"
+sh "$src/tools/build/rpr-pages.sh" "$tmp/pages-repository" "$tmp/pages-apps" \
+    "$tmp/kernel.sys" "$tmp/loader.elf" "$tmp/pages-kernel/manifest.txt" \
+    "$tmp/pages-version" "$tmp/fake-bin/apk" "$tmp/pages-key" "$tmp/pages-output"
+cmp "$tmp/pages-output/apk/leonos-rpr.rsa.pub" "$tmp/pages-output/apk/reliefos-rpr.rsa.pub"
+grep -F '"public_key":"reliefos-rpr.rsa.pub"' "$tmp/pages-output/apk/repository.json"
+grep -F '"legacy_public_key":"leonos-rpr.rsa.pub"' "$tmp/pages-output/apk/repository.json"
+test -f "$tmp/pages-output/apk/reliefos-base-1-r0.apk"
+printf 'CONFIG_RPR_BASE_URL="https://reliefosproject.github.io/ReliefOS/rpr"\n' > "$tmp/rpr.conf"
+sh "$src/tools/build/rpr-config.sh" "$tmp/rpr.conf" > "$tmp/rpr.env"
+grep -Fx 'RPR_PUBLIC_KEY=reliefos-rpr.rsa.pub' "$tmp/rpr.env"
+grep -Fx 'RPR_BASE_URL=https://reliefosproject.github.io/ReliefOS/rpr' "$tmp/rpr.env"
+
+printf 'RPR package names, dual key trust and publication validation passed\n'

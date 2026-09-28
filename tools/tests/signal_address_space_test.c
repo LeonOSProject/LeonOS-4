@@ -3,14 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <ntclks/paging.h>
+#include <reliefnt/paging.h>
 /* Model the kernel direct map with host pointers to the destination pages. */
-#undef NTCLKS_KERNEL_DIRECT_MAP_BASE
-#define NTCLKS_KERNEL_DIRECT_MAP_BASE 0
-#include "../../kernel/ntclks/kernel/ntclks/signal.c"
-#include "../../kernel/ntclks/kernel/ntclks/signal_queue.c"
-#include "../../kernel/ntclks/kernel/exec/usercopy_task.c"
-#include "../../kernel/ntclks/kernel/ntclks/syscall_socket_batch.c"
+#undef RELIEFNT_KERNEL_DIRECT_MAP_BASE
+#define RELIEFNT_KERNEL_DIRECT_MAP_BASE 0
+#include "../../kernel/reliefnt/kernel/reliefnt/signal.c"
+#include "../../kernel/reliefnt/kernel/reliefnt/signal_queue.c"
+#include "../../kernel/reliefnt/kernel/exec/usercopy_task.c"
+#include "../../kernel/reliefnt/kernel/reliefnt/syscall_socket_batch.c"
 
 #define STACK_ADDRESS 0x0f400000ULL
 static unsigned char target_pages[8192] __attribute__((aligned(4096)));

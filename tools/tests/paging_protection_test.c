@@ -5,7 +5,7 @@
 
 /* Exercise the real page-table implementation; only physical allocation and
  * privileged CPU operations are replaced by host fixtures. */
-#include "../../kernel/ntclks/arch/x86_64/paging.c"
+#include "../../kernel/reliefnt/arch/x86_64/paging.c"
 
 static struct { uint64_t address; unsigned refs; } pages[1024];
 
@@ -50,22 +50,22 @@ void x86_64_invlpg(uint64_t p) { (void)p; }
 int main(void)
 {
     struct address_space parent = {0}, child = {0};
-    const uint64_t va = NTCLKS_USER_BASE;
+    const uint64_t va = RELIEFNT_USER_BASE;
     nx_enabled = true;
     assert(address_space_create(&parent));
     uint64_t backing = mm_alloc_page();
     *(unsigned char *)(uintptr_t)backing = 42;
     assert(address_space_map_user_page(&parent, va, backing,
-                                      NTCLKS_PAGE_NOEXEC | NTCLKS_PAGE_PROTNONE));
+                                      RELIEFNT_PAGE_NOEXEC | RELIEFNT_PAGE_PROTNONE));
     assert(address_space_user_page_phys(&parent, va) == backing);
     assert(!address_space_user_page_readable(&parent, va));
     assert(!address_space_user_page_writable(&parent, va));
     assert(!address_space_handle_cow_fault(&parent, va));
-    assert(!address_space_map_user_page(&parent, va, backing, NTCLKS_PAGE_NOEXEC));
+    assert(!address_space_map_user_page(&parent, va, backing, RELIEFNT_PAGE_NOEXEC));
     assert(address_space_user_resident_kib(&parent) == 4);
     uint64_t device = mm_alloc_page();
     assert(address_space_map_user_page(&parent, va + 4096, device,
-                                      NTCLKS_PAGE_DEVICE | NTCLKS_PAGE_NOEXEC));
+                                      RELIEFNT_PAGE_DEVICE | RELIEFNT_PAGE_NOEXEC));
     assert(address_space_user_resident_kib(&parent) == 4);
     assert(address_space_unmap_user_page(&parent, va + 4096) == device);
     mm_free_page(device);
@@ -73,18 +73,18 @@ int main(void)
     assert(child.user_page_count == 1);
     assert(!address_space_user_page_readable(&child, va));
     assert(address_space_protect_user_page(&child, va,
-                                          NTCLKS_PAGE_WRITABLE | NTCLKS_PAGE_NOEXEC));
+                                          RELIEFNT_PAGE_WRITABLE | RELIEFNT_PAGE_NOEXEC));
     assert(address_space_user_page_readable(&child, va));
     assert(address_space_handle_cow_fault(&child, va));
     uint64_t private_page = address_space_user_page_phys(&child, va);
     assert(private_page != backing && *(unsigned char *)(uintptr_t)private_page == 42);
     *(unsigned char *)(uintptr_t)private_page = 17;
     assert(*(unsigned char *)(uintptr_t)backing == 42);
-    assert(address_space_protect_user_page(&child, va, NTCLKS_PAGE_NOEXEC));
+    assert(address_space_protect_user_page(&child, va, RELIEFNT_PAGE_NOEXEC));
     assert(!address_space_handle_cow_fault(&child, va));
     assert(!address_space_user_page_writable(&child, va));
     assert(address_space_protect_user_page(&child, va,
-                                          NTCLKS_PAGE_NOEXEC | NTCLKS_PAGE_PROTNONE));
+                                          RELIEFNT_PAGE_NOEXEC | RELIEFNT_PAGE_PROTNONE));
     assert(!address_space_user_page_readable(&child, va));
     assert(address_space_unmap_user_page(&child, va) == private_page);
     mm_free_page(private_page);
@@ -95,17 +95,17 @@ int main(void)
     assert(address_space_create(&parent));
     backing = mm_alloc_page();
     assert(address_space_map_user_page(&parent, va, backing,
-                                      NTCLKS_PAGE_NOEXEC | NTCLKS_PAGE_PROTNONE |
-                                      NTCLKS_PAGE_SHARED));
+                                      RELIEFNT_PAGE_NOEXEC | RELIEFNT_PAGE_PROTNONE |
+                                      RELIEFNT_PAGE_SHARED));
     assert(address_space_clone_cow(&parent, &child));
     assert(address_space_protect_user_page(&child, va,
-                                          NTCLKS_PAGE_WRITABLE | NTCLKS_PAGE_NOEXEC));
+                                          RELIEFNT_PAGE_WRITABLE | RELIEFNT_PAGE_NOEXEC));
     assert(address_space_user_page_writable(&child, va));
     assert(!address_space_handle_cow_fault(&child, va));
     assert(address_space_user_page_phys(&child, va) == backing);
     *(unsigned char *)(uintptr_t)backing = 61;
     assert(address_space_protect_user_page(&parent, va,
-                                          NTCLKS_PAGE_WRITABLE | NTCLKS_PAGE_NOEXEC));
+                                          RELIEFNT_PAGE_WRITABLE | RELIEFNT_PAGE_NOEXEC));
     assert(address_space_user_page_writable(&parent, va));
     assert(*(unsigned char *)(uintptr_t)address_space_user_page_phys(&parent, va) == 61);
     address_space_destroy(&parent);

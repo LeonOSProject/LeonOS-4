@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include <ntclks/paging.h>
+#include <reliefnt/paging.h>
 
 /* Regression fixture for the Alpine Clang dynamic-link failure.
  *
@@ -10,7 +10,7 @@
  * mmap (map_library in third_party/musl/ldso/dynlink.c), so a program's
  * resident set of file mappings has to fit in the kernel's read-only file mmap
  * arena.  Clang's libLLVM.so.22.1 alone needs a 183 MiB span and its complete
- * DT_NEEDED closure needs 278 MiB.  Before NTCLKS_USER_TOP moved to 768 MiB the
+ * DT_NEEDED closure needs 278 MiB.  Before RELIEFNT_USER_TOP moved to 768 MiB the
  * arena was 255 MiB, mmap returned ENOMEM, and every LLVM symbol afterwards
  * failed to resolve.
  *
@@ -30,22 +30,22 @@
  * window is the highest address the file-mmap scanner will consider. */
 static uint64_t mmap_top(void)
 {
-    return NTCLKS_USER_TOP - PAGE_BYTES -
-           (uint64_t)NTCLKS_USER_STACK_MAX_PAGES * PAGE_BYTES - PAGE_BYTES;
+    return RELIEFNT_USER_TOP - PAGE_BYTES -
+           (uint64_t)RELIEFNT_USER_STACK_MAX_PAGES * PAGE_BYTES - PAGE_BYTES;
 }
 
 static uint64_t mmap_arena(void)
 {
-    return mmap_top() - NTCLKS_KERNEL_HOLE_END;
+    return mmap_top() - RELIEFNT_KERNEL_HOLE_END;
 }
 
 int main(void)
 {
     const uint64_t arena = mmap_arena();
 
-    if (NTCLKS_USER_PD_START + NTCLKS_USER_PD_COUNT > 512u) {
+    if (RELIEFNT_USER_PD_START + RELIEFNT_USER_PD_COUNT > 512u) {
         printf("FAIL user window out of one page directory: %u entries\n",
-               (unsigned)(NTCLKS_USER_PD_START + NTCLKS_USER_PD_COUNT));
+               (unsigned)(RELIEFNT_USER_PD_START + RELIEFNT_USER_PD_COUNT));
         return 1;
     }
     if (arena < LARGEST_OBJECT_SPAN) {

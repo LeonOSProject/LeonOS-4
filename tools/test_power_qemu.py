@@ -112,7 +112,8 @@ def desktop_power(probe, serial, process, action):
     else:
         assert event["data"]["reason"] == "guest-reset"
         deadline = time.monotonic() + 90
-        while serial.read_text(errors="replace").count("[ntclks] boot complete:") < 2:
+        while sum(serial.read_text(errors="replace").count(marker)
+                  for marker in ("[reliefnt] boot complete:", "[ntclks] boot complete:")) < 2:
             assert time.monotonic() < deadline, "Reset did not reach a second kernel boot"
             assert process.poll() is None
             time.sleep(0.2)
@@ -155,7 +156,8 @@ def complete_installer_power(probe, serial, process):
     assert "restart requested from completion page" in serial.read_text(errors="replace")
     wait_log(serial, "[oobe.elf] starting first-run", process, 90)
     text = serial.read_text(errors="replace")
-    assert text.count("[ntclks] boot complete:") >= 2
+    assert sum(text.count(marker)
+               for marker in ("[reliefnt] boot complete:", "[ntclks] boot complete:")) >= 2
     assert "fs=ext2 desktop=desktop.elf" in text
     time.sleep(8)
     probe.frame("installed-disk-rebooted")
@@ -175,7 +177,7 @@ def main():
     serial, qmp = out / "serial.log", out / "qmp.sock"
     qmp.unlink(missing_ok=True)
     is_installer = args.case == "installer-reboot"
-    iso = args.iso or ROOT / "build/images" / ("leonos4-installer.iso" if is_installer else "leonos4.iso")
+    iso = args.iso or ROOT / "build/images" / ("reliefos-installer.iso" if is_installer else "reliefos-live.iso")
     command = ["qemu-system-x86_64", "-enable-kvm", "-cpu", "host", "-machine", "q35",
                "-m", "4096", "-smp", "2", "-display", "none", "-serial", f"file:{serial}",
                "-device", "VGA,xres=1280,yres=720", "-device", "qemu-xhci", "-device", "usb-tablet",

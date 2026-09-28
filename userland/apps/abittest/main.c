@@ -2,7 +2,7 @@
  * hangup and evdev EVIOCGRAB/capability queries. */
 #include <errno.h>
 #include <fcntl.h>
-#include <leonos/syscall.h>
+#include <reliefos/syscall.h>
 #include <linux/input.h>
 #include <poll.h>
 #include <pty.h>

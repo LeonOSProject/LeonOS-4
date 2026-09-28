@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inventory and optionally reject LeonOS-private ABI use.
+"""Inventory and optionally reject ReliefOS-private ABI use.
 
 The migration is intentionally staged: the default mode emits a deterministic
 inventory so existing consumers can be migrated without breaking the image.
@@ -78,7 +78,7 @@ def scan() -> dict[str, set[str]]:
 def write_report(path: Path, uses: dict[str, set[str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = [
-        "# Generated LeonOS private ABI inventory",
+        "# Generated ReliefOS private ABI inventory",
         "# Do not edit; regenerate with tools/check_abi_migration.py.",
         "",
     ]

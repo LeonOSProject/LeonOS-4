@@ -1,19 +1,19 @@
 /* windowd: userspace window registry and input-routing daemon.
  * SO_PEERCRED is the connection trust boundary.
  *
- * Apps open /run/leonos/windowd.sock through libwind and exchange window
+ * Apps open /run/reliefos/windowd.sock through libwind and exchange window
  * metadata/events over AF_UNIX; pixel buffers are /dev/shm0 segments passed
  * with SCM_RIGHTS. Desktop remains the shell renderer and connects with the
  * policy handshake below. */
 #include <errno.h>
 #include <fcntl.h>
-#include <leonos/device.h>
-#include <leonos/fs.h>
-#include <leonos/gui.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/unix_ipc.h>
-#include <leonos/windowd.h>
+#include <reliefos/device.h>
+#include <reliefos/fs.h>
+#include <reliefos/gui.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/unix_ipc.h>
+#include <reliefos/windowd.h>
 #include <linux/input.h>
 #include <linux/vt.h>
 #include <linux/kd.h>
@@ -54,7 +54,7 @@ struct windowd_window {
     void *mapping;
     char title[48];
     char text[1024];
-    char app_path[LEONOS_FS_PATH_LEN];
+    char app_path[RELIEFOS_FS_PATH_LEN];
 };
 
 static struct windowd_client clients[WINDOWD_MAX_CLIENTS];
@@ -63,10 +63,10 @@ static uint32_t next_window_id = 1u;
 static int policy_slot = -1;
 static uint32_t mouse_visible = 1u;
 static uint8_t mouse_visibility_pending;
-static struct leonos_display_state display_state;
-static struct leonos_appearance_state appearance_state = {
+static struct reliefos_display_state display_state;
+static struct reliefos_appearance_state appearance_state = {
     .theme = 1u,
-    .wallpaper_mode = LEONOS_WALLPAPER_MODE_FILL,
+    .wallpaper_mode = RELIEFOS_WALLPAPER_MODE_FILL,
 };
 static int keyboard_fd = -1;
 static int mouse_fd = -1;
@@ -140,7 +140,7 @@ static struct windowd_window *find_window(uint32_t window_id)
 static void close_client(int slot)
 {
     if (slot < 0 || slot >= (int)WINDOWD_MAX_CLIENTS || !clients[slot].used) return;
-    leonos_ipc_close(clients[slot].fd);
+    reliefos_ipc_close(clients[slot].fd);
     memset(&clients[slot], 0, sizeof(clients[slot]));
     clients[slot].fd = -1;
     if (policy_slot == slot) policy_slot = -1;
@@ -158,15 +158,15 @@ static void release_window(struct windowd_window *window)
 static int send_to_policy(uint32_t type, const void *payload, uint32_t length)
 {
     if (policy_slot < 0) return -1;
-    return leonos_ipc_send(clients[policy_slot].fd, type, payload, length);
+    return reliefos_ipc_send(clients[policy_slot].fd, type, payload, length);
 }
 
-static void notify_window_msg(struct leonos_gui_window_msg *message)
+static void notify_window_msg(struct reliefos_gui_window_msg *message)
 {
-    (void)send_to_policy(LEONOS_WIN_MSG_WINDOW_NOTIFY, message, sizeof(*message));
+    (void)send_to_policy(RELIEFOS_WIN_MSG_WINDOW_NOTIFY, message, sizeof(*message));
 }
 
-static void window_msg_from_window(struct leonos_gui_window_msg *message,
+static void window_msg_from_window(struct reliefos_gui_window_msg *message,
                                    uint32_t type, const struct windowd_window *window)
 {
     memset(message, 0, sizeof(*message));
@@ -185,10 +185,10 @@ static void window_msg_from_window(struct leonos_gui_window_msg *message,
 
 static int announce_window(struct windowd_window *window)
 {
-    struct leonos_gui_window_msg message;
+    struct reliefos_gui_window_msg message;
     if (!window->announce_pending) return 0;
     window_msg_from_window(&message, 1u, window);
-    if (send_to_policy(LEONOS_WIN_MSG_WINDOW_NOTIFY, &message, sizeof(message)) < 0)
+    if (send_to_policy(RELIEFOS_WIN_MSG_WINDOW_NOTIFY, &message, sizeof(message)) < 0)
         return -1;
     window->announce_pending = 0;
     return 0;
@@ -196,26 +196,26 @@ static int announce_window(struct windowd_window *window)
 
 static void notify_present(struct windowd_window *window)
 {
-    struct leonos_gui_window_msg message;
+    struct reliefos_gui_window_msg message;
     if (announce_window(window) < 0) return;
     window_msg_from_window(&message, 2u, window);
-    message.data = window->surface_changed ? LEONOS_WIN_SURFACE_REPLACED : 0;
-    if (send_to_policy(LEONOS_WIN_MSG_WINDOW_NOTIFY, &message, sizeof(message)) == 0)
+    message.data = window->surface_changed ? RELIEFOS_WIN_SURFACE_REPLACED : 0;
+    if (send_to_policy(RELIEFOS_WIN_MSG_WINDOW_NOTIFY, &message, sizeof(message)) == 0)
         window->surface_changed = 0;
 }
 
 static int replace_window_buffer(struct windowd_client *client,
-                                  const struct leonos_win_buffer *request, int fd)
+                                  const struct reliefos_win_buffer *request, int fd)
 {
     struct windowd_window *window = find_window(request->window_id);
     struct stat st;
     uint64_t bytes = (uint64_t)request->stride * request->height;
     void *mapping;
-    if (!window || window->owner_pid != client->pid || client->role != LEONOS_WIN_ROLE_APP)
+    if (!window || window->owner_pid != client->pid || client->role != RELIEFOS_WIN_ROLE_APP)
         return -EPERM;
     if (fd < 0 || !request->width || !request->height ||
-        request->width > LEONOS_GUI_MAX_WINDOW_WIDTH ||
-        request->height > LEONOS_GUI_MAX_WINDOW_HEIGHT ||
+        request->width > RELIEFOS_GUI_MAX_WINDOW_WIDTH ||
+        request->height > RELIEFOS_GUI_MAX_WINDOW_HEIGHT ||
         request->stride != request->width * 4u || bytes > WINDOWD_MAX_BYTES)
         return -EINVAL;
     if (fstat(fd, &st) < 0) return -errno;
@@ -241,7 +241,7 @@ static void window_read_app_path(struct windowd_window *window)
 {
     char path[48];
     snprintf(path, sizeof(path), "/proc/%u/cmdline", window->owner_pid);
-    int fd = open(path, LEONOS_O_RDONLY, 0);
+    int fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) return;
     /* procfs exposes the kernel's executable path for the authenticated peer. */
     ssize_t length = read(fd, window->app_path, sizeof(window->app_path) - 1u);
@@ -253,14 +253,14 @@ static void window_read_app_path(struct windowd_window *window)
 }
 
 static int create_window(struct windowd_client *client,
-                         const struct leonos_win_create *request)
+                         const struct reliefos_win_create *request)
 {
     struct windowd_window *window = 0;
-    struct leonos_win_create_ack ack;
+    struct reliefos_win_create_ack ack;
     uint64_t bytes;
     if (!client || !request || !request->width || !request->height ||
-        request->width > LEONOS_GUI_MAX_WINDOW_WIDTH ||
-        request->height > LEONOS_GUI_MAX_WINDOW_HEIGHT) {
+        request->width > RELIEFOS_GUI_MAX_WINDOW_WIDTH ||
+        request->height > RELIEFOS_GUI_MAX_WINDOW_HEIGHT) {
         printf("[windowd.elf] create reject: bad geometry %ux%u\n",
                request ? request->width : 0, request ? request->height : 0);
         return -1;
@@ -290,7 +290,7 @@ static int create_window(struct windowd_client *client,
     window->bytes = bytes;
     copy_text(window->title, sizeof(window->title), request->title);
     copy_text(window->text, sizeof(window->text), request->text);
-    window->shm_fd = open(LEONOS_DEV_SHM0, LEONOS_O_RDWR, 0);
+    window->shm_fd = open(RELIEFOS_DEV_SHM0, RELIEFOS_O_RDWR, 0);
     if (window->shm_fd < 0 || ftruncate(window->shm_fd, (long)bytes) < 0) {
         printf("[windowd.elf] create fail: shm open/ftruncate errno=%d bytes=%llu\n",
                errno, (unsigned long long)bytes);
@@ -309,7 +309,7 @@ static int create_window(struct windowd_client *client,
     ack.width = window->width;
     ack.height = window->height;
     ack.stride = window->stride;
-    if (leonos_ipc_send_fd(client->fd, LEONOS_WIN_MSG_CREATE_ACK, &ack,
+    if (reliefos_ipc_send_fd(client->fd, RELIEFOS_WIN_MSG_CREATE_ACK, &ack,
                            sizeof(ack), window->shm_fd) < 0) {
         printf("[windowd.elf] create fail: ack send errno=%d\n", errno);
         release_window(window);
@@ -343,10 +343,10 @@ static uint16_t evdev_to_legacy_keycode(uint16_t code)
     }
 }
 
-static void send_input_event(const struct leonos_input_event *event)
+static void send_input_event(const struct reliefos_input_event *event)
 {
     if (windowd_vt_active())
-        (void)send_to_policy(LEONOS_WIN_MSG_INPUT, event, sizeof(*event));
+        (void)send_to_policy(RELIEFOS_WIN_MSG_INPUT, event, sizeof(*event));
 }
 
 static void pump_input_device(int fd, uint32_t type)
@@ -354,20 +354,20 @@ static void pump_input_device(int fd, uint32_t type)
     static uint8_t keyboard_modifiers;
     for (uint32_t budget = 0; budget < 256u; ++budget) {
         struct input_event event;
-        struct leonos_input_event out;
+        struct reliefos_input_event out;
         long got = syscall3(SYS_read, fd, (long)&event, (long)sizeof(event));
         if (got != (long)sizeof(event)) break;
         memset(&out, 0, sizeof(out));
-        if (type == LEONOS_INPUT_KEYBOARD && event.type == EV_LED && event.code == LED_CAPSL) {
-            if (event.value) keyboard_modifiers |= LEONOS_INPUT_MOD_CAPS_LOCK;
-            else keyboard_modifiers &= (uint8_t)~LEONOS_INPUT_MOD_CAPS_LOCK;
-        } else if (type == LEONOS_INPUT_KEYBOARD && event.type == EV_KEY) {
-            out.type = LEONOS_INPUT_KEYBOARD;
+        if (type == RELIEFOS_INPUT_KEYBOARD && event.type == EV_LED && event.code == LED_CAPSL) {
+            if (event.value) keyboard_modifiers |= RELIEFOS_INPUT_MOD_CAPS_LOCK;
+            else keyboard_modifiers &= (uint8_t)~RELIEFOS_INPUT_MOD_CAPS_LOCK;
+        } else if (type == RELIEFOS_INPUT_KEYBOARD && event.type == EV_KEY) {
+            out.type = RELIEFOS_INPUT_KEYBOARD;
             out.keycode = (uint8_t)evdev_to_legacy_keycode(event.code);
             out.pressed = event.value ? 1 : 0;
             out.modifiers = keyboard_modifiers;
             send_input_event(&out);
-        } else if (type == LEONOS_INPUT_MOUSE) {
+        } else if (type == RELIEFOS_INPUT_MOUSE) {
             if (event.type == EV_REL && event.code == REL_X) {
                 cursor_x += event.value;
                 cursor_pending = 1;
@@ -403,11 +403,11 @@ static void pump_input_device(int fd, uint32_t type)
                 out.y = cursor_y;
                 out.buttons = cursor_buttons;
                 if (cursor_pending) {
-                    out.type = LEONOS_INPUT_MOUSE;
+                    out.type = RELIEFOS_INPUT_MOUSE;
                     send_input_event(&out);
                 }
                 if (cursor_wheel) {
-                    out.type = LEONOS_INPUT_MOUSE_WHEEL;
+                    out.type = RELIEFOS_INPUT_MOUSE_WHEEL;
                     out.dy = cursor_wheel;
                     send_input_event(&out);
                 }
@@ -428,53 +428,53 @@ static void handle_client(int slot)
         int received_fd = -1;
         struct pollfd descriptor = {.fd = client->fd, .events = POLLIN, .revents = 0};
         if (poll(&descriptor, 1, 0) <= 0) return;
-        if (leonos_ipc_recv_fd(client->fd, &type, buffer, sizeof(buffer),
+        if (reliefos_ipc_recv_fd(client->fd, &type, buffer, sizeof(buffer),
                                &length, &received_fd) < 0) {
             if (errno == EAGAIN) return;
             close_client(slot);
             return;
         }
-        if (type == LEONOS_WIN_MSG_BUFFER) {
-            struct leonos_win_buffer request;
+        if (type == RELIEFOS_WIN_MSG_BUFFER) {
+            struct reliefos_win_buffer request;
             int result = -EINVAL;
             if (length == sizeof(request)) {
                 memcpy(&request, buffer, sizeof(request));
                 result = replace_window_buffer(client, &request, received_fd);
             }
             if (result < 0) {
-                struct leonos_win_error error = {.code = result};
+                struct reliefos_win_error error = {.code = result};
                 if (received_fd >= 0) close(received_fd);
-                (void)leonos_ipc_send(client->fd, LEONOS_WIN_MSG_ERROR, &error, sizeof(error));
+                (void)reliefos_ipc_send(client->fd, RELIEFOS_WIN_MSG_ERROR, &error, sizeof(error));
             } else {
-                (void)leonos_ipc_send(client->fd, LEONOS_WIN_MSG_BUFFER_ACK, &request, sizeof(request));
+                (void)reliefos_ipc_send(client->fd, RELIEFOS_WIN_MSG_BUFFER_ACK, &request, sizeof(request));
                 notify_present(find_window(request.window_id));
             }
             continue;
         }
         if (received_fd >= 0) close(received_fd);
-        if (type == LEONOS_WIN_MSG_HELLO) {
-            struct leonos_win_hello hello;
-            struct leonos_win_hello_ack ack = {.version = 1};
+        if (type == RELIEFOS_WIN_MSG_HELLO) {
+            struct reliefos_win_hello hello;
+            struct reliefos_win_hello_ack ack = {.version = 1};
             if (length < sizeof(hello)) { close_client(slot); return; }
             memcpy(&hello, buffer, sizeof(hello));
             if (hello.pid != client->pid) { close_client(slot); return; }
-            client->role = LEONOS_WIN_ROLE_APP;
-            (void)leonos_ipc_send(client->fd, LEONOS_WIN_MSG_HELLO_ACK,
+            client->role = RELIEFOS_WIN_ROLE_APP;
+            (void)reliefos_ipc_send(client->fd, RELIEFOS_WIN_MSG_HELLO_ACK,
                                   &ack, sizeof(ack));
             continue;
         }
-        if (type == LEONOS_WIN_MSG_POLICY_HELLO) {
-            struct leonos_win_policy_hello hello;
-            struct leonos_win_hello_ack ack = {.version = 1};
+        if (type == RELIEFOS_WIN_MSG_POLICY_HELLO) {
+            struct reliefos_win_policy_hello hello;
+            struct reliefos_win_hello_ack ack = {.version = 1};
             if (length < sizeof(hello)) { close_client(slot); return; }
             memcpy(&hello, buffer, sizeof(hello));
-            if (client->uid != 0 || !text_eq(hello.token, LEONOS_WIN_POLICY_TOKEN) ||
+            if (client->uid != 0 || !text_eq(hello.token, RELIEFOS_WIN_POLICY_TOKEN) ||
                 hello.pid != client->pid) { close_client(slot); return; }
             if (policy_slot >= 0) { close_client(slot); return; }
-            client->role = LEONOS_WIN_ROLE_POLICY;
+            client->role = RELIEFOS_WIN_ROLE_POLICY;
             policy_slot = slot;
             mouse_visibility_pending = 1;
-            (void)leonos_ipc_send(client->fd, LEONOS_WIN_MSG_HELLO_ACK,
+            (void)reliefos_ipc_send(client->fd, RELIEFOS_WIN_MSG_HELLO_ACK,
                                   &ack, sizeof(ack));
             /* Applications can create windows before the desktop finishes its
              * policy handshake; those type-1 WINDOW_NOTIFY frames were dropped
@@ -487,9 +487,9 @@ static void handle_client(int slot)
             }
             continue;
         }
-        if (type == LEONOS_WIN_MSG_CREATE) {
-            struct leonos_win_create request;
-            if (length < sizeof(request) || client->role != LEONOS_WIN_ROLE_APP) {
+        if (type == RELIEFOS_WIN_MSG_CREATE) {
+            struct reliefos_win_create request;
+            if (length < sizeof(request) || client->role != RELIEFOS_WIN_ROLE_APP) {
                 printf("[windowd.elf] create reject: role=%u length=%u\n",
                        client->role, length);
                 continue;
@@ -501,10 +501,10 @@ static void handle_client(int slot)
             }
             continue;
         }
-        if (type == LEONOS_WIN_MSG_DESTROY) {
-            struct leonos_win_destroy request;
+        if (type == RELIEFOS_WIN_MSG_DESTROY) {
+            struct reliefos_win_destroy request;
             struct windowd_window *window;
-            struct leonos_gui_window_msg message;
+            struct reliefos_gui_window_msg message;
             if (length < sizeof(request)) continue;
             memcpy(&request, buffer, sizeof(request));
             window = find_window(request.window_id);
@@ -515,8 +515,8 @@ static void handle_client(int slot)
             }
             continue;
         }
-        if (type == LEONOS_WIN_MSG_PRESENT) {
-            struct leonos_win_present request;
+        if (type == RELIEFOS_WIN_MSG_PRESENT) {
+            struct reliefos_win_present request;
             struct windowd_window *window;
             if (length < sizeof(request)) continue;
             memcpy(&request, buffer, sizeof(request));
@@ -526,40 +526,40 @@ static void handle_client(int slot)
             }
             continue;
         }
-        if (type == LEONOS_WIN_MSG_UPDATE) {
-            struct leonos_win_update request;
+        if (type == RELIEFOS_WIN_MSG_UPDATE) {
+            struct reliefos_win_update request;
             struct windowd_window *window;
-            struct leonos_gui_window_msg message;
+            struct reliefos_gui_window_msg message;
             if (length < sizeof(request)) continue;
             memcpy(&request, buffer, sizeof(request));
             window = find_window(request.window_id);
             if (window && window->owner_pid == client->pid) {
-                if (request.mask & LEONOS_GUI_WINDOW_UPDATE_TITLE) {
+                if (request.mask & RELIEFOS_GUI_WINDOW_UPDATE_TITLE) {
                     copy_text(window->title, sizeof(window->title), request.title);
                 }
-                if (request.mask & (LEONOS_GUI_WINDOW_UPDATE_BORDERLESS |
-                                    LEONOS_GUI_WINDOW_UPDATE_TASKBAR)) {
-                    window->flags &= ~(LEONOS_GUI_WINDOW_BORDERLESS |
-                                       LEONOS_GUI_WINDOW_HIDE_TASKBAR);
-                    window->flags |= request.flags & (LEONOS_GUI_WINDOW_BORDERLESS |
-                                                      LEONOS_GUI_WINDOW_HIDE_TASKBAR);
+                if (request.mask & (RELIEFOS_GUI_WINDOW_UPDATE_BORDERLESS |
+                                    RELIEFOS_GUI_WINDOW_UPDATE_TASKBAR)) {
+                    window->flags &= ~(RELIEFOS_GUI_WINDOW_BORDERLESS |
+                                       RELIEFOS_GUI_WINDOW_HIDE_TASKBAR);
+                    window->flags |= request.flags & (RELIEFOS_GUI_WINDOW_BORDERLESS |
+                                                      RELIEFOS_GUI_WINDOW_HIDE_TASKBAR);
                 }
                 window_msg_from_window(&message, 4u, window);
                 notify_window_msg(&message);
             }
             continue;
         }
-        if (type == LEONOS_WIN_MSG_FETCH) {
-            struct leonos_win_fetch request;
+        if (type == RELIEFOS_WIN_MSG_FETCH) {
+            struct reliefos_win_fetch request;
             struct windowd_window *window;
-            struct leonos_win_fetch_ack ack;
-            if (client->role != LEONOS_WIN_ROLE_POLICY || length < sizeof(request)) continue;
+            struct reliefos_win_fetch_ack ack;
+            if (client->role != RELIEFOS_WIN_ROLE_POLICY || length < sizeof(request)) continue;
             memcpy(&request, buffer, sizeof(request));
             window = find_window(request.window_id);
             if (!window) {
                 /* Destruction can race the policy client's pending repaint. */
-                struct leonos_win_error error = {.code = -ENOENT};
-                (void)leonos_ipc_send(client->fd, LEONOS_WIN_MSG_ERROR,
+                struct reliefos_win_error error = {.code = -ENOENT};
+                (void)reliefos_ipc_send(client->fd, RELIEFOS_WIN_MSG_ERROR,
                                       &error, sizeof(error));
                 continue;
             }
@@ -567,29 +567,29 @@ static void handle_client(int slot)
             ack.width = window->width;
             ack.height = window->height;
             ack.stride = window->stride;
-            (void)leonos_ipc_send_fd(client->fd, LEONOS_WIN_MSG_FETCH_ACK,
+            (void)reliefos_ipc_send_fd(client->fd, RELIEFOS_WIN_MSG_FETCH_ACK,
                                      &ack, sizeof(ack), window->shm_fd);
             continue;
         }
-        if (type == LEONOS_WIN_MSG_EVENT) {
-            struct leonos_gui_app_event event;
+        if (type == RELIEFOS_WIN_MSG_EVENT) {
+            struct reliefos_gui_app_event event;
             int target;
-            if (client->role != LEONOS_WIN_ROLE_POLICY || length < sizeof(event)) continue;
+            if (client->role != RELIEFOS_WIN_ROLE_POLICY || length < sizeof(event)) continue;
             memcpy(&event, buffer, sizeof(event));
             target = client_slot_by_window(event.window_id);
             if (target >= 0) {
-                (void)leonos_ipc_send(clients[target].fd, LEONOS_WIN_MSG_EVENT,
+                (void)reliefos_ipc_send(clients[target].fd, RELIEFOS_WIN_MSG_EVENT,
                                       &event, sizeof(event));
             }
             continue;
         }
-        if (type == LEONOS_WIN_MSG_MOUSE_VISIBLE) {
-            struct leonos_win_mouse_visible request;
+        if (type == RELIEFOS_WIN_MSG_MOUSE_VISIBLE) {
+            struct reliefos_win_mouse_visible request;
             if (length < sizeof(request)) continue;
             memcpy(&request, buffer, sizeof(request));
             if (request.window_id == 0xffffffffu) {
                 request.visible = mouse_visible;
-                (void)leonos_ipc_send(client->fd, LEONOS_WIN_MSG_MOUSE_VISIBLE,
+                (void)reliefos_ipc_send(client->fd, RELIEFOS_WIN_MSG_MOUSE_VISIBLE,
                                       &request, sizeof(request));
             } else {
                 mouse_visible = request.visible ? 1u : 0u;
@@ -597,9 +597,9 @@ static void handle_client(int slot)
             }
             continue;
         }
-        if (type == LEONOS_WIN_MSG_CURSOR_REQUEST) {
-            struct leonos_gui_cursor_request request;
-            struct leonos_gui_window_msg message;
+        if (type == RELIEFOS_WIN_MSG_CURSOR_REQUEST) {
+            struct reliefos_gui_cursor_request request;
+            struct reliefos_gui_window_msg message;
             if (length < sizeof(request)) continue;
             memcpy(&request, buffer, sizeof(request));
             memset(&message, 0, sizeof(message));
@@ -612,13 +612,13 @@ static void handle_client(int slot)
             notify_window_msg(&message);
             continue;
         }
-        if (type == LEONOS_WIN_MSG_CURSOR_REGION) {
-            struct leonos_gui_cursor_region_request request;
-            struct leonos_gui_window_msg message;
+        if (type == RELIEFOS_WIN_MSG_CURSOR_REGION) {
+            struct reliefos_gui_cursor_region_request request;
+            struct reliefos_gui_window_msg message;
             if (length < sizeof(request)) continue;
             memcpy(&request, buffer, sizeof(request));
             memset(&message, 0, sizeof(message));
-            message.type = LEONOS_GUI_WINDOW_MSG_CURSOR_REGION;
+            message.type = RELIEFOS_GUI_WINDOW_MSG_CURSOR_REGION;
             message.window_id = request.window_id;
             message.cursor_region_id = request.region_id;
             message.cursor_x = request.x;
@@ -631,10 +631,10 @@ static void handle_client(int slot)
             notify_window_msg(&message);
             continue;
         }
-        if (type == LEONOS_WIN_MSG_TASKBAR) {
-            struct leonos_win_taskbar request;
-            struct leonos_gui_window_msg message;
-            if (length < sizeof(request) || client->role != LEONOS_WIN_ROLE_POLICY) continue;
+        if (type == RELIEFOS_WIN_MSG_TASKBAR) {
+            struct reliefos_win_taskbar request;
+            struct reliefos_gui_window_msg message;
+            if (length < sizeof(request) || client->role != RELIEFOS_WIN_ROLE_POLICY) continue;
             memcpy(&request, buffer, sizeof(request));
             memset(&message, 0, sizeof(message));
             message.type = 5u;
@@ -643,27 +643,27 @@ static void handle_client(int slot)
             notify_window_msg(&message);
             continue;
         }
-        if (type == LEONOS_WIN_MSG_DISPLAY_STATE) {
+        if (type == RELIEFOS_WIN_MSG_DISPLAY_STATE) {
             if (length == 0) {
-                (void)leonos_ipc_send(client->fd, LEONOS_WIN_MSG_DISPLAY_STATE,
+                (void)reliefos_ipc_send(client->fd, RELIEFOS_WIN_MSG_DISPLAY_STATE,
                                       &display_state, sizeof(display_state));
-            } else if (client->role == LEONOS_WIN_ROLE_POLICY && length >= sizeof(display_state)) {
+            } else if (client->role == RELIEFOS_WIN_ROLE_POLICY && length >= sizeof(display_state)) {
                 memcpy(&display_state, buffer, sizeof(display_state));
             }
             continue;
         }
-        if (type == LEONOS_WIN_MSG_APPEARANCE_STATE) {
+        if (type == RELIEFOS_WIN_MSG_APPEARANCE_STATE) {
             if (length == 0) {
-                (void)leonos_ipc_send(client->fd, LEONOS_WIN_MSG_APPEARANCE_STATE,
+                (void)reliefos_ipc_send(client->fd, RELIEFOS_WIN_MSG_APPEARANCE_STATE,
                                       &appearance_state, sizeof(appearance_state));
-            } else if (client->role == LEONOS_WIN_ROLE_POLICY && length >= sizeof(appearance_state)) {
+            } else if (client->role == RELIEFOS_WIN_ROLE_POLICY && length >= sizeof(appearance_state)) {
                 memcpy(&appearance_state, buffer, sizeof(appearance_state));
             }
             continue;
         }
-        if (type == LEONOS_WIN_MSG_DISPLAY_REQUEST ||
-            type == LEONOS_WIN_MSG_APPEARANCE_REQUEST) {
-            if (client->role == LEONOS_WIN_ROLE_APP && length > 0) {
+        if (type == RELIEFOS_WIN_MSG_DISPLAY_REQUEST ||
+            type == RELIEFOS_WIN_MSG_APPEARANCE_REQUEST) {
+            if (client->role == RELIEFOS_WIN_ROLE_APP && length > 0) {
                 (void)send_to_policy(type, buffer, length);
             }
             continue;
@@ -678,22 +678,22 @@ int main(void)
     memset(clients, 0, sizeof(clients));
     for (uint32_t i = 0; i < WINDOWD_MAX_CLIENTS; ++i) clients[i].fd = -1;
     for (uint32_t i = 0; i < WINDOWD_MAX_WINDOWS; ++i) windows[i].shm_fd = -1;
-    listen_fd = leonos_ipc_bind_listen_mode(LEONOS_IPC_SOCK_WINDOWD, 8, 0666);
+    listen_fd = reliefos_ipc_bind_listen_mode(RELIEFOS_IPC_SOCK_WINDOWD, 8, 0666);
     if (listen_fd < 0) {
         printf("[windowd.elf] bind failed errno=%d\n", errno);
         return 1;
     }
-    (void)leonos_ipc_set_nonblock(listen_fd, 1);
-    keyboard_fd = open(LEONOS_DEV_INPUT_EVENT0, LEONOS_O_RDONLY | O_NONBLOCK, 0);
-    mouse_fd = open(LEONOS_DEV_INPUT_EVENT1, LEONOS_O_RDONLY | O_NONBLOCK, 0);
+    (void)reliefos_ipc_set_nonblock(listen_fd, 1);
+    keyboard_fd = open(RELIEFOS_DEV_INPUT_EVENT0, RELIEFOS_O_RDONLY | O_NONBLOCK, 0);
+    mouse_fd = open(RELIEFOS_DEV_INPUT_EVENT1, RELIEFOS_O_RDONLY | O_NONBLOCK, 0);
     uint32_t graphical_vt = 1;
-    if ((keyboard_fd >= 0 && ioctl(keyboard_fd, LEONOS_EVIOCSVT, &graphical_vt) < 0) ||
-        (mouse_fd >= 0 && ioctl(mouse_fd, LEONOS_EVIOCSVT, &graphical_vt) < 0)) {
+    if ((keyboard_fd >= 0 && ioctl(keyboard_fd, RELIEFOS_EVIOCSVT, &graphical_vt) < 0) ||
+        (mouse_fd >= 0 && ioctl(mouse_fd, RELIEFOS_EVIOCSVT, &graphical_vt) < 0)) {
         perror("Bind graphical VT input");
         return 1;
     }
     printf("[windowd.elf] listening on %s keyboard=%d mouse=%d\n",
-           LEONOS_IPC_SOCK_WINDOWD, keyboard_fd, mouse_fd);
+           RELIEFOS_IPC_SOCK_WINDOWD, keyboard_fd, mouse_fd);
 
     for (;;) {
         struct pollfd fds[3 + WINDOWD_MAX_CLIENTS] = {
@@ -702,7 +702,7 @@ int main(void)
             {.fd = mouse_fd, .events = POLLIN},
         };
         for (uint32_t i = 0; i < WINDOWD_MAX_CLIENTS; ++i) {
-            if (clients[i].used && leonos_ipc_flush(clients[i].fd) < 0 && errno != EAGAIN)
+            if (clients[i].used && reliefos_ipc_flush(clients[i].fd) < 0 && errno != EAGAIN)
                 close_client((int)i);
             fds[3 + i].fd = clients[i].used ? clients[i].fd : -1;
             fds[3 + i].events = POLLIN;
@@ -718,17 +718,17 @@ int main(void)
         }
         if (fds[0].revents & POLLIN) {
             int fd;
-            while ((fd = leonos_ipc_accept(listen_fd, 0)) >= 0) {
+            while ((fd = reliefos_ipc_accept(listen_fd, 0)) >= 0) {
                 struct ucred credentials;
                 int slot = -1;
                 for (uint32_t i = 0; i < WINDOWD_MAX_CLIENTS; ++i) {
                     if (!clients[i].used) { slot = (int)i; break; }
                 }
-                if (slot < 0 || leonos_ipc_peer_credentials(fd, &credentials) < 0) {
+                if (slot < 0 || reliefos_ipc_peer_credentials(fd, &credentials) < 0) {
                     close(fd);
                     continue;
                 }
-                (void)leonos_ipc_set_nonblock(fd, 1);
+                (void)reliefos_ipc_set_nonblock(fd, 1);
                 clients[slot].used = 1;
                 clients[slot].fd = fd;
                 clients[slot].pid = (uint32_t)credentials.pid;
@@ -738,15 +738,15 @@ int main(void)
                        clients[slot].pid, clients[slot].uid);
             }
         }
-        if (fds[1].revents & POLLIN) pump_input_device(keyboard_fd, LEONOS_INPUT_KEYBOARD);
-        if (fds[2].revents & POLLIN) pump_input_device(mouse_fd, LEONOS_INPUT_MOUSE);
+        if (fds[1].revents & POLLIN) pump_input_device(keyboard_fd, RELIEFOS_INPUT_KEYBOARD);
+        if (fds[2].revents & POLLIN) pump_input_device(mouse_fd, RELIEFOS_INPUT_MOUSE);
         for (uint32_t i = 0; i < WINDOWD_MAX_CLIENTS; ++i) {
             if (clients[i].used) handle_client(i);
         }
         if (mouse_visibility_pending && policy_slot >= 0) {
-            struct leonos_win_mouse_visible state = {
+            struct reliefos_win_mouse_visible state = {
                 .window_id = 0xffffffffu, .visible = mouse_visible};
-            if (send_to_policy(LEONOS_WIN_MSG_MOUSE_VISIBLE, &state, sizeof(state)) == 0)
+            if (send_to_policy(RELIEFOS_WIN_MSG_MOUSE_VISIBLE, &state, sizeof(state)) == 0)
                 mouse_visibility_pending = 0;
         }
     }

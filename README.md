@@ -1,12 +1,12 @@
-# LeonOS 4
+# ReliefOS
 <p align="center">
-    <img src="https://github.com/LeonOSProject/LeonOS-4/blob/main/logo.png?raw=true" alt="LeonOS 4's logo" width="240"/>
+    <img src="logo.png" alt="ReliefOS logo" width="240"/>
 </p>
 
-此代码库是 **LeonOS 4** 项目的源代码仓库，此仓库的开源协议位于[LICENSE](LICENSE)。
+此代码库是 **ReliefOS** 项目的源代码仓库，此仓库的开源协议位于[LICENSE](LICENSE)。
 
 ## 感谢
-感谢 [@VasilyZa](https://github.com/VasilyZa/) 对 LeonOS 4 的 Linux ABI 和 musl libc 等等有着至高无上的贡献，他的贡献将会被永远记住。
+感谢 [@VasilyZa](https://github.com/VasilyZa/) 对本项目 Linux ABI 和 musl libc 等方面作出的贡献。
 
 ## 编译源代码
 
@@ -33,7 +33,7 @@ make run
 ```
 
 `make fetch` 是唯一联网阶段，校验 `configs/dependencies.lock.json` 中的摘要。
-`kernel/ntclks` 子仓另有独立缓存：`git submodule update --init --recursive` 会初始化它
+`kernel/reliefnt` 子仓另有独立缓存：`git submodule update --init --recursive` 会初始化它
 及其嵌套子仓，首次构建前还需在子仓内执行一次 `make fetch`。
 构建缺缓存时会报错，不会暗中下载。`make doctor` 实际检查目标编译、compiler-rt
 及镜像工具。Clang 必须包含 x86_64 compiler-rt builtins；仅有头文件不够。
@@ -49,8 +49,8 @@ RPR 子树。`run-iso`、`run-installer` 启动对应镜像，`QEMU_KVM=0` 可�
 
 默认产物在 `out/x86_64/release/`：
 
-- `images/leonos4.vmdk`、`images/leonos4-live.iso`、`images/leonos4-installer.iso`
-- `packages/leonos-musl-sdk.tar.gz`
+- `images/reliefos.vmdk`、`images/reliefos-live.iso`、`images/reliefos-installer.iso`
+- `packages/reliefos-musl-sdk.tar.gz`
 - `packages/apk/repository/`、`rootfs/manifest.json`、`rpr-pages/`、`pages/`
 
 `make menuconfig` 编辑所选 `O/config/.config`；`make olddefconfig` 保留选择并补全新项。
@@ -71,7 +71,7 @@ RPR 子树。`run-iso`、`run-installer` 启动对应镜像，`QEMU_KVM=0` 可�
 
 ## 界面样式
 
-系统默认使用蓝色、直角、平面化的 Metro 样式。管理员可在“设置 → 显示”中切换为完整保留的 Win95 样式；选择会立即应用到 Desktop 和已打开程序，并保存到 `/etc/leonos/display.conf` 供下次启动的登录、安装器与内核早期画面使用。账户在安装器中创建，OOBE 已移除；普通用户和固定的 `root` 账户均要求 1 至 32 个字符且不含空白字符的密码。Python 与 GCC/binutils 可在安装时独立选择。
+系统默认使用蓝色、直角、平面化的 Metro 样式。管理员可在“设置 → 显示”中切换为完整保留的 Win95 样式；选择会立即应用到 Desktop 和已打开程序，并保存到 `/etc/reliefos/display.conf` 供下次启动的登录、安装器与内核早期画面使用。账户在安装器中创建，OOBE 已移除；普通用户和固定的 `root` 账户均要求 1 至 32 个字符且不含空白字符的密码。Python 与 GCC/binutils 可在安装时独立选择。
 
 ## 代码与目录结构
 
@@ -83,9 +83,9 @@ RPR 子树。`run-iso`、`run-installer` 启动对应镜像，`QEMU_KVM=0` 可�
 - `tools/host/`、`tools/build/`：C 数据工具和短上游构建适配器。
 - `configs/`：组件清单、默认配置和可提交的构建 profile。
 - `docs/`：架构、ABI、构建、文件系统、安全和工具文档。
-- `include/`：公共 C 头文件（`leonos/`）与生成头（`generated/`）；UAPI 头在内核子仓 `include/uapi/`。
-- `kernel/ntclks/`：内核子仓（gitlink，github.com/LeonOSProject/NTCLKS），含 LeonOS 内核核心、`drivers/`、`boot/loader/` 与 `include/uapi`；首次使用执行 `git submodule update --init --recursive` 并在其中 `make fetch`。
-- `los2w/`：宿主机上的 LeonOS/Windows 兼容工具和模拟器代码。
+- `include/`：公共 C 头文件（`reliefos/`，旧 `leonos/` 头转发兼容）与生成头（`generated/`）；UAPI 头在内核子仓 `include/uapi/`。
+- `kernel/reliefnt/`：ReliefNT 内核子仓（gitlink，https://github.com/ReliefOSProject/ReliefNT），含内核核心、`drivers/`、`boot/loader/` 与 `include/uapi`；首次使用执行 `git submodule update --init --recursive` 并在其中 `make fetch`。
+- `los2w/`：宿主机上的操作系统/Windows 兼容工具和模拟器代码。
 - `system/`：镜像中 staging 的系统配置、字体、证书、壁纸、图标和其他资源。
 - `test/`：测试输入和测试资源。
 - `third_party/`：通过 Git submodule 引入的上游或分叉项目源码，具体归属见 `.gitmodules`。
@@ -98,7 +98,7 @@ RPR 子树。`run-iso`、`run-installer` 启动对应镜像，`QEMU_KVM=0` 可�
 
 ## 代码注释规范
 
-内核子仓 `kernel/ntclks/kernel/ntclks/` 的每个函数定义和公共函数
+内核子仓 `kernel/reliefnt/kernel/reliefnt/` 的每个函数定义和公共函数
 声明都必须使用 Doxygen 风格注释。C、C++ 和汇编预处理源均采用以下块注释形式，
 以便 Doxygen 读取：
 

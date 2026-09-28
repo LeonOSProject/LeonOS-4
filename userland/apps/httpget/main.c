@@ -1,13 +1,13 @@
-#include <leonos/gui.h>
-#include <leonos/http.h>
+#include <reliefos/gui.h>
+#include <reliefos/http.h>
 #include <libintl.h>
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/net_service.h>
-#include <leonos/psf_font.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
+#include <reliefos/layout.h>
+#include <reliefos/net_service.h>
+#include <reliefos/psf_font.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
 
 #define HTTPGET_W 720
 #define HTTPGET_H 520
@@ -30,7 +30,7 @@
 #define RESPONSE_Y 110
 #define RESPONSE_W (HTTPGET_W - 48)
 #define RESPONSE_H 356
-#define HTTPGET_RESPONSE_MAX (LEONOS_HTTP_HEADER_MAX + LEONOS_HTTP_BODY_MAX + 4U)
+#define HTTPGET_RESPONSE_MAX (RELIEFOS_HTTP_HEADER_MAX + RELIEFOS_HTTP_BODY_MAX + 4U)
 #define T(s) gettext(s)
 
 static uint32_t pixels[HTTPGET_W * HTTPGET_H];
@@ -39,13 +39,13 @@ static char path_input[NET_SERVICE_HTTP_PATH_LEN] = "/";
 static char port_input[8] = "80";
 static char status_text[160] = "Ready";
 static char summary_text[192] = "Enter a host and path, then send an HTTP or HTTPS GET request.";
-static char response_body[LEONOS_HTTP_BODY_MAX + 1];
-static char response_headers[LEONOS_HTTP_HEADER_MAX + 1];
+static char response_body[RELIEFOS_HTTP_BODY_MAX + 1];
+static char response_headers[RELIEFOS_HTTP_HEADER_MAX + 1];
 static char response_text[HTTPGET_RESPONSE_MAX + 1];
-static struct leonos_ui_edit_state host_edit;
-static struct leonos_ui_edit_state path_edit;
-static struct leonos_ui_edit_state port_edit;
-static struct leonos_ui_text_area_state response_area;
+static struct reliefos_ui_edit_state host_edit;
+static struct reliefos_ui_edit_state path_edit;
+static struct reliefos_ui_edit_state port_edit;
+static struct reliefos_ui_text_area_state response_area;
 static uint8_t secure_request;
 
 static void copy_text(char *dst, uint32_t cap, const char *src)
@@ -224,8 +224,8 @@ static void append_http_response_text(const char *headers, const char *body)
 
 static void run_http_get(void)
 {
-    struct leonos_http_response response;
-    char url[LEONOS_HTTP_URL_LEN];
+    struct reliefos_http_response response;
+    char url[RELIEFOS_HTTP_URL_LEN];
     uint32_t port = parse_port(port_input);
     uint32_t pos = 0;
     int ret;
@@ -249,7 +249,7 @@ static void run_http_get(void)
     copy_text(status_text, sizeof(status_text),
               secure_request ? T("Sending HTTPS GET...")
                              : T("Sending HTTP GET..."));
-    ret = leonos_http_get(url, LEONOS_HTTP_DEFAULT_TIMEOUT_MS,
+    ret = reliefos_http_get(url, RELIEFOS_HTTP_DEFAULT_TIMEOUT_MS,
                           response_body, sizeof(response_body),
                           response_headers, sizeof(response_headers),
                           &response);
@@ -272,10 +272,10 @@ static void run_http_get(void)
         append_text(summary_text, &pos, sizeof(summary_text), "  redirects ");
         append_u32(summary_text, &pos, sizeof(summary_text), response.redirect_count);
     }
-    if (response.flags & LEONOS_HTTP_FLAG_CHUNKED) {
+    if (response.flags & RELIEFOS_HTTP_FLAG_CHUNKED) {
         append_text(summary_text, &pos, sizeof(summary_text), "  chunked");
     }
-    if (response.flags & LEONOS_HTTP_FLAG_TRUNCATED) {
+    if (response.flags & RELIEFOS_HTTP_FLAG_TRUNCATED) {
         append_text(summary_text, &pos, sizeof(summary_text), "  truncated");
     }
     if (response.content_type[0]) {
@@ -283,30 +283,30 @@ static void run_http_get(void)
         append_text(summary_text, &pos, sizeof(summary_text), response.content_type);
     }
     copy_text(status_text, sizeof(status_text), summary_text);
-    leonos_ui_text_area_state_sync(&response_area, RESPONSE_W);
+    reliefos_ui_text_area_state_sync(&response_area, RESPONSE_W);
 }
 
-static void draw_httpget(struct leonos_ui_surface *ui)
+static void draw_httpget(struct reliefos_ui_surface *ui)
 {
-    leonos_ui_rect(ui, 0, 0, HTTPGET_W, HTTPGET_H, LEONOS_UI_GRAY);
-    leonos_ui_text(ui, 24, 14, T("HTTP/HTTPS GET over TCP"),
-                   LEONOS_UI_BLACK, LEONOS_UI_GRAY);
+    reliefos_ui_rect(ui, 0, 0, HTTPGET_W, HTTPGET_H, RELIEFOS_UI_GRAY);
+    reliefos_ui_text(ui, 24, 14, T("HTTP/HTTPS GET over TCP"),
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
 
-    leonos_ui_text(ui, 24, 42, T("Host:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_edit_state_draw(ui, HOST_X, HOST_Y, HOST_W, &host_edit, 0);
-    leonos_ui_text(ui, 348, 42, T("Path:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_edit_state_draw(ui, PATH_X, PATH_Y, PATH_W, &path_edit, 0);
-    leonos_ui_text(ui, 24, 76, T("Port:"), LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_edit_state_draw(ui, PORT_X, PORT_Y, PORT_W, &port_edit, 0);
-    leonos_ui_button(ui, GET_X, GET_Y, GET_W, LEONOS_UI_BUTTON_H,
+    reliefos_ui_text(ui, 24, 42, T("Host:"), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_edit_state_draw(ui, HOST_X, HOST_Y, HOST_W, &host_edit, 0);
+    reliefos_ui_text(ui, 348, 42, T("Path:"), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_edit_state_draw(ui, PATH_X, PATH_Y, PATH_W, &path_edit, 0);
+    reliefos_ui_text(ui, 24, 76, T("Port:"), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_edit_state_draw(ui, PORT_X, PORT_Y, PORT_W, &port_edit, 0);
+    reliefos_ui_button(ui, GET_X, GET_Y, GET_W, RELIEFOS_UI_BUTTON_H,
                      T("GET"), 0);
-    leonos_ui_checkbox(ui, HTTPS_X, HTTPS_Y, "HTTPS", secure_request, 0);
-    leonos_ui_text_clipped(ui, 372, 76, HTTPGET_W - 396, summary_text,
-                           LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text_area_state_draw(ui, RESPONSE_X, RESPONSE_Y,
+    reliefos_ui_checkbox(ui, HTTPS_X, HTTPS_Y, "HTTPS", secure_request, 0);
+    reliefos_ui_text_clipped(ui, 372, 76, HTTPGET_W - 396, summary_text,
+                           RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text_area_state_draw(ui, RESPONSE_X, RESPONSE_Y,
                                    RESPONSE_W, RESPONSE_H,
-                                   &response_area, LEONOS_UI_EDIT_READONLY);
-    leonos_ui_statusbar(ui, HTTPGET_H - 28, 28, status_text);
+                                   &response_area, RELIEFOS_UI_EDIT_READONLY);
+    reliefos_ui_statusbar(ui, HTTPGET_H - 28, 28, status_text);
 }
 
 static int hit_rect(int32_t px, int32_t py, int32_t x, int32_t y,
@@ -316,16 +316,16 @@ static int hit_rect(int32_t px, int32_t py, int32_t x, int32_t y,
            px < x + (int32_t)w && py < y + (int32_t)h;
 }
 
-static int handle_edit_mouse(struct leonos_gui_app_event *event)
+static int handle_edit_mouse(struct reliefos_gui_app_event *event)
 {
     int changed = 0;
-    changed |= leonos_ui_edit_state_handle_mouse(&host_edit, event->x, event->y,
+    changed |= reliefos_ui_edit_state_handle_mouse(&host_edit, event->x, event->y,
                                                  HOST_X, HOST_Y, HOST_W,
                                                  event->buttons);
-    changed |= leonos_ui_edit_state_handle_mouse(&path_edit, event->x, event->y,
+    changed |= reliefos_ui_edit_state_handle_mouse(&path_edit, event->x, event->y,
                                                  PATH_X, PATH_Y, PATH_W,
                                                  event->buttons);
-    changed |= leonos_ui_edit_state_handle_mouse(&port_edit, event->x, event->y,
+    changed |= reliefos_ui_edit_state_handle_mouse(&port_edit, event->x, event->y,
                                                  PORT_X, PORT_Y, PORT_W,
                                                  event->buttons);
     return changed;
@@ -334,31 +334,31 @@ static int handle_edit_mouse(struct leonos_gui_app_event *event)
 static int handle_edit_key(uint8_t keycode, uint8_t pressed)
 {
     if (host_edit.focused) {
-        return leonos_ui_edit_state_handle_key(&host_edit, keycode, pressed);
+        return reliefos_ui_edit_state_handle_key(&host_edit, keycode, pressed);
     }
     if (path_edit.focused) {
-        return leonos_ui_edit_state_handle_key(&path_edit, keycode, pressed);
+        return reliefos_ui_edit_state_handle_key(&path_edit, keycode, pressed);
     }
     if (port_edit.focused) {
-        return leonos_ui_edit_state_handle_key(&port_edit, keycode, pressed);
+        return reliefos_ui_edit_state_handle_key(&port_edit, keycode, pressed);
     }
     return 0;
 }
 
-static void present(int window_id, struct leonos_ui_surface *ui)
+static void present(int window_id, struct reliefos_ui_surface *ui)
 {
     draw_httpget(ui);
-    leonos_gui_present_window((uint32_t)window_id, HTTPGET_W, HTTPGET_H,
+    reliefos_gui_present_window((uint32_t)window_id, HTTPGET_W, HTTPGET_H,
                               HTTPGET_W, pixels);
 }
 
 int main(int argc, char **argv, char **envp)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     int window_id;
     (void)envp;
 
@@ -369,45 +369,45 @@ int main(int argc, char **argv, char **envp)
     if (argc > 2 && argv && argv[2] && argv[2][0]) {
         copy_text(path_input, sizeof(path_input), argv[2]);
     }
-    window_id = leonos_gui_create_app_window_ex(T("HTTP GET"),
+    window_id = reliefos_gui_create_app_window_ex(T("HTTP GET"),
                                                 T("TCP and HTTP test"),
                                                 HTTPGET_W, HTTPGET_H,
-                                                LEONOS_GUI_WINDOW_NO_RESIZE);
+                                                RELIEFOS_GUI_WINDOW_NO_RESIZE);
     if (window_id <= 0) {
         printf("[httpget.elf] create window failed=%d\n", window_id);
         return 1;
     }
-    leonos_ui_bind(&ui, pixels, HTTPGET_W, HTTPGET_H, HTTPGET_W);
-    leonos_ui_edit_state_init(&host_edit, host_input, sizeof(host_input));
-    leonos_ui_edit_state_init(&path_edit, path_input, sizeof(path_input));
-    leonos_ui_edit_state_init(&port_edit, port_input, sizeof(port_input));
-    leonos_ui_text_area_state_init(&response_area, response_text, sizeof(response_text));
+    reliefos_ui_bind(&ui, pixels, HTTPGET_W, HTTPGET_H, HTTPGET_W);
+    reliefos_ui_edit_state_init(&host_edit, host_input, sizeof(host_input));
+    reliefos_ui_edit_state_init(&path_edit, path_input, sizeof(path_input));
+    reliefos_ui_edit_state_init(&port_edit, port_input, sizeof(port_input));
+    reliefos_ui_text_area_state_init(&response_area, response_text, sizeof(response_text));
     host_edit.focused = 1;
     response_area.readonly = 1;
     present(window_id, &ui);
 
     for (;;) {
         event.window_id = (uint32_t)window_id;
-        while (leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS) > 0) {
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
+        while (reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS) > 0) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON) {
                 int changed = handle_edit_mouse(&event);
-                changed |= leonos_ui_text_area_state_handle_mouse(&response_area,
+                changed |= reliefos_ui_text_area_state_handle_mouse(&response_area,
                                                                   event.x, event.y,
                                                                   RESPONSE_X, RESPONSE_Y,
                                                                   RESPONSE_W, RESPONSE_H,
                                                                   event.buttons);
                 if ((event.buttons & 1u) &&
                     hit_rect(event.x, event.y, GET_X, GET_Y,
-                             GET_W, LEONOS_UI_BUTTON_H)) {
+                             GET_W, RELIEFOS_UI_BUTTON_H)) {
                     run_http_get();
                     changed = 1;
                 }
                 if ((event.buttons & 1u) &&
                     hit_rect(event.x, event.y, HTTPS_X, HTTPS_Y,
-                             HTTPS_W, LEONOS_UI_BUTTON_H)) {
+                             HTTPS_W, RELIEFOS_UI_BUTTON_H)) {
                     secure_request = !secure_request;
                     if ((secure_request && port_input[0] == '8' &&
                          port_input[1] == '0' && port_input[2] == 0) ||
@@ -416,7 +416,7 @@ int main(int argc, char **argv, char **envp)
                          port_input[3] == 0)) {
                         copy_text(port_input, sizeof(port_input),
                                   secure_request ? "443" : "80");
-                        leonos_ui_edit_state_sync(&port_edit);
+                        reliefos_ui_edit_state_sync(&port_edit);
                     }
                     changed = 1;
                 }
@@ -424,7 +424,7 @@ int main(int argc, char **argv, char **envp)
                     present(window_id, &ui);
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_WHEEL) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_WHEEL) {
                 if (hit_rect(event.x, event.y, RESPONSE_X, RESPONSE_Y,
                              RESPONSE_W, RESPONSE_H)) {
                     if (event.dy < 0) {
@@ -435,16 +435,16 @@ int main(int argc, char **argv, char **envp)
                     present(window_id, &ui);
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN ||
-                event.type == LEONOS_GUI_APP_EVENT_KEY_UP) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN ||
+                event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) {
                 if (event.pressed && event.keycode == 1) {
                     return 0;
                 }
-                if (event.pressed && event.keycode == LEONOS_KEY_ENTER) {
+                if (event.pressed && event.keycode == RELIEFOS_KEY_ENTER) {
                     run_http_get();
                     present(window_id, &ui);
                 } else if (handle_edit_key(event.keycode, event.pressed) ||
-                           leonos_ui_text_area_state_handle_key(&response_area,
+                           reliefos_ui_text_area_state_handle_key(&response_area,
                                                                event.keycode,
                                                                event.pressed,
                                                                RESPONSE_W,
@@ -452,8 +452,8 @@ int main(int argc, char **argv, char **envp)
                     present(window_id, &ui);
                 }
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_FOCUS ||
-                event.type == LEONOS_GUI_APP_EVENT_RESIZE) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_FOCUS ||
+                event.type == RELIEFOS_GUI_APP_EVENT_RESIZE) {
                 present(window_id, &ui);
             }
         }

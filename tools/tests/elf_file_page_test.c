@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ntclks/lock.h>
-#include "../../kernel/ntclks/kernel/ntclks/syscall_mm.c"
+#include <reliefnt/lock.h>
+#include "../../kernel/reliefnt/kernel/reliefnt/syscall_mm.c"
 
 static unsigned char file_bytes[8192];
 static uint64_t mapped;
@@ -29,7 +29,7 @@ int storage_read_node(const struct storage_node *node, uint64_t offset,
     assert(node->size == sizeof(file_bytes) && offset + size <= node->size);
     ++reads;
     *got = 0;
-    if (io_async) return -LEONOS_EAGAIN;
+    if (io_async) return -RELIEFOS_EAGAIN;
     if (read_error) return read_error;
     if (short_read) --size;
     memcpy(buffer, file_bytes + offset, size);
@@ -85,12 +85,12 @@ int main(void)
     struct task_vma cold = text;
     cold.file_offset = 4096;
     unsigned allocated_before = allocations;
-    read_error = -LEONOS_EIO;
-    assert(task_map_file_vma_page(&task, &cold, cold.start) == -LEONOS_EIO);
+    read_error = -RELIEFOS_EIO;
+    assert(task_map_file_vma_page(&task, &cold, cold.start) == -RELIEFOS_EIO);
     assert(allocations == allocated_before && mapped == text_page);
     read_error = 0;
     short_read = true;
-    assert(task_map_file_vma_page(&task, &cold, cold.start) == -LEONOS_EIO);
+    assert(task_map_file_vma_page(&task, &cold, cold.start) == -RELIEFOS_EIO);
     assert(allocations == allocated_before && mapped == text_page);
     short_read = false;
     storage_set_io_async_context(true);
@@ -116,7 +116,7 @@ int main(void)
     struct task_vma shared = text;
     shared.flags |= TASK_VMA_FLAG_SHARED;
     unsigned pinned_allocations = allocations;
-    assert(task_map_file_vma_page(&task, &shared, shared.start) == -LEONOS_EIO);
+    assert(task_map_file_vma_page(&task, &shared, shared.start) == -RELIEFOS_EIO);
     assert(allocations == pinned_allocations);
     assert(task_map_file_vma_page(&task, &text, text.start) == 0);
     assert(!page_cache_owns(mapped));

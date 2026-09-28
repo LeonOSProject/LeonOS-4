@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class RootfsInterfaces(unittest.TestCase):
     def test_fstab_matches_installer_gpt_reader(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-fstab-") as directory:
+        with tempfile.TemporaryDirectory(prefix="reliefos-fstab-") as directory:
             root = Path(directory)
             (root / "etc").mkdir()
             image = root / "disk.img"
@@ -32,18 +32,18 @@ class RootfsInterfaces(unittest.TestCase):
             executable = root / "gpt-reader"
             subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                             "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                            "-Ikernel/ntclks/include", "-Ikernel/ntclks/include/uapi", "-idirafter", "userland/runtime/include",
+                            "-Ikernel/reliefnt/include", "-Ikernel/reliefnt/include/uapi", "-idirafter", "userland/runtime/include",
                             "tools/tests/rootfs_gpt_test.c", "-o", executable], cwd=ROOT, check=True)
             subprocess.run([executable, image, str(partitions[0]), str(partitions[1])], check=True, timeout=20)
 
     def test_kernel_modules(self):
-        with tempfile.TemporaryDirectory(prefix="leonos-rootfs-") as directory:
+        with tempfile.TemporaryDirectory(prefix="reliefos-rootfs-") as directory:
             for name in ("rootfs_mounts", "rootfs_uts", "rootfs_paths", "procfs_directories", "linux_permissions", "chroot_paths"):
                 with self.subTest(module=name):
                     executable = Path(directory) / name
                     subprocess.run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",
                                     "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
-                                    "-Ikernel/ntclks/include", "-Iinclude", "-Ikernel/ntclks/include/uapi", "-Ikernel/ntclks/kernel/ntclks/include",
+                                    "-Ikernel/reliefnt/include", "-Iinclude", "-Ikernel/reliefnt/include/uapi", "-Ikernel/reliefnt/kernel/reliefnt/include",
                                     f"tools/tests/{name}_test.c", "-o", executable], cwd=ROOT, check=True)
                     subprocess.run([executable], cwd=ROOT, check=True, timeout=20)
 

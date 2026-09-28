@@ -1,13 +1,13 @@
-#ifndef LEONOS_FILEOP_PATHS_H
-#define LEONOS_FILEOP_PATHS_H
-#include <leonos/sudo.h>
+#ifndef RELIEFOS_FILEOP_PATHS_H
+#define RELIEFOS_FILEOP_PATHS_H
+#include <reliefos/sudo.h>
 #include <string.h>
 #include <sys/stat.h>
-#define SUDO_FILEOP_LIST LEONOS_FILEOP_LIST
-#define SUDO_FILEOP_MKDIR LEONOS_FILEOP_MKDIR
-#define SUDO_FILEOP_RENAME LEONOS_FILEOP_RENAME
-#define SUDO_FILEOP_UNLINK LEONOS_FILEOP_UNLINK
-#define SUDO_DELETE_CONFIRM LEONOS_FILEOP_CONFIRM
+#define SUDO_FILEOP_LIST RELIEFOS_FILEOP_LIST
+#define SUDO_FILEOP_MKDIR RELIEFOS_FILEOP_MKDIR
+#define SUDO_FILEOP_RENAME RELIEFOS_FILEOP_RENAME
+#define SUDO_FILEOP_UNLINK RELIEFOS_FILEOP_UNLINK
+#define SUDO_DELETE_CONFIRM RELIEFOS_FILEOP_CONFIRM
 /* Reject any path the privileged worker must never touch. ".." is refused
  * outright so the worker never relies on the kernel folding it after the
  * check, and the kernel-managed trees are refused by path prefix (a plain

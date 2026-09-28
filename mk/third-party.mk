@@ -6,48 +6,50 @@
 # script in tools/build; this fragment only says which pinned source is used,
 # which products prove it worked, and when the work has to be redone.
 
-LEONOS_LOCK := $(LEONOS_SRC)/configs/dependencies.lock.json
-LEONOS_FETCH_SCRIPT := $(LEONOS_SRC)/tools/build/fetch.sh
+RELIEFOS_LOCK ?= $(if $(strip $(LEONOS_LOCK)),$(LEONOS_LOCK),$(RELIEFOS_SRC)/configs/dependencies.lock.json)
+RELIEFOS_FETCH_SCRIPT ?= $(if $(strip $(LEONOS_FETCH_SCRIPT)),$(LEONOS_FETCH_SCRIPT),$(RELIEFOS_SRC)/tools/build/fetch.sh)
 
 # --- the lock file must describe what it claims -------------------------------
 # Parse-time, but read-only: `make fetch` and every adapter consult the lock
-# through leonos-deps, and a broken file has to stop the build before anything
+# through reliefos-deps, and a broken file has to stop the build before anything
 # is downloaded.
-$(LEONOS_CACHE):
+$(RELIEFOS_CACHE):
 	$(Q)mkdir -p $@
 
-.PHONY: leonos-check-lock
-leonos-check-lock: | $(LEONOS_O_MARKER) $(LEONOS_DEPS_TOOL)
-	$(call LEONOS_LOG,CHECK,$(LEONOS_LOCK))
-	$(Q)$(LEONOS_DEPS_TOOL) --lock $(LEONOS_LOCK) --check --root $(LEONOS_SRC)
+.PHONY: reliefos-check-lock leonos-check-lock
+reliefos-check-lock: | $(RELIEFOS_O_MARKER) $(RELIEFOS_DEPS_TOOL)
+	$(call RELIEFOS_LOG,CHECK,$(RELIEFOS_LOCK))
+	$(Q)$(RELIEFOS_DEPS_TOOL) --lock $(RELIEFOS_LOCK) --check --root $(RELIEFOS_SRC)
+leonos-check-lock: reliefos-check-lock
 
-fetch: leonos-check-lock ntclks-fetch | $(LEONOS_CACHE)
-	$(call LEONOS_LOG,FETCH,$(LEONOS_CACHE))
-	$(Q)sh $(LEONOS_FETCH_SCRIPT) --deps $(LEONOS_DEPS_TOOL) --lock $(LEONOS_LOCK) \
-		--cache $(LEONOS_CACHE)
+fetch: reliefos-check-lock reliefnt-fetch | $(RELIEFOS_CACHE)
+	$(call RELIEFOS_LOG,FETCH,$(RELIEFOS_CACHE))
+	$(Q)sh $(RELIEFOS_FETCH_SCRIPT) --deps $(RELIEFOS_DEPS_TOOL) --lock $(RELIEFOS_LOCK) \
+		--cache $(RELIEFOS_CACHE)
 
 # Used by the build itself: a dependency that was never fetched stops the build
 # with the id and the command that fixes it, instead of silently going online
 # (plan section 9).
-.PHONY: leonos-verify-cache
-leonos-verify-cache: | $(LEONOS_DEPS_TOOL)
-	$(Q)sh $(LEONOS_FETCH_SCRIPT) --deps $(LEONOS_DEPS_TOOL) --lock $(LEONOS_LOCK) \
-		--cache $(LEONOS_CACHE) --verify-only
+.PHONY: reliefos-verify-cache leonos-verify-cache
+reliefos-verify-cache: | $(RELIEFOS_DEPS_TOOL)
+	$(Q)sh $(RELIEFOS_FETCH_SCRIPT) --deps $(RELIEFOS_DEPS_TOOL) --lock $(RELIEFOS_LOCK) \
+		--cache $(RELIEFOS_CACHE) --verify-only
+leonos-verify-cache: reliefos-verify-cache
 
 # --- musl and mimalloc --------------------------------------------------------
 MUSL_SYSROOT := $(O_SYSROOT)/musl
 MUSL_STAMP := $(MUSL_SYSROOT)/.leonos-musl.json
 MUSL_WORK := $(O_THIRD_PARTY)/musl
-MUSL_SCRIPT := $(LEONOS_SRC)/tools/build/musl-sysroot.sh
+MUSL_SCRIPT := $(RELIEFOS_SRC)/tools/build/musl-sysroot.sh
 
 # musl's own configure probes with the compiler word, so the target triple has
 # to stay inside CC; these are the flags the retired Python driver passed.
-LEONOS_MUSL_CFLAGS := -O2 -fno-stack-protector -mno-avx
+RELIEFOS_MUSL_CFLAGS := -O2 -fno-stack-protector -mno-avx
 
 # The products the rest of the build links against. Declaring them makes an
 # install that "succeeded" while leaving something out a Make error rather than
 # a link failure three stages later.
-LEONOS_MUSL_ARTIFACTS := \
+RELIEFOS_MUSL_ARTIFACTS := \
 	$(MUSL_SYSROOT)/lib/libc.so \
 	$(MUSL_SYSROOT)/lib/libc.a \
 	$(MUSL_SYSROOT)/lib/libmimalloc.so.3 \
@@ -64,27 +66,27 @@ LEONOS_MUSL_ARTIFACTS := \
 	$(MUSL_SYSROOT)/share/licenses/mimalloc/LICENSE
 
 # The whole lock file digest is part of the signature rather than just the musl
-# entries. That is deliberate: reading a subset here would need leonos-deps to
+# entries. That is deliberate: reading a subset here would need reliefos-deps to
 # exist before it has been built, and this project does not parse JSON with sed.
 # The cost is one extra sysroot rebuild when an unrelated dependency is edited.
-LEONOS_LOCK_DIGEST := $(if $(LEONOS_PASSIVE),unavailable,\
-	$(shell sha256sum $(LEONOS_LOCK) 2>/dev/null | cut -d' ' -f1))
+RELIEFOS_LOCK_DIGEST := $(if $(RELIEFOS_PASSIVE),unavailable,\
+	$(shell sha256sum $(RELIEFOS_LOCK) 2>/dev/null | cut -d' ' -f1))
 # git is part of the contract: the pinned trees are submodule checkouts and the
 # adapter verifies their HEAD before unpacking.
-leonos_git_path := $(if $(LEONOS_PASSIVE),deferred,$(shell command -v git 2>/dev/null || echo unavailable))
+reliefos_git_path := $(if $(RELIEFOS_PASSIVE),deferred,$(shell command -v git 2>/dev/null || echo unavailable))
 
-LEONOS_SIG_musl-sysroot := script=$(MUSL_SCRIPT)|lock=$(LEONOS_LOCK_DIGEST)|cc=$(TARGET_CC)|ar=$(TARGET_AR)|ranlib=$(TARGET_RANLIB)|ld=$(TARGET_LD)|triple=$(TRIPLE_USER)|cflags=$(LEONOS_MUSL_CFLAGS)|git=$(leonos_git_path)
-$(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,musl-sysroot)))
+RELIEFOS_SIG_musl-sysroot := script=$(MUSL_SCRIPT)|lock=$(RELIEFOS_LOCK_DIGEST)|cc=$(TARGET_CC)|ar=$(TARGET_AR)|ranlib=$(TARGET_RANLIB)|ld=$(TARGET_LD)|triple=$(TRIPLE_USER)|cflags=$(RELIEFOS_MUSL_CFLAGS)|git=$(reliefos_git_path)
+$(if $(RELIEFOS_PASSIVE),,$(eval $(call RELIEFOS_SIGNATURE_RULE,musl-sysroot)))
 
-$(MUSL_STAMP) $(LEONOS_MUSL_ARTIFACTS) &: $(LEONOS_LOCK) $(MUSL_SCRIPT) $(LEONOS_SHELL_LOG) $(LEONOS_DEPS_TOOL) $(O_META)/musl-sysroot.sig \
+$(MUSL_STAMP) $(RELIEFOS_MUSL_ARTIFACTS) &: $(RELIEFOS_LOCK) $(MUSL_SCRIPT) $(RELIEFOS_SHELL_LOG) $(RELIEFOS_DEPS_TOOL) $(O_META)/musl-sysroot.sig \
 	| $(MUSL_SYSROOT) $(MUSL_WORK) $(O_LOGS)
-	$(call LEONOS_LOG,SYSROOT,musl)
-	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0;; esac; sh $(MUSL_SCRIPT) --src '$(LEONOS_SRC)' --deps '$(abspath $(LEONOS_DEPS_TOOL))' \
-		--lock '$(LEONOS_LOCK)' --work '$(abspath $(MUSL_WORK))' --sysroot '$(abspath $(MUSL_SYSROOT))' \
+	$(call RELIEFOS_LOG,SYSROOT,musl)
+	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0;; esac; sh $(MUSL_SCRIPT) --src '$(RELIEFOS_SRC)' --deps '$(abspath $(RELIEFOS_DEPS_TOOL))' \
+		--lock '$(RELIEFOS_LOCK)' --work '$(abspath $(MUSL_WORK))' --sysroot '$(abspath $(MUSL_SYSROOT))' \
 		--cc '$(TARGET_CC)' --ar '$(TARGET_AR)' --ranlib '$(TARGET_RANLIB)' \
 		--ld '$(TARGET_LD)' --target '$(TRIPLE_USER)' \
-		--cflags '$(LEONOS_MUSL_CFLAGS)' --log $(abspath $(O_LOGS))/musl.log
-	$(Q)for product in $(LEONOS_MUSL_ARTIFACTS); do test -e "$$product" || exit 1; touch "$$product"; done
+		--cflags '$(RELIEFOS_MUSL_CFLAGS)' --log $(abspath $(O_LOGS))/musl.log
+	$(Q)for product in $(RELIEFOS_MUSL_ARTIFACTS); do test -e "$$product" || exit 1; touch "$$product"; done
 	$(Q)touch $(MUSL_STAMP)
 
 $(MUSL_SYSROOT) $(MUSL_WORK) $(O_THIRD_PARTY):
@@ -100,36 +102,37 @@ $(MUSL_SYSROOT) $(MUSL_WORK) $(O_THIRD_PARTY):
 AUTH_ROOT := $(O_AUTH)/root
 AUTH_STAMP := $(O_AUTH)/.leonos-auth.json
 AUTH_WORK := $(O_THIRD_PARTY)/auth
-AUTH_SCRIPT := $(LEONOS_SRC)/tools/build/auth-upstream.sh
-LEONOS_AUTH_CFLAGS := -O2 -mno-avx -mno-avx2
+AUTH_SCRIPT := $(RELIEFOS_SRC)/tools/build/auth-upstream.sh
+RELIEFOS_AUTH_CFLAGS := -O2 -mno-avx -mno-avx2
 
 # Declared, not implied by a stamp: an install that "succeeded" while leaving a
 # header or a SONAME behind has to be a Make error here.
-LEONOS_AUTH_ARTIFACTS := \
+RELIEFOS_AUTH_ARTIFACTS := \
 	$(AUTH_ROOT)/usr/include/crypt.h \
 	$(AUTH_ROOT)/usr/include/linux/openat2.h \
 	$(AUTH_ROOT)/lib/libcrypt.so.2 \
 	$(AUTH_ROOT)/share/licenses/libxcrypt/LICENSE \
 	$(AUTH_ROOT)/share/licenses/linux-headers/LICENSE
 
-LEONOS_SIG_auth-upstream := script=$(AUTH_SCRIPT)|lock=$(LEONOS_LOCK_DIGEST)|cc=$(TARGET_CC)|ar=$(TARGET_AR)|ranlib=$(TARGET_RANLIB)|triple=$(TRIPLE_USER)|cflags=$(LEONOS_AUTH_CFLAGS)|resource=$(shell $(TARGET_CC) -print-resource-dir 2>/dev/null)
-$(if $(LEONOS_PASSIVE),,$(eval $(call LEONOS_SIGNATURE_RULE,auth-upstream)))
+RELIEFOS_SIG_auth-upstream := script=$(AUTH_SCRIPT)|lock=$(RELIEFOS_LOCK_DIGEST)|cc=$(TARGET_CC)|ar=$(TARGET_AR)|ranlib=$(TARGET_RANLIB)|triple=$(TRIPLE_USER)|cflags=$(RELIEFOS_AUTH_CFLAGS)|resource=$(shell $(TARGET_CC) -print-resource-dir 2>/dev/null)
+$(if $(RELIEFOS_PASSIVE),,$(eval $(call RELIEFOS_SIGNATURE_RULE,auth-upstream)))
 
-.PHONY: leonos-auth
-leonos-auth: $(AUTH_STAMP) $(LEONOS_AUTH_ARTIFACTS)
+.PHONY: reliefos-auth leonos-auth
+reliefos-auth: $(AUTH_STAMP) $(RELIEFOS_AUTH_ARTIFACTS)
+leonos-auth: reliefos-auth
 
-$(AUTH_STAMP) $(LEONOS_AUTH_ARTIFACTS) &: $(LEONOS_LOCK) $(AUTH_SCRIPT) $(LEONOS_SHELL_LOG) $(LEONOS_DEPS_TOOL) \
+$(AUTH_STAMP) $(RELIEFOS_AUTH_ARTIFACTS) &: $(RELIEFOS_LOCK) $(AUTH_SCRIPT) $(RELIEFOS_SHELL_LOG) $(RELIEFOS_DEPS_TOOL) \
 	$(O_META)/auth-upstream.sig $(MUSL_STAMP) | $(O_AUTH) $(AUTH_WORK) $(O_LOGS)
-	$(call LEONOS_LOG,AUTH,auth)
-	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0;; esac; sh $(AUTH_SCRIPT) --src '$(LEONOS_SRC)' --deps '$(abspath $(LEONOS_DEPS_TOOL))' \
-		--lock '$(LEONOS_LOCK)' --cache '$(LEONOS_CACHE)' --work '$(abspath $(AUTH_WORK))' \
+	$(call RELIEFOS_LOG,AUTH,auth)
+	+$(Q)case "$${MAKEFLAGS%% *}" in *n*) exit 0;; esac; sh $(AUTH_SCRIPT) --src '$(RELIEFOS_SRC)' --deps '$(abspath $(RELIEFOS_DEPS_TOOL))' \
+		--lock '$(RELIEFOS_LOCK)' --cache '$(RELIEFOS_CACHE)' --work '$(abspath $(AUTH_WORK))' \
 		--stage '$(abspath $(AUTH_ROOT))' --sysroot '$(abspath $(MUSL_SYSROOT))' \
 		--cc '$(TARGET_CC)' --ar '$(TARGET_AR)' --ranlib '$(TARGET_RANLIB)' \
-		--target '$(TRIPLE_USER)' --cflags '$(LEONOS_AUTH_CFLAGS)' \
+		--target '$(TRIPLE_USER)' --cflags '$(RELIEFOS_AUTH_CFLAGS)' \
 		--log $(abspath $(O_LOGS))/auth.log
 	$(Q)cp $(AUTH_WORK)/.leonos-auth.json $(AUTH_STAMP).tmp
 	$(Q)mv $(AUTH_STAMP).tmp $(AUTH_STAMP)
-	$(Q)for product in $(LEONOS_AUTH_ARTIFACTS); do test -e "$$product" || exit 1; touch "$$product"; done
+	$(Q)for product in $(RELIEFOS_AUTH_ARTIFACTS); do test -e "$$product" || exit 1; touch "$$product"; done
 
 $(O_AUTH) $(AUTH_WORK):
 	$(Q)mkdir -p $@

@@ -7,7 +7,7 @@ remove_provider() {
     file=$1
     [ -f "$file" ] || return 0
     grep -q '^provider[0-9][0-9]*_id=oschinpt$' "$file" || return 0
-    temporary=$file.leonos-oschinpt.$$
+    temporary=$file.reliefos-oschinpt.$$
     awk -F= '
         {
             key = $1

@@ -16,7 +16,7 @@ export LC_ALL
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-execchain.XXXXXX") || exit 1
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-execchain.XXXXXX") || exit 1
 failures=0
 checks=0
 

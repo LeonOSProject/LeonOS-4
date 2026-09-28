@@ -17,22 +17,23 @@ repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 
 # The kernel checkout under test (env-overridable, see test-incremental.sh).
-ntclks=${NTCLKS_DIR:-$repo_root/kernel/ntclks}
+reliefnt=${RELIEFNT_DIR:-${NTCLKS_DIR:-$repo_root/kernel/reliefnt}}
 
 # Probe files live in the shared checkout, so runs must not interleave: two
 # instances racing on the same files restore each other's half-written state
 # into the tree and the loser's marker stays behind forever. The lock is keyed
-# by checkout path and user, and lives in /tmp so runs with different TMPDIR
-# values still serialize on one checkout.
-probe_lock=/tmp/leonos-header-boundary-probe-$(id -u)-$(printf '%s' "$ntclks" | cksum | cut -d' ' -f1).lock
+# by checkout, and lives in its Git metadata so runs with different TMPDIR
+# values still serialize without writing outside the repository's data disk.
+probe_gitdir=$(git -C "$reliefnt" rev-parse --absolute-git-dir) || exit 1
+probe_lock=$probe_gitdir/reliefos-header-boundary-probe-$(id -u).lock
 exec 9>"$probe_lock" || exit 1
 if ! flock -n 9; then
-    printf 'FAIL - another header-boundary run on %s is in flight\n' "$ntclks"
+    printf 'FAIL - another header-boundary run on %s is in flight\n' "$reliefnt"
     exit 1
 fi
 
-probe_sched="$ntclks/kernel/ntclks/include/ntclks/sched.h"
-probe_fsabi="$ntclks/include/uapi/leonos/fs_abi.h"
+probe_sched="$reliefnt/kernel/reliefnt/include/reliefnt/sched.h"
+probe_fsabi="$reliefnt/include/uapi/reliefos/fs_abi.h"
 
 # A run killed between marker append and restore leaves the marker behind for
 # every later test to trip over (the release gate treats the checkout as dirty).
@@ -40,12 +41,12 @@ probe_fsabi="$ntclks/include/uapi/leonos/fs_abi.h"
 for changed in "$probe_sched" "$probe_fsabi"; do
     if [ -f "$changed" ] && tail -n 1 "$changed" | grep -q 'header-boundary probe'; then
         printf 'FAIL - %s still carries a probe marker from an interrupted run\n' "$changed"
-        printf '       restore it (git -C %s checkout -- <file>) and rerun\n' "$ntclks"
+        printf '       restore it (git -C %s checkout -- <file>) and rerun\n' "$reliefnt"
         exit 1
     fi
 done
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/leonos-header-boundary.XXXXXX") || exit 1
+work=$(mktemp -d "${TMPDIR:-/tmp}/reliefos-header-boundary.XXXXXX") || exit 1
 O="$work/out"
 failures=0
 checks=0
@@ -104,7 +105,8 @@ printf '== header boundary ==\n'
 
 # Baseline: config + export + runtime.
 build "$work/0.log" defconfig headers_install runtime
-[ -f "$export_include/leonos/fs_abi.h" ] && [ -f "$export_include/linux/types.h" ] \
+[ -f "$export_include/leonos/fs_abi.h" ] && [ -f "$export_include/reliefos/fs_abi.h" ] \
+    && [ -f "$export_include/linux/types.h" ] \
     && pass "export tree installed under $export_include" \
     || fail "export tree missing" "$(find "$O/kernel-export" -type f | head)"
 

@@ -1,16 +1,16 @@
-#include <leonos/syscall.h>
-#include <leonos/ui.h>
-#include <leonos/layout.h>
+#include <reliefos/syscall.h>
+#include <reliefos/ui.h>
+#include <reliefos/layout.h>
 
 #include "ui_internal.h"
 
 #define UI_WINDOW_BUTTON_ICON_W 16U
 #define UI_WINDOW_BUTTON_ICON_H 16U
 #define UI_WINDOW_BUTTON_ICON_MAX_BYTES (UI_WINDOW_BUTTON_ICON_W * UI_WINDOW_BUTTON_ICON_H * 4U + 128U)
-#define UI_WINDOW_BUTTON_MINIMIZE_ICON_PATH LEONOS_PATH_WINDOW_MINIMIZE_BMP
-#define UI_WINDOW_BUTTON_MAXIMIZE_ICON_PATH LEONOS_PATH_WINDOW_MAXIMIZE_BMP
-#define UI_WINDOW_BUTTON_RESTORE_ICON_PATH LEONOS_PATH_WINDOW_RESTORE_BMP
-#define UI_WINDOW_BUTTON_CLOSE_ICON_PATH LEONOS_PATH_WINDOW_CLOSE_BMP
+#define UI_WINDOW_BUTTON_MINIMIZE_ICON_PATH RELIEFOS_PATH_WINDOW_MINIMIZE_BMP
+#define UI_WINDOW_BUTTON_MAXIMIZE_ICON_PATH RELIEFOS_PATH_WINDOW_MAXIMIZE_BMP
+#define UI_WINDOW_BUTTON_RESTORE_ICON_PATH RELIEFOS_PATH_WINDOW_RESTORE_BMP
+#define UI_WINDOW_BUTTON_CLOSE_ICON_PATH RELIEFOS_PATH_WINDOW_CLOSE_BMP
 
 static uint16_t ui_read_le16(const uint8_t *p)
 {
@@ -57,7 +57,7 @@ static int ui_load_bmp_argb(const char *path, uint32_t max_w, uint32_t max_h,
                             uint32_t *out_h)
 {
     uint8_t bmp[UI_WINDOW_BUTTON_ICON_MAX_BYTES];
-    struct leonos_stat st;
+    struct reliefos_stat st;
     int fd;
     uint32_t len = 0;
     uint32_t pixel_offset;
@@ -75,11 +75,11 @@ static int ui_load_bmp_argb(const char *path, uint32_t max_w, uint32_t max_h,
         out_stride < max_w || max_bytes > sizeof(bmp)) {
         return 0;
     }
-    if (leonos_stat_legacy(path, &st) < 0 || st.type != LEONOS_FS_TYPE_FILE ||
+    if (reliefos_stat_legacy(path, &st) < 0 || st.type != RELIEFOS_FS_TYPE_FILE ||
         st.size < 54 || st.size > max_bytes) {
         return 0;
     }
-    fd = open(path, LEONOS_O_RDONLY, 0);
+    fd = open(path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return 0;
     }
@@ -187,7 +187,7 @@ static int ui_ensure_window_button_icon(struct ui_window_button_icon *icon)
     return icon->loaded;
 }
 
-static int ui_draw_window_button_icon(struct leonos_ui_surface *surface,
+static int ui_draw_window_button_icon(struct reliefos_ui_surface *surface,
                                       struct ui_window_button_icon *icon,
                                       uint32_t x, uint32_t y,
                                       uint32_t draw_w, uint32_t draw_h,
@@ -212,48 +212,48 @@ static int ui_draw_window_button_icon(struct leonos_ui_surface *surface,
             if ((argb >> 24) == 0) {
                 continue;
             }
-            leonos_ui_pixel(surface, x + xx, y + yy, color);
+            reliefos_ui_pixel(surface, x + xx, y + yy, color);
         }
     }
     return 1;
 }
 
-static void ui_window_button_outline_symbol(struct leonos_ui_surface *surface,
+static void ui_window_button_outline_symbol(struct reliefos_ui_surface *surface,
                                             uint32_t x, uint32_t y,
                                             uint32_t w, uint32_t h,
                                             uint32_t color)
 {
-    leonos_ui_rect(surface, x, y, w, 1, color);
-    leonos_ui_rect(surface, x, y, 1, h, color);
-    leonos_ui_rect(surface, x + w - 1, y, 1, h, color);
-    leonos_ui_rect(surface, x, y + h - 1, w, 1, color);
+    reliefos_ui_rect(surface, x, y, w, 1, color);
+    reliefos_ui_rect(surface, x, y, 1, h, color);
+    reliefos_ui_rect(surface, x + w - 1, y, 1, h, color);
+    reliefos_ui_rect(surface, x, y + h - 1, w, 1, color);
 }
 
-static void ui_draw_fallback_window_button_symbol(struct leonos_ui_surface *surface,
+static void ui_draw_fallback_window_button_symbol(struct reliefos_ui_surface *surface,
                                                   uint32_t x, uint32_t y,
                                                   char label, uint32_t color)
 {
     switch (label) {
     case '_':
-        leonos_ui_rect(surface, x + 3, y + 12, 10, 2, color);
+        reliefos_ui_rect(surface, x + 3, y + 12, 10, 2, color);
         break;
     case 'M':
     case 'm':
         ui_window_button_outline_symbol(surface, x + 3, y + 3, 10, 9, color);
-        leonos_ui_rect(surface, x + 4, y + 4, 8, 1, color);
+        reliefos_ui_rect(surface, x + 4, y + 4, 8, 1, color);
         break;
     case 'r':
     case 'R':
         ui_window_button_outline_symbol(surface, x + 5, y + 3, 8, 7, color);
-        leonos_ui_rect(surface, x + 6, y + 4, 6, 1, color);
+        reliefos_ui_rect(surface, x + 6, y + 4, 6, 1, color);
         ui_window_button_outline_symbol(surface, x + 3, y + 6, 8, 7, color);
-        leonos_ui_rect(surface, x + 4, y + 7, 6, 1, color);
+        reliefos_ui_rect(surface, x + 4, y + 7, 6, 1, color);
         break;
     case 'X':
     case 'x':
         for (uint32_t i = 0; i < 8; ++i) {
-            leonos_ui_rect(surface, x + 4 + i, y + 4 + i, 2, 2, color);
-            leonos_ui_rect(surface, x + 4 + i, y + 11 - i, 2, 2, color);
+            reliefos_ui_rect(surface, x + 4 + i, y + 4 + i, 2, 2, color);
+            reliefos_ui_rect(surface, x + 4 + i, y + 11 - i, 2, 2, color);
         }
         break;
     default:
@@ -262,16 +262,16 @@ static void ui_draw_fallback_window_button_symbol(struct leonos_ui_surface *surf
 }
 
 
-void ui_window_button_draw(struct leonos_ui_surface *surface, uint32_t x, uint32_t y,
+void ui_window_button_draw(struct reliefos_ui_surface *surface, uint32_t x, uint32_t y,
                            char label, uint32_t flags)
 {
-    uint32_t pressed = (flags & LEONOS_UI_BUTTON_PRESSED) ? 1U : 0U;
-    uint32_t color = (flags & LEONOS_UI_BUTTON_DISABLED) ? LEONOS_UI_DARK : LEONOS_UI_BLACK;
-    uint32_t icon_x = x + (LEONOS_UI_WINDOW_BUTTON_W - UI_WINDOW_BUTTON_ICON_W) / 2U + pressed;
-    uint32_t icon_y = y + (LEONOS_UI_WINDOW_BUTTON_H - UI_WINDOW_BUTTON_ICON_H) / 2U + pressed;
+    uint32_t pressed = (flags & RELIEFOS_UI_BUTTON_PRESSED) ? 1U : 0U;
+    uint32_t color = (flags & RELIEFOS_UI_BUTTON_DISABLED) ? RELIEFOS_UI_DARK : RELIEFOS_UI_BLACK;
+    uint32_t icon_x = x + (RELIEFOS_UI_WINDOW_BUTTON_W - UI_WINDOW_BUTTON_ICON_W) / 2U + pressed;
+    uint32_t icon_y = y + (RELIEFOS_UI_WINDOW_BUTTON_H - UI_WINDOW_BUTTON_ICON_H) / 2U + pressed;
     struct ui_window_button_icon *icon = ui_window_button_icon_for_label(label);
-    leonos_ui_button(surface, x, y, LEONOS_UI_WINDOW_BUTTON_W,
-                     LEONOS_UI_WINDOW_BUTTON_H, 0, flags);
+    reliefos_ui_button(surface, x, y, RELIEFOS_UI_WINDOW_BUTTON_W,
+                     RELIEFOS_UI_WINDOW_BUTTON_H, 0, flags);
     if (!ui_draw_window_button_icon(surface, icon, icon_x, icon_y,
                                     UI_WINDOW_BUTTON_ICON_W,
                                     UI_WINDOW_BUTTON_ICON_H, color)) {

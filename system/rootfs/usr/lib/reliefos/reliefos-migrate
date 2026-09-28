@@ -1,0 +1,173 @@
+#!/bin/sh
+# Copy only the known persistent files from the pre-ReliefOS guest layout.
+set -u
+umask 022
+
+if [ "$#" -gt 1 ]; then
+    echo 'usage: reliefos-migrate [ROOT]' >&2
+    exit 2
+fi
+root=${1:-/}
+[ -d "$root" ] || { echo "reliefos-migrate: root is not a directory: $root" >&2; exit 2; }
+root=${root%/}
+[ -n "$root" ] || root=/
+
+log() { printf 'reliefos-migrate: %s\n' "$*" >&2; }
+temporary=
+cleanup() {
+    if [ -n "$temporary" ]; then
+        rm -f "$temporary"
+        temporary=
+    fi
+}
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
+
+safe_parent() {
+    relative=$1
+    parent=${relative%/*}
+    current=$root
+    while [ -n "$parent" ]; do
+        case $parent in
+            */*) component=${parent%%/*}; parent=${parent#*/} ;;
+            *) component=$parent; parent= ;;
+        esac
+        if [ "$current" = / ]; then current=/$component; else current=$current/$component; fi
+        if [ -L "$current" ] || { [ -e "$current" ] && [ ! -d "$current" ]; }; then
+            log "unsafe destination parent for $relative: $current"
+            return 1
+        fi
+    done
+    return 0
+}
+
+ensure_destination_parent() {
+    source_parts=${1%/*}
+    destination_parts=${2%/*}
+    source_current=$root
+    destination_current=$root
+    while [ -n "$source_parts" ] && [ -n "$destination_parts" ]; do
+        case $source_parts in
+            */*) source_component=${source_parts%%/*}; source_parts=${source_parts#*/} ;;
+            *) source_component=$source_parts; source_parts= ;;
+        esac
+        case $destination_parts in
+            */*) destination_component=${destination_parts%%/*}; destination_parts=${destination_parts#*/} ;;
+            *) destination_component=$destination_parts; destination_parts= ;;
+        esac
+        if [ "$source_current" = / ]; then source_current=/$source_component; else source_current=$source_current/$source_component; fi
+        if [ "$destination_current" = / ]; then destination_current=/$destination_component; else destination_current=$destination_current/$destination_component; fi
+
+        if [ -L "$source_current" ] || { [ -e "$source_current" ] && [ ! -d "$source_current" ]; }; then
+            log "unsafe legacy directory: $source_current"
+            return 1
+        fi
+        if [ -L "$destination_current" ] || { [ -e "$destination_current" ] && [ ! -d "$destination_current" ]; }; then
+            log "unsafe destination directory: $destination_current"
+            return 1
+        fi
+        if [ ! -d "$destination_current" ]; then
+            if ! mkdir -m 0755 "$destination_current"; then
+                log "cannot create destination directory: $destination_current"
+                return 1
+            fi
+            if [ -d "$source_current" ]; then
+                mode=$(stat -c '%a' "$source_current") || { log "cannot read directory mode: $source_current"; return 1; }
+                uid=$(stat -c '%u' "$source_current") || { log "cannot read directory owner: $source_current"; return 1; }
+                gid=$(stat -c '%g' "$source_current") || { log "cannot read directory group: $source_current"; return 1; }
+                if ! chmod "$mode" "$destination_current" || ! chown "$uid:$gid" "$destination_current"; then
+                    log "cannot preserve directory permissions or ownership: $destination_current"
+                    return 1
+                fi
+            fi
+        fi
+    done
+    return 0
+}
+
+migrate_file() {
+    old_relative=$1
+    new_relative=$2
+    if [ "$root" = / ]; then
+        source=/$old_relative
+        destination=/$new_relative
+    else
+        source=$root/$old_relative
+        destination=$root/$new_relative
+    fi
+
+    if [ ! -e "$source" ] && [ ! -L "$source" ]; then return 0; fi
+    if [ -L "$source" ] || [ ! -f "$source" ]; then
+        log "legacy source is not a regular file; refusing: /$old_relative"
+        return 1
+    fi
+    if [ -e "$destination" ] || [ -L "$destination" ]; then
+        log "destination exists; keeping /$new_relative"
+        return 0
+    fi
+
+    if ! safe_parent "$old_relative" || ! safe_parent "$new_relative"; then return 1; fi
+    if ! ensure_destination_parent "$old_relative" "$new_relative"; then return 1; fi
+    temporary=$(mktemp "$destination.tmp.XXXXXX") || {
+        log "cannot create temporary file for /$new_relative"
+        return 1
+    }
+    if ! cp -p "$source" "$temporary"; then
+        log "copy failed: /$old_relative -> /$new_relative"
+        cleanup
+        return 1
+    fi
+    if ! cmp -s "$source" "$temporary"; then
+        log "copy verification failed: /$old_relative -> /$new_relative"
+        cleanup
+        return 1
+    fi
+    # link(2) publishes atomically and fails instead of replacing a file that
+    # appeared after the initial existence check.
+    if ! ln "$temporary" "$destination"; then
+        if [ -e "$destination" ] || [ -L "$destination" ]; then
+            log "destination appeared during migration; keeping /$new_relative"
+            cleanup
+            return 0
+        fi
+        log "cannot publish migrated file: /$new_relative"
+        cleanup
+        return 1
+    fi
+    cleanup
+    log "copied /$old_relative -> /$new_relative"
+    return 0
+}
+
+failed=0
+# Keep this list explicit. Do not recurse through user-owned directories.
+for pair in \
+    'etc/leonos/leonos.conf etc/reliefos/leonos.conf' \
+    'etc/leonos/display.conf etc/reliefos/display.conf' \
+    'etc/leonos/drivers.conf etc/reliefos/drivers.conf' \
+    'etc/leonos/taskbar.cfg etc/reliefos/taskbar.cfg' \
+    'etc/leonos/network.conf etc/reliefos/network.conf' \
+    'etc/leonos/locale.conf etc/reliefos/locale.conf' \
+    'etc/leonos/environment.conf etc/reliefos/environment.conf' \
+    'etc/leonos/fileassoc.cfg etc/reliefos/fileassoc.cfg' \
+    'etc/leonos/desktop-entries.conf etc/reliefos/desktop-entries.conf' \
+    'etc/leonos/lesskey etc/reliefos/lesskey' \
+    'etc/leonos/desktop-profile etc/reliefos/desktop-profile' \
+    'etc/leonos/desktop-session etc/reliefos/desktop-session' \
+    'etc/leonos/installer-runtime etc/reliefos/installer-runtime' \
+    'etc/leonos/installed etc/reliefos/installed' \
+    'var/lib/leonos/users.db var/lib/reliefos/users.db' \
+    'var/lib/leonos/accounts.db var/lib/reliefos/accounts.db' \
+    'var/lib/leonos/startup.db var/lib/reliefos/startup.db' \
+    'var/lib/leonos/startup-denials.db var/lib/reliefos/startup-denials.db' \
+    'var/lib/leonos/oobe.done var/lib/reliefos/oobe.done' \
+    'var/lib/leonos/license.dat var/lib/reliefos/license.dat' \
+    'var/lib/leonos/kerneldebug.enabled var/lib/reliefos/kerneldebug.enabled' \
+    'var/lib/leonos/kernel-debug var/lib/reliefos/kernel-debug' \
+    'var/lib/leonos/browser/cookies.txt var/lib/reliefos/browser/cookies.txt' \
+    'var/lib/leonos/browser/bookmarks.txt var/lib/reliefos/browser/bookmarks.txt'; do
+    set -- $pair
+    if ! migrate_file "$1" "$2"; then failed=1; fi
+done
+
+exit "$failed"

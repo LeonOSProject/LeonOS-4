@@ -1,5 +1,5 @@
 #!/bin/sh
-# Generate the LeonOS 4 site home page at the Pages root.
+# Generate the ReliefOS site home page at the Pages root.
 #
 # Minimal by design (plan §9, §40): an entry point with the version and links to
 # Download, RPR/packages, Source and Documentation. It is not a README and it
@@ -9,7 +9,7 @@
 set -eu
 [ "$#" = 2 ] || exit 2
 build=$1 output=$2
-version=$(sed -n 's/^#define LEONOS_KERNEL_VERSION "\([0-9.]*\)"$/\1/p' "$build")
+version=$(sed -n 's/^#define RELIEFOS_KERNEL_VERSION "\([0-9.]*\)"$/\1/p' "$build")
 printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo 'invalid release version' >&2; exit 1; }
 # shellcheck source=/dev/null
 . "$(dirname "$0")/site-common.sh"
@@ -17,7 +17,7 @@ printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo 'invali
 mkdir -p "$output"
 {
     site_page_begin "$(site_css_href 0)" "$(site_home_href 0)" \
-        "LeonOS 4" "LeonOS 4"
+        "ReliefOS" "ReliefOS"
     printf '<p class="subtitle">A free and open operating system. &middot; Latest version %s</p>\n' \
         "$(printf '%s' "$version" | site_html_escape)"
     cat <<'HTML'
@@ -30,7 +30,7 @@ mkdir -p "$output"
 <ul>
 <li><a href="rpr/index.html">RPR</a> &mdash; the Remote Package Repository.</li>
 <li><a href="download/index.html">Download</a> &mdash; installer ISO with checksums.</li>
-<li><a href="https://github.com/LeonOSProject/LeonOS-4">Source</a> &mdash; project repository.</li>
+<li><a href="https://github.com/ReliefOSProject/ReliefOS">Source</a> &mdash; project repository.</li>
 <li><a href="docs/index.html">Documentation</a> &mdash; guides generated from the source tree.</li>
 </ul>
 </section>

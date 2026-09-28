@@ -1,5 +1,5 @@
-/* Unix domain socket framing client used by every migrated LeonOS service. */
-#include <leonos/unix_ipc.h>
+/* Unix domain socket framing client used by every migrated ReliefOS service. */
+#include <reliefos/unix_ipc.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdint.h>
@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-int leonos_ipc_connect(const char *path)
+int reliefos_ipc_connect(const char *path)
 {
     struct sockaddr_un address;
     int fd;
@@ -34,12 +34,12 @@ int leonos_ipc_connect(const char *path)
     return fd;
 }
 
-int leonos_ipc_bind_listen(const char *path, int backlog)
+int reliefos_ipc_bind_listen(const char *path, int backlog)
 {
-    return leonos_ipc_bind_listen_mode(path, backlog, 0600);
+    return reliefos_ipc_bind_listen_mode(path, backlog, 0600);
 }
 
-int leonos_ipc_bind_listen_mode(const char *path, int backlog, uint32_t mode)
+int reliefos_ipc_bind_listen_mode(const char *path, int backlog, uint32_t mode)
 {
     struct sockaddr_un address;
     int fd;
@@ -72,10 +72,10 @@ int leonos_ipc_bind_listen_mode(const char *path, int backlog, uint32_t mode)
     return fd;
 }
 
-int leonos_ipc_accept(int listen_fd, struct ucred *peer)
+int reliefos_ipc_accept(int listen_fd, struct ucred *peer)
 {
     int fd = accept4(listen_fd, 0, 0, SOCK_CLOEXEC);
-    if (fd >= 0 && peer && leonos_ipc_peer_credentials(fd, peer) < 0) {
+    if (fd >= 0 && peer && reliefos_ipc_peer_credentials(fd, peer) < 0) {
         int saved = errno;
         close(fd);
         errno = saved;
@@ -84,7 +84,7 @@ int leonos_ipc_accept(int listen_fd, struct ucred *peer)
     return fd;
 }
 
-int leonos_ipc_set_nonblock(int fd, int enabled)
+int reliefos_ipc_set_nonblock(int fd, int enabled)
 {
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags < 0) return -1;
@@ -93,7 +93,7 @@ int leonos_ipc_set_nonblock(int fd, int enabled)
     return fcntl(fd, F_SETFL, flags);
 }
 
-int leonos_ipc_peer_credentials(int fd, struct ucred *credentials)
+int reliefos_ipc_peer_credentials(int fd, struct ucred *credentials)
 {
     socklen_t length = sizeof(*credentials);
     if (!credentials) {
@@ -118,7 +118,7 @@ struct ipc_send_state {
     struct ipc_send_state *next;
     int fd, busy, ancillary;
     uint32_t done, length;
-    uint8_t bytes[LEONOS_IPC_ATOMIC_FRAME_CAP];
+    uint8_t bytes[RELIEFOS_IPC_ATOMIC_FRAME_CAP];
 };
 
 static struct ipc_send_state *send_states;
@@ -215,7 +215,7 @@ static void send_finish(struct ipc_send_state *state, int result)
     errno = saved;
 }
 
-int leonos_ipc_flush(int fd)
+int reliefos_ipc_flush(int fd)
 {
     struct ipc_send_state *state = send_acquire(fd, 0);
     if (!state) return errno ? -1 : 0;
@@ -224,11 +224,11 @@ int leonos_ipc_flush(int fd)
     return result;
 }
 
-int leonos_ipc_send_fd(int fd, uint32_t type, const void *payload,
+int reliefos_ipc_send_fd(int fd, uint32_t type, const void *payload,
                        uint32_t length, int send_fd)
 {
     if (length && !payload) { errno = EINVAL; return -1; }
-    if (length > LEONOS_IPC_ATOMIC_FRAME_CAP - sizeof(struct leonos_ipc_frame) -
+    if (length > RELIEFOS_IPC_ATOMIC_FRAME_CAP - sizeof(struct reliefos_ipc_frame) -
                      sizeof(uint32_t)) {
         errno = EMSGSIZE;
         return -1;
@@ -239,9 +239,9 @@ int leonos_ipc_send_fd(int fd, uint32_t type, const void *payload,
         send_finish(state, -1);
         return -1;
     }
-    struct leonos_ipc_frame frame = {
-        .magic = LEONOS_IPC_MAGIC,
-        .version = LEONOS_IPC_VERSION,
+    struct reliefos_ipc_frame frame = {
+        .magic = RELIEFOS_IPC_MAGIC,
+        .version = RELIEFOS_IPC_VERSION,
         .length = sizeof(uint32_t) + length,
     };
     memcpy(state->bytes, &frame, sizeof(frame));
@@ -256,9 +256,9 @@ int leonos_ipc_send_fd(int fd, uint32_t type, const void *payload,
     return accepted ? 0 : -1;
 }
 
-int leonos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
+int reliefos_ipc_send(int fd, uint32_t type, const void *payload, uint32_t length)
 {
-    return leonos_ipc_send_fd(fd, type, payload, length, -1);
+    return reliefos_ipc_send_fd(fd, type, payload, length, -1);
 }
 
 struct ipc_receive_state {
@@ -270,7 +270,7 @@ struct ipc_receive_state {
     uint32_t body_bytes;
     int require_credentials;
     struct ucred expected;
-    struct leonos_ipc_frame frame;
+    struct reliefos_ipc_frame frame;
     uint8_t *body;
 };
 
@@ -381,7 +381,7 @@ static int receive_frame(int fd, uint32_t *type, void *payload, uint32_t capacit
     if (length) *length = 0;
     /* Request/reply clients may have an accepted request tail to drain. Still
      * read on EAGAIN so two peers under backpressure can both make progress. */
-    if (leonos_ipc_flush(fd) < 0 && errno != EAGAIN) return -1;
+    if (reliefos_ipc_flush(fd) < 0 && errno != EAGAIN) return -1;
     struct ipc_receive_state *state = receive_acquire(fd);
     if (!state) return -1;
     if (!state->header_bytes) {
@@ -394,7 +394,7 @@ static int receive_frame(int fd, uint32_t *type, void *payload, uint32_t capacit
         goto error;
     }
     if (receive_part(state, &state->frame, &state->header_bytes, sizeof(state->frame)) < 0) goto error;
-    if (state->frame.magic != LEONOS_IPC_MAGIC || state->frame.version != LEONOS_IPC_VERSION ||
+    if (state->frame.magic != RELIEFOS_IPC_MAGIC || state->frame.version != RELIEFOS_IPC_VERSION ||
         state->frame.length < sizeof(uint32_t) || state->frame.length > 1024u * 1024u) {
         errno = EPROTO;
         goto error;
@@ -423,26 +423,26 @@ error:;
     return -1;
 }
 
-int leonos_ipc_recv_fd(int fd, uint32_t *type, void *payload, uint32_t capacity,
+int reliefos_ipc_recv_fd(int fd, uint32_t *type, void *payload, uint32_t capacity,
                        uint32_t *length, int *received_fd)
 {
     return receive_frame(fd, type, payload, capacity, length, received_fd, NULL);
 }
 
-int leonos_ipc_recv_cred_fd(int fd, uint32_t *type, void *payload, uint32_t capacity,
+int reliefos_ipc_recv_cred_fd(int fd, uint32_t *type, void *payload, uint32_t capacity,
                            uint32_t *length, int *received_fd, const struct ucred *expected)
 {
     if (!expected) { errno = EINVAL; return -1; }
     return receive_frame(fd, type, payload, capacity, length, received_fd, expected);
 }
 
-int leonos_ipc_recv(int fd, uint32_t *type, void *payload, uint32_t capacity,
+int reliefos_ipc_recv(int fd, uint32_t *type, void *payload, uint32_t capacity,
                     uint32_t *length)
 {
-    return leonos_ipc_recv_fd(fd, type, payload, capacity, length, 0);
+    return reliefos_ipc_recv_fd(fd, type, payload, capacity, length, 0);
 }
 
-int leonos_ipc_close(int fd)
+int reliefos_ipc_close(int fd)
 {
     struct ipc_send_state *pending = send_acquire(fd, 0);
     if (!pending && errno) return -1;
@@ -456,3 +456,17 @@ int leonos_ipc_close(int fd)
     if (state) receive_release(state, 0);
     return fd >= 0 ? close(fd) : -1;
 }
+/* Published libleonos.so.2 aliases; keep these in the defining translation unit. */
+extern __typeof__(reliefos_ipc_accept) leonos_ipc_accept __attribute__((alias("reliefos_ipc_accept")));
+extern __typeof__(reliefos_ipc_bind_listen) leonos_ipc_bind_listen __attribute__((alias("reliefos_ipc_bind_listen")));
+extern __typeof__(reliefos_ipc_bind_listen_mode) leonos_ipc_bind_listen_mode __attribute__((alias("reliefos_ipc_bind_listen_mode")));
+extern __typeof__(reliefos_ipc_close) leonos_ipc_close __attribute__((alias("reliefos_ipc_close")));
+extern __typeof__(reliefos_ipc_connect) leonos_ipc_connect __attribute__((alias("reliefos_ipc_connect")));
+extern __typeof__(reliefos_ipc_flush) leonos_ipc_flush __attribute__((alias("reliefos_ipc_flush")));
+extern __typeof__(reliefos_ipc_peer_credentials) leonos_ipc_peer_credentials __attribute__((alias("reliefos_ipc_peer_credentials")));
+extern __typeof__(reliefos_ipc_recv) leonos_ipc_recv __attribute__((alias("reliefos_ipc_recv")));
+extern __typeof__(reliefos_ipc_recv_cred_fd) leonos_ipc_recv_cred_fd __attribute__((alias("reliefos_ipc_recv_cred_fd")));
+extern __typeof__(reliefos_ipc_recv_fd) leonos_ipc_recv_fd __attribute__((alias("reliefos_ipc_recv_fd")));
+extern __typeof__(reliefos_ipc_send) leonos_ipc_send __attribute__((alias("reliefos_ipc_send")));
+extern __typeof__(reliefos_ipc_send_fd) leonos_ipc_send_fd __attribute__((alias("reliefos_ipc_send_fd")));
+extern __typeof__(reliefos_ipc_set_nonblock) leonos_ipc_set_nonblock __attribute__((alias("reliefos_ipc_set_nonblock")));

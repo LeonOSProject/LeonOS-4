@@ -1,5 +1,5 @@
 #!/bin/sh
-# Contract tests for leonos-deps, the reader of configs/dependencies.lock.json.
+# Contract tests for reliefos-deps, the reader of configs/dependencies.lock.json.
 #
 # The lock file decides which upstream source gets built and which digest is
 # accepted, so these checks cover the tool's promises: what it validates, what
@@ -10,12 +10,12 @@ set -u
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 
-deps=${LEONOS_DEPS:?set by mk/tests.mk}
-lock=${LEONOS_LOCK:-configs/dependencies.lock.json}
+deps=${RELIEFOS_DEPS:-${LEONOS_DEPS:?set by mk/tests.mk}}
+lock=${RELIEFOS_LOCK:-${LEONOS_LOCK:-configs/dependencies.lock.json}}
 
 failures=0
 checks=0
-work=./leonos-deps-contract.$$
+work=./reliefos-deps-contract.$$
 
 cleanup() { rm -rf "$work"; }
 trap 'cleanup; exit 130' INT
@@ -224,7 +224,7 @@ expect_failure '--print without --id is rejected' \
 cleanup
 printf -- '---\n'
 if [ "$failures" -ne 0 ]; then
-    printf 'not ok - leonos-deps contract: %d of %d checks failed\n' "$failures" "$checks"
+    printf 'not ok - reliefos-deps contract: %d of %d checks failed\n' "$failures" "$checks"
     exit 1
 fi
-printf 'ok - leonos-deps contract: %d checks passed\n' "$checks"
+printf 'ok - reliefos-deps contract: %d checks passed\n' "$checks"

@@ -1,4 +1,5 @@
 #include <assert.h>
+#include "host_tmp.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,9 +9,10 @@
 
 int main(void)
 {
-    char directory[] = "/tmp/leonos-installer-accounts-XXXXXX";
+    char directory[192];
+    host_tmp_path(directory, sizeof(directory), "installer-accounts-XXXXXX");
     assert(mkdtemp(directory));
-    struct leonos_auth_record records[2] = {
+    struct reliefos_auth_record records[2] = {
         {.user = {.uid = 0, .role = 2, .username = "root", .home = "/root"}},
         {.user = {.uid = 1000, .role = 1, .username = "alice", .home = "/home/alice"}},
     };
@@ -47,21 +49,21 @@ int main(void)
     assert(authd_check_password(&records[1], "reference-password"));
     records[1].password_hash[22] = '!';
     assert(!authd_check_password(&records[1], "reference-password"));
-    assert(!leonos_auth_password_valid("123456789012345678901234567890123", 34));
-    assert(!leonos_auth_password_valid("before after", 13));
-    assert(!leonos_auth_password_valid("before\tafter", 13));
-    assert(!leonos_auth_password_valid("\xe3\x80\x80", 4));
+    assert(!reliefos_auth_password_valid("123456789012345678901234567890123", 34));
+    assert(!reliefos_auth_password_valid("before after", 13));
+    assert(!reliefos_auth_password_valid("before\tafter", 13));
+    assert(!reliefos_auth_password_valid("\xe3\x80\x80", 4));
     char unicode_password[133];
     for (unsigned i = 0; i < 33; ++i) memcpy(unicode_password + i * 4, "\xf0\x9f\x94\x91", 4);
     unicode_password[132] = 0;
-    assert(!leonos_auth_password_valid(unicode_password, sizeof(unicode_password)));
+    assert(!reliefos_auth_password_valid(unicode_password, sizeof(unicode_password)));
     unicode_password[128] = 0;
-    assert(leonos_auth_password_valid(unicode_password, sizeof(unicode_password)));
+    assert(reliefos_auth_password_valid(unicode_password, sizeof(unicode_password)));
     assert(authd_set_password(&records[1], unicode_password) == 0);
     assert(authd_check_password(&records[1], unicode_password));
-    assert(!leonos_auth_password_valid("\xc0\xaf", 3));
-    assert(!leonos_auth_password_valid("\xed\xa0\x80", 4));
-    assert(!leonos_auth_password_valid("\xf0\x9f", 3));
+    assert(!reliefos_auth_password_valid("\xc0\xaf", 3));
+    assert(!reliefos_auth_password_valid("\xed\xa0\x80", 4));
+    assert(!reliefos_auth_password_valid("\xf0\x9f", 3));
     records[1].user.uid = 0;
     assert(authd_export_accounts(directory, records, 2) == -1 && errno == EINVAL);
     records[1].user.uid = 1000;

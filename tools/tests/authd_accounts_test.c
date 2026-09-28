@@ -1,4 +1,5 @@
 #include <assert.h>
+#include "host_tmp.h"
 #include <errno.h>
 #include <grp.h>
 #include <pwd.h>
@@ -11,16 +12,17 @@
 
 int main(void)
 {
-    char directory[] = "/tmp/leonos-accounts-XXXXXX", path[256];
+    char directory[192], path[256];
+    host_tmp_path(directory, sizeof(directory), "accounts-XXXXXX");
     assert(mkdtemp(directory));
-    struct leonos_auth_record records[2] = {0};
+    struct reliefos_auth_record records[2] = {0};
     records[0].user.uid = 0;
-    records[0].user.role = LEONOS_AUTH_ROLE_ADMIN;
+    records[0].user.role = RELIEFOS_AUTH_ROLE_ADMIN;
     strcpy(records[0].user.username, "root");
     strcpy(records[0].user.home, "/root");
     memset(records[0].password_hash, 'Z', sizeof(records[0].password_hash));
     records[1].user.uid = 1000;
-    records[1].user.role = LEONOS_AUTH_ROLE_USER;
+    records[1].user.role = RELIEFOS_AUTH_ROLE_USER;
     strcpy(records[1].user.username, "second-user");
     strcpy(records[1].user.home, "/home/second-user");
     assert(authd_export_accounts(directory, records, 2) == 0);
@@ -75,7 +77,7 @@ int main(void)
     assert(unlink(path) == 0);
     snprintf(path, sizeof(path), "%s/passwd", directory);
     assert(unlink(path) == 0);
-    assert(authd_export_accounts("/proc/leonos-accounts-test", records, 1) == -1);
+    assert(authd_export_accounts("/proc/reliefos-accounts-test", records, 1) == -1);
     assert(rmdir(directory) == 0);
     puts("accounts: standard passwd/group lookup, UID preservation, modes and invalid records PASS");
     return 0;

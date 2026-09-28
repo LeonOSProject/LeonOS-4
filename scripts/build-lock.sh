@@ -104,7 +104,7 @@ if [ "$live" = 1 ]; then
     if [ "$owner" = "$self:$target_o" ]; then
         printf '%s\n' "$owner"; exit 0
     fi
-    if [ "${LEONOS_BUILD_OWNER:-}" = "$owner" ] &&
+    if [ "${RELIEFOS_BUILD_OWNER:-}" = "$owner" ] &&
        [ "${owner#*:}" = "$target_o" ]; then
         while [ "$probe" -gt 1 ] 2>/dev/null; do
             probe=$(proc_field "$probe" 4) || break

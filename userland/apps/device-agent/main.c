@@ -1,17 +1,17 @@
 #include <signal.h>
 #include <sys/wait.h>
-/* devmand, LeonOS business protocol: /run/leonos/devman.sock exports the device
+/* devmand, ReliefOS business protocol: /run/reliefos/devman.sock exports the device
  * catalog and driver control plane previously available through /dev/hwinfo
  * and /dev/driverctl. */
 #include <errno.h>
 #include <sys/ioctl.h>
-#include <leonos/device.h>
-#include <leonos/devmand.h>
-#include <leonos/driver.h>
-#include <leonos/fs.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/unix_ipc.h>
+#include <reliefos/device.h>
+#include <reliefos/devmand.h>
+#include <reliefos/driver.h>
+#include <reliefos/fs.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/unix_ipc.h>
 #include <poll.h>
 #include <stdint.h>
 #include <string.h>
@@ -21,7 +21,7 @@
 
 #define DEVMAND_MAX_CLIENTS 16u
 #define DEVMAND_MAX_DEVICES 32u
-#define DEVMAND_MAX_DRIVERS LEONOS_DRIVER_MAX
+#define DEVMAND_MAX_DRIVERS RELIEFOS_DRIVER_MAX
 #define DEVMAND_FRAME_CAP 8192u
 
 struct devmand_client {
@@ -46,38 +46,38 @@ static void devmand_copy(char *dst, uint32_t capacity, const char *src)
     dst[i] = 0;
 }
 
-static void devmand_fill_device(const char *name, struct leonos_device_info *out)
+static void devmand_fill_device(const char *name, struct reliefos_device_info *out)
 {
     memset(out, 0, sizeof(*out));
-    out->flags = LEONOS_DEVICE_FLAG_PRESENT | LEONOS_DEVICE_FLAG_ACTIVE;
+    out->flags = RELIEFOS_DEVICE_FLAG_PRESENT | RELIEFOS_DEVICE_FLAG_ACTIVE;
     devmand_copy(out->name, sizeof(out->name), name);
-    if (!strcmp(name, "fb0")) out->device_class = LEONOS_DEVICE_CLASS_DISPLAY;
+    if (!strcmp(name, "fb0")) out->device_class = RELIEFOS_DEVICE_CLASS_DISPLAY;
     else if (!strcmp(name, "keyboard") || !strcmp(name, "mouse"))
-        out->device_class = LEONOS_DEVICE_CLASS_INPUT;
+        out->device_class = RELIEFOS_DEVICE_CLASS_INPUT;
     else if (!strcmp(name, "sda") || !strcmp(name, "vda") ||
              !strcmp(name, "nvme0n1") || !strcmp(name, "disk0"))
-        out->device_class = LEONOS_DEVICE_CLASS_STORAGE;
+        out->device_class = RELIEFOS_DEVICE_CLASS_STORAGE;
     else if (!strcmp(name, "dsp") || !strcmp(name, "audio"))
-        out->device_class = LEONOS_DEVICE_CLASS_AUDIO;
+        out->device_class = RELIEFOS_DEVICE_CLASS_AUDIO;
     else if (!strcmp(name, "ttyS0") || !strcmp(name, "serial0"))
-        out->device_class = LEONOS_DEVICE_CLASS_SERIAL;
+        out->device_class = RELIEFOS_DEVICE_CLASS_SERIAL;
     else if (!strcmp(name, "ethernet0"))
-        out->device_class = LEONOS_DEVICE_CLASS_NETWORK;
+        out->device_class = RELIEFOS_DEVICE_CLASS_NETWORK;
     else
-        out->device_class = LEONOS_DEVICE_CLASS_SYSTEM;
+        out->device_class = RELIEFOS_DEVICE_CLASS_SYSTEM;
     devmand_copy(out->status, sizeof(out->status), "Running");
 }
 
-static uint32_t devmand_collect_devices(struct leonos_device_info *out,
+static uint32_t devmand_collect_devices(struct reliefos_device_info *out,
                                         uint32_t capacity)
 {
-    struct leonos_device_info devices[DEVMAND_MAX_DEVICES] = {0};
-    struct leonos_dir_entry entry;
-    int fd = open("/dev", LEONOS_O_RDONLY, 0);
+    struct reliefos_device_info devices[DEVMAND_MAX_DEVICES] = {0};
+    struct reliefos_dir_entry entry;
+    int fd = open("/dev", RELIEFOS_O_RDONLY, 0);
     uint32_t count = 0;
     if (fd < 0) return 0;
-    while (count < DEVMAND_MAX_DEVICES && leonos_readdir(fd, &entry) > 0) {
-        if (entry.type != LEONOS_FS_TYPE_DEVICE) continue;
+    while (count < DEVMAND_MAX_DEVICES && reliefos_readdir(fd, &entry) > 0) {
+        if (entry.type != RELIEFOS_FS_TYPE_DEVICE) continue;
         devmand_fill_device(entry.name, &devices[count]);
         ++count;
     }
@@ -89,9 +89,9 @@ static uint32_t devmand_collect_devices(struct leonos_device_info *out,
     return count;
 }
 
-static int devmand_collect_drivers(struct leonos_driver_info *out, uint32_t capacity)
+static int devmand_collect_drivers(struct reliefos_driver_info *out, uint32_t capacity)
 {
-    int fd = open("/proc/leonos-drivers", LEONOS_O_RDONLY, 0);
+    int fd = open("/proc/leonos-drivers", RELIEFOS_O_RDONLY, 0);
     if (fd < 0) return -1;
     uint32_t bytes = 0, limit = capacity * sizeof(*out);
     while (bytes < limit) {
@@ -115,37 +115,37 @@ static void devmand_handle_client(int slot)
     for (;;) {
         struct pollfd descriptor = {.fd = client->fd, .events = POLLIN, .revents = 0};
         if (poll(&descriptor, 1, 0) <= 0) return;
-        if (leonos_ipc_recv_cred_fd(client->fd, &type, buffer, sizeof(buffer), &length, NULL, &client->credentials) < 0) {
+        if (reliefos_ipc_recv_cred_fd(client->fd, &type, buffer, sizeof(buffer), &length, NULL, &client->credentials) < 0) {
             if (errno == EAGAIN) return;
-            leonos_ipc_close(client->fd);
+            reliefos_ipc_close(client->fd);
             memset(client, 0, sizeof(*client));
             client->fd = -1;
             return;
         }
         if (client->credentials.pid != (pid_t)client->pid || client->credentials.uid != client->uid) {
-            leonos_ipc_close(client->fd);
+            reliefos_ipc_close(client->fd);
             memset(client, 0, sizeof(*client)); client->fd = -1;
             return;
         }
-        if (type == LEONOS_DEVMAND_MSG_HELLO) {
-            struct leonos_devmand_hello hello;
-            struct leonos_devmand_ack ack = {.code = 1};
-            if (length < sizeof(hello)) { leonos_ipc_close(client->fd); memset(client,0,sizeof(*client)); client->fd=-1; return; }
+        if (type == RELIEFOS_DEVMAND_MSG_HELLO) {
+            struct reliefos_devmand_hello hello;
+            struct reliefos_devmand_ack ack = {.code = 1};
+            if (length < sizeof(hello)) { reliefos_ipc_close(client->fd); memset(client,0,sizeof(*client)); client->fd=-1; return; }
             memcpy(&hello, buffer, sizeof(hello));
             if (hello.pid != client->pid || hello.uid != client->uid) {
-                leonos_ipc_close(client->fd);
+                reliefos_ipc_close(client->fd);
                 memset(client, 0, sizeof(*client));
                 client->fd = -1;
                 return;
             }
-            (void)leonos_ipc_send(client->fd, LEONOS_DEVMAND_MSG_ACK,
+            (void)reliefos_ipc_send(client->fd, RELIEFOS_DEVMAND_MSG_ACK,
                                   &ack, sizeof(ack));
             continue;
         }
-        if (type == LEONOS_DEVMAND_MSG_DEVICE_LIST) {
-            struct leonos_devmand_list_request request;
-            struct leonos_devmand_ack ack;
-            struct leonos_device_info devices[DEVMAND_MAX_DEVICES] = {0};
+        if (type == RELIEFOS_DEVMAND_MSG_DEVICE_LIST) {
+            struct reliefos_devmand_list_request request;
+            struct reliefos_devmand_ack ack;
+            struct reliefos_device_info devices[DEVMAND_MAX_DEVICES] = {0};
             uint8_t payload[DEVMAND_FRAME_CAP];
             uint32_t offset = sizeof(ack);
             if (length < sizeof(request)) continue;
@@ -160,14 +160,14 @@ static void devmand_handle_client(int slot)
                 }
             }
             memcpy(payload, &ack, sizeof(ack));
-            (void)leonos_ipc_send(client->fd, LEONOS_DEVMAND_MSG_DEVICE_LIST,
+            (void)reliefos_ipc_send(client->fd, RELIEFOS_DEVMAND_MSG_DEVICE_LIST,
                                   payload, offset + ack.count * sizeof(*devices));
             continue;
         }
-        if (type == LEONOS_DEVMAND_MSG_DRIVER_LIST) {
-            struct leonos_devmand_list_request request;
-            struct leonos_devmand_ack ack;
-            struct leonos_driver_info drivers[DEVMAND_MAX_DRIVERS] = {0};
+        if (type == RELIEFOS_DEVMAND_MSG_DRIVER_LIST) {
+            struct reliefos_devmand_list_request request;
+            struct reliefos_devmand_ack ack;
+            struct reliefos_driver_info drivers[DEVMAND_MAX_DRIVERS] = {0};
             uint8_t payload[DEVMAND_FRAME_CAP];
             uint32_t offset = sizeof(ack);
             if (length < sizeof(request)) continue;
@@ -176,7 +176,7 @@ static void devmand_handle_client(int slot)
             int count = devmand_collect_drivers(drivers, DEVMAND_MAX_DRIVERS);
             if (count < 0) {
                 ack.code = -errno;
-                (void)leonos_ipc_send(client->fd, LEONOS_DEVMAND_MSG_ACK, &ack, sizeof(ack));
+                (void)reliefos_ipc_send(client->fd, RELIEFOS_DEVMAND_MSG_ACK, &ack, sizeof(ack));
                 continue;
             }
             ack.count = count;
@@ -188,32 +188,32 @@ static void devmand_handle_client(int slot)
                 }
             }
             memcpy(payload, &ack, sizeof(ack));
-            (void)leonos_ipc_send(client->fd, LEONOS_DEVMAND_MSG_DRIVER_LIST,
+            (void)reliefos_ipc_send(client->fd, RELIEFOS_DEVMAND_MSG_DRIVER_LIST,
                                   payload, offset + ack.count * sizeof(*drivers));
             continue;
         }
-        if (type == LEONOS_DEVMAND_MSG_DRIVER_CONTROL) {
-            struct leonos_devmand_ack ack = {.code = -EACCES};
+        if (type == RELIEFOS_DEVMAND_MSG_DRIVER_CONTROL) {
+            struct reliefos_devmand_ack ack = {.code = -EACCES};
             /* SO_PEERCRED uid==0 is the only driver-control principal. */
             if (client->uid == 0) {
-                struct leonos_driver_control request;
+                struct reliefos_driver_control request;
                 if (length != sizeof(request)) ack.code = -EINVAL;
                 else {
                     memcpy(&request, buffer, sizeof(request));
                     if (request.flags || request.reserved || !memchr(request.file, 0, sizeof(request.file)))
                         ack.code = -EINVAL;
                     else {
-                        int fd = open("/dev/driverctl", LEONOS_O_RDONLY | LEONOS_O_CLOEXEC, 0);
+                        int fd = open("/dev/driverctl", RELIEFOS_O_RDONLY | RELIEFOS_O_CLOEXEC, 0);
                         if (fd < 0) ack.code = -errno;
                         else {
-                            int ret = ioctl(fd, LEONOS_DRIVER_CONTROL_IOCTL, &request);
+                            int ret = ioctl(fd, RELIEFOS_DRIVER_CONTROL_IOCTL, &request);
                             ack.code = ret < 0 ? -errno : request.status;
                             close(fd);
                         }
                     }
                 }
             }
-            (void)leonos_ipc_send(client->fd, LEONOS_DEVMAND_MSG_ACK,
+            (void)reliefos_ipc_send(client->fd, RELIEFOS_DEVMAND_MSG_ACK,
                                   &ack, sizeof(ack));
             continue;
         }
@@ -223,7 +223,7 @@ static void devmand_handle_client(int slot)
 static void devmand_poll(void)
 {
     if (listen_fd < 0) {
-        listen_fd = leonos_ipc_bind_listen_mode(LEONOS_IPC_SOCK_DEVICE, 8, 0666);
+        listen_fd = reliefos_ipc_bind_listen_mode(RELIEFOS_IPC_SOCK_DEVICE, 8, 0666);
         if (listen_fd < 0) {
             printf("[devmand] bind failed errno=%d\n", errno);
             return;
@@ -232,25 +232,25 @@ static void devmand_poll(void)
         if (setsockopt(listen_fd, SOL_SOCKET, SO_PASSCRED, &passcred, sizeof(passcred)) < 0) {
             close(listen_fd); listen_fd = -1; return;
         }
-        (void)leonos_ipc_set_nonblock(listen_fd, 1);
-        printf("[devmand] listening on %s\n", LEONOS_IPC_SOCK_DEVICE);
+        (void)reliefos_ipc_set_nonblock(listen_fd, 1);
+        printf("[devmand] listening on %s\n", RELIEFOS_IPC_SOCK_DEVICE);
     }
     {
         struct pollfd descriptor = {.fd = listen_fd, .events = POLLIN, .revents = 0};
         if (poll(&descriptor, 1, 0) > 0 && (descriptor.revents & POLLIN)) {
             int fd;
-            while ((fd = leonos_ipc_accept(listen_fd, 0)) >= 0) {
+            while ((fd = reliefos_ipc_accept(listen_fd, 0)) >= 0) {
                 struct ucred credentials;
                 int slot = -1, passcred = 1;
                 for (uint32_t i = 0; i < DEVMAND_MAX_CLIENTS; ++i) {
                     if (!clients[i].used) { slot = (int)i; break; }
                 }
-                if (slot < 0 || leonos_ipc_peer_credentials(fd, &credentials) < 0 ||
+                if (slot < 0 || reliefos_ipc_peer_credentials(fd, &credentials) < 0 ||
                     setsockopt(fd, SOL_SOCKET, SO_PASSCRED, &passcred, sizeof(passcred)) < 0) {
                     close(fd);
                     continue;
                 }
-                (void)leonos_ipc_set_nonblock(fd, 1);
+                (void)reliefos_ipc_set_nonblock(fd, 1);
                 clients[slot].used = 1;
                 clients[slot].fd = fd;
                 clients[slot].pid = (uint32_t)credentials.pid;
@@ -285,6 +285,6 @@ int main(void)
     }
     for (unsigned i = 0; i < 16; ++i) if (clients[i].used) close(clients[i].fd);
     close(listen_fd);
-    unlink(LEONOS_IPC_SOCK_DEVICE);
+    unlink(RELIEFOS_IPC_SOCK_DEVICE);
     return stopping ? 0 : 1;
 }

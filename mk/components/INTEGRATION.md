@@ -3,12 +3,12 @@
 Include `mk/userland.mk` after runtime/SDK and third-party fragments; it includes
 `mk/components/graphics.mk` itself. Parent has integrated the root Makefile.
 Host tool rules are self-contained in the fragment. `tools` may additionally
-depend on `$(LEONOS_COMPONENT_TOOL)` and `$(LEONOS_GEARS_TOOL)`.
+depend on `$(RELIEFOS_COMPONENT_TOOL)` and `$(RELIEFOS_GEARS_TOOL)`.
 
 ## Interfaces
 
-- `LEONOS_COMPONENTS_ENABLED`, `LEONOS_COMPONENTS_DISABLED`,
-  `LEONOS_COMPONENT_APPS` come from `configs/components.toml` plus O/config/.config.
+- `RELIEFOS_COMPONENTS_ENABLED`, `RELIEFOS_COMPONENTS_DISABLED`,
+  `RELIEFOS_COMPONENT_APPS` come from `configs/components.toml` plus O/config/.config.
   Required components remain enabled; dependency closure follows the old resolver.
 - Apps: `O/userland/NAME.elf`, aliases `app-NAME` for enabled project applications.
 - Installer: `O/userland-installer-policy/{desktop,settings}.elf` and
@@ -24,7 +24,7 @@ depend on `$(LEONOS_COMPONENT_TOOL)` and `$(LEONOS_GEARS_TOOL)`.
 
 ## Parser boundaries
 
-`leonos-components` is a bounded, explicit constrained TOML parser, not a shell
+`reliefos-components` is a bounded, explicit constrained TOML parser, not a shell
 text extractor. It accepts the current schema: bare keys, basic single-line
 strings without escapes, booleans, version integer, string arrays, components
 array-of-tables and comments. Unsupported syntax/fields fail clearly. Nonempty
@@ -40,7 +40,7 @@ renames/touches were performed.
 - `sh tests/build/test-components.sh`: pass with GCC and Clang strict warnings.
   Required/disabled selection, dependency closure, cycles, unsafe names and
   truncated strings; old valid output survives a rejected manifest.
-- Same suite with Clang ASan/UBSan: pass. Log `/tmp/leonos-components-test.log`.
+- Same suite with Clang ASan/UBSan: pass. Log `/tmp/reliefos-components-test.log`.
 - `sh tests/build/test-gears-generator.sh`: GCC, Clang and ASan/UBSan pass;
   exactly one upstream implementation marker required, old output preserved.
 - `sh tests/build/test-userland-graph.sh`: pass in disposable fixture. No-op mtime,
@@ -59,7 +59,7 @@ renames/touches were performed.
   Log `/tmp/leonos-userland-noop-final.log` (parent's temporary coordination
   message is the only output).
 - `readelf` confirms hello ELF64 x86-64 PIE, DT_NEEDED libmimalloc.so.3,
-  libleonos.so.2 and libc.so; dynlinkerror has no dynamic section.
+  libreliefos.so.2 and libc.so; dynlinkerror has no dynamic section.
 - Initial CC command-line propagation failure in upstream auth was diagnosed:
   recursive Make replaced configured compound CC with plain host clang. Parent
   fixed adapter propagation. This is not a userland workaround.

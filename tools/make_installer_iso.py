@@ -57,9 +57,11 @@ def stage_installer_tree(
     copy_file(grub_config, stage / "grub/grub.cfg")
     copy_file(grub_font, stage / "grub/fonts/leonos-unicode.pf2")
     copy_file(ROOT / "boot/grub/theme/theme.txt", stage / "grub/theme/theme.txt")
-    (stage / "leonos-installer-iso.marker").write_text("LeonOS installer ISO volume\n", encoding="ascii")
+    for namespace in ("reliefos", "leonos"):
+        (stage / f"{namespace}-installer-iso.marker").write_text("ReliefOS installer ISO volume\n", encoding="ascii")
+        copy_file(kernel, stage / namespace / "kernel.sys")
+        copy_file(loader, stage / namespace / "loader.elf")
     copy_file(loader, stage / "loader.elf")
-    copy_file(kernel, stage / "leonos/kernel.sys")
     copy_file(installer_root, stage / "install/root.fat")
     copy_file(boot_image, stage / "boot/efiboot.img")
 
@@ -80,14 +82,14 @@ def create_boot_image(boot_image: Path, boot_efi: Path, boot_stage: Path) -> Non
     if boot_image.exists():
         boot_image.unlink()
     run(["truncate", "-s", f"{size_mib}M", str(boot_image)])
-    run(["mkfs.fat", "-F", "16", "-n", "LEONOSINST", str(boot_image)])
+    run(["mkfs.fat", "-F", "16", "-n", "RELIEFOS", str(boot_image)])
     for item in sorted(boot_stage.iterdir()):
         run(["mcopy", "-s", "-i", str(boot_image), str(item), "::/"])
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Create LeonOS UEFI installer ISO")
-    parser.add_argument("--out", default="build/images/leonos4-installer.iso")
+    parser = argparse.ArgumentParser(description="Create ReliefOS UEFI installer ISO")
+    parser.add_argument("--out", default="build/images/reliefos-installer.iso")
     parser.add_argument("--stage", default="build/installer-iso")
     parser.add_argument("--boot-image", default="build/install/installer-efiboot.img")
     parser.add_argument("--loader", default="build/boot/loader.elf")
@@ -139,7 +141,7 @@ def main() -> int:
         "-R",
         "-J",
         "-V",
-        "LEONOS4INST",
+        "RELIEFOSINST",
         *(("-b", "boot/grub/eltorito.img", "-no-emul-boot", "-boot-load-size", "4",
            "-boot-info-table", "-eltorito-alt-boot") if args.bios else ()),
         "-e",

@@ -4,7 +4,7 @@ src=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 work=$(mktemp -d)
 trap 'chmod -R u+w "$work"; rm -rf "$work"' EXIT HUP INT TERM
 ${HOSTCC:-cc} -std=c11 -Wall -Wextra -Werror -Wpedantic -I"$src" \
- "$src/tools/host/manifest/leonos-stage.c" "$src/tools/host/common/io.c" "$src/tools/host/common/buffer.c" "$src/tools/host/manifest/json.c" -o "$work/stage"
+ "$src/tools/host/manifest/reliefos-stage.c" "$src/tools/host/common/io.c" "$src/tools/host/common/buffer.c" "$src/tools/host/manifest/json.c" -o "$work/stage"
 mkdir "$work/input" "$work/root"
 printf 'payload\n' > "$work/input/file with spaces"
 ln -s 'file with spaces' "$work/input/alias"
@@ -42,11 +42,11 @@ mkdir "$work/deleted-root"
 # explicit value reaches the manifest (M1 service role marks depend on it).
 grep -q '"uid":0,"gid":0' "$work/deleted.json"
 printf 'payload\n' > "$work/gid-input"
-printf 'f\t%s\t/usr/lib/leonos/apps/desktop/desktop.elf\t0755\tservice\tunique\t60001\n' "$work/gid-input" > "$work/gid-plan"
+printf 'f\t%s\t/usr/lib/reliefos/apps/desktop/desktop.elf\t0755\tservice\tunique\t60001\n' "$work/gid-input" > "$work/gid-plan"
 mkdir "$work/gid-root"
 "$work/stage" "$work/gid-plan" "$work/gid-root" "$work/gid.json"
-grep -q '"path":"/usr/lib/leonos/apps/desktop/desktop.elf","mode":"0755","uid":0,"gid":60001' "$work/gid.json"
-[ "$(stat -c %a "$work/gid-root/usr/lib/leonos/apps/desktop/desktop.elf")" = 755 ]
+grep -q '"path":"/usr/lib/reliefos/apps/desktop/desktop.elf","mode":"0755","uid":0,"gid":60001' "$work/gid.json"
+[ "$(stat -c %a "$work/gid-root/usr/lib/reliefos/apps/desktop/desktop.elf")" = 755 ]
 # An absent, empty or non-decimal gid column is refused before staging.
 for bad in '' 'bogus' '-1' '99999999999'; do
     printf 'f\t%s\t/bad\t0644\tservice\tunique\t%s\n' "$work/gid-input" "$bad" > "$work/bad-gid"

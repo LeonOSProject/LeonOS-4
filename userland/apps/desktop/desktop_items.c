@@ -1,6 +1,6 @@
-#include <leonos/pam_session.h>
+#include <reliefos/pam_session.h>
 #include "desktop.h"
-#include <leonos/launch_result.h>
+#include <reliefos/launch_result.h>
 
 #define DESKTOP_ITEM_LABEL_LINES 2
 #define DESKTOP_SHORTCUT_MAX_BYTES 384U
@@ -232,7 +232,7 @@ static int desktop_read_shortcut_target(const char *shortcut_path, char *target,
         return -22;
     }
     target[0] = 0;
-    fd = open(shortcut_path, LEONOS_O_RDONLY, 0);
+    fd = open(shortcut_path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return fd;
     }
@@ -304,7 +304,7 @@ static int32_t desktop_item_at(uint32_t x, uint32_t y)
 
 static void desktop_icon_path_for_target(const char *path, char *dst, uint32_t dst_len)
 {
-    struct leonos_stat st;
+    struct reliefos_stat st;
     const char *app_path;
     if (!dst || !dst_len) {
         return;
@@ -317,45 +317,45 @@ static void desktop_icon_path_for_target(const char *path, char *dst, uint32_t d
         desktop_icon_path_for_app(path, dst, dst_len);
         return;
     }
-    if (leonos_stat_legacy(path, &st) == 0 && st.type == LEONOS_FS_TYPE_DIR) {
-        char fileman_path[LEONOS_APP_PATH_LEN];
-        if (leonos_app_registry_resolve("fileman", fileman_path,
+    if (reliefos_stat_legacy(path, &st) == 0 && st.type == RELIEFOS_FS_TYPE_DIR) {
+        char fileman_path[RELIEFOS_APP_PATH_LEN];
+        if (reliefos_app_registry_resolve("fileman", fileman_path,
                                         sizeof(fileman_path)) == 0) {
             desktop_icon_path_for_app(fileman_path, dst, dst_len);
         }
         return;
     }
-    app_path = leonos_launch_resolve_default_app_for_path(path);
+    app_path = reliefos_launch_resolve_default_app_for_path(path);
     if (app_path && app_path[0]) {
         desktop_icon_path_for_app(app_path, dst, dst_len);
     }
 }
 
-static void desktop_icon_path_for_entry(const struct leonos_dir_entry *entry,
+static void desktop_icon_path_for_entry(const struct reliefos_dir_entry *entry,
                                         const char *path, char *dst, uint32_t dst_len)
 {
-    char target[LEONOS_FS_PATH_LEN];
+    char target[RELIEFOS_FS_PATH_LEN];
     if (!dst || !dst_len) {
         return;
     }
     dst[0] = 0;
-    if (entry && entry->type == LEONOS_FS_TYPE_DIR) {
+    if (entry && entry->type == RELIEFOS_FS_TYPE_DIR) {
         desktop_icon_path_for_target(path, dst, dst_len);
         return;
     }
-    if (entry && entry->type == LEONOS_FS_TYPE_FILE &&
+    if (entry && entry->type == RELIEFOS_FS_TYPE_FILE &&
         text_ends_with(entry->name, ".lnk") &&
         desktop_read_shortcut_target(path, target, sizeof(target)) == 0) {
         desktop_icon_path_for_target(target, dst, dst_len);
         return;
     }
-    if (entry && entry->type == LEONOS_FS_TYPE_FILE) {
+    if (entry && entry->type == RELIEFOS_FS_TYPE_FILE) {
         desktop_icon_path_for_target(path, dst, dst_len);
     }
 }
 
 static void desktop_copy_item_label(char *dst, uint32_t dst_len,
-                                    const struct leonos_dir_entry *entry)
+                                    const struct reliefos_dir_entry *entry)
 {
     uint32_t len;
     if (!dst || dst_len == 0) {
@@ -366,11 +366,11 @@ static void desktop_copy_item_label(char *dst, uint32_t dst_len,
         return;
     }
     len = desktop_text_len(entry->name);
-    if (entry->type == LEONOS_FS_TYPE_FILE &&
+    if (entry->type == RELIEFOS_FS_TYPE_FILE &&
         text_ends_with(entry->name, ".lnk") && len > 4U) {
         len -= 4U;
     }
-    if (entry->type == LEONOS_FS_TYPE_FILE &&
+    if (entry->type == RELIEFOS_FS_TYPE_FILE &&
         desktop_text_ends_with_ignore_case_len(entry->name, len, ".elf")) {
         len -= 4U;
     }
@@ -465,7 +465,7 @@ static uint32_t desktop_label_visible_lines(const char *text, uint32_t label_w)
 {
     uint32_t len = desktop_text_len(text);
     uint32_t pos = 0;
-    uint32_t max_cells = leonos_ui_text_fit_chars(label_w);
+    uint32_t max_cells = reliefos_ui_text_fit_chars(label_w);
     uint32_t lines = 0;
     if (!len) {
         return 1;
@@ -481,7 +481,7 @@ static uint32_t desktop_label_visible_lines(const char *text, uint32_t label_w)
 static void desktop_draw_centered_label_line(const char *text, uint32_t x, uint32_t y,
                                              uint32_t w, uint32_t fg, uint32_t bg)
 {
-    uint32_t text_w = leonos_ui_text_width(text ? text : "");
+    uint32_t text_w = reliefos_ui_text_width(text ? text : "");
     uint32_t draw_x = x;
     uint32_t draw_w = w;
     if (text_w < w) {
@@ -489,13 +489,13 @@ static void desktop_draw_centered_label_line(const char *text, uint32_t x, uint3
         draw_x = x + inset;
         draw_w = w > inset ? w - inset : w;
     }
-    if (wallpaper_loaded && bg == LEONOS_UI_DESKTOP) {
+    if (wallpaper_loaded && bg == RELIEFOS_UI_DESKTOP) {
         text_draw_transparent_i((int)draw_x + 1, (int)y + 1, text ? text : "",
                                 0x00101d32u);
         text_draw_transparent_i((int)draw_x, (int)y, text ? text : "", fg);
         return;
     }
-    leonos_ui_text_clipped(&ui, draw_x, y, draw_w, text ? text : "", fg, bg);
+    reliefos_ui_text_clipped(&ui, draw_x, y, draw_w, text ? text : "", fg, bg);
 }
 
 static void desktop_draw_item_label(const char *text, uint32_t x, uint32_t y,
@@ -504,11 +504,11 @@ static void desktop_draw_item_label(const char *text, uint32_t x, uint32_t y,
     uint32_t len = desktop_text_len(text);
     uint32_t pos = 0;
     uint32_t line = 0;
-    uint32_t max_cells = leonos_ui_text_fit_chars(w);
-    uint32_t fg = LEONOS_UI_WHITE;
+    uint32_t max_cells = reliefos_ui_text_fit_chars(w);
+    uint32_t fg = RELIEFOS_UI_WHITE;
     uint32_t bg = selected
-                      ? LEONOS_UI_ACTIVE_TITLE
-                      : LEONOS_UI_DESKTOP;
+                      ? RELIEFOS_UI_ACTIVE_TITLE
+                      : RELIEFOS_UI_DESKTOP;
     if (!max_cells) {
         max_cells = 1;
     }
@@ -517,11 +517,11 @@ static void desktop_draw_item_label(const char *text, uint32_t x, uint32_t y,
         return;
     }
     while (pos < len && line < DESKTOP_ITEM_LABEL_LINES) {
-        char label[LEONOS_FS_NAME_LEN + 4];
+        char label[RELIEFOS_FS_NAME_LEN + 4];
         uint32_t next = desktop_label_next_line(text, len, pos, max_cells);
         uint8_t ellipsis = (line + 1 == DESKTOP_ITEM_LABEL_LINES && next < len) ? 1 : 0;
         desktop_copy_label_line(label, sizeof(label), text, pos, next, max_cells, ellipsis);
-        desktop_draw_centered_label_line(label, x, y + line * LEONOS_FONT_H, w, fg, bg);
+        desktop_draw_centered_label_line(label, x, y + line * RELIEFOS_FONT_H, w, fg, bg);
         pos = next > pos ? next : pos + 1;
         ++line;
     }
@@ -538,7 +538,7 @@ static void desktop_append_signed(char *buf, uint32_t *pos, uint32_t cap, int va
 
 static int desktop_permission_error(int value)
 {
-    return value == -LEONOS_EPERM || value == -LEONOS_EACCES;
+    return value == -RELIEFOS_EPERM || value == -RELIEFOS_EACCES;
 }
 
 static const char *desktop_launch_error_text(int code)
@@ -591,25 +591,25 @@ static void desktop_context_menu_set_active(uint8_t active)
     desktop_context_menu_active = active;
     desktop_context_menu_opening = active;
     desktop_context_menu_animating = active;
-    desktop_context_menu_anim_start = leonos_uptime_ms();
+    desktop_context_menu_anim_start = reliefos_uptime_ms();
     full_redraw_pending = 1;
 }
 
-static void desktop_build_context_menu_items(struct leonos_ui_context_menu_item *items)
+static void desktop_build_context_menu_items(struct reliefos_ui_context_menu_item *items)
 {
-    items[0] = (struct leonos_ui_context_menu_item){
+    items[0] = (struct reliefos_ui_context_menu_item){
         T("Refresh"), DESKTOP_CONTEXT_ACTION_REFRESH, 0};
-    items[1] = (struct leonos_ui_context_menu_item){
+    items[1] = (struct reliefos_ui_context_menu_item){
         T("Open Desktop Folder"),
         DESKTOP_CONTEXT_ACTION_OPEN_FOLDER, 0};
-    items[2] = (struct leonos_ui_context_menu_item){
+    items[2] = (struct reliefos_ui_context_menu_item){
         T("Create Shortcut"),
         DESKTOP_CONTEXT_ACTION_CREATE_SHORTCUT, 0};
 }
 
 static void desktop_show_context_menu(uint32_t x, uint32_t y)
 {
-    uint32_t menu_h = leonos_ui_context_menu_height(DESKTOP_CONTEXT_MENU_COUNT);
+    uint32_t menu_h = reliefos_ui_context_menu_height(DESKTOP_CONTEXT_MENU_COUNT);
     desktop_context_menu_x = x;
     desktop_context_menu_y = y;
     if (desktop_context_menu_x + DESKTOP_CONTEXT_MENU_W > fb_w()) {
@@ -635,7 +635,7 @@ static void desktop_open_path(const char *path)
     }
     argv[0] = (char *)path;
     argv[1] = 0;
-    pid = leonos_launch_argv(argv);
+    pid = reliefos_launch_argv(argv);
     if (pid < 0) {
         desktop_show_error_code(T("Open Failed"),
                                 T("Open failed"), pid);
@@ -651,7 +651,7 @@ static void desktop_open_folder(void)
     if (ret < 0 || !desktop_folder_path[0]) {
         desktop_show_error_code(T("Desktop"),
                                 T("Cannot open Desktop folder"),
-                                ret < 0 ? ret : -LEONOS_EACCES);
+                                ret < 0 ? ret : -RELIEFOS_EACCES);
         return;
     }
     desktop_open_path(desktop_folder_path);
@@ -682,7 +682,7 @@ static void desktop_append_shortcut_input_char(char ch)
 
 static void desktop_create_shortcut_from_input(void)
 {
-    char shortcut_path[LEONOS_FS_PATH_LEN];
+    char shortcut_path[RELIEFOS_FS_PATH_LEN];
     int ret;
     if (!desktop_shortcut_target[0]) {
         desktop_shortcut_input_active = 0;
@@ -696,11 +696,11 @@ static void desktop_create_shortcut_from_input(void)
             desktop_shortcut_input_active = 0;
             desktop_show_error_code(T("Create Shortcut"),
                                     T("Cannot open Desktop folder"),
-                                    ret < 0 ? ret : -LEONOS_EACCES);
+                                    ret < 0 ? ret : -RELIEFOS_EACCES);
             return;
         }
     }
-    ret = leonos_launch_create_shortcut_in_dir(desktop_folder_path,
+    ret = reliefos_launch_create_shortcut_in_dir(desktop_folder_path,
                                                desktop_shortcut_target,
                                                shortcut_path, sizeof(shortcut_path));
     if (ret < 0) {
@@ -751,25 +751,25 @@ void desktop_items_clear(void)
 
 int desktop_refresh_items(void)
 {
-    struct leonos_user_info user;
-    struct leonos_dir_entry entry;
+    struct reliefos_user_info user;
+    struct reliefos_dir_entry entry;
     int fd;
     int ret;
     int auth_ret;
     uint32_t count = 0;
 
     desktop_items_clear();
-    user = (struct leonos_user_info){0};
-    auth_ret = leonos_session_current(&user);
+    user = (struct reliefos_user_info){0};
+    auth_ret = reliefos_session_current(&user);
     if (auth_ret < 0) {
         return auth_ret;
     }
     if (!user.home[0]) {
-        return -LEONOS_EACCES;
+        return -RELIEFOS_EACCES;
     }
     desktop_build_child_path(desktop_folder_path, sizeof(desktop_folder_path),
                              user.home, "desktop");
-    fd = open(desktop_folder_path, LEONOS_O_RDONLY, 0);
+    fd = open(desktop_folder_path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return fd;
     }
@@ -777,7 +777,7 @@ int desktop_refresh_items(void)
         if (count >= DESKTOP_ITEM_MAX) {
             break;
         }
-        ret = leonos_readdir(fd, &entry);
+        ret = reliefos_readdir(fd, &entry);
         if (ret < 0) {
             close(fd);
             desktop_items_clear();
@@ -816,7 +816,7 @@ int desktop_refresh_items(void)
  * error so a transient storage failure does not clear the current model. */
 int desktop_items_directory_changed(void)
 {
-    struct leonos_dir_entry entry;
+    struct reliefos_dir_entry entry;
     int fd;
     int ret;
     uint32_t count = 0;
@@ -824,13 +824,13 @@ int desktop_items_directory_changed(void)
     if (!desktop_items_ready || !desktop_folder_path[0]) {
         return 0;
     }
-    fd = open(desktop_folder_path, LEONOS_O_RDONLY, 0);
+    fd = open(desktop_folder_path, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return fd;
     }
     for (;;) {
         uint8_t matched = 0;
-        ret = leonos_readdir(fd, &entry);
+        ret = reliefos_readdir(fd, &entry);
         if (ret < 0) {
             close(fd);
             return ret;
@@ -878,8 +878,8 @@ void draw_desktop_items(struct rect dirty)
         }
         if (selected) {
             rect_fill_i(r.x + 4, label_y - 2, r.w - 8,
-                        (int)(label_lines * LEONOS_FONT_H + 4),
-                        LEONOS_UI_ACTIVE_TITLE);
+                        (int)(label_lines * RELIEFOS_FONT_H + 4),
+                        RELIEFOS_UI_ACTIVE_TITLE);
         }
         draw_app_icon_large(desktop_items[i].icon_path, icon_x, icon_y);
         desktop_draw_item_label(desktop_items[i].label,
@@ -890,21 +890,21 @@ void draw_desktop_items(struct rect dirty)
 
 void draw_desktop_context_menu(void)
 {
-    struct leonos_ui_context_menu_item items[DESKTOP_CONTEXT_MENU_COUNT];
+    struct reliefos_ui_context_menu_item items[DESKTOP_CONTEXT_MENU_COUNT];
     uint32_t progress = 1000;
     if (!desktop_context_menu_active && !desktop_context_menu_animating) {
         return;
     }
     desktop_build_context_menu_items(items);
     if (desktop_context_menu_animating) {
-        progress = leonos_ui_anim_progress(leonos_uptime_ms(),
+        progress = reliefos_ui_anim_progress(reliefos_uptime_ms(),
                                            desktop_context_menu_anim_start, 120);
         if (progress >= 1000) {
             desktop_context_menu_animating = 0;
             progress = desktop_context_menu_active ? 1000 : 0;
         }
     }
-    leonos_ui_context_menu_animated(&ui, desktop_context_menu_x, desktop_context_menu_y,
+    reliefos_ui_context_menu_animated(&ui, desktop_context_menu_x, desktop_context_menu_y,
                                     DESKTOP_CONTEXT_MENU_W, items,
                                     DESKTOP_CONTEXT_MENU_COUNT, progress);
 }
@@ -933,11 +933,11 @@ void draw_desktop_message(void)
     x = fb_w() > DESKTOP_MESSAGE_W ? (fb_w() - DESKTOP_MESSAGE_W) / 2 : 0;
     y = fb_h() > DESKTOP_MESSAGE_H ? (fb_h() - DESKTOP_MESSAGE_H) / 2 : 0;
     rect_fill_i((int)x + 5, (int)y + 5, DESKTOP_MESSAGE_W, DESKTOP_MESSAGE_H, 0x00404040);
-    leonos_ui_dialog(&ui, x, y, DESKTOP_MESSAGE_W, DESKTOP_MESSAGE_H, desktop_message_title);
-    leonos_ui_text_clipped(&ui, x + 20, y + 50, DESKTOP_MESSAGE_W - 40,
-                           desktop_message_text, LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_button(&ui, x + DESKTOP_MESSAGE_W / 2 - 36,
-                     y + DESKTOP_MESSAGE_H - 38, 72, LEONOS_UI_BUTTON_H, "OK", 0);
+    reliefos_ui_dialog(&ui, x, y, DESKTOP_MESSAGE_W, DESKTOP_MESSAGE_H, desktop_message_title);
+    reliefos_ui_text_clipped(&ui, x + 20, y + 50, DESKTOP_MESSAGE_W - 40,
+                           desktop_message_text, RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_button(&ui, x + DESKTOP_MESSAGE_W / 2 - 36,
+                     y + DESKTOP_MESSAGE_H - 38, 72, RELIEFOS_UI_BUTTON_H, "OK", 0);
 }
 
 int desktop_handle_message_click(uint32_t x, uint32_t y)
@@ -950,7 +950,7 @@ int desktop_handle_message_click(uint32_t x, uint32_t y)
     dialog_x = fb_w() > DESKTOP_MESSAGE_W ? (fb_w() - DESKTOP_MESSAGE_W) / 2 : 0;
     dialog_y = fb_h() > DESKTOP_MESSAGE_H ? (fb_h() - DESKTOP_MESSAGE_H) / 2 : 0;
     if (hit_rect(x, y, (int)dialog_x + DESKTOP_MESSAGE_W / 2 - 36,
-                 (int)dialog_y + DESKTOP_MESSAGE_H - 38, 72, LEONOS_UI_BUTTON_H) ||
+                 (int)dialog_y + DESKTOP_MESSAGE_H - 38, 72, RELIEFOS_UI_BUTTON_H) ||
         !hit_rect(x, y, (int)dialog_x, (int)dialog_y,
                   DESKTOP_MESSAGE_W, DESKTOP_MESSAGE_H)) {
         desktop_message_active = 0;
@@ -964,7 +964,7 @@ int desktop_handle_message_key(uint8_t keycode, uint8_t pressed)
     if (!desktop_message_active) {
         return 0;
     }
-    if (pressed && (keycode == LEONOS_KEY_ENTER || keycode == 1)) {
+    if (pressed && (keycode == RELIEFOS_KEY_ENTER || keycode == 1)) {
         desktop_message_active = 0;
         full_redraw_pending = 1;
     }
@@ -990,28 +990,28 @@ void draw_desktop_shortcut_input(void)
             : 0;
     input_w = DESKTOP_SHORTCUT_INPUT_W > 40 ? DESKTOP_SHORTCUT_INPUT_W - 40 : DESKTOP_SHORTCUT_INPUT_W;
     text_len = desktop_text_len(desktop_shortcut_target);
-    visible_chars = input_w > 8 ? (input_w - 8) / LEONOS_FONT_W : 0;
+    visible_chars = input_w > 8 ? (input_w - 8) / RELIEFOS_FONT_W : 0;
     if (visible_chars && text_len > visible_chars) {
         scroll = text_len - visible_chars;
     }
     rect_fill_i((int)x + 5, (int)y + 5,
                 DESKTOP_SHORTCUT_INPUT_W, DESKTOP_SHORTCUT_INPUT_H, 0x00404040);
-    leonos_ui_dialog(&ui, x, y, DESKTOP_SHORTCUT_INPUT_W,
+    reliefos_ui_dialog(&ui, x, y, DESKTOP_SHORTCUT_INPUT_W,
                      DESKTOP_SHORTCUT_INPUT_H,
                      T("Create Shortcut"));
-    leonos_ui_text(&ui, x + 20, y + 48,
+    reliefos_ui_text(&ui, x + 20, y + 48,
                    T("Target path:"),
-                   LEONOS_UI_BLACK, LEONOS_UI_GRAY);
-    leonos_ui_edit(&ui, x + 20, y + 72, input_w,
+                   RELIEFOS_UI_BLACK, RELIEFOS_UI_GRAY);
+    reliefos_ui_edit(&ui, x + 20, y + 72, input_w,
                    desktop_shortcut_target, text_len, scroll,
-                   LEONOS_UI_EDIT_FOCUSED);
-    leonos_ui_button(&ui, x + DESKTOP_SHORTCUT_INPUT_W - 168,
+                   RELIEFOS_UI_EDIT_FOCUSED);
+    reliefos_ui_button(&ui, x + DESKTOP_SHORTCUT_INPUT_W - 168,
                      y + DESKTOP_SHORTCUT_INPUT_H - 38,
-                     72, LEONOS_UI_BUTTON_H,
+                     72, RELIEFOS_UI_BUTTON_H,
                      T("OK"), 0);
-    leonos_ui_button(&ui, x + DESKTOP_SHORTCUT_INPUT_W - 88,
+    reliefos_ui_button(&ui, x + DESKTOP_SHORTCUT_INPUT_W - 88,
                      y + DESKTOP_SHORTCUT_INPUT_H - 38,
-                     72, LEONOS_UI_BUTTON_H,
+                     72, RELIEFOS_UI_BUTTON_H,
                      T("Cancel"), 0);
 }
 
@@ -1030,13 +1030,13 @@ int desktop_handle_shortcut_input_click(uint32_t x, uint32_t y)
                    : 0;
     if (hit_rect(x, y, (int)dialog_x + DESKTOP_SHORTCUT_INPUT_W - 168,
                  (int)dialog_y + DESKTOP_SHORTCUT_INPUT_H - 38,
-                 72, LEONOS_UI_BUTTON_H)) {
+                 72, RELIEFOS_UI_BUTTON_H)) {
         desktop_create_shortcut_from_input();
         return 1;
     }
     if (hit_rect(x, y, (int)dialog_x + DESKTOP_SHORTCUT_INPUT_W - 88,
                  (int)dialog_y + DESKTOP_SHORTCUT_INPUT_H - 38,
-                 72, LEONOS_UI_BUTTON_H)) {
+                 72, RELIEFOS_UI_BUTTON_H)) {
         desktop_shortcut_input_active = 0;
         desktop_shortcut_target[0] = 0;
         full_redraw_pending = 1;
@@ -1052,14 +1052,14 @@ int desktop_handle_shortcut_input_key(uint8_t keycode, uint8_t pressed)
     if (!desktop_shortcut_input_active) {
         return 0;
     }
-    if (keycode == LEONOS_KEY_LEFT_SHIFT || keycode == LEONOS_KEY_RIGHT_SHIFT) {
+    if (keycode == RELIEFOS_KEY_LEFT_SHIFT || keycode == RELIEFOS_KEY_RIGHT_SHIFT) {
         desktop_shortcut_shift_down = pressed ? 1 : 0;
         return 1;
     }
     if (!pressed) {
         return 1;
     }
-    if (keycode == LEONOS_KEY_ENTER) {
+    if (keycode == RELIEFOS_KEY_ENTER) {
         desktop_create_shortcut_from_input();
         return 1;
     }
@@ -1069,7 +1069,7 @@ int desktop_handle_shortcut_input_key(uint8_t keycode, uint8_t pressed)
         full_redraw_pending = 1;
         return 1;
     }
-    if (keycode == LEONOS_KEY_BACKSPACE) {
+    if (keycode == RELIEFOS_KEY_BACKSPACE) {
         len = desktop_text_len(desktop_shortcut_target);
         if (len) {
             desktop_shortcut_target[len - 1] = 0;
@@ -1077,7 +1077,7 @@ int desktop_handle_shortcut_input_key(uint8_t keycode, uint8_t pressed)
         }
         return 1;
     }
-    if (leonos_ui_keycode_to_char_shift(keycode, desktop_shortcut_shift_down, &ch) &&
+    if (reliefos_ui_keycode_to_char_shift(keycode, desktop_shortcut_shift_down, &ch) &&
         ch >= 32 && ch != 127) {
         desktop_append_shortcut_input_char(ch);
     }
@@ -1086,13 +1086,13 @@ int desktop_handle_shortcut_input_key(uint8_t keycode, uint8_t pressed)
 
 int desktop_handle_context_menu_click(uint32_t x, uint32_t y)
 {
-    struct leonos_ui_context_menu_item items[DESKTOP_CONTEXT_MENU_COUNT];
+    struct reliefos_ui_context_menu_item items[DESKTOP_CONTEXT_MENU_COUNT];
     uint32_t action = 0;
     if (!desktop_context_menu_active) {
         return 0;
     }
     desktop_build_context_menu_items(items);
-    if (leonos_ui_context_menu_hit((int32_t)x, (int32_t)y,
+    if (reliefos_ui_context_menu_hit((int32_t)x, (int32_t)y,
                                    desktop_context_menu_x, desktop_context_menu_y,
                                    DESKTOP_CONTEXT_MENU_W, items,
                                    DESKTOP_CONTEXT_MENU_COUNT, &action)) {
@@ -1109,7 +1109,7 @@ int desktop_handle_context_menu_click(uint32_t x, uint32_t y)
 int desktop_handle_background_click(uint32_t x, uint32_t y)
 {
     int32_t index = desktop_item_at(x, y);
-    unsigned long now = leonos_uptime_ms();
+    unsigned long now = reliefos_uptime_ms();
     if (index >= 0) {
         if (desktop_selected_item == index &&
             desktop_last_click_item == index &&

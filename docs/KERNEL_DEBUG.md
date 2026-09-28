@@ -1,16 +1,16 @@
 # Kernel Debug Tool
 
-LeonOS 4 includes an optional Ring-0 diagnostic mode. Open **About LeonOS**
+ReliefOS includes an optional Ring-0 diagnostic mode. Open **About ReliefOS**
 (`osver`) and click the Logo five times within two seconds. The enabled state
-is stored at `/var/lib/leonos/kerneldebug.enabled`.
+is stored at `/var/lib/reliefos/kerneldebug.enabled`.
 
 When enabled, the Start menu exposes **Restart into kernel debugger**. That
 action writes a one-shot marker to the boot ESP at
-`/boot/leonos/state/kerneldebug.next`. The loader consumes and deletes the marker
+`/boot/reliefos/state/kerneldebug.next`. The loader consumes and deletes the marker
 before entering the kernel, so an interrupted debug session cannot create a
 permanent boot loop.
 
-The kernel then validates `/usr/lib/leonos/kerneldebug.sys` as an x86_64 `ET_REL`
+The kernel then validates `/usr/lib/reliefos/kerneldebug.sys` as an x86_64 `ET_REL`
 module and enters its `ostui` diagnostic interface before starting Ring-3
 userland. The module must contain the `LEONKDBG` ELF note (ABI 1 and the fixed
 entry-name hash), have no dynamic segment or TLS, and use only the supported
@@ -59,8 +59,8 @@ placeholder and does not run anything automatically.
 ## System identity
 
 The `uname` implementation in BusyBox and the command shim now obtains
-`sysname`, `release`, and `version` from `leonos_system_info()` and derives a
-machine-specific node name from `leonos_machine_identity()`. The kernel target
-architecture is also published in `leonos_system_info()` and copied into the
+`sysname`, `release`, and `version` from `reliefos_system_info()` and derives a
+machine-specific node name from `reliefos_machine_identity()`. The kernel target
+architecture is also published in `reliefos_system_info()` and copied into the
 machine field. These values therefore follow the kernel build and platform
 identity instead of repeating the product name in every field.

@@ -128,18 +128,18 @@ The system group controls the license platform URL that is compiled into
 userland binaries. The default is `http://127.0.0.1:30301`.
 
 The Make/Kconfig front end normalizes `.config`, writes `autoconf.h` with the
-VMDK `LEONOS_LICENSE_REQUIRE` policy, writes `autoconf-installer.h` with the
+VMDK `RELIEFOS_LICENSE_REQUIRE` policy, writes `autoconf-installer.h` with the
 installer-installed-system policy, and writes `CONFIG_LICENSE_SERVER_URL` into
 both headers. License binaries read that compiled macro directly; there is no
-runtime `/etc/leonos/license.conf` server override.
+runtime `/etc/reliefos/license.conf` server override.
 
 ## Main outputs
 
 Common build outputs (under `$(O)`, default `out/x86_64/release`):
 
-- `images/leonos4.vmdk` / `images/leonos4.raw`
-- `images/leonos4-live.iso`
-- `images/leonos4-installer.iso`
+- `images/reliefos.vmdk` / `images/reliefos.raw`
+- `images/reliefos-live.iso`
+- `images/reliefos-installer.iso`
 - `images/installer-root.ext2` (historically `install/root.fat`)
 - `images/root.ext2` (Live / disk root; default ext2 because FAT/exFAT cannot represent the current real symlinks)
 - `stage/esp` (ESP staging directory; esp.fat is generated from it during ISO/VMDK assembly)
@@ -149,16 +149,16 @@ The common system staging tree is:
 - `stage/esp`
 
 It contains the Alpine-shaped root tree (`bin/`, `sbin/`, `lib/`, `usr/`,
-`etc/leonos/`, `var/lib/leonos/`, `opt/`) plus the ESP-only loader and kernel
-under `leonos/`. Help documents live in
-`usr/share/doc/leonos/`; all application packages live in
-`usr/lib/leonos/apps/`.
+`etc/reliefos/`, `var/lib/reliefos/`, `opt/`) plus the ESP-only loader and kernel
+under `reliefos/`. Legacy `leonos` paths remain available for migration and
+compatibility. Help documents live in `usr/share/doc/reliefos/`; application
+packages live in `usr/lib/reliefos/apps/`.
 Vim and ncurses are enabled by default. Vim now arrives as the unmodified
 Alpine `vim` APK (pinned in `configs/dependencies.lock.json`), and ncurses is
 built from the pinned submodule via `make upstream-ncurses`. Both `image-vmdk` and
 `installer` package Vim's runtime and the
 ncurses terminfo database. The ncurses tools also embed fallback descriptions
-for LeonOS terminal types (`xterm`, `xterm-256color`, `linux`, `vt100`, `ansi`,
+for ReliefOS terminal types (`xterm`, `xterm-256color`, `linux`, `vt100`, `ansi`,
 `screen`, and `screen-256color`), so `clear`, `tput`, and Vim remain usable if
 the external database cannot be read. `musl-desktop-vim` remains a compatible
 target name for the standalone GRUB live desktop ISO, now using this same normal
@@ -190,7 +190,7 @@ The installer has two related payload groups:
 
 - Top-level ISO boot payload: loader, kernel, and installer root.
 - Installed-system root payload: a copy of `build/esp` without `EFI/`,
-  `grub/`, `loader.elf`, or `leonos/`, stored under `install/root` inside
+  `grub/`, `loader.elf`, or `reliefos/`, stored under `install/root` inside
   `build/install/root.fat`.
 - Installed-system FAT32 ESP payload: the UEFI/GRUB and early loader files
   stored under `install/esp` inside `build/install/root.fat`.
@@ -201,11 +201,11 @@ normal staging tree into `/install/root` and its boot subset into
 and overlays
 policy-sensitive binaries built with `autoconf-installer.h`.
 
-`tools/make_installer_iso.py` creates `build/images/leonos4-installer.iso` and
+`tools/make_installer_iso.py` creates `build/images/reliefos-installer.iso` and
 stages:
 
 - `loader.elf`
-- `leonos/kernel.sys`
+- `reliefos/kernel.sys`
 - `install/root.fat`
 
 This keeps installer boot and installed-system boot on the same matched
@@ -452,15 +452,15 @@ queues and require 512-byte logical sectors. IDE/PATA disks use synchronous
 PIO with LBA48 (and LBA28 fallback); IDE/ATAPI optical media is read-only and
 can provide the Installer ISO.
 
-For QEMU, the normal `python3 build.py run run` command keeps the AHCI topology. Set
-`LEONOS_QEMU_IDE=1` when running `python3 build.py run run-iso` or a QMP smoke test to use
+For QEMU, the normal `make run` command keeps the AHCI topology. Set
+`RELIEFOS_QEMU_IDE=1` when running `make run-iso` or a QMP smoke test to use
 a PIIX3 IDE controller with the disk on primary master and the ISO on the
 secondary channel.
-Set `LEONOS_QEMU_NVME=1` to attach the same VMDK through a QEMU NVMe controller;
+Set `RELIEFOS_QEMU_NVME=1` to attach the same VMDK through a QEMU NVMe controller;
 this is intentionally opt-in so normal QEMU runs retain the AHCI regression path.
 
 The installer ISO GRUB menu provides the default graphical installer and one
-`Install LeonOS 4 (TTY mode)` entry. TTY mode starts an interactive BusyBox Ash
+`Install ReliefOS (TTY mode)` entry. TTY mode starts an interactive BusyBox Ash
 shell in the installer root. Run `installer` in that shell to start the TTY
 version of `installer.elf`; otherwise the same environment can be used for a
 manual installation with upstream util-linux
@@ -474,7 +474,7 @@ option. The complete current procedure is installed as
 
 The installer runtime includes `desktop.elf`, `installer.elf`, and
 `/bin/busybox`. The installed-system root payload under
-`/install/root/usr/lib/leonos/apps` contains the normal app set, including
+`/install/root/usr/lib/reliefos/apps` contains the normal app set, including
 `login.elf`. A fresh install boots directly into login using accounts created
 on the installer's Accounts page. Copying the root payload manually does not
 provision these accounts or the installed-system marker.
@@ -484,17 +484,18 @@ and `settings.elf`. They link a libc build that uses
 `autoconf-installer.h`, so disk files cannot turn off validation or redirect
 the license server. To build an image without license validation, change the
 corresponding source macro through Kconfig and regenerate/rebuild so the
-generated binaries contain `LEONOS_LICENSE_REQUIRE 0`.
+generated binaries contain `RELIEFOS_LICENSE_REQUIRE 0`.
 
 Installer update mode refreshes FAT32 ESP boot files from `/install/esp`, ext2
 system files from `/install/root`, selected changed or missing application
-packages under `/usr/lib/leonos/apps`, and bundled docs from
-`/install/root/usr/share/doc/leonos`. The core update refreshes the real
-`/bin`, `/sbin`, `/lib`, `/usr/bin`, `/usr/sbin`, `/usr/lib`, `/etc/leonos`,
-`/opt` and `/var/lib/leonos` trees without deleting unrelated target files.
+packages under `/usr/lib/reliefos/apps`, and bundled docs from
+`/install/root/usr/share/doc/reliefos`. The core update refreshes the real
+`/bin`, `/sbin`, `/lib`, `/usr/bin`, `/usr/sbin`, `/usr/lib`, `/etc/reliefos`,
+`/opt` and `/var/lib/reliefos` trees without deleting unrelated target files.
 Third-party shared libraries such as `libmagic.so.1`, `liblua.so.5`, and
-`sqlite.so.3` live in `/usr/lib`; private `libleonos.so.2` lives in
-`/usr/lib/leonos`. It also copies `/usr/lib/leonos/kerneldebug.sys` from the
+`sqlite.so.3` live in `/usr/lib`; the canonical `libreliefos.so.2` lives in
+`/usr/lib/reliefos`, while `libleonos.so.2` remains in `/usr/lib/leonos` for old
+ELF dependencies. It also copies `/usr/lib/reliefos/kerneldebug.sys` from the
 payload.
 This keeps the dynamic loader, shared runtime, applications, and the built-in
 kernel debugging module on one release version. Missing runtime directories or
@@ -506,15 +507,15 @@ are missing or changed are copied. This includes package metadata, licenses,
 icons, headers, examples, and private runtime data; files added locally to an
 installed package are left untouched.
 Docs are merged: matching bundled `.hlp` files are overwritten under
-`/target/usr/share/doc/leonos`, but extra third-party help files already
-present there are kept. Update mode does not replace `/target/etc/leonos` or
-`/target/var/lib/leonos`, so local machine state such as
+`/target/usr/share/doc/reliefos`, but extra third-party help files already
+present there are kept. Update mode does not replace `/target/etc/reliefos` or
+`/target/var/lib/reliefos`, so local machine state such as
 `license.dat` and the installed marker is preserved across an
 installer-driven update. The machine ID is derived from detected machine
 identity at runtime instead of being stored in `/etc/install.id`. The stable
 identity source is SMBIOS System UUID when firmware provides it, otherwise the
 boot GPT disk and ESP partition GUIDs. A fresh install copies the staged
-`etc/leonos` and `var/lib/leonos` trees, then writes the chosen accounts before
+`etc/reliefos` and `var/lib/reliefos` trees, then writes the chosen accounts before
 publishing the ESP boot payload. Update supports only an existing non-usr-merge ext2 layout; old
 pre-FHS installations need a fresh install. There is no migration/archive
 stage. Populated legacy private account databases are rejected before overlay;
@@ -533,7 +534,7 @@ Native Windows build-tool output is not the authoritative proof path.
 Build the normal disk image and installer ISO:
 
 ```sh
-wsl -e bash -lc 'cd "/mnt/d/Projects/C/LeonOS 4" && python3 build.py run image-vmdk && python3 build.py run installer'
+wsl -e bash -lc 'cd "/mnt/d/Projects/C/LeonOS 4" && make image-vmdk installer'
 ```
 
 For docs-only changes, a full image rebuild is normally unnecessary. At minimum

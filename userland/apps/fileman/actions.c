@@ -1,5 +1,5 @@
 #include "fileman.h"
-#include <leonos/launch_result.h>
+#include <reliefos/launch_result.h>
 
 /* Land the cursor on `name` after a refresh, scrolling it into view. */
 static void select_entry_by_name(const char *name, uint32_t count)
@@ -17,14 +17,14 @@ static void select_entry_by_name(const char *name, uint32_t count)
 
 void open_selected_entry(void)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     int pid;
     if (file_list.selected < 0 || (uint32_t)file_list.selected >= entry_count) {
         set_status(T("Select an item"));
         return;
     }
     build_child_path(path, sizeof(path), entries[file_list.selected].name);
-    if (entries[file_list.selected].type == LEONOS_FS_TYPE_DIR) {
+    if (entries[file_list.selected].type == RELIEFOS_FS_TYPE_DIR) {
         navigate_to_path(path);
         return;
     }
@@ -35,13 +35,13 @@ void open_selected_entry(void)
     }
     {
         char *argv[] = {path, 0};
-        pid = leonos_launch_argv(argv);
+        pid = reliefos_launch_argv(argv);
     }
     if (pid < 0) {
         if (pid == LAUNCH_RESULT_NO_ASSOCIATION) {
             show_open_with_for_path(path, 0);
-        } else if (leonos_launch_is_error(pid)) {
-            set_status(leonos_launch_error_text(pid));
+        } else if (reliefos_launch_is_error(pid)) {
+            set_status(reliefos_launch_error_text(pid));
         } else {
             set_status_code("Launch failed ", pid);
         }
@@ -60,7 +60,7 @@ void open_selected_entry(void)
 
 void navigate_up(void)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     if (is_root_path(current_path)) {
         set_status("Already at root");
         return;
@@ -76,10 +76,10 @@ void navigate_root(void)
 
 void create_new_folder(void)
 {
-    char name[LEONOS_FS_NAME_LEN] = "New Folder";
-    char path[LEONOS_FS_PATH_LEN];
+    char name[RELIEFOS_FS_NAME_LEN] = "New Folder";
+    char path[RELIEFOS_FS_PATH_LEN];
     int ret;
-    if (!leonos_ui_show_input_dialog(T("New Folder"), T("Folder name:"), name, sizeof(name))) {
+    if (!reliefos_ui_show_input_dialog(T("New Folder"), T("Folder name:"), name, sizeof(name))) {
         set_status(T("New folder canceled"));
         return;
     }
@@ -119,9 +119,9 @@ void create_new_folder(void)
 
 void create_shortcut_for_selected(void)
 {
-    char target_path[LEONOS_FS_PATH_LEN];
-    char dest_dir[LEONOS_FS_PATH_LEN];
-    char shortcut_path[LEONOS_FS_PATH_LEN];
+    char target_path[RELIEFOS_FS_PATH_LEN];
+    char dest_dir[RELIEFOS_FS_PATH_LEN];
+    char shortcut_path[RELIEFOS_FS_PATH_LEN];
     const char *created_name;
     int to_desktop;
     int ret;
@@ -130,7 +130,7 @@ void create_shortcut_for_selected(void)
         return;
     }
     build_child_path(target_path, sizeof(target_path), entries[file_list.selected].name);
-    to_desktop = leonos_ui_show_confirm_dialog(
+    to_desktop = reliefos_ui_show_confirm_dialog(
         T("Create Shortcut"),
         T("Place shortcut on Desktop? No creates it here."),
         1);
@@ -146,11 +146,11 @@ void create_shortcut_for_selected(void)
     } else {
         copy_text(dest_dir, sizeof(dest_dir), current_path);
     }
-    ret = leonos_launch_create_shortcut_in_dir(dest_dir, target_path,
+    ret = reliefos_launch_create_shortcut_in_dir(dest_dir, target_path,
                                                shortcut_path, sizeof(shortcut_path));
     if (ret < 0) {
-        if (leonos_launch_is_error(ret)) {
-            set_status(leonos_launch_error_text(ret));
+        if (reliefos_launch_is_error(ret)) {
+            set_status(reliefos_launch_error_text(ret));
         } else {
             set_status_error("Create shortcut failed ", ret);
         }
@@ -176,16 +176,16 @@ void create_shortcut_for_selected(void)
 
 void rename_selected_entry(void)
 {
-    char old_path[LEONOS_FS_PATH_LEN];
-    char new_path[LEONOS_FS_PATH_LEN];
-    char name[LEONOS_FS_NAME_LEN];
+    char old_path[RELIEFOS_FS_PATH_LEN];
+    char new_path[RELIEFOS_FS_PATH_LEN];
+    char name[RELIEFOS_FS_NAME_LEN];
     int ret;
     if (!selected_entry_valid()) {
         set_status(T("Select an item"));
         return;
     }
     copy_text(name, sizeof(name), entries[file_list.selected].name);
-    if (!leonos_ui_show_input_dialog(T("Rename"), T("New name:"), name, sizeof(name))) {
+    if (!reliefos_ui_show_input_dialog(T("Rename"), T("New name:"), name, sizeof(name))) {
         set_status(T("Rename canceled"));
         return;
     }
@@ -224,7 +224,7 @@ void rename_selected_entry(void)
 
 void delete_selected_entry(void)
 {
-    char path[LEONOS_FS_PATH_LEN];
+    char path[RELIEFOS_FS_PATH_LEN];
     char message[96];
     uint32_t pos = 0;
     int ret;
@@ -236,12 +236,12 @@ void delete_selected_entry(void)
     append_text(message, &pos, sizeof(message), T("Delete "));
     append_text(message, &pos, sizeof(message), entries[file_list.selected].name);
     append_char(message, &pos, sizeof(message), '?');
-    if (!leonos_ui_show_confirm_dialog(T("Delete"), message, 0)) {
+    if (!reliefos_ui_show_confirm_dialog(T("Delete"), message, 0)) {
         set_status(T("Delete canceled"));
         return;
     }
     {
-        uint8_t is_dir = entries[file_list.selected].type == LEONOS_FS_TYPE_DIR;
+        uint8_t is_dir = entries[file_list.selected].type == RELIEFOS_FS_TYPE_DIR;
         uint32_t elevated_count = 0;
         build_child_path(path, sizeof(path), entries[file_list.selected].name);
         ret = is_dir ? rmdir(path) : unlink(path);
@@ -249,7 +249,7 @@ void delete_selected_entry(void)
             /* Protected parent directory: the broker removes it, and demands
              * an explicit confirmation word for a directory because that
              * removal is unrecoverable. */
-            if (is_dir && !leonos_ui_show_confirm_dialog(
+            if (is_dir && !reliefos_ui_show_confirm_dialog(
                     T("Delete Folder"),
                     T("This permanently deletes the folder and everything inside it. Continue?"),
                     0)) {
@@ -358,7 +358,7 @@ void execute_action(uint32_t action)
 
 void extract_tar_with_path(const char *tar_path)
 {
-    char dest_dir[LEONOS_FS_PATH_LEN];
+    char dest_dir[RELIEFOS_FS_PATH_LEN];
     uint32_t plen;
     const char *ext;
     if (!tar_path || !tar_path[0]) {
@@ -374,13 +374,13 @@ void extract_tar_with_path(const char *tar_path)
         dest_dir[plen - 4U] = 0;
     }
     if (mkdir(dest_dir, 0777) < 0) {
-        struct leonos_stat st;
-        if (leonos_stat_legacy(dest_dir, &st) != 0 || st.type != LEONOS_FS_TYPE_DIR) {
+        struct reliefos_stat st;
+        if (reliefos_stat_legacy(dest_dir, &st) != 0 || st.type != RELIEFOS_FS_TYPE_DIR) {
             set_status_code("Extract mkdir failed ", -1);
             return;
         }
     }
-    if (!leonos_tar_extract_all(tar_path, dest_dir)) {
+    if (!reliefos_tar_extract_all(tar_path, dest_dir)) {
         set_status(T("Tar extract failed"));
         return;
     }
@@ -389,7 +389,7 @@ void extract_tar_with_path(const char *tar_path)
 
 void extract_tar_selected(void)
 {
-    char tar_path[LEONOS_FS_PATH_LEN];
+    char tar_path[RELIEFOS_FS_PATH_LEN];
     if (!selected_entry_valid()) {
         set_status(T("Select a tar file"));
         return;
@@ -408,14 +408,14 @@ void extract_tar_selected(void)
 
 void compress_selected_to_tar(void)
 {
-    char tar_path[LEONOS_FS_PATH_LEN];
-    char src_path[LEONOS_FS_PATH_LEN];
+    char tar_path[RELIEFOS_FS_PATH_LEN];
+    char src_path[RELIEFOS_FS_PATH_LEN];
     uint32_t count;
     uint32_t i;
     uint32_t has_any = 0;
     uint32_t packed_count = 0;
     int failed = 0;
-    char base_name[LEONOS_FS_NAME_LEN];
+    char base_name[RELIEFOS_FS_NAME_LEN];
     int tar_fd;
     count = fileman_selected_count();
     if (count == 0) {
@@ -443,7 +443,7 @@ void compress_selected_to_tar(void)
         memcpy(tar_path + clen + 1U, base_name, nlen);
         memcpy(tar_path + clen + 1U + nlen, ".tar", 5U);
     }
-    tar_fd = open(tar_path, LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
+    tar_fd = open(tar_path, RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0666);
     if (tar_fd < 0) {
         set_status(T("Cannot create tar"));
         return;
@@ -461,14 +461,14 @@ void compress_selected_to_tar(void)
             continue;
         }
         build_child_path(src_path, sizeof(src_path), entries[i].name);
-        if (entries[i].type == LEONOS_FS_TYPE_DIR) {
-            if (!leonos_tar_pack_dir_append(tar_fd, src_path)) {
+        if (entries[i].type == RELIEFOS_FS_TYPE_DIR) {
+            if (!reliefos_tar_pack_dir_append(tar_fd, src_path)) {
                 set_status_code("Tar pack dir failed on ", -1);
                 failed = 1;
                 break;
             }
         } else {
-            if (!leonos_tar_pack_file_append(tar_fd, src_path,
+            if (!reliefos_tar_pack_file_append(tar_fd, src_path,
                                               entries[i].name)) {
                 set_status_code("Tar pack file failed on ", -1);
                 failed = 1;
@@ -488,7 +488,7 @@ void compress_selected_to_tar(void)
         return;
     }
     if (has_any) {
-        if (!leonos_tar_finalize(tar_fd)) {
+        if (!reliefos_tar_finalize(tar_fd)) {
             close(tar_fd);
             unlink(tar_path);
             fileman_operation_active = 0;

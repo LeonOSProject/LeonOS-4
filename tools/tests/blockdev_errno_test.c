@@ -47,14 +47,14 @@ ssize_t write(int fd, const void *buffer, size_t length)
 
 int main(void)
 {
-    struct leonos_block_disk_info disks[LEONOS_BLOCK_MAX_DISKS];
+    struct reliefos_block_disk_info disks[RELIEFOS_BLOCK_MAX_DISKS];
     uint32_t count = 0;
-    assert(leonos_block_list_disks(disks, LEONOS_BLOCK_MAX_DISKS, &count) == 0);
+    assert(reliefos_block_list_disks(disks, RELIEFOS_BLOCK_MAX_DISKS, &count) == 0);
     assert(count == 1 && disks[0].sector_count == 4194304 && disks[0].sector_size == 512);
     fail_open = 1;
-    assert(leonos_block_get_info("/dev/disk0", disks) == -EACCES);
+    assert(reliefos_block_get_info("/dev/disk0", disks) == -EACCES);
     fail_open = 0; fail_ioctl = 1;
-    assert(leonos_block_get_info("/dev/disk0", disks) == -EIO);
+    assert(reliefos_block_get_info("/dev/disk0", disks) == -EIO);
     assert(block_reread(42) == -EIO);
     fail_ioctl = 0;
     char buffer[512];

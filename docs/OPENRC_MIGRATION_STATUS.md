@@ -15,7 +15,7 @@
 | NTP 轮询 | 上游 BusyBox ntpd | OpenRC，唯一同步进程 |
 | 网络配置/查询 IPC | libc 查询内核；配置经授权命令桥接 | 查询允许普通用户，变更保留 root 检查 |
 | 启动项数据库、用户会话 IPC | 独立 sessiond 业务进程 | root 接收凭据；用户程序应用 PAM UID/GID/组 |
-| LeonOS 设备目录与驱动协议 | 独立设备协议业务组件 | 只处理设备协议；不监督服务 |
+| ReliefOS 设备目录与驱动协议 | 独立设备协议业务组件 | 只处理设备协议；不监督服务 |
 | network_icon、rtc_clock | taskbar.cfg 偏好 | 设置和桌面；不再表示服务运行状态 |
 | 直接 reboot syscall | BusyBox PID 1 信号协议 | 现有 sudo/PAM 授权；OpenRC shutdown |
 

@@ -220,5 +220,5 @@ int main(void)
     test_rejects_nesting_beyond_the_limit();
     test_lookup_paths_and_types();
     test_parser_reports_a_position();
-    return leonos_test_report("host/json");
+    return reliefos_test_report("host/json");
 }

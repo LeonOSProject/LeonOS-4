@@ -1,17 +1,17 @@
-#ifndef LEONOS_APPS_LOCALIZED_DOC_H
-#define LEONOS_APPS_LOCALIZED_DOC_H
+#ifndef RELIEFOS_APPS_LOCALIZED_DOC_H
+#define RELIEFOS_APPS_LOCALIZED_DOC_H
 
 #include <locale.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <leonos/layout.h>
+#include <reliefos/layout.h>
 
 /* Translate only bundled document paths; arbitrary user files stay literal. */
 static inline void localized_doc_path(char *out, size_t capacity, const char *path)
 {
     const char *locale = setlocale(LC_MESSAGES, NULL);
-    const char *base = LEONOS_LAYOUT_LEONOS_DOC "/";
+    const char *base = RELIEFOS_LAYOUT_RELIEFOS_DOC "/";
     size_t prefix = strlen(base), length = 0;
     if (locale && strncmp(path, base, prefix) == 0 && !strchr(path + prefix, '/')) {
         while (locale[length] && locale[length] != '.' && locale[length] != '@') {

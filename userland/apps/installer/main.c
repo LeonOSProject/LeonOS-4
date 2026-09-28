@@ -1,17 +1,17 @@
-#include <leonos/fs.h>
-#include <leonos/blockdev.h>
-#include <leonos/gui.h>
+#include <reliefos/fs.h>
+#include <reliefos/blockdev.h>
+#include <reliefos/gui.h>
 #include <libintl.h>
 #include "../locale_settings.h"
 #include <locale.h>
-#include <leonos/layout.h>
-#include <leonos/layout.h>
-#include <leonos/stdio.h>
-#include <leonos/syscall.h>
-#include <leonos/system.h>
-#include <leonos/ui.h>
-#include <leonos/inputm.h>
-#include <leonos/psf_font.h>
+#include <reliefos/layout.h>
+#include <reliefos/layout.h>
+#include <reliefos/stdio.h>
+#include <reliefos/syscall.h>
+#include <reliefos/system.h>
+#include <reliefos/ui.h>
+#include <reliefos/inputm.h>
+#include <reliefos/psf_font.h>
 #include "installer_sha256.h"
 #include "installer_tty.h"
 #include "installer_directory.h"
@@ -36,7 +36,7 @@
 #define FOOTER_H 64
 #define CONTENT_PAD 34
 #define BUTTON_W 84
-#define BUTTON_H LEONOS_UI_BUTTON_H
+#define BUTTON_H RELIEFOS_UI_BUTTON_H
 #define KEY_ESCAPE 1U
 #define KEY_SPACE 57U
 #define KEY_UP 72U
@@ -46,11 +46,11 @@
 #define COPY_PRESENT_INTERVAL_MS 50U
 #define INSTALLER_EVENT_BATCH_MAX 32U
 #define UPDATE_APP_ROW_H 24U
-#define UPDATE_APP_MAX LEONOS_FS_MAX_ENTRIES
+#define UPDATE_APP_MAX RELIEFOS_FS_MAX_ENTRIES
 #define POLICY_SCROLLBAR_W 18U
 #define POLICY_LINE_TEXT_MAX 256U
 #define POLICY_MAX_LINES 192U
-#define INSTALLER_CJK_FONT LEONOS_PATH_BROWSER_CJK_FONT
+#define INSTALLER_CJK_FONT RELIEFOS_PATH_BROWSER_CJK_FONT
 #define INSTALL_ROOT_PAYLOAD "/install/root"
 #define INSTALL_ESP_PAYLOAD "/install/esp"
 #define INSTALL_ROOT_MOUNT "/target"
@@ -59,26 +59,27 @@
 /* Target-root path contract.  The installer payload uses the same relative
  * paths as the guest root, so each payload path is INSTALL_ROOT_PAYLOAD plus
  * the matching guest-relative name. */
-#define TARGET_LEONOS_APPS INSTALL_ROOT_MOUNT LEONOS_LAYOUT_LEONOS_APPS
-#define TARGET_LEONOS_LIB INSTALL_ROOT_MOUNT LEONOS_LAYOUT_LEONOS_LIB
-#define TARGET_LEONOS_DRIVERS INSTALL_ROOT_MOUNT LEONOS_LAYOUT_LEONOS_DRIVERS
-#define TARGET_LEONOS_DOC INSTALL_ROOT_MOUNT LEONOS_LAYOUT_LEONOS_DOC
-#define TARGET_ETC_LEONOS INSTALL_ROOT_MOUNT LEONOS_LAYOUT_ETC_LEONOS
-#define TARGET_VAR_LIB_LEONOS INSTALL_ROOT_MOUNT LEONOS_LAYOUT_VAR_LIB_LEONOS
-#define TARGET_VAR_LOG INSTALL_ROOT_MOUNT LEONOS_LAYOUT_VAR_LOG
-#define TARGET_VAR_TMP INSTALL_ROOT_MOUNT LEONOS_LAYOUT_VAR_TMP
-#define TARGET_FONTS INSTALL_ROOT_MOUNT LEONOS_LAYOUT_LEONOS_FONTS
-#define TARGET_RESOURCES INSTALL_ROOT_MOUNT LEONOS_LAYOUT_LEONOS_RESOURCES
-#define TARGET_CERTS INSTALL_ROOT_MOUNT LEONOS_LAYOUT_ETC_SSL_CERTS
-#define TARGET_USR_BIN INSTALL_ROOT_MOUNT LEONOS_LAYOUT_USR_BIN
-#define TARGET_USR_SBIN INSTALL_ROOT_MOUNT LEONOS_LAYOUT_USR_SBIN
-#define TARGET_USR_LIB INSTALL_ROOT_MOUNT LEONOS_LAYOUT_USR_LIB
-#define TARGET_USR_SHARE INSTALL_ROOT_MOUNT LEONOS_LAYOUT_USR_SHARE
+#define TARGET_RELIEFOS_APPS INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_RELIEFOS_APPS
+#define TARGET_RELIEFOS_LIB INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_RELIEFOS_LIB
+#define TARGET_RELIEFOS_DRIVERS INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_RELIEFOS_DRIVERS
+#define TARGET_RELIEFOS_DOC INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_RELIEFOS_DOC
+#define TARGET_ETC_RELIEFOS INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_ETC_RELIEFOS
+#define TARGET_VAR_LIB_RELIEFOS INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_VAR_LIB_RELIEFOS
+#define TARGET_VAR_LOG INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_VAR_LOG
+#define TARGET_VAR_TMP INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_VAR_TMP
+#define TARGET_FONTS INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_RELIEFOS_FONTS
+#define TARGET_RESOURCES INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_RELIEFOS_RESOURCES
+#define TARGET_CERTS INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_ETC_SSL_CERTS
+#define TARGET_USR_BIN INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_USR_BIN
+#define TARGET_USR_SBIN INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_USR_SBIN
+#define TARGET_USR_LIB INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_USR_LIB
+#define TARGET_USR_SHARE INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_USR_SHARE
 #define TARGET_HOME INSTALL_ROOT_MOUNT "/home"
 #define TARGET_OPT INSTALL_ROOT_MOUNT "/opt"
-#define TARGET_RUN_LEONOS INSTALL_ROOT_MOUNT LEONOS_LAYOUT_RUN_LEONOS
+#define TARGET_RUN_RELIEFOS INSTALL_ROOT_MOUNT RELIEFOS_LAYOUT_RUN_RELIEFOS
 #define TARGET_BOOT INSTALL_ROOT_MOUNT "/boot"
-#define TARGET_ESP_KERNEL TARGET_BOOT "/leonos/kernel.sys"
+#define TARGET_ESP_KERNEL TARGET_BOOT "/reliefos/kernel.sys"
+#define TARGET_ESP_KERNEL_LEGACY TARGET_BOOT "/leonos/kernel.sys"
 /* The installer must be able to change language before it has a writable
  * target system.  Do not make rendering depend on persisting locale.conf on
  * the installation medium. */
@@ -151,13 +152,13 @@ struct installer_text_view {
 };
 
 struct update_app_entry {
-    char name[LEONOS_FS_NAME_LEN];
-    char src_package[LEONOS_FS_PATH_LEN];
-    char dst_package[LEONOS_FS_PATH_LEN];
-    char src_elf[LEONOS_FS_PATH_LEN];
-    char dst_elf[LEONOS_FS_PATH_LEN];
-    char src_icon[LEONOS_FS_PATH_LEN];
-    char dst_icon[LEONOS_FS_PATH_LEN];
+    char name[RELIEFOS_FS_NAME_LEN];
+    char src_package[RELIEFOS_FS_PATH_LEN];
+    char dst_package[RELIEFOS_FS_PATH_LEN];
+    char src_elf[RELIEFOS_FS_PATH_LEN];
+    char dst_elf[RELIEFOS_FS_PATH_LEN];
+    char src_icon[RELIEFOS_FS_PATH_LEN];
+    char dst_icon[RELIEFOS_FS_PATH_LEN];
     uint8_t selected;
     uint8_t missing;
     uint8_t elf_diff;
@@ -170,20 +171,20 @@ static uint32_t surface_w = INSTALLER_INITIAL_W;
 static uint32_t surface_h = INSTALLER_INITIAL_H;
 static uint8_t page = PAGE_LANGUAGE;
 static uint8_t install_mode = INSTALL_MODE_FRESH;
-static uint8_t installer_theme = LEONOS_UI_THEME_METRO;
+static uint8_t installer_theme = RELIEFOS_UI_THEME_METRO;
 static uint8_t installer_theme_explicit;
 static uint32_t acknowledgements_scroll_y;
-static struct leonos_block_disk_info disks[LEONOS_BLOCK_MAX_DISKS];
+static struct reliefos_block_disk_info disks[RELIEFOS_BLOCK_MAX_DISKS];
 static uint32_t disk_count;
 static int32_t selected_disk = -1;
 static char confirm_text[16];
-static struct leonos_ui_edit_state confirm_edit;
+static struct reliefos_ui_edit_state confirm_edit;
 static struct installer_setup setup;
-static struct leonos_ui_edit_state account_edits[5];
+static struct reliefos_ui_edit_state account_edits[5];
 static unsigned account_focus;
 static struct update_app_entry update_apps[UPDATE_APP_MAX];
 static uint32_t update_app_count;
-static struct leonos_ui_listview_state update_app_list;
+static struct reliefos_ui_listview_state update_app_list;
 static char status_text[128] = "Ready";
 static char detail_text[128] = "";
 static char progress_text[256] = "Ready";
@@ -206,7 +207,7 @@ static uint32_t policy_line_count;
 static const char acknowledgements_en[] =
     "# Acknowledgements\n"
     "\n"
-    "LeonOS 4 gratefully acknowledges the creators, contributors, and maintainers of the public resources and open-source projects used by this release.\n"
+    "ReliefOS gratefully acknowledges the creators, contributors, and maintainers of the public resources and open-source projects used by this release.\n"
     "\n"
     "## Runtime, Toolchain, and Applications\n"
     "- GNU GRUB 2 - GPL-3.0-or-later\n"
@@ -248,7 +249,7 @@ static const char acknowledgements_en[] =
 static const char acknowledgements_zh[] =
     "# 感谢\n"
     "\n"
-    "LeonOS 4 诚挚感谢本发行版所使用的公共资源与开源项目的创作者、贡献者和维护者。\n"
+    "ReliefOS 诚挚感谢本发行版所使用的公共资源与开源项目的创作者、贡献者和维护者。\n"
     "\n"
     "## 运行时、开发工具链与应用程序\n"
     "- GNU GRUB 2 - GPL-3.0-or-later\n"
@@ -512,7 +513,7 @@ static void policy_emit_wrapped(uint8_t kind, const char *prefix,
     char line[POLICY_LINE_TEXT_MAX];
     uint32_t out = 0;
     uint32_t pos = 0;
-    uint32_t max_cells = leonos_ui_text_fit_chars(width);
+    uint32_t max_cells = reliefos_ui_text_fit_chars(width);
     uint32_t prefix_cells = policy_text_cells(prefix);
     uint32_t cells = prefix_cells;
     uint32_t source_len = text_len(text);
@@ -752,8 +753,8 @@ static void update_surface_size(uint32_t width, uint32_t height)
 
 static void update_surface_size_from_framebuffer(void)
 {
-    struct leonos_fb_info fb;
-    if (leonos_fb_info(&fb) >= 0) {
+    struct reliefos_fb_info fb;
+    if (reliefos_fb_info(&fb) >= 0) {
         update_surface_size(fb.width, fb.height);
     }
 }
@@ -841,15 +842,15 @@ static const char *mode_action_text(void)
 
 static const char *mode_progress_title(void)
 {
-    return install_mode == INSTALL_MODE_UPDATE ? T("Updating LeonOS 4")
-                                               : T("Installing LeonOS 4");
+    return install_mode == INSTALL_MODE_UPDATE ? T("Updating ReliefOS")
+                                               : T("Installing ReliefOS");
 }
 
 static void set_disk_select_status(void)
 {
     if (install_mode == INSTALL_MODE_UPDATE) {
         set_status(T("Select the disk to update"),
-                   T("Setup will check for an existing LeonOS 4 system."));
+                   T("Setup will check for an existing ReliefOS system."));
     } else {
         set_status(T("Select the target disk"),
                    T("The selected disk will be erased."));
@@ -859,13 +860,13 @@ static void set_disk_select_status(void)
 static void reset_update_app_list(void)
 {
     update_app_count = 0;
-    leonos_ui_listview_state_set_count(&update_app_list, 0);
+    reliefos_ui_listview_state_set_count(&update_app_list, 0);
     update_app_list.selected = -1;
     update_app_list.scroll = 0;
 }
 
 static void format_disk_line(char *buf, uint32_t cap,
-                             const struct leonos_block_disk_info *disk)
+                             const struct reliefos_block_disk_info *disk)
 {
     uint32_t pos = 0;
     uint64_t mib = 0;
@@ -894,7 +895,7 @@ static void format_disk_line(char *buf, uint32_t cap,
 static void reset_confirm(void)
 {
     confirm_text[0] = 0;
-    leonos_ui_edit_state_init(&confirm_edit, confirm_text, sizeof(confirm_text));
+    reliefos_ui_edit_state_init(&confirm_edit, confirm_text, sizeof(confirm_text));
     confirm_edit.focused = 1;
 }
 
@@ -933,22 +934,22 @@ static int installer_target_partitions(const char *disk_path, int fresh,
                                        char *root_path, uint32_t root_cap,
                                        uint32_t *root_filesystem)
 {
-    struct leonos_block_partition parts[LEONOS_BLOCK_MAX_PARTITIONS];
+    struct reliefos_block_partition parts[RELIEFOS_BLOCK_MAX_PARTITIONS];
     uint32_t count = 0, esp = UINT32_MAX, root = UINT32_MAX;
     int ret;
     if (!disk_path || !esp_path || !root_path || !root_filesystem) return -EINVAL;
-    *root_filesystem = LEONOS_BLOCK_FILESYSTEM_UNKNOWN;
+    *root_filesystem = RELIEFOS_BLOCK_FILESYSTEM_UNKNOWN;
     if (fresh) {
-        struct leonos_block_disk_info info;
+        struct reliefos_block_disk_info info;
         uint32_t root_mib;
-        ret = leonos_block_get_info(disk_path, &info);
+        ret = reliefos_block_get_info(disk_path, &info);
         if (ret < 0) return ret;
-        ret = leonos_block_gpt_initialize(disk_path, 1);
+        ret = reliefos_block_gpt_initialize(disk_path, 1);
         if (ret < 0) return ret;
-        ret = leonos_block_gpt_create(disk_path, LEONOS_BLOCK_FILESYSTEM_FAT32,
-                                      128, "LeonOS 4 ESP", &esp);
+        ret = reliefos_block_gpt_create(disk_path, RELIEFOS_BLOCK_FILESYSTEM_FAT32,
+                                      128, "RELIEFOS_ESP", &esp);
         if (ret < 0) return ret;
-        ret = leonos_block_gpt_set_type(disk_path, esp, LEONOS_BLOCK_GPT_ESP);
+        ret = reliefos_block_gpt_set_type(disk_path, esp, RELIEFOS_BLOCK_GPT_ESP);
         if (ret < 0) return ret;
         root_mib = (uint32_t)((info.sector_count * info.sector_size) / (1024ULL * 1024ULL));
         /* Match main's install_write_gpt layout: a fixed 128 MiB ESP, then
@@ -956,34 +957,34 @@ static int installer_target_partitions(const char *disk_path, int fresh,
          * 3 MiB reserve covers the primary/backup GPT and 1 MiB alignment
          * slop after the ESP. */
         if (root_mib > 256u) root_mib -= 131u; else root_mib = 64u;
-        ret = leonos_block_gpt_create(disk_path, LEONOS_BLOCK_FILESYSTEM_EXT2,
-                                      root_mib, "LEONOS4_ROOT", &root);
+        ret = reliefos_block_gpt_create(disk_path, RELIEFOS_BLOCK_FILESYSTEM_EXT2,
+                                      root_mib, "RELIEFOS_ROOT", &root);
         if (ret < 0) return ret;
-        ret = leonos_block_gpt_set_type(disk_path, root, LEONOS_BLOCK_GPT_LINUX);
+        ret = reliefos_block_gpt_set_type(disk_path, root, RELIEFOS_BLOCK_GPT_LINUX);
         if (ret < 0) return ret;
         /* Format through the partition nodes after the GPT reread. */
-        ret = leonos_block_partition_path(disk_path, esp, esp_path, esp_cap);
+        ret = reliefos_block_partition_path(disk_path, esp, esp_path, esp_cap);
         if (ret < 0) return ret;
-        ret = leonos_block_partition_path(disk_path, root, root_path, root_cap);
+        ret = reliefos_block_partition_path(disk_path, root, root_path, root_cap);
         if (ret < 0) return ret;
-        ret = leonos_block_format(esp_path, LEONOS_BLOCK_FILESYSTEM_FAT32, NULL);
+        ret = reliefos_block_format(esp_path, RELIEFOS_BLOCK_FILESYSTEM_FAT32, "RELIEFOS");
         if (ret < 0) return ret;
-        *root_filesystem = LEONOS_BLOCK_FILESYSTEM_EXT2;
-        ret = leonos_block_format(root_path, LEONOS_BLOCK_FILESYSTEM_EXT2, NULL);
-        if (!ret) ret = leonos_block_partition_uuid(disk_path, root, installer_root_uuid);
-        if (!ret) ret = leonos_block_partition_uuid(disk_path, esp, installer_esp_uuid);
+        *root_filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXT2;
+        ret = reliefos_block_format(root_path, RELIEFOS_BLOCK_FILESYSTEM_EXT2, "RELIEFOS");
+        if (!ret) ret = reliefos_block_partition_uuid(disk_path, root, installer_root_uuid);
+        if (!ret) ret = reliefos_block_partition_uuid(disk_path, esp, installer_esp_uuid);
         return ret;
     }
-    ret = leonos_block_list_partitions(disk_path, parts, LEONOS_BLOCK_MAX_PARTITIONS, &count);
+    ret = reliefos_block_list_partitions(disk_path, parts, RELIEFOS_BLOCK_MAX_PARTITIONS, &count);
     printf("[installer.elf] block list partitions ret=%d count=%u disk=%s\n",
            ret, count, disk_path ? disk_path : "?");
     if (ret < 0) return ret;
-    for (uint32_t i = 0; i < count && i < LEONOS_BLOCK_MAX_PARTITIONS; ++i) {
+    for (uint32_t i = 0; i < count && i < RELIEFOS_BLOCK_MAX_PARTITIONS; ++i) {
         printf("[installer.elf] partition[%u] path=%s fs=%u gpt_type=%u\n",
                i, parts[i].path, parts[i].filesystem, parts[i].gpt_type);
-        if (parts[i].filesystem == LEONOS_BLOCK_FILESYSTEM_FAT32 && esp == UINT32_MAX) esp = i;
-        if ((parts[i].filesystem == LEONOS_BLOCK_FILESYSTEM_EXT2 ||
-             parts[i].filesystem == LEONOS_BLOCK_FILESYSTEM_EXFAT) && root == UINT32_MAX) root = i;
+        if (parts[i].filesystem == RELIEFOS_BLOCK_FILESYSTEM_FAT32 && esp == UINT32_MAX) esp = i;
+        if ((parts[i].filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2 ||
+             parts[i].filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXFAT) && root == UINT32_MAX) root = i;
     }
     if (esp == UINT32_MAX || root == UINT32_MAX) {
         printf("[installer.elf] block partitions missing esp=%u root=%u\n", esp, root);
@@ -995,12 +996,12 @@ static int installer_target_partitions(const char *disk_path, int fresh,
     return 0;
 }
 
-static uint32_t installer_root_filesystem = LEONOS_BLOCK_FILESYSTEM_UNKNOWN;
+static uint32_t installer_root_filesystem = RELIEFOS_BLOCK_FILESYSTEM_UNKNOWN;
 
 static int installer_mount_targets(const char *disk_path, int fresh)
 {
-    char esp_path[LEONOS_BLOCK_PATH_LEN], root_path[LEONOS_BLOCK_PATH_LEN];
-    uint32_t root_filesystem = LEONOS_BLOCK_FILESYSTEM_UNKNOWN;
+    char esp_path[RELIEFOS_BLOCK_PATH_LEN], root_path[RELIEFOS_BLOCK_PATH_LEN];
+    uint32_t root_filesystem = RELIEFOS_BLOCK_FILESYSTEM_UNKNOWN;
     const char *root_fs_name = NULL;
     struct stat mountpoint;
     int ret;
@@ -1041,9 +1042,9 @@ static int installer_mount_targets(const char *disk_path, int fresh)
     printf("[installer.elf] mount targets disk=%s root=%s esp=%s fresh=%d root_fs=%u\n",
            disk_path ? disk_path : "?", root_path, esp_path, fresh,
            root_filesystem);
-    if (root_filesystem == LEONOS_BLOCK_FILESYSTEM_EXFAT) {
+    if (root_filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXFAT) {
         root_fs_name = "exfat";
-    } else if (root_filesystem == LEONOS_BLOCK_FILESYSTEM_EXT2) {
+    } else if (root_filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2) {
         root_fs_name = "ext2";
     }
     if (mount(root_path, INSTALL_ROOT_MOUNT, root_fs_name, 0, NULL) < 0) {
@@ -1075,7 +1076,7 @@ static int confirmation_ok(void)
 static void refresh_disks(void)
 {
     uint32_t count = 0;
-    int ret = leonos_block_list_disks(disks, LEONOS_BLOCK_MAX_DISKS, &count);
+    int ret = reliefos_block_list_disks(disks, RELIEFOS_BLOCK_MAX_DISKS, &count);
     if (ret < 0) {
         disk_count = 0;
         selected_disk = -1;
@@ -1083,7 +1084,7 @@ static void refresh_disks(void)
         dirty = 1;
         return;
     }
-    disk_count = count > LEONOS_BLOCK_MAX_DISKS ? LEONOS_BLOCK_MAX_DISKS : count;
+    disk_count = count > RELIEFOS_BLOCK_MAX_DISKS ? RELIEFOS_BLOCK_MAX_DISKS : count;
     if (disk_count == 0) {
         selected_disk = -1;
         set_status(T("No disks were found"), T("Attach a disk and click Refresh."));
@@ -1096,25 +1097,25 @@ static void refresh_disks(void)
     dirty = 1;
 }
 
-static void draw_sidebar(struct leonos_ui_surface *ui)
+static void draw_sidebar(struct reliefos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
     if (!l.sidebar_w) {
         return;
     }
-    leonos_ui_rect(ui, 0, 0, l.sidebar_w, surface_h, LEONOS_UI_ACTIVE_TITLE);
-    leonos_ui_text(ui, 18, 24, "LeonOS 4", LEONOS_UI_WHITE, LEONOS_UI_ACTIVE_TITLE);
-    leonos_ui_text(ui, 18, 48, T("Setup"), LEONOS_UI_WHITE, LEONOS_UI_ACTIVE_TITLE);
+    reliefos_ui_rect(ui, 0, 0, l.sidebar_w, surface_h, RELIEFOS_UI_ACTIVE_TITLE);
+    reliefos_ui_text(ui, 18, 24, "ReliefOS", RELIEFOS_UI_WHITE, RELIEFOS_UI_ACTIVE_TITLE);
+    reliefos_ui_text(ui, 18, 48, T("Setup"), RELIEFOS_UI_WHITE, RELIEFOS_UI_ACTIVE_TITLE);
     uint32_t row = 0;
     for (uint32_t i = 0; i < PAGE_COUNT; ++i) {
         if (i == PAGE_UPDATE_APPS && install_mode != INSTALL_MODE_UPDATE) continue;
         if (i == PAGE_ACCOUNTS && install_mode == INSTALL_MODE_UPDATE) continue;
         uint32_t spacing = surface_h >= 600 ? 34 : 26;
         uint32_t y = 104 + row++ * spacing;
-        uint32_t fg = i == page ? LEONOS_UI_BLACK : LEONOS_UI_WHITE;
-        uint32_t bg = i == page ? LEONOS_UI_LIGHT : LEONOS_UI_ACTIVE_TITLE;
+        uint32_t fg = i == page ? RELIEFOS_UI_BLACK : RELIEFOS_UI_WHITE;
+        uint32_t bg = i == page ? RELIEFOS_UI_LIGHT : RELIEFOS_UI_ACTIVE_TITLE;
         if (i == page) {
-            leonos_ui_rect(ui, 12, y - 6, l.sidebar_w > 34 ? l.sidebar_w - 34 : l.sidebar_w, 24, bg);
+            reliefos_ui_rect(ui, 12, y - 6, l.sidebar_w > 34 ? l.sidebar_w - 34 : l.sidebar_w, 24, bg);
         }
         const char *label = "";
         if (i == PAGE_LANGUAGE) {
@@ -1140,18 +1141,18 @@ static void draw_sidebar(struct leonos_ui_surface *ui)
         } else if (i == PAGE_FINISH) {
             label = T("Finish");
         }
-        leonos_ui_text(ui, 20, y, label, fg, bg);
+        reliefos_ui_text(ui, 20, y, label, fg, bg);
     }
 }
 
-static void draw_title(struct leonos_ui_surface *ui, const char *title,
+static void draw_title(struct reliefos_ui_surface *ui, const char *title,
                        const char *subtitle)
 {
     struct installer_layout l = get_layout();
-    leonos_ui_text(ui, l.content_x, l.content_y, title, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+    reliefos_ui_text(ui, l.content_x, l.content_y, title, RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     if (subtitle) {
-        leonos_ui_text_clipped(ui, l.content_x, l.content_y + 26, l.content_w,
-                               subtitle, LEONOS_UI_DARK, LEONOS_UI_WHITE);
+        reliefos_ui_text_clipped(ui, l.content_x, l.content_y + 26, l.content_w,
+                               subtitle, RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     }
 }
 
@@ -1185,37 +1186,37 @@ static const char *primary_label(void)
     return T("Next");
 }
 
-static void draw_footer(struct leonos_ui_surface *ui)
+static void draw_footer(struct reliefos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
     uint32_t back_disabled = page == PAGE_LANGUAGE || page == PAGE_PROGRESS ||
                              (page == PAGE_FINISH && install_success);
     uint32_t cancel_disabled = page == PAGE_PROGRESS ||
                                (page == PAGE_FINISH && install_success);
-    leonos_ui_rect(ui, l.sidebar_w, l.footer_y, surface_w > l.sidebar_w ? surface_w - l.sidebar_w : surface_w, 1, LEONOS_UI_DARK);
-    leonos_ui_rect(ui, l.sidebar_w, l.footer_y + 1, surface_w > l.sidebar_w ? surface_w - l.sidebar_w : surface_w, surface_h > l.footer_y + 1 ? surface_h - l.footer_y - 1 : 0, LEONOS_UI_GRAY);
-    leonos_ui_button(ui, l.back_x, l.button_y, BUTTON_W, BUTTON_H, T("Previous Step"),
-                     back_disabled ? LEONOS_UI_BUTTON_DISABLED : 0);
-    leonos_ui_button(ui, l.next_x, l.button_y, BUTTON_W, BUTTON_H, primary_label(),
-                     primary_disabled() ? LEONOS_UI_BUTTON_DISABLED : 0);
-    leonos_ui_button(ui, l.cancel_x, l.button_y, BUTTON_W, BUTTON_H, T("Cancel"),
-                     cancel_disabled ? LEONOS_UI_BUTTON_DISABLED : 0);
+    reliefos_ui_rect(ui, l.sidebar_w, l.footer_y, surface_w > l.sidebar_w ? surface_w - l.sidebar_w : surface_w, 1, RELIEFOS_UI_DARK);
+    reliefos_ui_rect(ui, l.sidebar_w, l.footer_y + 1, surface_w > l.sidebar_w ? surface_w - l.sidebar_w : surface_w, surface_h > l.footer_y + 1 ? surface_h - l.footer_y - 1 : 0, RELIEFOS_UI_GRAY);
+    reliefos_ui_button(ui, l.back_x, l.button_y, BUTTON_W, BUTTON_H, T("Previous Step"),
+                     back_disabled ? RELIEFOS_UI_BUTTON_DISABLED : 0);
+    reliefos_ui_button(ui, l.next_x, l.button_y, BUTTON_W, BUTTON_H, primary_label(),
+                     primary_disabled() ? RELIEFOS_UI_BUTTON_DISABLED : 0);
+    reliefos_ui_button(ui, l.cancel_x, l.button_y, BUTTON_W, BUTTON_H, T("Cancel"),
+                     cancel_disabled ? RELIEFOS_UI_BUTTON_DISABLED : 0);
 }
 
-static void draw_language_page(struct leonos_ui_surface *ui)
+static void draw_language_page(struct reliefos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
     draw_title(ui, T("Select Language"), T("Choose the language for Setup and the installed system."));
-    leonos_ui_button(ui, l.content_x, l.content_y + 88, 140, BUTTON_H, "English",
-                     language_selection() == 0 ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_button(ui, l.content_x + 156, l.content_y + 88, 140, BUTTON_H, "中文",
-                     language_selection() == 1 ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_text(ui, l.content_x, l.content_y + 140,
+    reliefos_ui_button(ui, l.content_x, l.content_y + 88, 140, BUTTON_H, "English",
+                     language_selection() == 0 ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_button(ui, l.content_x + 156, l.content_y + 88, 140, BUTTON_H, "中文",
+                     language_selection() == 1 ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_text(ui, l.content_x, l.content_y + 140,
                    T("The installed system will use the same language."),
-                   LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
 }
 
-static void draw_acknowledgements_page(struct leonos_ui_surface *ui)
+static void draw_acknowledgements_page(struct reliefos_ui_surface *ui)
 {
     struct installer_text_view view = get_acknowledgements_view();
     uint32_t total_h;
@@ -1229,7 +1230,7 @@ static void draw_acknowledgements_page(struct leonos_ui_surface *ui)
     if (acknowledgements_scroll_y > max_scroll) {
         acknowledgements_scroll_y = max_scroll;
     }
-    leonos_ui_scroll_view_frame(ui, view.x, view.y, view.w, view.h);
+    reliefos_ui_scroll_view_frame(ui, view.x, view.y, view.w, view.h);
     for (uint32_t i = 0; i < policy_line_count; ++i) {
         uint32_t line_h = policy_line_height(policy_lines[i].kind);
         int32_t line_y = (int32_t)view.y + (int32_t)offset -
@@ -1237,114 +1238,114 @@ static void draw_acknowledgements_page(struct leonos_ui_surface *ui)
         if (line_y >= (int32_t)view.y &&
             line_y + (int32_t)line_h <= (int32_t)(view.y + view.h)) {
             if (policy_lines[i].kind == POLICY_LINE_H1) {
-                leonos_ui_text_resized_clipped(ui, view.text_x, (uint32_t)line_y,
+                reliefos_ui_text_resized_clipped(ui, view.text_x, (uint32_t)line_y,
                                                 view.text_w, policy_lines[i].text,
-                                                LEONOS_UI_ACTIVE_TITLE, LEONOS_UI_WHITE, 9, 18);
+                                                RELIEFOS_UI_ACTIVE_TITLE, RELIEFOS_UI_WHITE, 9, 18);
             } else if (policy_lines[i].kind == POLICY_LINE_H2) {
-                leonos_ui_text_resized_clipped(ui, view.text_x, (uint32_t)line_y,
+                reliefos_ui_text_resized_clipped(ui, view.text_x, (uint32_t)line_y,
                                                 view.text_w, policy_lines[i].text,
-                                                LEONOS_UI_ACTIVE_TITLE, LEONOS_UI_WHITE, 9, 17);
+                                                RELIEFOS_UI_ACTIVE_TITLE, RELIEFOS_UI_WHITE, 9, 17);
             } else if (policy_lines[i].kind == POLICY_LINE_RULE) {
-                leonos_ui_rect(ui, view.text_x, (uint32_t)line_y + 5,
-                               view.text_w, 1, LEONOS_UI_DARK);
+                reliefos_ui_rect(ui, view.text_x, (uint32_t)line_y + 5,
+                               view.text_w, 1, RELIEFOS_UI_DARK);
             } else if (policy_lines[i].kind == POLICY_LINE_QUOTE) {
-                leonos_ui_rect(ui, view.text_x, (uint32_t)line_y + 1, 3,
-                               line_h > 2 ? line_h - 2 : line_h, LEONOS_UI_ACTIVE_TITLE);
-                leonos_ui_text_clipped(ui, view.text_x + 9, (uint32_t)line_y,
+                reliefos_ui_rect(ui, view.text_x, (uint32_t)line_y + 1, 3,
+                               line_h > 2 ? line_h - 2 : line_h, RELIEFOS_UI_ACTIVE_TITLE);
+                reliefos_ui_text_clipped(ui, view.text_x + 9, (uint32_t)line_y,
                                        view.text_w > 9 ? view.text_w - 9 : view.text_w,
-                                       policy_lines[i].text, LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                                       policy_lines[i].text, RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
             } else {
-                leonos_ui_text_clipped(ui, view.text_x, (uint32_t)line_y,
+                reliefos_ui_text_clipped(ui, view.text_x, (uint32_t)line_y,
                                        view.text_w, policy_lines[i].text,
                                        policy_lines[i].kind == POLICY_LINE_BULLET
-                                           ? LEONOS_UI_BLACK : LEONOS_UI_DARK,
-                                       LEONOS_UI_WHITE);
+                                           ? RELIEFOS_UI_BLACK : RELIEFOS_UI_DARK,
+                                       RELIEFOS_UI_WHITE);
             }
         }
         offset += line_h;
     }
-    leonos_ui_vscrollbar(ui, view.x + view.w - POLICY_SCROLLBAR_W, view.y,
+    reliefos_ui_vscrollbar(ui, view.x + view.w - POLICY_SCROLLBAR_W, view.y,
                          POLICY_SCROLLBAR_W, view.h, acknowledgements_scroll_y,
                          total_h > view.h ? total_h : view.h, view.h,
-                         total_h <= view.h ? LEONOS_UI_SCROLLBAR_DISABLED : 0);
+                         total_h <= view.h ? RELIEFOS_UI_SCROLLBAR_DISABLED : 0);
 }
 
-static void draw_theme_page(struct leonos_ui_surface *ui)
+static void draw_theme_page(struct reliefos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
     draw_title(ui, T("Choose UI Style"),
                T("Preview a style now and apply it to the installed system."));
-    leonos_ui_button(ui, l.content_x, l.content_y + 88, 140, BUTTON_H, "Metro",
-                     installer_theme == LEONOS_UI_THEME_METRO
-                         ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_button(ui, l.content_x + 156, l.content_y + 88, 140, BUTTON_H, "Win95",
-                     installer_theme == LEONOS_UI_THEME_WIN95
-                         ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_text(ui, l.content_x, l.content_y + 140,
-                   installer_theme == LEONOS_UI_THEME_METRO
+    reliefos_ui_button(ui, l.content_x, l.content_y + 88, 140, BUTTON_H, "Metro",
+                     installer_theme == RELIEFOS_UI_THEME_METRO
+                         ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_button(ui, l.content_x + 156, l.content_y + 88, 140, BUTTON_H, "Win95",
+                     installer_theme == RELIEFOS_UI_THEME_WIN95
+                         ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_text(ui, l.content_x, l.content_y + 140,
+                   installer_theme == RELIEFOS_UI_THEME_METRO
                        ? T("Metro uses the modern flat system appearance.")
                        : T("Win95 keeps the classic beveled system appearance."),
-                   LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
 }
 
-static void draw_welcome(struct leonos_ui_surface *ui)
+static void draw_welcome(struct reliefos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
-    draw_title(ui, T("LeonOS 4 Setup"), T("Install a new system or update an existing LeonOS 4 disk."));
-    leonos_ui_text(ui, l.content_x, l.content_y + 84, T("Setup can copy the full normal system payload"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, l.content_x, l.content_y + 108, T("or replace the boot/leonos and system files on an existing installation."), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, l.content_x, l.content_y + 164, T("SATA/AHCI and IDE/PATA target disks are supported."), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+    draw_title(ui, T("ReliefOS Setup"), T("Install a new system or update an existing ReliefOS disk."));
+    reliefos_ui_text(ui, l.content_x, l.content_y + 84, T("Setup can copy the full normal system payload"), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, l.content_x, l.content_y + 108, T("or replace the boot/reliefos and system files on an existing installation."), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, l.content_x, l.content_y + 164, T("SATA/AHCI and IDE/PATA target disks are supported."), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
 }
 
-static void draw_mode_page(struct leonos_ui_surface *ui)
+static void draw_mode_page(struct reliefos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
     uint32_t card_w = l.content_w > 620 ? 280 : l.content_w;
     draw_title(ui, T("Choose Setup Mode"), T("Fresh install erases the disk. Update keeps existing users and extra programs."));
-    leonos_ui_button(ui, l.content_x, l.content_y + 84, card_w, BUTTON_H,
+    reliefos_ui_button(ui, l.content_x, l.content_y + 84, card_w, BUTTON_H,
                      T("Fresh Install"),
-                     install_mode == INSTALL_MODE_FRESH ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_text_clipped(ui, l.content_x, l.content_y + 122, card_w,
-                           T("Format the selected disk and copy a clean LeonOS 4 system."),
-                           LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_button(ui, l.content_x, l.content_y + 180, card_w, BUTTON_H,
+                     install_mode == INSTALL_MODE_FRESH ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_text_clipped(ui, l.content_x, l.content_y + 122, card_w,
+                           T("Format the selected disk and copy a clean ReliefOS system."),
+                           RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_button(ui, l.content_x, l.content_y + 180, card_w, BUTTON_H,
                      T("Update Existing System"),
-                     install_mode == INSTALL_MODE_UPDATE ? LEONOS_UI_BUTTON_PRESSED : 0);
-    leonos_ui_text_clipped(ui, l.content_x, l.content_y + 218, l.content_w,
+                     install_mode == INSTALL_MODE_UPDATE ? RELIEFOS_UI_BUTTON_PRESSED : 0);
+    reliefos_ui_text_clipped(ui, l.content_x, l.content_y + 218, l.content_w,
                            T("Replace boot, system, EFI and bundled docs. Then choose changed or missing system apps."),
-                           LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                           RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
 }
 
-static void draw_disk_page(struct leonos_ui_surface *ui)
+static void draw_disk_page(struct reliefos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
     char line[128];
     draw_title(ui,
                install_mode == INSTALL_MODE_UPDATE ? T("Select Disk to Update")
                                                    : T("Select Installation Disk"),
-               install_mode == INSTALL_MODE_UPDATE ? T("Choose the disk that already contains LeonOS 4.")
-                                                   : T("Choose the disk that will receive LeonOS."));
-    leonos_ui_button(ui, l.disk_refresh_x, l.disk_refresh_y, 92, BUTTON_H, T("Refresh"), 0);
-    leonos_ui_list_header(ui, l.content_x, l.disk_header_y, l.table_w, T("Available disks"));
-    leonos_ui_inset(ui, l.content_x, l.disk_list_y, l.table_w, l.disk_list_h, LEONOS_UI_WHITE);
+               install_mode == INSTALL_MODE_UPDATE ? T("Choose the disk that already contains ReliefOS.")
+                                                   : T("Choose the disk that will receive ReliefOS."));
+    reliefos_ui_button(ui, l.disk_refresh_x, l.disk_refresh_y, 92, BUTTON_H, T("Refresh"), 0);
+    reliefos_ui_list_header(ui, l.content_x, l.disk_header_y, l.table_w, T("Available disks"));
+    reliefos_ui_inset(ui, l.content_x, l.disk_list_y, l.table_w, l.disk_list_h, RELIEFOS_UI_WHITE);
     if (disk_count == 0) {
-        leonos_ui_text(ui, l.content_x + 12, l.disk_list_y + 20, T("No disks were found."), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+        reliefos_ui_text(ui, l.content_x + 12, l.disk_list_y + 20, T("No disks were found."), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     }
-    for (uint32_t i = 0; i < disk_count && i < LEONOS_BLOCK_MAX_DISKS; ++i) {
+    for (uint32_t i = 0; i < disk_count && i < RELIEFOS_BLOCK_MAX_DISKS; ++i) {
         uint32_t row_y = l.disk_list_y + 2 + i * 24;
         if (row_y + 22 > l.disk_list_y + l.disk_list_h) {
             break;
         }
         format_disk_line(line, sizeof(line), &disks[i]);
-        leonos_ui_list_row(ui, l.content_x + 2, row_y,
+        reliefos_ui_list_row(ui, l.content_x + 2, row_y,
                            l.table_w > 4 ? l.table_w - 4 : l.table_w, line,
-                           selected_disk == (int32_t)i ? LEONOS_UI_MENU_SELECTED : 0);
+                           selected_disk == (int32_t)i ? RELIEFOS_UI_MENU_SELECTED : 0);
     }
-    leonos_ui_inset(ui, l.content_x, l.disk_status_y, l.table_w, 26, LEONOS_UI_LIGHT);
-    leonos_ui_text_clipped(ui, l.content_x + 8, l.disk_status_y + 5,
+    reliefos_ui_inset(ui, l.content_x, l.disk_status_y, l.table_w, 26, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text_clipped(ui, l.content_x + 8, l.disk_status_y + 5,
                            l.table_w > 16 ? l.table_w - 16 : l.table_w,
-                           status_text, LEONOS_UI_BLACK, LEONOS_UI_LIGHT);
-    leonos_ui_text_clipped(ui, l.content_x, l.disk_detail_y, l.table_w, detail_text, LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                           status_text, RELIEFOS_UI_BLACK, RELIEFOS_UI_LIGHT);
+    reliefos_ui_text_clipped(ui, l.content_x, l.disk_detail_y, l.table_w, detail_text, RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
 }
 
 static void format_update_reason(char *buf, uint32_t cap,
@@ -1380,10 +1381,10 @@ static void sync_update_list_layout(uint32_t list_h)
     }
     update_app_list.visible_rows = visible_rows;
     update_app_list.row_height = UPDATE_APP_ROW_H;
-    leonos_ui_listview_state_set_count(&update_app_list, update_app_count);
+    reliefos_ui_listview_state_set_count(&update_app_list, update_app_count);
 }
 
-static void draw_update_apps_page(struct leonos_ui_surface *ui)
+static void draw_update_apps_page(struct reliefos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
     uint32_t header_y = l.content_y + 112;
@@ -1394,107 +1395,107 @@ static void draw_update_apps_page(struct leonos_ui_surface *ui)
     sync_update_list_layout(list_h);
     draw_title(ui, T("Program and Driver Updates"),
                T("Changed or missing programs are selected; changed drivers are refreshed automatically."));
-    leonos_ui_text_clipped(ui, l.content_x, l.content_y + 72, l.content_w,
+    reliefos_ui_text_clipped(ui, l.content_x, l.content_y + 72, l.content_w,
                            T("boot, libraries, kerneldebug, EFI, docs, and drivers will be refreshed. Extra target applications and drivers are kept."),
-                           LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_list_header(ui, l.content_x, header_y, list_w,
+                           RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_list_header(ui, l.content_x, header_y, list_w,
                           T("Programs to replace"));
-    leonos_ui_inset(ui, l.content_x, list_y, list_w, list_h, LEONOS_UI_WHITE);
+    reliefos_ui_inset(ui, l.content_x, list_y, list_w, list_h, RELIEFOS_UI_WHITE);
     if (update_app_count == 0) {
-        leonos_ui_text(ui, l.content_x + 12, list_y + 20,
+        reliefos_ui_text(ui, l.content_x + 12, list_y + 20,
                        T("No program package differences were found."),
-                       LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                       RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     }
     for (uint32_t row = 0; row < update_app_list.visible_rows; ++row) {
         uint32_t i = update_app_list.scroll + row;
         uint32_t row_y = list_y + 2 + row * UPDATE_APP_ROW_H;
         uint32_t selected = update_app_list.selected == (int32_t)i;
-        uint32_t bg = selected ? LEONOS_UI_ACTIVE_TITLE : LEONOS_UI_WHITE;
-        uint32_t fg = selected ? LEONOS_UI_WHITE : LEONOS_UI_BLACK;
+        uint32_t bg = selected ? RELIEFOS_UI_ACTIVE_TITLE : RELIEFOS_UI_WHITE;
+        uint32_t fg = selected ? RELIEFOS_UI_WHITE : RELIEFOS_UI_BLACK;
         if (i >= update_app_count || row_y + UPDATE_APP_ROW_H > list_y + list_h) {
             break;
         }
-        leonos_ui_rect(ui, l.content_x + 2, row_y,
+        reliefos_ui_rect(ui, l.content_x + 2, row_y,
                        list_w > 4 ? list_w - 4 : list_w, UPDATE_APP_ROW_H, bg);
-        leonos_ui_checkbox(ui, l.content_x + 8, row_y + 3, "",
+        reliefos_ui_checkbox(ui, l.content_x + 8, row_y + 3, "",
                            update_apps[i].selected, 0);
         format_update_reason(line, sizeof(line), &update_apps[i]);
-        leonos_ui_text_clipped(ui, l.content_x + 34, row_y + 5,
+        reliefos_ui_text_clipped(ui, l.content_x + 34, row_y + 5,
                                list_w > 42 ? list_w - 42 : list_w,
                                line, fg, bg);
     }
-    leonos_ui_vscrollbar(ui, l.content_x + list_w, list_y, 18, list_h,
+    reliefos_ui_vscrollbar(ui, l.content_x + list_w, list_y, 18, list_h,
                          update_app_list.scroll,
                          update_app_count > update_app_list.visible_rows
                              ? update_app_count : update_app_list.visible_rows,
                          update_app_list.visible_rows,
                          update_app_count <= update_app_list.visible_rows
-                             ? LEONOS_UI_SCROLLBAR_DISABLED : 0);
-    leonos_ui_text_clipped(ui, l.content_x, list_y + list_h + 14, l.content_w,
-                           status_text, LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                             ? RELIEFOS_UI_SCROLLBAR_DISABLED : 0);
+    reliefos_ui_text_clipped(ui, l.content_x, list_y + list_h + 14, l.content_w,
+                           status_text, RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
 }
 
-static void draw_confirm_page(struct leonos_ui_surface *ui)
+static void draw_confirm_page(struct reliefos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
     char line[128];
     draw_title(ui,
                install_mode == INSTALL_MODE_UPDATE ? T("Confirm Update")
                                                    : T("Confirm Installation"),
-               install_mode == INSTALL_MODE_UPDATE ? T("Installed LeonOS packages will be upgraded.")
+               install_mode == INSTALL_MODE_UPDATE ? T("Installed ReliefOS packages will be upgraded.")
                                                    : T("This operation is destructive."));
     if (selected_disk >= 0 && (uint32_t)selected_disk < disk_count) {
         format_disk_line(line, sizeof(line), &disks[selected_disk]);
-        leonos_ui_text(ui, l.content_x, l.content_y + 78, T("Target:"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-        leonos_ui_text_clipped(ui, l.content_x + 70, l.content_y + 78,
+        reliefos_ui_text(ui, l.content_x, l.content_y + 78, T("Target:"), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+        reliefos_ui_text_clipped(ui, l.content_x + 70, l.content_y + 78,
                                l.content_w > 70 ? l.content_w - 70 : l.content_w,
-                               line, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+                               line, RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     }
-    leonos_ui_text_clipped(ui, l.content_x, l.content_y + 130, l.content_w,
+    reliefos_ui_text_clipped(ui, l.content_x, l.content_y + 130, l.content_w,
                            install_mode == INSTALL_MODE_UPDATE
                        ? T("Alpine packages and local configuration are retained. Boot files are updated after the package transaction succeeds.")
                                : T("The selected disk will be erased and formatted with a FAT32 ESP and ext2 system root."),
-                           LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_text(ui, l.content_x, l.content_y + 174,
+                           RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_text(ui, l.content_x, l.content_y + 174,
                    install_mode == INSTALL_MODE_UPDATE
                        ? T("Type UPDATE to enable the Update button.")
                        : T("Type INSTALL to enable the Install button."),
-                   LEONOS_UI_DARK, LEONOS_UI_WHITE);
-    leonos_ui_edit_state_draw(ui, l.content_x, l.confirm_edit_y, 220, &confirm_edit, 0);
+                   RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
+    reliefos_ui_edit_state_draw(ui, l.content_x, l.confirm_edit_y, 220, &confirm_edit, 0);
 }
 
-static void draw_progress_page(struct leonos_ui_surface *ui)
+static void draw_progress_page(struct reliefos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
     draw_title(ui, mode_progress_title(), T("Do not turn off this machine."));
-    leonos_ui_text_clipped(ui, l.content_x, l.content_y + 94, l.content_w,
-                           progress_text, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-    leonos_ui_progress(ui, l.content_x, l.content_y + 130, l.content_w, 24, progress_value, 100);
+    reliefos_ui_text_clipped(ui, l.content_x, l.content_y + 94, l.content_w,
+                           progress_text, RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+    reliefos_ui_progress(ui, l.content_x, l.content_y + 130, l.content_w, 24, progress_value, 100);
 }
 
-static void draw_finish_page(struct leonos_ui_surface *ui)
+static void draw_finish_page(struct reliefos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
     if (install_success) {
         draw_title(ui,
                    install_mode == INSTALL_MODE_UPDATE ? T("Update Complete")
                                                        : T("Installation Complete"),
-                   install_mode == INSTALL_MODE_UPDATE ? T("LeonOS was updated on the selected disk.")
-                                                       : T("LeonOS was installed to the selected disk."));
-        leonos_ui_text(ui, l.content_x, l.content_y + 96, T("Remove the installation media, then restart."), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
+                   install_mode == INSTALL_MODE_UPDATE ? T("ReliefOS was updated on the selected disk.")
+                                                       : T("ReliefOS was installed to the selected disk."));
+        reliefos_ui_text(ui, l.content_x, l.content_y + 96, T("Remove the installation media, then restart."), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
         if (reboot_error) {
-            leonos_ui_text(ui, l.content_x, l.content_y + 130,
-                           T("Restart failed"), LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-            leonos_ui_text_clipped(ui, l.content_x, l.content_y + 164, l.content_w,
-                                   strerror(reboot_error), LEONOS_UI_DARK, LEONOS_UI_WHITE);
+            reliefos_ui_text(ui, l.content_x, l.content_y + 130,
+                           T("Restart failed"), RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+            reliefos_ui_text_clipped(ui, l.content_x, l.content_y + 164, l.content_w,
+                                   strerror(reboot_error), RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
         }
     } else {
         draw_title(ui,
                    install_mode == INSTALL_MODE_UPDATE ? T("Update Failed")
                                                        : T("Installation Failed"),
                    T("No writes will continue after this error."));
-        leonos_ui_text(ui, l.content_x, l.content_y + 96, status_text, LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-        leonos_ui_text_clipped(ui, l.content_x, l.content_y + 130, l.content_w, detail_text, LEONOS_UI_DARK, LEONOS_UI_WHITE);
+        reliefos_ui_text(ui, l.content_x, l.content_y + 96, status_text, RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+        reliefos_ui_text_clipped(ui, l.content_x, l.content_y + 130, l.content_w, detail_text, RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
     }
 }
 
@@ -1504,20 +1505,20 @@ static uint32_t account_width(void)
     return width < 480 ? width : 480;
 }
 
-static void draw_accounts_page(struct leonos_ui_surface *ui)
+static void draw_accounts_page(struct reliefos_ui_surface *ui)
 {
     struct installer_layout l = get_layout();
-    leonos_inputm_set_current_context(LEONOS_INPUTM_CONTEXT_FOCUSED |
-        (account_focus ? LEONOS_INPUTM_CONTEXT_SECURE : 0), l.content_x,
-        l.content_y + 84 + account_focus * 54, account_width(), LEONOS_FONT_H + 8);
+    reliefos_inputm_set_current_context(RELIEFOS_INPUTM_CONTEXT_FOCUSED |
+        (account_focus ? RELIEFOS_INPUTM_CONTEXT_SECURE : 0), l.content_x,
+        l.content_y + 84 + account_focus * 54, account_width(), RELIEFOS_FONT_H + 8);
     const char *labels[] = {T("Standard user name"), T("Standard user password"),
                             T("Confirm password"),
                             T("root password"), T("Confirm root password")};
     draw_title(ui, T("Accounts"), T("Administrator: root"));
     for (unsigned i = 0; i < 5; ++i) {
         uint32_t y = l.content_y + 64 + i * 54;
-        leonos_ui_text(ui, l.content_x, y, labels[i], LEONOS_UI_BLACK, LEONOS_UI_WHITE);
-        char masked[LEONOS_AUTH_PASSWORD_LEN];
+        reliefos_ui_text(ui, l.content_x, y, labels[i], RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
+        char masked[RELIEFOS_AUTH_PASSWORD_LEN];
         const char *text = account_edits[i].buffer;
         if (i) {
             size_t length = strlen(text);
@@ -1525,19 +1526,19 @@ static void draw_accounts_page(struct leonos_ui_surface *ui)
             masked[length] = 0;
             text = masked;
         }
-        leonos_ui_edit(ui, l.content_x, y + 20, account_width(), text,
+        reliefos_ui_edit(ui, l.content_x, y + 20, account_width(), text,
                        account_edits[i].cursor, account_edits[i].scroll,
-                       i == account_focus ? LEONOS_UI_EDIT_FOCUSED : 0);
+                       i == account_focus ? RELIEFOS_UI_EDIT_FOCUSED : 0);
     }
     if (setup.username[0] && !installer_setup_valid(&setup))
-        leonos_ui_text_clipped(ui, l.content_x, l.content_y + 346, l.content_w,
+        reliefos_ui_text_clipped(ui, l.content_x, l.content_y + 346, l.content_w,
                                T("Passwords: 1-32 characters, no spaces; confirmations must match"),
-                               LEONOS_UI_DARK, LEONOS_UI_WHITE);
+                               RELIEFOS_UI_DARK, RELIEFOS_UI_WHITE);
 }
 
-static void draw_installer(struct leonos_ui_surface *ui)
+static void draw_installer(struct reliefos_ui_surface *ui)
 {
-    leonos_ui_rect(ui, 0, 0, surface_w, surface_h, LEONOS_UI_WHITE);
+    reliefos_ui_rect(ui, 0, 0, surface_w, surface_h, RELIEFOS_UI_WHITE);
     draw_sidebar(ui);
     switch (page) {
     case PAGE_LANGUAGE:
@@ -1578,18 +1579,18 @@ static void draw_installer(struct leonos_ui_surface *ui)
     draw_footer(ui);
 }
 
-static void present_installer(int window_id, struct leonos_ui_surface *ui)
+static void present_installer(int window_id, struct reliefos_ui_surface *ui)
 {
     if (installer_tty_mode || !ui || window_id <= 0) {
         return;
     }
     draw_installer(ui);
-    leonos_gui_present_window((uint32_t)window_id, surface_w, surface_h,
+    reliefos_gui_present_window((uint32_t)window_id, surface_w, surface_h,
                               INSTALLER_MAX_W, pixels);
     dirty = 0;
 }
 
-static void show_progress(int window_id, struct leonos_ui_surface *ui,
+static void show_progress(int window_id, struct reliefos_ui_surface *ui,
                           uint32_t value, const char *status,
                           const char *detail)
 {
@@ -1623,12 +1624,12 @@ static uint32_t copy_progress_percent(void)
     return 35 + (uint32_t)((copy_done_bytes * 60ULL) / copy_total_bytes);
 }
 
-static void show_copy_progress(int window_id, struct leonos_ui_surface *ui,
+static void show_copy_progress(int window_id, struct reliefos_ui_surface *ui,
                                const char *detail)
 {
     static unsigned long last_present_ms;
     if (!installer_tty_mode) {
-        unsigned long now = leonos_uptime_ms();
+        unsigned long now = reliefos_uptime_ms();
         if (now - last_present_ms < COPY_PRESENT_INTERVAL_MS) return;
         last_present_ms = now;
     }
@@ -1663,7 +1664,7 @@ static int installer_mkdir(const char *path)
 
 static int count_files_recursive(const char *src, uint32_t *out_count)
 {
-    struct leonos_dir_entry *entries = NULL;
+    struct reliefos_dir_entry *entries = NULL;
     uint32_t count = 0;
     int ret;
     ret = installer_list_dir(src, &entries, &count);
@@ -1671,7 +1672,7 @@ static int count_files_recursive(const char *src, uint32_t *out_count)
         goto out;
     }
     for (uint32_t i = 0; i < count; ++i) {
-        char child[LEONOS_FS_PATH_LEN];
+        char child[RELIEFOS_FS_PATH_LEN];
         if (name_is_dot(entries[i].name)) {
             continue;
         }
@@ -1680,20 +1681,20 @@ static int count_files_recursive(const char *src, uint32_t *out_count)
             ret = -1;
             goto out;
         }
-        if (entries[i].type == LEONOS_FS_TYPE_FILE) {
-            struct leonos_stat st;
-            if (leonos_stat_legacy(child, &st) == 0 && st.type == LEONOS_FS_TYPE_FILE) {
+        if (entries[i].type == RELIEFOS_FS_TYPE_FILE) {
+            struct reliefos_stat st;
+            if (reliefos_stat_legacy(child, &st) == 0 && st.type == RELIEFOS_FS_TYPE_FILE) {
                 copy_total_bytes += st.size;
             }
             ++*out_count;
             continue;
         }
-        if (entries[i].type == LEONOS_FS_TYPE_SYMLINK) {
+        if (entries[i].type == RELIEFOS_FS_TYPE_SYMLINK) {
             /* Symlink recreation is a metadata-sized work item. */
             ++*out_count;
             continue;
         }
-        if (entries[i].type == LEONOS_FS_TYPE_DIR) {
+        if (entries[i].type == RELIEFOS_FS_TYPE_DIR) {
             ret = count_files_recursive(child, out_count);
             if (ret < 0) {
                 goto out;
@@ -1708,8 +1709,8 @@ out:
 
 static int path_has_type(const char *path, uint32_t type)
 {
-    struct leonos_stat st;
-    int ret = leonos_stat_legacy(path, &st);
+    struct reliefos_stat st;
+    int ret = reliefos_stat_legacy(path, &st);
     if (ret < 0) {
         return ret;
     }
@@ -1718,7 +1719,7 @@ static int path_has_type(const char *path, uint32_t type)
 
 static int source_file_exists(const char *path)
 {
-    return path_has_type(path, LEONOS_FS_TYPE_FILE) == 0;
+    return path_has_type(path, RELIEFOS_FS_TYPE_FILE) == 0;
 }
 
 /* Defined below: final-symlink-aware helpers used by traversal. */
@@ -1727,20 +1728,20 @@ static int copy_symlink_path(const char *src, const char *dst);
 
 static int add_file_copy_work(const char *path)
 {
-    struct leonos_stat st;
+    struct reliefos_stat st;
     int type = path_type_nofollow(path);
-    if (type == LEONOS_FS_TYPE_SYMLINK) {
+    if (type == RELIEFOS_FS_TYPE_SYMLINK) {
         ++copy_total;
         return 0;
     }
     if (type < 0) {
         return type;
     }
-    int ret = leonos_stat_legacy(path, &st);
+    int ret = reliefos_stat_legacy(path, &st);
     if (ret < 0) {
         return ret;
     }
-    if (st.type != LEONOS_FS_TYPE_FILE) {
+    if (st.type != RELIEFOS_FS_TYPE_FILE) {
         return -20;
     }
     ++copy_total;
@@ -1751,7 +1752,7 @@ static int add_file_copy_work(const char *path)
 static int remove_path_recursive(const char *path)
 {
     struct stat lst;
-    struct leonos_dir_entry *entries;
+    struct reliefos_dir_entry *entries;
     /* lstat is essential here: unlinking "/target/bin" must remove the
      * usr-merge symlink itself, never recurse into /usr/bin. */
     if (lstat(path, &lst) < 0) {
@@ -1774,7 +1775,7 @@ static int remove_path_recursive(const char *path)
             break;
         }
         for (uint32_t i = 0; i < count; ++i) {
-            char child[LEONOS_FS_PATH_LEN];
+            char child[RELIEFOS_FS_PATH_LEN];
             if (name_is_dot(entries[i].name)) {
                 continue;
             }
@@ -1799,15 +1800,15 @@ out:
 }
 
 static int copy_dir_recursive(const char *src, const char *dst,
-                              int window_id, struct leonos_ui_surface *ui);
+                              int window_id, struct reliefos_ui_surface *ui);
 
 static int copy_file_path(const char *src, const char *dst,
-                          int window_id, struct leonos_ui_surface *ui)
+                          int window_id, struct reliefos_ui_surface *ui)
 {
-    int in_fd = open(src, LEONOS_O_RDONLY, 0);
+    int in_fd = open(src, RELIEFOS_O_RDONLY, 0);
     int out_fd = -1;
     int error = 0;
-    char temporary[LEONOS_FS_PATH_LEN];
+    char temporary[RELIEFOS_FS_PATH_LEN];
     struct stat source;
     long got = 0;
     uint32_t write_slice = sizeof(copy_buf);
@@ -1822,7 +1823,7 @@ static int copy_file_path(const char *src, const char *dst,
     if (!S_ISREG(source.st_mode)) { error = EINVAL; goto done; }
     const char *slash = strrchr(dst, '/');
     if (!slash) { error = EINVAL; goto done; }
-    int n = snprintf(temporary, sizeof(temporary), "%.*s.leonos-copy-XXXXXX",
+    int n = snprintf(temporary, sizeof(temporary), "%.*s.reliefos-copy-XXXXXX",
                      (int)(slash - dst + 1), dst);
     if (n < 0 || (size_t)n >= sizeof(temporary)) { error = ENAMETOOLONG; goto done; }
     /* A failed copy must leave the previous file (and any hard-link aliases)
@@ -1887,10 +1888,10 @@ static int path_type_nofollow(const char *path)
     if (!path || lstat(path, &status) < 0) {
         return errno ? -errno : -2;
     }
-    if (S_ISLNK(status.st_mode)) return LEONOS_FS_TYPE_SYMLINK;
-    if (S_ISDIR(status.st_mode)) return LEONOS_FS_TYPE_DIR;
-    if (S_ISREG(status.st_mode)) return LEONOS_FS_TYPE_FILE;
-    return LEONOS_FS_TYPE_DEVICE;
+    if (S_ISLNK(status.st_mode)) return RELIEFOS_FS_TYPE_SYMLINK;
+    if (S_ISDIR(status.st_mode)) return RELIEFOS_FS_TYPE_DIR;
+    if (S_ISREG(status.st_mode)) return RELIEFOS_FS_TYPE_FILE;
+    return RELIEFOS_FS_TYPE_DEVICE;
 }
 
 /* Recreate a symlink with the same literal target.  The Alpine root
@@ -1898,8 +1899,8 @@ static int path_type_nofollow(const char *path)
  * the target bytes as a directory or regular file is not equivalent. */
 static int copy_symlink_path(const char *src, const char *dst)
 {
-    char target[LEONOS_FS_PATH_LEN];
-    char temporary[LEONOS_FS_PATH_LEN];
+    char target[RELIEFOS_FS_PATH_LEN];
+    char temporary[RELIEFOS_FS_PATH_LEN];
     struct stat status;
     ssize_t length;
     if (!src || !dst) return -22;
@@ -1910,7 +1911,7 @@ static int copy_symlink_path(const char *src, const char *dst)
     if (lstat(src, &status) < 0) return -errno;
     const char *slash = strrchr(dst, '/');
     if (!slash) return -EINVAL;
-    int n = snprintf(temporary, sizeof(temporary), "%.*s.leonos-link-XXXXXX",
+    int n = snprintf(temporary, sizeof(temporary), "%.*s.reliefos-link-XXXXXX",
                      (int)(slash - dst + 1), dst);
     if (n < 0 || (size_t)n >= sizeof(temporary)) return -ENAMETOOLONG;
     int fd = mkstemp(temporary);
@@ -1929,9 +1930,9 @@ static int copy_symlink_path(const char *src, const char *dst)
 }
 
 static int copy_dir_recursive(const char *src, const char *dst,
-                              int window_id, struct leonos_ui_surface *ui)
+                              int window_id, struct reliefos_ui_surface *ui)
 {
-    struct leonos_dir_entry *entries = NULL;
+    struct reliefos_dir_entry *entries = NULL;
     uint32_t count = 0;
     int ret;
     ret = installer_list_dir(src, &entries, &count);
@@ -1940,8 +1941,8 @@ static int copy_dir_recursive(const char *src, const char *dst,
         goto out;
     }
     for (uint32_t i = 0; i < count; ++i) {
-        char src_child[LEONOS_FS_PATH_LEN];
-        char dst_child[LEONOS_FS_PATH_LEN];
+        char src_child[RELIEFOS_FS_PATH_LEN];
+        char dst_child[RELIEFOS_FS_PATH_LEN];
         if (name_is_dot(entries[i].name)) {
             continue;
         }
@@ -1952,12 +1953,12 @@ static int copy_dir_recursive(const char *src, const char *dst,
             ret = -1;
             goto out;
         }
-        if (entries[i].type == LEONOS_FS_TYPE_DIR) {
+        if (entries[i].type == RELIEFOS_FS_TYPE_DIR) {
             ret = installer_mkdir(dst_child);
             if (ret == -17) {
-                struct leonos_stat dst_st;
-                ret = leonos_stat_legacy(dst_child, &dst_st);
-                if (ret == 0 && dst_st.type == LEONOS_FS_TYPE_DIR) {
+                struct reliefos_stat dst_st;
+                ret = reliefos_stat_legacy(dst_child, &dst_st);
+                if (ret == 0 && dst_st.type == RELIEFOS_FS_TYPE_DIR) {
                     ret = 0;
                 } else if (ret == 0) {
                     ret = -20;
@@ -1975,7 +1976,7 @@ static int copy_dir_recursive(const char *src, const char *dst,
                        src_child, dst_child, ret);
                 goto out;
             }
-        } else if (entries[i].type == LEONOS_FS_TYPE_FILE) {
+        } else if (entries[i].type == RELIEFOS_FS_TYPE_FILE) {
             ret = copy_file_path(src_child, dst_child, window_id, ui);
             if (ret < 0) {
                 printf("[installer.elf] copy %s -> %s ret=%d\n", src_child, dst_child, ret);
@@ -1983,7 +1984,7 @@ static int copy_dir_recursive(const char *src, const char *dst,
             }
             ++copy_done;
             show_copy_progress(window_id, ui, dst_child);
-        } else if (entries[i].type == LEONOS_FS_TYPE_SYMLINK) {
+        } else if (entries[i].type == RELIEFOS_FS_TYPE_SYMLINK) {
             ret = copy_symlink_path(src_child, dst_child);
             if (ret < 0) {
                 printf("[installer.elf] symlink %s -> %s ret=%d\n", src_child, dst_child, ret);
@@ -2007,9 +2008,9 @@ out:
 }
 
 static int merge_dir_recursive(const char *src, const char *dst,
-                               int window_id, struct leonos_ui_surface *ui)
+                               int window_id, struct reliefos_ui_surface *ui)
 {
-    struct leonos_dir_entry *entries = NULL;
+    struct reliefos_dir_entry *entries = NULL;
     uint32_t count = 0;
     int ret;
     ret = installer_mkdir(dst);
@@ -2023,8 +2024,8 @@ static int merge_dir_recursive(const char *src, const char *dst,
         goto out;
     }
     for (uint32_t i = 0; i < count; ++i) {
-        char src_child[LEONOS_FS_PATH_LEN];
-        char dst_child[LEONOS_FS_PATH_LEN];
+        char src_child[RELIEFOS_FS_PATH_LEN];
+        char dst_child[RELIEFOS_FS_PATH_LEN];
         if (name_is_dot(entries[i].name)) {
             continue;
         }
@@ -2035,14 +2036,14 @@ static int merge_dir_recursive(const char *src, const char *dst,
             ret = -1;
             goto out;
         }
-        if (entries[i].type == LEONOS_FS_TYPE_DIR) {
+        if (entries[i].type == RELIEFOS_FS_TYPE_DIR) {
             ret = merge_dir_recursive(src_child, dst_child, window_id, ui);
             if (ret < 0) {
                 printf("[installer.elf] recurse merge %s -> %s ret=%d\n",
                        src_child, dst_child, ret);
                 goto out;
             }
-        } else if (entries[i].type == LEONOS_FS_TYPE_FILE) {
+        } else if (entries[i].type == RELIEFOS_FS_TYPE_FILE) {
             ret = copy_file_path(src_child, dst_child, window_id, ui);
             if (ret < 0) {
                 printf("[installer.elf] copy %s -> %s ret=%d\n", src_child, dst_child, ret);
@@ -2050,7 +2051,7 @@ static int merge_dir_recursive(const char *src, const char *dst,
             }
             ++copy_done;
             show_copy_progress(window_id, ui, dst_child);
-        } else if (entries[i].type == LEONOS_FS_TYPE_SYMLINK) {
+        } else if (entries[i].type == RELIEFOS_FS_TYPE_SYMLINK) {
             ret = copy_symlink_path(src_child, dst_child);
             if (ret < 0) {
                 printf("[installer.elf] symlink %s -> %s ret=%d\n", src_child, dst_child, ret);
@@ -2068,10 +2069,10 @@ out:
 
 /* Return whether any source file differs from the corresponding target file.
  * Extra files already present on the target are intentionally ignored: update
- * mode is additive for user data and only refreshes files shipped by LeonOS. */
+ * mode is additive for user data and only refreshes files shipped by ReliefOS. */
 static int package_has_changes(const char *src, const char *dst)
 {
-    struct leonos_dir_entry *entries = NULL;
+    struct reliefos_dir_entry *entries = NULL;
     uint32_t count = 0;
     int ret;
     ret = installer_list_dir(src, &entries, &count);
@@ -2079,8 +2080,8 @@ static int package_has_changes(const char *src, const char *dst)
         goto out;
     }
     for (uint32_t i = 0; i < count; ++i) {
-        char src_child[LEONOS_FS_PATH_LEN];
-        char dst_child[LEONOS_FS_PATH_LEN];
+        char src_child[RELIEFOS_FS_PATH_LEN];
+        char dst_child[RELIEFOS_FS_PATH_LEN];
         if (name_is_dot(entries[i].name)) {
             continue;
         }
@@ -2089,10 +2090,10 @@ static int package_has_changes(const char *src, const char *dst)
             ret = -1;
             goto out;
         }
-        if (entries[i].type == LEONOS_FS_TYPE_DIR) {
-            struct leonos_stat dst_stat;
-            ret = leonos_stat_legacy(dst_child, &dst_stat);
-            if (ret < 0 || dst_stat.type != LEONOS_FS_TYPE_DIR) {
+        if (entries[i].type == RELIEFOS_FS_TYPE_DIR) {
+            struct reliefos_stat dst_stat;
+            ret = reliefos_stat_legacy(dst_child, &dst_stat);
+            if (ret < 0 || dst_stat.type != RELIEFOS_FS_TYPE_DIR) {
                 ret = 1;
                 goto out;
             }
@@ -2100,8 +2101,8 @@ static int package_has_changes(const char *src, const char *dst)
             if (ret != 0) {
                 goto out;
             }
-        } else if (entries[i].type == LEONOS_FS_TYPE_FILE ||
-                   entries[i].type == LEONOS_FS_TYPE_SYMLINK) {
+        } else if (entries[i].type == RELIEFOS_FS_TYPE_FILE ||
+                   entries[i].type == RELIEFOS_FS_TYPE_SYMLINK) {
             uint8_t missing;
             uint8_t different;
             ret = installer_files_equal(src_child, dst_child, &missing, &different);
@@ -2122,7 +2123,7 @@ out:
 
 static int count_changed_files_recursive(const char *src, const char *dst)
 {
-    struct leonos_dir_entry *entries = NULL;
+    struct reliefos_dir_entry *entries = NULL;
     uint32_t count = 0;
     int ret;
     ret = installer_list_dir(src, &entries, &count);
@@ -2130,8 +2131,8 @@ static int count_changed_files_recursive(const char *src, const char *dst)
         goto out;
     }
     for (uint32_t i = 0; i < count; ++i) {
-        char src_child[LEONOS_FS_PATH_LEN];
-        char dst_child[LEONOS_FS_PATH_LEN];
+        char src_child[RELIEFOS_FS_PATH_LEN];
+        char dst_child[RELIEFOS_FS_PATH_LEN];
         if (name_is_dot(entries[i].name)) {
             continue;
         }
@@ -2141,10 +2142,10 @@ static int count_changed_files_recursive(const char *src, const char *dst)
             ret = -1;
             goto out;
         }
-        if (entries[i].type == LEONOS_FS_TYPE_DIR) {
+        if (entries[i].type == RELIEFOS_FS_TYPE_DIR) {
             ret = count_changed_files_recursive(src_child, dst_child);
-        } else if (entries[i].type == LEONOS_FS_TYPE_FILE ||
-                   entries[i].type == LEONOS_FS_TYPE_SYMLINK) {
+        } else if (entries[i].type == RELIEFOS_FS_TYPE_FILE ||
+                   entries[i].type == RELIEFOS_FS_TYPE_SYMLINK) {
             uint8_t missing;
             uint8_t different;
             ret = installer_files_equal(src_child, dst_child, &missing, &different);
@@ -2165,9 +2166,9 @@ out:
 }
 
 static int copy_changed_dir_recursive(const char *src, const char *dst,
-                                      int window_id, struct leonos_ui_surface *ui)
+                                      int window_id, struct reliefos_ui_surface *ui)
 {
-    struct leonos_dir_entry *entries = NULL;
+    struct reliefos_dir_entry *entries = NULL;
     uint32_t count = 0;
     int ret;
     ret = installer_mkdir(dst);
@@ -2181,8 +2182,8 @@ static int copy_changed_dir_recursive(const char *src, const char *dst,
         goto out;
     }
     for (uint32_t i = 0; i < count; ++i) {
-        char src_child[LEONOS_FS_PATH_LEN];
-        char dst_child[LEONOS_FS_PATH_LEN];
+        char src_child[RELIEFOS_FS_PATH_LEN];
+        char dst_child[RELIEFOS_FS_PATH_LEN];
         if (name_is_dot(entries[i].name)) {
             continue;
         }
@@ -2193,9 +2194,9 @@ static int copy_changed_dir_recursive(const char *src, const char *dst,
             ret = -1;
             goto out;
         }
-        if (entries[i].type == LEONOS_FS_TYPE_DIR) {
+        if (entries[i].type == RELIEFOS_FS_TYPE_DIR) {
             int dst_type = path_type_nofollow(dst_child);
-            if (dst_type >= 0 && dst_type != LEONOS_FS_TYPE_DIR) {
+            if (dst_type >= 0 && dst_type != RELIEFOS_FS_TYPE_DIR) {
                 ret = remove_path_recursive(dst_child);
                 if (ret < 0) {
                     goto out;
@@ -2205,8 +2206,8 @@ static int copy_changed_dir_recursive(const char *src, const char *dst,
                 goto out;
             }
             ret = copy_changed_dir_recursive(src_child, dst_child, window_id, ui);
-        } else if (entries[i].type == LEONOS_FS_TYPE_FILE ||
-                   entries[i].type == LEONOS_FS_TYPE_SYMLINK) {
+        } else if (entries[i].type == RELIEFOS_FS_TYPE_FILE ||
+                   entries[i].type == RELIEFOS_FS_TYPE_SYMLINK) {
             uint8_t missing;
             uint8_t different;
             int dst_type = path_type_nofollow(dst_child);
@@ -2222,7 +2223,7 @@ static int copy_changed_dir_recursive(const char *src, const char *dst,
             }
             ret = installer_files_equal(src_child, dst_child, &missing, &different);
             if (ret >= 0 && (missing || different)) {
-                if (entries[i].type == LEONOS_FS_TYPE_SYMLINK) {
+                if (entries[i].type == RELIEFOS_FS_TYPE_SYMLINK) {
                     ret = copy_symlink_path(src_child, dst_child);
                 } else {
                     ret = copy_file_path(src_child, dst_child, window_id, ui);
@@ -2247,7 +2248,7 @@ out:
     return ret;
 }
 
-static int copy_payload_ordered(int window_id, struct leonos_ui_surface *ui)
+static int copy_payload_ordered(int window_id, struct reliefos_ui_surface *ui)
 {
     int ret = copy_dir_recursive(INSTALL_ROOT_PAYLOAD, INSTALL_ROOT_MOUNT, window_id, ui);
     if (!ret) ret = installer_write_fstab();
@@ -2271,11 +2272,11 @@ static int copy_payload_ordered(int window_id, struct leonos_ui_surface *ui)
      * explicitly and make the operation idempotent for filesystems that keep
      * an end-marker or directory cache across the preceding copy. */
     {
-        const char *state_path = TARGET_VAR_LIB_LEONOS;
-        struct leonos_stat state_st;
-        ret = leonos_stat_legacy(state_path, &state_st);
+        const char *state_path = TARGET_VAR_LIB_RELIEFOS;
+        struct reliefos_stat state_st;
+        ret = reliefos_stat_legacy(state_path, &state_st);
         if (ret == 0) {
-            if (state_st.type == LEONOS_FS_TYPE_DIR) {
+            if (state_st.type == RELIEFOS_FS_TYPE_DIR) {
                 return 0;
             }
             printf("[installer.elf] target state has wrong type=%u path=%s\n",
@@ -2292,8 +2293,8 @@ static int copy_payload_ordered(int window_id, struct leonos_ui_surface *ui)
         }
         ret = installer_mkdir(state_path);
         if (ret == -17) {
-            ret = leonos_stat_legacy(state_path, &state_st);
-            if (ret == 0 && state_st.type == LEONOS_FS_TYPE_DIR) {
+            ret = reliefos_stat_legacy(state_path, &state_st);
+            if (ret == 0 && state_st.type == RELIEFOS_FS_TYPE_DIR) {
                 return 0;
             }
             printf("[installer.elf] verify existing target state %s ret=%d type=%u\n",
@@ -2309,57 +2310,70 @@ static int copy_payload_ordered(int window_id, struct leonos_ui_surface *ui)
 
 static int check_update_target_required(void)
 {
-    /* Updates accept only the current non-usr-merge root. Old images need
-     * a fresh installation; never mutate them in an attempted migration. */
+    /* Both brand namespaces use the same non-usr-merge filesystem contract.
+     * Accept a complete old namespace for migration, but never a usr-merged
+     * root or symlinked hierarchy. This preflight performs no writes. */
     static const char *const required_dirs[] = {
-        "/etc/leonos", "/var/lib/leonos", "/bin", "/sbin", "/lib",
+        "/etc", "/var", "/var/lib", "/bin", "/sbin", "/lib",
         "/usr", "/usr/bin", "/usr/sbin", "/usr/lib",
-        LEONOS_LAYOUT_LEONOS_APPS, LEONOS_LAYOUT_LEONOS_DRIVERS,
     };
     for (uint32_t i = 0; i < sizeof(required_dirs) / sizeof(required_dirs[0]); ++i) {
-        char path[LEONOS_FS_PATH_LEN];
+        char path[RELIEFOS_FS_PATH_LEN];
         if (path_join(path, sizeof(path), INSTALL_ROOT_MOUNT, required_dirs[i]) < 0)
             return -ENAMETOOLONG;
-        if (path_type_nofollow(path) != LEONOS_FS_TYPE_DIR) {
+        if (path_type_nofollow(path) != RELIEFOS_FS_TYPE_DIR) {
             set_status(T("Unsupported root layout; use a fresh ext2 installation"), path);
             return -EINVAL;
         }
     }
     {
-        char desktop[LEONOS_FS_PATH_LEN];
+        static const char *const namespaces[][6] = {
+            {"/etc/reliefos", "/var/lib/reliefos", "/usr/lib/reliefos",
+             "/usr/lib/reliefos/apps", "/usr/lib/reliefos/drivers",
+             "/usr/lib/reliefos/apps/desktop/desktop.elf"},
+            {"/etc/leonos", "/var/lib/leonos", "/usr/lib/leonos",
+             "/usr/lib/leonos/apps", "/usr/lib/leonos/drivers",
+             "/usr/lib/leonos/apps/desktop/desktop.elf"},
+        };
         int found = 0;
-        if (path_join(desktop, sizeof(desktop), TARGET_LEONOS_APPS,
-                      "desktop/desktop.elf") == 0 &&
-            path_has_type(desktop, LEONOS_FS_TYPE_FILE) == 0) {
-            found = 1;
+        for (uint32_t n = 0; n < sizeof(namespaces) / sizeof(namespaces[0]); ++n) {
+            int complete = 1;
+            for (uint32_t i = 0; i < 6; ++i) {
+                char path[RELIEFOS_FS_PATH_LEN];
+                int required = i == 5 ? RELIEFOS_FS_TYPE_FILE : RELIEFOS_FS_TYPE_DIR;
+                if (path_join(path, sizeof(path), INSTALL_ROOT_MOUNT, namespaces[n][i]) < 0)
+                    return -ENAMETOOLONG;
+                if (path_type_nofollow(path) != required) { complete = 0; break; }
+            }
+            if (complete) { found = 1; break; }
         }
         if (!found) {
-            set_status(T("Existing LeonOS 4 was not detected"),
-                       desktop);
-            return -2;
+            set_status(T("Existing ReliefOS was not detected"), INSTALL_ROOT_MOUNT);
+            return -EINVAL;
         }
     }
     {
         static const char *const esp_dirs[] = {"boot", "boot/EFI"};
         for (uint32_t i = 0; i < sizeof(esp_dirs) / sizeof(esp_dirs[0]); ++i) {
-            char path[LEONOS_FS_PATH_LEN];
+            char path[RELIEFOS_FS_PATH_LEN];
             if (path_join(path, sizeof(path), INSTALL_ROOT_MOUNT, esp_dirs[i]) < 0 ||
-                path_has_type(path, LEONOS_FS_TYPE_DIR) < 0) {
-                set_status(T("Existing LeonOS 4 boot partition was not detected"), path);
+                path_has_type(path, RELIEFOS_FS_TYPE_DIR) < 0) {
+                set_status(T("Existing ReliefOS boot partition was not detected"), path);
                 return -2;
             }
         }
     }
     {
-        char loader[LEONOS_FS_PATH_LEN];
+        char loader[RELIEFOS_FS_PATH_LEN];
         if (path_join(loader, sizeof(loader), TARGET_BOOT, "loader.elf") < 0 ||
-            path_has_type(loader, LEONOS_FS_TYPE_FILE) < 0) {
-            set_status(T("Existing LeonOS 4 boot partition was not detected"), loader);
+            path_has_type(loader, RELIEFOS_FS_TYPE_FILE) < 0) {
+            set_status(T("Existing ReliefOS boot partition was not detected"), loader);
             return -2;
         }
     }
-    if (path_has_type(TARGET_ESP_KERNEL, LEONOS_FS_TYPE_FILE) < 0) {
-        set_status(T("Existing LeonOS 4 boot partition was not detected"), TARGET_ESP_KERNEL);
+    if (path_has_type(TARGET_ESP_KERNEL, RELIEFOS_FS_TYPE_FILE) < 0 &&
+        path_has_type(TARGET_ESP_KERNEL_LEGACY, RELIEFOS_FS_TYPE_FILE) < 0) {
+        set_status(T("Existing ReliefOS boot partition was not detected"), TARGET_ESP_KERNEL);
         return -2;
     }
     return 0;
@@ -2368,30 +2382,38 @@ static int check_update_target_required(void)
 static int check_update_payload_required(void)
 {
     static const char *const required_dirs[] = {
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_ETC_LEONOS,
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_VAR_LIB_LEONOS,
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_USR_LIB,
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LEONOS_LIB,
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LEONOS_APPS,
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LEONOS_DRIVERS,
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LEONOS_DOC,
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LEONOS_FONTS,
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LEONOS_RESOURCES,
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LICENSES,
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_ETC_SSL_CERTS,
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_ETC_RELIEFOS,
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_VAR_LIB_RELIEFOS,
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_USR_LIB,
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_LIB,
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_APPS,
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_DRIVERS,
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_DOC,
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_FONTS,
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_RESOURCES,
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_LICENSES,
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_ETC_SSL_CERTS,
         INSTALL_ESP_PAYLOAD "/grub",
+        INSTALL_ESP_PAYLOAD "/reliefos",
         INSTALL_ESP_PAYLOAD "/leonos",
         INSTALL_ESP_PAYLOAD "/EFI",
     };
     static const char *const required_files[] = {
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LEONOS_LIB "/kerneldebug.sys",
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LIB "/ld-musl-x86_64.so.1",
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LIB "/libc.so",
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LIB "/libmimalloc.so.3",
-        INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LEONOS_LIB "/libleonos.so.2",
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_LIB "/kerneldebug.sys",
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_LIB "/ld-musl-x86_64.so.1",
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_LIB "/libc.so",
+        INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_LIB "/libmimalloc.so.3",
+        INSTALL_ROOT_PAYLOAD RELIEFOS_PATH_LIBRELIEFOS,
+        INSTALL_ROOT_PAYLOAD "/usr/lib/leonos/libleonos.so.2",
+        INSTALL_ESP_PAYLOAD "/reliefos/kernel.sys",
+        INSTALL_ESP_PAYLOAD "/reliefos/loader.elf",
+        INSTALL_ESP_PAYLOAD "/leonos/kernel.sys",
+        INSTALL_ESP_PAYLOAD "/loader.elf",
+        INSTALL_ESP_PAYLOAD "/grub/grub.cfg",
+        INSTALL_ESP_PAYLOAD "/EFI/BOOT/BOOTX64.EFI",
     };
     for (uint32_t i = 0; i < sizeof(required_dirs) / sizeof(required_dirs[0]); ++i) {
-        int ret = path_has_type(required_dirs[i], LEONOS_FS_TYPE_DIR);
+        int ret = path_has_type(required_dirs[i], RELIEFOS_FS_TYPE_DIR);
         if (ret < 0) {
             set_status(T("Installation media is incomplete"),
                        required_dirs[i]);
@@ -2399,7 +2421,7 @@ static int check_update_payload_required(void)
         }
     }
     for (uint32_t i = 0; i < sizeof(required_files) / sizeof(required_files[0]); ++i) {
-        int ret = path_has_type(required_files[i], LEONOS_FS_TYPE_FILE);
+        int ret = path_has_type(required_files[i], RELIEFOS_FS_TYPE_FILE);
         if (ret < 0) {
             set_status(T("Installation media is incomplete"),
                        required_files[i]);
@@ -2440,14 +2462,14 @@ static int add_update_app_entry(const char *name,
  * manifest's system=1 marker keeps them out of the optional list. */
 static int app_package_is_system(const char *package_dir)
 {
-    char manifest[LEONOS_FS_PATH_LEN];
+    char manifest[RELIEFOS_FS_PATH_LEN];
     char text[512];
     int fd;
     long got;
     if (path_join(manifest, sizeof(manifest), package_dir, "manifest.ini") < 0) {
         return 0;
     }
-    fd = open(manifest, LEONOS_O_RDONLY, 0);
+    fd = open(manifest, RELIEFOS_O_RDONLY, 0);
     if (fd < 0) {
         return 0;
     }
@@ -2462,34 +2484,34 @@ static int app_package_is_system(const char *package_dir)
 
 static int scan_update_apps(void)
 {
-    static const char *const source_root = INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LEONOS_APPS;
-    static const char *const target_root = TARGET_LEONOS_APPS;
-    struct leonos_dir_entry entries[LEONOS_FS_MAX_ENTRIES];
+    static const char *const source_root = INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_APPS;
+    static const char *const target_root = TARGET_RELIEFOS_APPS;
+    struct reliefos_dir_entry entries[RELIEFOS_FS_MAX_ENTRIES];
     uint32_t count = 0;
     int ret;
     reset_update_app_list();
-    ret = leonos_list_dir(source_root, entries,
-                          LEONOS_FS_MAX_ENTRIES, &count);
+    ret = reliefos_list_dir(source_root, entries,
+                          RELIEFOS_FS_MAX_ENTRIES, &count);
     printf("[installer.elf] scan programs list ret=%d count=%u path=%s\n",
            ret, count, source_root);
     if (ret < 0) {
         return ret;
     }
     for (uint32_t i = 0; i < count; ++i) {
-        char src_elf[LEONOS_FS_PATH_LEN];
-        char dst_elf[LEONOS_FS_PATH_LEN];
-        char src_icon[LEONOS_FS_PATH_LEN];
-        char dst_icon[LEONOS_FS_PATH_LEN];
-        char src_package[LEONOS_FS_PATH_LEN];
-        char dst_package[LEONOS_FS_PATH_LEN];
-        char elf_name[LEONOS_FS_PATH_LEN];
+        char src_elf[RELIEFOS_FS_PATH_LEN];
+        char dst_elf[RELIEFOS_FS_PATH_LEN];
+        char src_icon[RELIEFOS_FS_PATH_LEN];
+        char dst_icon[RELIEFOS_FS_PATH_LEN];
+        char src_package[RELIEFOS_FS_PATH_LEN];
+        char dst_package[RELIEFOS_FS_PATH_LEN];
+        char elf_name[RELIEFOS_FS_PATH_LEN];
         uint32_t name_len = 0;
         uint8_t missing = 0;
         uint8_t elf_diff = 1;
         uint8_t icon_missing = 0;
         uint8_t icon_diff = 0;
         uint8_t package_diff = 0;
-        if (entries[i].type != LEONOS_FS_TYPE_DIR) {
+        if (entries[i].type != RELIEFOS_FS_TYPE_DIR) {
             continue;
         }
         if (path_join(src_package, sizeof(src_package), source_root, entries[i].name) < 0 ||
@@ -2556,7 +2578,7 @@ static int scan_update_apps(void)
             update_apps[update_app_count - 1].package_diff = package_diff;
         }
     }
-    leonos_ui_listview_state_set_count(&update_app_list, update_app_count);
+    reliefos_ui_listview_state_set_count(&update_app_list, update_app_count);
     update_app_list.selected = update_app_count ? 0 : -1;
     if (update_app_count) {
         char line[128];
@@ -2589,10 +2611,10 @@ static int count_selected_update_work(void)
     return 0;
 }
 
-static int copy_selected_update_apps(int window_id, struct leonos_ui_surface *ui)
+static int copy_selected_update_apps(int window_id, struct reliefos_ui_surface *ui)
 {
     int ret;
-    ret = installer_mkdir(TARGET_LEONOS_APPS);
+    ret = installer_mkdir(TARGET_RELIEFOS_APPS);
     if (ret < 0 && ret != -17) {
         return ret;
     }
@@ -2600,16 +2622,16 @@ static int copy_selected_update_apps(int window_id, struct leonos_ui_surface *ui
         if (!update_apps[i].selected) {
             continue;
         }
-        char package_dir[LEONOS_FS_PATH_LEN];
-        if (path_join(package_dir, sizeof(package_dir), TARGET_LEONOS_APPS,
+        char package_dir[RELIEFOS_FS_PATH_LEN];
+        if (path_join(package_dir, sizeof(package_dir), TARGET_RELIEFOS_APPS,
                       update_apps[i].name) < 0) {
             return -1;
         }
         {
-            struct leonos_stat package_stat;
-            ret = leonos_stat_legacy(package_dir, &package_stat);
+            struct reliefos_stat package_stat;
+            ret = reliefos_stat_legacy(package_dir, &package_stat);
             if (ret == 0) {
-                if (package_stat.type != LEONOS_FS_TYPE_DIR) {
+                if (package_stat.type != RELIEFOS_FS_TYPE_DIR) {
                     ret = remove_path_recursive(package_dir);
                     if (ret < 0) {
                         return ret;
@@ -2635,7 +2657,7 @@ static int copy_selected_update_apps(int window_id, struct leonos_ui_surface *ui
 
 static int write_target_locale(void)
 {
-    return write_locale_setting(TARGET_ETC_LEONOS "/locale.conf", language_selection()) == 0
+    return write_locale_setting(TARGET_ETC_RELIEFOS "/locale.conf", language_selection()) == 0
         ? 0 : -errno;
 }
 
@@ -2649,19 +2671,19 @@ static int write_target_theme(void)
 {
     char input[384];
     char output[512];
-    const char *theme = installer_theme == LEONOS_UI_THEME_WIN95 ? "win95" : "metro";
-    struct leonos_stat stat_info;
+    const char *theme = installer_theme == RELIEFOS_UI_THEME_WIN95 ? "win95" : "metro";
+    struct reliefos_stat stat_info;
     uint32_t input_len = 0;
     uint32_t output_len = 0;
     uint32_t offset = 0;
-    int ret = leonos_stat_legacy(TARGET_ETC_LEONOS "/display.conf", &stat_info);
+    int ret = reliefos_stat_legacy(TARGET_ETC_RELIEFOS "/display.conf", &stat_info);
     if (ret == 0) {
         int fd;
         long got;
-        if (stat_info.type != LEONOS_FS_TYPE_FILE || stat_info.size >= sizeof(input)) {
+        if (stat_info.type != RELIEFOS_FS_TYPE_FILE || stat_info.size >= sizeof(input)) {
             return -27;
         }
-        fd = open(TARGET_ETC_LEONOS "/display.conf", LEONOS_O_RDONLY, 0);
+        fd = open(TARGET_ETC_RELIEFOS "/display.conf", RELIEFOS_O_RDONLY, 0);
         if (fd < 0) {
             return fd;
         }
@@ -2705,8 +2727,8 @@ static int write_target_theme(void)
         return -27;
     }
     {
-        int fd = open(TARGET_ETC_LEONOS "/display.conf",
-                      LEONOS_O_WRONLY | LEONOS_O_CREAT | LEONOS_O_TRUNC, 0666);
+        int fd = open(TARGET_ETC_RELIEFOS "/display.conf",
+                      RELIEFOS_O_WRONLY | RELIEFOS_O_CREAT | RELIEFOS_O_TRUNC, 0666);
         long wrote;
         if (fd < 0) {
             return fd;
@@ -2735,7 +2757,7 @@ static int write_target_preferences(void)
     return 0;
 }
 
-static void finish_install(int window_id, struct leonos_ui_surface *ui, int ret,
+static void finish_install(int window_id, struct reliefos_ui_surface *ui, int ret,
                            const char *prefix)
 {
     install_running = 0;
@@ -2767,9 +2789,9 @@ static void finish_install(int window_id, struct leonos_ui_surface *ui, int ret,
     }
 }
 
-static void perform_install(int window_id, struct leonos_ui_surface *ui);
-static void perform_update(int window_id, struct leonos_ui_surface *ui);
-static void prepare_update_target(int window_id, struct leonos_ui_surface *ui);
+static void perform_install(int window_id, struct reliefos_ui_surface *ui);
+static void perform_update(int window_id, struct reliefos_ui_surface *ui);
+static void prepare_update_target(int window_id, struct reliefos_ui_surface *ui);
 
 static void tty_print_update_packages(void)
 {
@@ -2805,7 +2827,7 @@ static void tty_perform_update(void)
 
 static int installer_mkdir_p(const char *path)
 {
-    char buffer[LEONOS_FS_PATH_LEN];
+    char buffer[RELIEFOS_FS_PATH_LEN];
     uint32_t i;
     if (!path || !path[0] || strlen(path) >= sizeof(buffer)) {
         return path && path[0] ? -36 : -22;
@@ -2838,12 +2860,12 @@ static int apply_directory_metadata(const char *src, const char *dst)
 
 static int payload_has_app_package(const char *name)
 {
-    char path[LEONOS_FS_PATH_LEN];
-    if (path_join(path, sizeof(path), INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LEONOS_APPS,
+    char path[RELIEFOS_FS_PATH_LEN];
+    if (path_join(path, sizeof(path), INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_APPS,
                   name) < 0) {
         return 0;
     }
-    return path_has_type(path, LEONOS_FS_TYPE_DIR) == 0;
+    return path_has_type(path, RELIEFOS_FS_TYPE_DIR) == 0;
 }
 
 /* Require real hierarchy components. The standard links are copied from
@@ -2852,15 +2874,15 @@ static int apply_runtime_root_paths(void)
 {
     static const struct { const char *path; const char *target; } links[] = {
 #define ROOT_LINK(path, target) {INSTALL_ROOT_MOUNT path, target},
-        LEONOS_ROOTFS_SYMLINKS(ROOT_LINK)
+        RELIEFOS_ROOTFS_SYMLINKS(ROOT_LINK)
 #undef ROOT_LINK
     };
     for (uint32_t i = 0; i < sizeof(links) / sizeof(links[0]); ++i) {
         int type = path_type_nofollow(links[i].path);
         if (type == -ENOENT) {
             if (symlink(links[i].target, links[i].path) < 0) return -errno;
-        } else if (type == LEONOS_FS_TYPE_SYMLINK) {
-            char target[LEONOS_FS_PATH_LEN];
+        } else if (type == RELIEFOS_FS_TYPE_SYMLINK) {
+            char target[RELIEFOS_FS_PATH_LEN];
             ssize_t length = readlink(links[i].path, target, sizeof(target) - 1);
             if (length < 0) return -errno;
             target[length] = 0;
@@ -2878,7 +2900,7 @@ static int ensure_runtime_layout_dirs(void)
         uint32_t mode;
     } dirs[] = {
 #define ROOT_DIR(path, mode) {INSTALL_ROOT_MOUNT path, mode},
-        LEONOS_ROOTFS_DIRECTORIES(ROOT_DIR)
+        RELIEFOS_ROOTFS_DIRECTORIES(ROOT_DIR)
 #undef ROOT_DIR
     };
     for (uint32_t i = 0; i < sizeof(dirs) / sizeof(dirs[0]); ++i) {
@@ -2893,10 +2915,11 @@ static int ensure_runtime_layout_dirs(void)
 /* Copy new payload paths over an existing tree without deleting unrelated
  * target entries.  System files are refreshed; user-created commands and
  * packages survive. */
-static int overlay_dir_recursive(const char *src, const char *dst,
-                                 int window_id, struct leonos_ui_surface *ui)
+static int overlay_dir_recursive_filtered(const char *src, const char *dst,
+                                          int window_id, struct reliefos_ui_surface *ui,
+                                          const char *skip_source)
 {
-    struct leonos_dir_entry *entries = NULL;
+    struct reliefos_dir_entry *entries = NULL;
     uint32_t count = 0;
     int ret;
     int dst_type = path_type_nofollow(dst);
@@ -2905,7 +2928,7 @@ static int overlay_dir_recursive(const char *src, const char *dst,
         if (ret < 0 && ret != -17) return ret;
         ret = apply_directory_metadata(src, dst);
         if (ret < 0) return ret;
-    } else if (dst_type != LEONOS_FS_TYPE_DIR) {
+    } else if (dst_type != RELIEFOS_FS_TYPE_DIR) {
         printf("[installer.elf] overlay target is not a directory: %s type=%d\n",
                dst, dst_type);
         return -17;
@@ -2913,33 +2936,34 @@ static int overlay_dir_recursive(const char *src, const char *dst,
     ret = installer_list_dir(src, &entries, &count);
     if (ret < 0) return ret;
     for (uint32_t i = 0; i < count; ++i) {
-        char src_child[LEONOS_FS_PATH_LEN];
-        char dst_child[LEONOS_FS_PATH_LEN];
+        char src_child[RELIEFOS_FS_PATH_LEN];
+        char dst_child[RELIEFOS_FS_PATH_LEN];
         if (name_is_dot(entries[i].name)) continue;
         if (path_join(src_child, sizeof(src_child), src, entries[i].name) < 0 ||
             path_join(dst_child, sizeof(dst_child), dst, entries[i].name) < 0) {
             free(entries);
             return -1;
         }
-        if (strcmp(src_child, INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LEONOS_APPS) == 0) {
+        if (skip_source && !strcmp(src_child, skip_source)) continue;
+        if (strcmp(src_child, INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_APPS) == 0) {
             /* Packages have their own system/optional selection below. */
             continue;
         }
         if (strcmp(src, INSTALL_ROOT_PAYLOAD "/usr/bin") == 0 &&
             payload_has_app_package(entries[i].name)) {
-            char package[LEONOS_FS_PATH_LEN];
+            char package[RELIEFOS_FS_PATH_LEN];
             if (path_join(package, sizeof(package),
-                          INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LEONOS_APPS,
+                          INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_APPS,
                           entries[i].name) < 0) { free(entries); return -ENAMETOOLONG; }
             int publish = app_package_is_system(package);
             if (!publish) {
-                char executable[LEONOS_FS_PATH_LEN];
+                char executable[RELIEFOS_FS_PATH_LEN];
                 int size = snprintf(executable, sizeof(executable), "%s/%s/%s.elf",
-                                    TARGET_LEONOS_APPS, entries[i].name, entries[i].name);
+                                    TARGET_RELIEFOS_APPS, entries[i].name, entries[i].name);
                 if (size < 0 || (size_t)size >= sizeof(executable)) {
                     free(entries); return -ENAMETOOLONG;
                 }
-                publish = path_has_type(executable, LEONOS_FS_TYPE_FILE) == 0;
+                publish = path_has_type(executable, RELIEFOS_FS_TYPE_FILE) == 0;
             }
             for (uint32_t j = 0; j < update_app_count; ++j) {
                 if (!strcmp(update_apps[j].name, entries[i].name)) {
@@ -2949,21 +2973,22 @@ static int overlay_dir_recursive(const char *src, const char *dst,
             }
             if (!publish) continue; /* preserve the unchecked app's existing entry */
         }
-        if (entries[i].type == LEONOS_FS_TYPE_DIR) {
-            ret = overlay_dir_recursive(src_child, dst_child, window_id, ui);
-        } else if (entries[i].type == LEONOS_FS_TYPE_FILE) {
+        if (entries[i].type == RELIEFOS_FS_TYPE_DIR) {
+            ret = overlay_dir_recursive_filtered(src_child, dst_child, window_id, ui,
+                                                 skip_source);
+        } else if (entries[i].type == RELIEFOS_FS_TYPE_FILE) {
             int child_type = path_type_nofollow(dst_child);
-            if (child_type >= 0 && child_type != LEONOS_FS_TYPE_FILE &&
-                child_type != LEONOS_FS_TYPE_SYMLINK) {
+            if (child_type >= 0 && child_type != RELIEFOS_FS_TYPE_FILE &&
+                child_type != RELIEFOS_FS_TYPE_SYMLINK) {
                 ret = -17;
             } else {
                 ret = copy_file_path(src_child, dst_child, window_id, ui);
                 if (ret >= 0) ++copy_done;
             }
-        } else if (entries[i].type == LEONOS_FS_TYPE_SYMLINK) {
+        } else if (entries[i].type == RELIEFOS_FS_TYPE_SYMLINK) {
             int child_type = path_type_nofollow(dst_child);
-            if (child_type == -2 || child_type == LEONOS_FS_TYPE_FILE ||
-                child_type == LEONOS_FS_TYPE_SYMLINK) {
+            if (child_type == -2 || child_type == RELIEFOS_FS_TYPE_FILE ||
+                child_type == RELIEFOS_FS_TYPE_SYMLINK) {
                 ret = copy_symlink_path(src_child, dst_child);
             } else {
                 ret = -17;
@@ -2983,12 +3008,18 @@ static int overlay_dir_recursive(const char *src, const char *dst,
     return 0;
 }
 
+static int overlay_dir_recursive(const char *src, const char *dst,
+                                 int window_id, struct reliefos_ui_surface *ui)
+{
+    return overlay_dir_recursive_filtered(src, dst, window_id, ui, NULL);
+}
+
 /* Copy defaults only when the destination does not already exist.  Used for
  * /etc and persistent state so an update never overwrites user settings. */
 static int merge_missing_dir_recursive(const char *src, const char *dst,
-                                       int window_id, struct leonos_ui_surface *ui)
+                                       int window_id, struct reliefos_ui_surface *ui)
 {
-    struct leonos_dir_entry *entries = NULL;
+    struct reliefos_dir_entry *entries = NULL;
     uint32_t count = 0;
     int ret;
     int dst_type = path_type_nofollow(dst);
@@ -2997,14 +3028,14 @@ static int merge_missing_dir_recursive(const char *src, const char *dst,
         if (ret < 0 && ret != -17) return ret;
         ret = apply_directory_metadata(src, dst);
         if (ret < 0) return ret;
-    } else if (dst_type != LEONOS_FS_TYPE_DIR) {
+    } else if (dst_type != RELIEFOS_FS_TYPE_DIR) {
         return -17;
     }
     ret = installer_list_dir(src, &entries, &count);
     if (ret < 0) return ret;
     for (uint32_t i = 0; i < count; ++i) {
-        char src_child[LEONOS_FS_PATH_LEN];
-        char dst_child[LEONOS_FS_PATH_LEN];
+        char src_child[RELIEFOS_FS_PATH_LEN];
+        char dst_child[RELIEFOS_FS_PATH_LEN];
         if (name_is_dot(entries[i].name)) continue;
         if (path_join(src_child, sizeof(src_child), src, entries[i].name) < 0 ||
             path_join(dst_child, sizeof(dst_child), dst, entries[i].name) < 0) {
@@ -3012,7 +3043,7 @@ static int merge_missing_dir_recursive(const char *src, const char *dst,
             return -1;
         }
         int dst_type = path_type_nofollow(dst_child);
-        if (entries[i].type == LEONOS_FS_TYPE_DIR) {
+        if (entries[i].type == RELIEFOS_FS_TYPE_DIR) {
             if (dst_type == -2) {
                 ret = installer_mkdir_p(dst_child);
                 if (ret < 0 && ret != -17) {
@@ -3020,7 +3051,7 @@ static int merge_missing_dir_recursive(const char *src, const char *dst,
                     return ret;
                 }
                 ret = apply_directory_metadata(src_child, dst_child);
-            } else if (dst_type == LEONOS_FS_TYPE_DIR) {
+            } else if (dst_type == RELIEFOS_FS_TYPE_DIR) {
                 ret = 0;
             } else {
                 ret = -17;
@@ -3029,9 +3060,9 @@ static int merge_missing_dir_recursive(const char *src, const char *dst,
                 ret = merge_missing_dir_recursive(src_child, dst_child, window_id, ui);
             }
         } else if (dst_type == -2) {
-            if (entries[i].type == LEONOS_FS_TYPE_FILE) {
+            if (entries[i].type == RELIEFOS_FS_TYPE_FILE) {
                 ret = copy_file_path(src_child, dst_child, window_id, ui);
-            } else if (entries[i].type == LEONOS_FS_TYPE_SYMLINK) {
+            } else if (entries[i].type == RELIEFOS_FS_TYPE_SYMLINK) {
                 ret = copy_symlink_path(src_child, dst_child);
             } else {
                 ret = -20;
@@ -3052,26 +3083,26 @@ static int merge_missing_dir_recursive(const char *src, const char *dst,
     return 0;
 }
 
-static int sync_application_packages(int window_id, struct leonos_ui_surface *ui)
+static int sync_application_packages(int window_id, struct reliefos_ui_surface *ui)
 {
-    struct leonos_dir_entry *entries = NULL;
+    struct reliefos_dir_entry *entries = NULL;
     uint32_t count = 0;
-    int ret = installer_mkdir_p(TARGET_LEONOS_APPS);
+    int ret = installer_mkdir_p(TARGET_RELIEFOS_APPS);
     if (ret < 0 && ret != -17) return ret;
     /* Optional packages are handled by copy_selected_update_apps. */
-    ret = installer_list_dir(INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LEONOS_APPS,
+    ret = installer_list_dir(INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_APPS,
                              &entries, &count);
     if (ret < 0) return ret;
     for (uint32_t i = 0; i < count; ++i) {
-        char source[LEONOS_FS_PATH_LEN];
-        char destination[LEONOS_FS_PATH_LEN];
-        if (entries[i].type != LEONOS_FS_TYPE_DIR || name_is_dot(entries[i].name)) {
+        char source[RELIEFOS_FS_PATH_LEN];
+        char destination[RELIEFOS_FS_PATH_LEN];
+        if (entries[i].type != RELIEFOS_FS_TYPE_DIR || name_is_dot(entries[i].name)) {
             continue;
         }
         if (path_join(source, sizeof(source),
-                      INSTALL_ROOT_PAYLOAD LEONOS_LAYOUT_LEONOS_APPS,
+                      INSTALL_ROOT_PAYLOAD RELIEFOS_LAYOUT_RELIEFOS_APPS,
                       entries[i].name) < 0 ||
-            path_join(destination, sizeof(destination), TARGET_LEONOS_APPS,
+            path_join(destination, sizeof(destination), TARGET_RELIEFOS_APPS,
                       entries[i].name) < 0) {
             free(entries);
             return -1;
@@ -3087,17 +3118,17 @@ static int sync_application_packages(int window_id, struct leonos_ui_surface *ui
     entries = NULL;
     count = 0;
     /* Remove stale build-managed system packages; keep user packages. */
-    ret = installer_list_dir(TARGET_LEONOS_APPS, &entries, &count);
+    ret = installer_list_dir(TARGET_RELIEFOS_APPS, &entries, &count);
     if (ret < 0) return ret;
     for (uint32_t i = 0; i < count; ++i) {
-        char package[LEONOS_FS_PATH_LEN];
-        if (entries[i].type != LEONOS_FS_TYPE_DIR || name_is_dot(entries[i].name)) {
+        char package[RELIEFOS_FS_PATH_LEN];
+        if (entries[i].type != RELIEFOS_FS_TYPE_DIR || name_is_dot(entries[i].name)) {
             continue;
         }
         if (payload_has_app_package(entries[i].name)) {
             continue;
         }
-        if (path_join(package, sizeof(package), TARGET_LEONOS_APPS,
+        if (path_join(package, sizeof(package), TARGET_RELIEFOS_APPS,
                       entries[i].name) < 0) {
             free(entries);
             return -1;
@@ -3110,15 +3141,15 @@ static int sync_application_packages(int window_id, struct leonos_ui_surface *ui
             free(entries);
             return ret;
         }
-        char command[LEONOS_FS_PATH_LEN], expected[LEONOS_FS_PATH_LEN];
-        char current[LEONOS_FS_PATH_LEN];
+        char command[RELIEFOS_FS_PATH_LEN], expected[RELIEFOS_FS_PATH_LEN];
+        char current[RELIEFOS_FS_PATH_LEN];
         int size = snprintf(expected, sizeof(expected), "../lib/leonos/apps/%s/%s.elf",
                             entries[i].name, entries[i].name);
         if (path_join(command, sizeof(command), TARGET_USR_BIN, entries[i].name) < 0 ||
             size < 0 || (size_t)size >= sizeof(expected)) {
             free(entries); return -ENAMETOOLONG;
         }
-        if (path_type_nofollow(command) == LEONOS_FS_TYPE_SYMLINK) {
+        if (path_type_nofollow(command) == RELIEFOS_FS_TYPE_SYMLINK) {
             ssize_t length = readlink(command, current, sizeof(current) - 1);
             if (length < 0) { free(entries); return -errno; }
             current[length] = 0;
@@ -3131,11 +3162,11 @@ static int sync_application_packages(int window_id, struct leonos_ui_surface *ui
     return 0;
 }
 
-static int sync_system_payload(int window_id, struct leonos_ui_surface *ui)
+static int sync_system_payload(int window_id, struct reliefos_ui_surface *ui)
 {
     pid_t child;
-    char *const argv[] = {"sh", "/usr/lib/leonos/leonos-apk-update", INSTALL_ROOT_MOUNT,
-                         INSTALL_ROOT_PAYLOAD "/usr/share/leonos/apk/repository", NULL};
+    char *const argv[] = {"sh", "/usr/lib/reliefos/reliefos-apk-update", INSTALL_ROOT_MOUNT,
+                         INSTALL_ROOT_PAYLOAD "/usr/share/reliefos/apk/repository", NULL};
     char *const envp[] = {"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL=C", "HOME=/root", NULL};
     int ret = posix_spawn(&child, "/bin/sh", NULL, NULL, argv, envp);
     if (ret) return -ret;
@@ -3151,7 +3182,7 @@ static int sync_system_payload(int window_id, struct leonos_ui_surface *ui)
     return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -EIO;
 }
 
-static void prepare_update_target(int window_id, struct leonos_ui_surface *ui)
+static void prepare_update_target(int window_id, struct reliefos_ui_surface *ui)
 {
     int ret;
     if (selected_disk < 0 || (uint32_t)selected_disk >= disk_count) {
@@ -3168,13 +3199,13 @@ static void prepare_update_target(int window_id, struct leonos_ui_surface *ui)
         finish_install(window_id, ui, ret, T("Mount failed"));
         return;
     }
-    if (leonos_account_legacy_check(INSTALL_ROOT_MOUNT) < 0) {
+    if (reliefos_account_legacy_check(INSTALL_ROOT_MOUNT) < 0) {
         finish_install(window_id, ui, -errno,
                        T("Legacy accounts require recovery before updating"));
         return;
     }
     show_progress(window_id, ui, 18,
-                  T("Checking existing LeonOS 4"),
+                  T("Checking existing ReliefOS"),
                   T("Target: /target"));
     ret = check_update_payload_required();
     if (ret < 0) {
@@ -3186,12 +3217,12 @@ static void prepare_update_target(int window_id, struct leonos_ui_surface *ui)
         finish_install(window_id, ui, ret, T("Existing system check failed"));
         return;
     }
-    if (path_type_nofollow(INSTALL_ROOT_MOUNT "/lib/apk/db/installed") != LEONOS_FS_TYPE_FILE) {
+    if (path_type_nofollow(INSTALL_ROOT_MOUNT "/lib/apk/db/installed") != RELIEFOS_FS_TYPE_FILE) {
         finish_install(window_id, ui, -ENOENT,
                        T("No APK database: reinstall from this media"));
         return;
     }
-    set_status(T("Update installed LeonOS packages"),
+    set_status(T("Update installed ReliefOS packages"),
                T("Alpine packages and local configuration are preserved."));
     page = PAGE_CONFIRM;
     reset_confirm();
@@ -3199,7 +3230,7 @@ static void prepare_update_target(int window_id, struct leonos_ui_surface *ui)
     present_installer(window_id, ui);
 }
 
-static void perform_install(int window_id, struct leonos_ui_surface *ui)
+static void perform_install(int window_id, struct reliefos_ui_surface *ui)
 {
     int ret;
     if (!installer_setup_valid(&setup)) {
@@ -3257,12 +3288,9 @@ static void perform_install(int window_id, struct leonos_ui_surface *ui)
     finish_install(window_id, ui, 0, "");
 }
 
-static void perform_update(int window_id, struct leonos_ui_surface *ui)
+static void perform_update(int window_id, struct reliefos_ui_surface *ui)
 {
-    static const char *const boot_dirs[] = {"leonos", "grub", "EFI"};
-    static const char *const boot_files[] = {
-        "loader.elf",
-    };
+    static const char *const boot_dirs[] = {"reliefos", "grub", "EFI"};
     int ret;
     if (selected_disk < 0 || (uint32_t)selected_disk >= disk_count) {
         return;
@@ -3283,7 +3311,7 @@ static void perform_update(int window_id, struct leonos_ui_surface *ui)
         return;
     }
 
-    show_progress(window_id, ui, 10, T("Checking existing LeonOS 4"),
+    show_progress(window_id, ui, 10, T("Checking existing ReliefOS"),
                   T("Target: /target"));
     ret = check_update_payload_required();
     if (ret < 0) {
@@ -3295,7 +3323,7 @@ static void perform_update(int window_id, struct leonos_ui_surface *ui)
         finish_install(window_id, ui, ret, T("Existing system check failed"));
         return;
     }
-    if (installer_root_filesystem == LEONOS_BLOCK_FILESYSTEM_EXFAT) {
+    if (installer_root_filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXFAT) {
         /* The current root contract needs real symlinks; exFAT cannot store
          * them, so an update would silently produce an unusable namespace.
          * Refuse instead of materializing directory copies. */
@@ -3314,7 +3342,7 @@ static void perform_update(int window_id, struct leonos_ui_surface *ui)
     show_progress(window_id, ui, 22, T("Scanning update payload"),
                   T("Root and boot payloads"));
     for (uint32_t i = 0; i < sizeof(boot_dirs) / sizeof(boot_dirs[0]); ++i) {
-        char src[LEONOS_FS_PATH_LEN];
+        char src[RELIEFOS_FS_PATH_LEN];
         if (path_join(src, sizeof(src), INSTALL_ESP_PAYLOAD, boot_dirs[i]) < 0) {
             finish_install(window_id, ui, -1, T("Payload path is too long"));
             return;
@@ -3325,15 +3353,7 @@ static void perform_update(int window_id, struct leonos_ui_surface *ui)
             return;
         }
     }
-    for (uint32_t i = 0; i < sizeof(boot_files) / sizeof(boot_files[0]); ++i) {
-        char src[LEONOS_FS_PATH_LEN];
-        if (path_join(src, sizeof(src), INSTALL_ESP_PAYLOAD, boot_files[i]) < 0 ||
-            add_file_copy_work(src) < 0) {
-            finish_install(window_id, ui, -1, T("Payload scan failed"));
-            return;
-        }
-    }
-    show_progress(window_id, ui, 35, T("Upgrading signed LeonOS packages"),
+    show_progress(window_id, ui, 35, T("Upgrading signed ReliefOS packages"),
                   T("Checking dependencies and preserving local configuration"));
     ret = sync_system_payload(window_id, ui);
     if (ret < 0) {
@@ -3344,20 +3364,26 @@ static void perform_update(int window_id, struct leonos_ui_surface *ui)
     /* Publish boot files only after the root payload is complete. Each file
      * is replaced after its copy succeeds; never delete the EFI/GRUB tree. */
     for (uint32_t i = 0; i < sizeof(boot_dirs) / sizeof(boot_dirs[0]); ++i) {
-        char src[LEONOS_FS_PATH_LEN], dst[LEONOS_FS_PATH_LEN];
+        char src[RELIEFOS_FS_PATH_LEN], dst[RELIEFOS_FS_PATH_LEN];
         if (path_join(src, sizeof(src), INSTALL_ESP_PAYLOAD, boot_dirs[i]) < 0 ||
             path_join(dst, sizeof(dst), INSTALL_ESP_MOUNT, boot_dirs[i]) < 0) {
             finish_install(window_id, ui, -ENAMETOOLONG, T("Boot update failed"));
             return;
         }
-        ret = overlay_dir_recursive(src, dst, window_id, ui);
+        ret = !strcmp(boot_dirs[i], "grub")
+            ? overlay_dir_recursive_filtered(src, dst, window_id, ui,
+                                             INSTALL_ESP_PAYLOAD "/grub/grub.cfg")
+            : overlay_dir_recursive(src, dst, window_id, ui);
         if (ret < 0) {
             finish_install(window_id, ui, ret, T("Boot update failed"));
             return;
         }
     }
-    ret = copy_file_path(INSTALL_ESP_PAYLOAD "/loader.elf",
-                         INSTALL_ESP_MOUNT "/loader.elf", window_id, ui);
+    /* Publish the new boot menu only after its kernel, loader and EFI image
+     * are present. The config's legacy entry keeps the untouched old payload
+     * under /leonos available if a subsequent boot fails. */
+    ret = copy_file_path(INSTALL_ESP_PAYLOAD "/grub/grub.cfg",
+                         INSTALL_ESP_MOUNT "/grub/grub.cfg", window_id, ui);
     if (ret < 0) {
         finish_install(window_id, ui, ret, T("Boot update failed"));
         return;
@@ -3392,7 +3418,7 @@ static void go_back(void)
     dirty = 1;
 }
 
-static int go_primary(int window_id, struct leonos_ui_surface *ui)
+static int go_primary(int window_id, struct reliefos_ui_surface *ui)
 {
     if (primary_disabled()) {
         return 0;
@@ -3454,7 +3480,7 @@ static int go_primary(int window_id, struct leonos_ui_surface *ui)
     }
     if (page == PAGE_FINISH && install_success) {
         fprintf(stderr, "[installer.elf] restart requested from completion page\n");
-        if (leonos_system_reboot() < 0) {
+        if (reliefos_system_reboot() < 0) {
             reboot_error = errno;
             fprintf(stderr, "[installer.elf] restart failed: %s\n", strerror(reboot_error));
             dirty = 1;
@@ -3506,14 +3532,14 @@ static void installer_apply_language_font(void)
 {
     if (language_selection() == 1) {
         /* SimSun supplies the CJK glyphs used throughout the Chinese UI. */
-        (void)leonos_ui_set_font_fallback_path(0);
-        (void)leonos_ui_set_font_path(INSTALLER_CJK_FONT);
+        (void)reliefos_ui_set_font_fallback_path(0);
+        (void)reliefos_ui_set_font_path(INSTALLER_CJK_FONT);
     } else {
         /* The language page contains the native-language "中文" selector.
          * Use the complete face here so it renders deterministically before
          * any fallback glyph cache has been warmed. */
-        (void)leonos_ui_set_font_fallback_path(0);
-        (void)leonos_ui_set_font_path(INSTALLER_CJK_FONT);
+        (void)reliefos_ui_set_font_fallback_path(0);
+        (void)reliefos_ui_set_font_path(INSTALLER_CJK_FONT);
     }
 }
 
@@ -3540,7 +3566,7 @@ static void handle_acknowledgements_click(int32_t x, int32_t y)
     uint32_t total_h;
     acknowledgements_reflow(view.text_w);
     total_h = policy_total_height();
-    if (leonos_ui_vscrollbar_handle_mouse(&acknowledgements_scroll_y,
+    if (reliefos_ui_vscrollbar_handle_mouse(&acknowledgements_scroll_y,
                                            total_h > view.h ? total_h : view.h,
                                            view.h,
                                            view.x + view.w - POLICY_SCROLLBAR_W,
@@ -3562,7 +3588,7 @@ static void handle_acknowledgements_wheel(int32_t delta)
     acknowledgements_reflow(view.text_w);
     total_h = policy_total_height();
     pixels = delta > 0 ? (int32_t)(steps * 36U) : -(int32_t)(steps * 36U);
-    if (leonos_ui_vscrollbar_handle_wheel(&acknowledgements_scroll_y,
+    if (reliefos_ui_vscrollbar_handle_wheel(&acknowledgements_scroll_y,
                                           total_h > view.h ? total_h : view.h,
                                           view.h, pixels)) {
         dirty = 1;
@@ -3576,17 +3602,17 @@ static void handle_theme_click(int32_t x, int32_t y)
     uint8_t selected = 0;
     if (hit_rect_i(x, y, (int32_t)l.content_x, (int32_t)l.content_y + 88,
                    140, BUTTON_H)) {
-        theme = LEONOS_UI_THEME_METRO;
+        theme = RELIEFOS_UI_THEME_METRO;
         selected = 1;
     } else if (hit_rect_i(x, y, (int32_t)l.content_x + 156,
                           (int32_t)l.content_y + 88, 140, BUTTON_H)) {
-        theme = LEONOS_UI_THEME_WIN95;
+        theme = RELIEFOS_UI_THEME_WIN95;
         selected = 1;
     }
     if (selected) {
         installer_theme = (uint8_t)theme;
         installer_theme_explicit = 1;
-        (void)leonos_ui_theme_set(theme);
+        (void)reliefos_ui_theme_set(theme);
         dirty = 1;
     }
 }
@@ -3599,7 +3625,7 @@ static void handle_update_apps_click(int32_t x, int32_t y)
     uint32_t list_h = l.content_h > 220 ? l.content_h - 178 : 120;
     uint32_t list_w = l.table_w > 22 ? l.table_w - 22 : l.table_w;
     sync_update_list_layout(list_h);
-    if (leonos_ui_vscrollbar_handle_mouse(&update_app_list.scroll,
+    if (reliefos_ui_vscrollbar_handle_mouse(&update_app_list.scroll,
                                            update_app_count > update_app_list.visible_rows
                                                ? update_app_count : update_app_list.visible_rows,
                                            update_app_list.visible_rows,
@@ -3626,13 +3652,13 @@ static void handle_update_apps_click(int32_t x, int32_t y)
 
 static void handle_update_apps_wheel(int32_t delta)
 {
-    if (leonos_ui_listview_state_handle_wheel(&update_app_list, delta)) {
+    if (reliefos_ui_listview_state_handle_wheel(&update_app_list, delta)) {
         dirty = 1;
     }
 }
 
-static int handle_mouse(int window_id, struct leonos_ui_surface *ui,
-                        const struct leonos_gui_app_event *event)
+static int handle_mouse(int window_id, struct reliefos_ui_surface *ui,
+                        const struct reliefos_gui_app_event *event)
 {
     struct installer_layout l = get_layout();
     if (!(event->buttons & 1u)) {
@@ -3641,10 +3667,10 @@ static int handle_mouse(int window_id, struct leonos_ui_surface *ui,
     if (page == PAGE_ACCOUNTS) {
         for (unsigned i = 0; i < 5; ++i) {
             if (hit_rect_i(event->x, event->y, l.content_x, l.content_y + 84 + i * 54,
-                           account_width(), LEONOS_FONT_H + 8)) {
+                           account_width(), RELIEFOS_FONT_H + 8)) {
                 for (unsigned j = 0; j < 5; ++j) account_edits[j].focused = 0;
                 account_focus = i;
-                leonos_ui_edit_state_handle_mouse(&account_edits[i], event->x, event->y,
+                reliefos_ui_edit_state_handle_mouse(&account_edits[i], event->x, event->y,
                     l.content_x, l.content_y + 84 + i * 54, account_width(), event->buttons);
                 dirty = 1;
                 break;
@@ -3652,7 +3678,7 @@ static int handle_mouse(int window_id, struct leonos_ui_surface *ui,
         }
     }
     if (page == PAGE_CONFIRM &&
-        leonos_ui_edit_state_handle_mouse(&confirm_edit, event->x, event->y,
+        reliefos_ui_edit_state_handle_mouse(&confirm_edit, event->x, event->y,
                                           l.content_x, l.confirm_edit_y, 220, event->buttons)) {
         dirty = 1;
     }
@@ -3694,12 +3720,12 @@ static int handle_mouse(int window_id, struct leonos_ui_surface *ui,
     return 0;
 }
 
-static int handle_key(int window_id, struct leonos_ui_surface *ui,
-                      const struct leonos_gui_app_event *event)
+static int handle_key(int window_id, struct reliefos_ui_surface *ui,
+                      const struct reliefos_gui_app_event *event)
 {
     if (page == PAGE_ACCOUNTS) {
-        if (event->pressed && (event->keycode == 15 || event->keycode == LEONOS_KEY_ENTER)) {
-            if (event->keycode == LEONOS_KEY_ENTER && account_focus == 4)
+        if (event->pressed && (event->keycode == 15 || event->keycode == RELIEFOS_KEY_ENTER)) {
+            if (event->keycode == RELIEFOS_KEY_ENTER && account_focus == 4)
                 return go_primary(window_id, ui);
             account_edits[account_focus].focused = 0;
             account_focus = (account_focus + 1) % 5;
@@ -3707,11 +3733,11 @@ static int handle_key(int window_id, struct leonos_ui_surface *ui,
             dirty = 1;
             return 0;
         }
-        if (leonos_ui_edit_state_handle_key(&account_edits[account_focus], event->keycode, event->pressed))
+        if (reliefos_ui_edit_state_handle_key(&account_edits[account_focus], event->keycode, event->pressed))
             dirty = 1;
         if (event->keycode != KEY_ESCAPE) return 0;
     }
-    if (event->type == LEONOS_GUI_APP_EVENT_KEY_DOWN && event->pressed) {
+    if (event->type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN && event->pressed) {
         if (event->keycode == KEY_ESCAPE && page != PAGE_PROGRESS) {
             return 1;
         }
@@ -3726,8 +3752,8 @@ static int handle_key(int window_id, struct leonos_ui_surface *ui,
                 }
                 return 0;
             }
-            if (event->keycode != LEONOS_KEY_ENTER &&
-                leonos_ui_listview_state_handle_key(&update_app_list,
+            if (event->keycode != RELIEFOS_KEY_ENTER &&
+                reliefos_ui_listview_state_handle_key(&update_app_list,
                                                     event->keycode, &activated)) {
                 dirty = 1;
                 return 0;
@@ -3746,14 +3772,14 @@ static int handle_key(int window_id, struct leonos_ui_surface *ui,
                 return 0;
             }
         }
-        if (event->keycode == LEONOS_KEY_ENTER && page != PAGE_PROGRESS) {
+        if (event->keycode == RELIEFOS_KEY_ENTER && page != PAGE_PROGRESS) {
             return go_primary(window_id, ui);
         }
     }
     if (page == PAGE_CONFIRM &&
-        (event->type == LEONOS_GUI_APP_EVENT_KEY_DOWN ||
-         event->type == LEONOS_GUI_APP_EVENT_KEY_UP)) {
-        if (leonos_ui_edit_state_handle_key(&confirm_edit, event->keycode,
+        (event->type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN ||
+         event->type == RELIEFOS_GUI_APP_EVENT_KEY_UP)) {
+        if (reliefos_ui_edit_state_handle_key(&confirm_edit, event->keycode,
                                             event->pressed)) {
             dirty = 1;
         }
@@ -3764,19 +3790,19 @@ static int handle_key(int window_id, struct leonos_ui_surface *ui,
 int main(int argc, char **argv)
 {
     setlocale(LC_ALL, "");
-    bindtextdomain("leonos", LEONOS_LAYOUT_LOCALE);
+    bindtextdomain("leonos", RELIEFOS_LAYOUT_LOCALE);
     textdomain("leonos");
-    struct leonos_ui_surface ui;
-    struct leonos_gui_app_event event;
+    struct reliefos_ui_surface ui;
+    struct reliefos_gui_app_event event;
     struct installer_tty_context tty_context;
     int window_id;
 
     setvbuf(stdout, NULL, _IOLBF, 0);
-    leonos_ui_edit_state_init(&account_edits[0], setup.username, sizeof(setup.username));
-    leonos_ui_edit_state_init(&account_edits[1], setup.password, sizeof(setup.password));
-    leonos_ui_edit_state_init(&account_edits[2], setup.password_confirm, sizeof(setup.password_confirm));
-    leonos_ui_edit_state_init(&account_edits[3], setup.root_password, sizeof(setup.root_password));
-    leonos_ui_edit_state_init(&account_edits[4], setup.root_password_confirm, sizeof(setup.root_password_confirm));
+    reliefos_ui_edit_state_init(&account_edits[0], setup.username, sizeof(setup.username));
+    reliefos_ui_edit_state_init(&account_edits[1], setup.password, sizeof(setup.password));
+    reliefos_ui_edit_state_init(&account_edits[2], setup.password_confirm, sizeof(setup.password_confirm));
+    reliefos_ui_edit_state_init(&account_edits[3], setup.root_password, sizeof(setup.root_password));
+    reliefos_ui_edit_state_init(&account_edits[4], setup.root_password_confirm, sizeof(setup.root_password_confirm));
     account_edits[0].focused = 1;
 
     int graphical = argc == 2 && strcmp(argv[1], "--graphical") == 0;
@@ -3805,19 +3831,19 @@ int main(int argc, char **argv)
     }
     puts("[installer.elf] starting installer wizard");
     update_surface_size_from_framebuffer();
-    window_id = leonos_gui_create_app_window_ex("LeonOS Setup", "Install LeonOS 4",
+    window_id = reliefos_gui_create_app_window_ex("ReliefOS Setup", "Install ReliefOS",
                                                 surface_w, surface_h,
-                                                LEONOS_GUI_WINDOW_FULLSCREEN);
+                                                RELIEFOS_GUI_WINDOW_FULLSCREEN);
     if (window_id <= 0) {
         printf("[installer.elf] create window failed=%d\n", window_id);
         return 1;
     }
 
-    leonos_ui_bind(&ui, pixels, surface_w, surface_h, INSTALLER_MAX_W);
+    reliefos_ui_bind(&ui, pixels, surface_w, surface_h, INSTALLER_MAX_W);
 
-    installer_theme = (uint8_t)leonos_ui_theme();
+    installer_theme = (uint8_t)reliefos_ui_theme();
     installer_apply_language_font();
-    leonos_ui_listview_state_init(&update_app_list, 1, UPDATE_APP_ROW_H);
+    reliefos_ui_listview_state_init(&update_app_list, 1, UPDATE_APP_ROW_H);
     refresh_disks();
     page = PAGE_LANGUAGE;
     present_installer(window_id, &ui);
@@ -3829,35 +3855,35 @@ int main(int argc, char **argv)
          * painting for as long as mouse motion keeps arriving. */
         while (event_count < INSTALLER_EVENT_BATCH_MAX &&
                (event_count == 0
-                    ? leonos_gui_wait_app_event(&event, LEONOS_GUI_IDLE_WAIT_MS)
-                    : leonos_gui_poll_app_event(&event)) > 0) {
+                    ? reliefos_gui_wait_app_event(&event, RELIEFOS_GUI_IDLE_WAIT_MS)
+                    : reliefos_gui_poll_app_event(&event)) > 0) {
             ++event_count;
-            if (event.type == LEONOS_GUI_APP_EVENT_CLOSE) {
-                leonos_gui_destroy_app_window((uint32_t)window_id);
+            if (event.type == RELIEFOS_GUI_APP_EVENT_CLOSE) {
+                reliefos_gui_destroy_app_window((uint32_t)window_id);
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_RESIZE) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_RESIZE) {
                 update_surface_size(event.width, event.height);
-                leonos_ui_bind(&ui, pixels, surface_w, surface_h, INSTALLER_MAX_W);
+                reliefos_ui_bind(&ui, pixels, surface_w, surface_h, INSTALLER_MAX_W);
                 dirty = 1;
                 break;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_BUTTON &&
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_BUTTON &&
                 handle_mouse(window_id, &ui, &event)) {
-                leonos_gui_destroy_app_window((uint32_t)window_id);
+                reliefos_gui_destroy_app_window((uint32_t)window_id);
                 return 0;
             }
-            if (event.type == LEONOS_GUI_APP_EVENT_MOUSE_WHEEL) {
+            if (event.type == RELIEFOS_GUI_APP_EVENT_MOUSE_WHEEL) {
                 if (page == PAGE_UPDATE_APPS) {
                     handle_update_apps_wheel(event.dy);
                 } else if (page == PAGE_THANKS) {
                     handle_acknowledgements_wheel(event.dy);
                 }
             }
-            if ((event.type == LEONOS_GUI_APP_EVENT_KEY_DOWN ||
-                 event.type == LEONOS_GUI_APP_EVENT_KEY_UP) &&
+            if ((event.type == RELIEFOS_GUI_APP_EVENT_KEY_DOWN ||
+                 event.type == RELIEFOS_GUI_APP_EVENT_KEY_UP) &&
                 handle_key(window_id, &ui, &event)) {
-                leonos_gui_destroy_app_window((uint32_t)window_id);
+                reliefos_gui_destroy_app_window((uint32_t)window_id);
                 return 0;
             }
             if (dirty) {

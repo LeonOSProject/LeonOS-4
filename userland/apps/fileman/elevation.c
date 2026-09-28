@@ -1,8 +1,8 @@
 /* Each operation invokes upstream sudo and re-evaluates its command policy. */
 #include "fileman.h"
-#include <leonos/sudo.h>
+#include <reliefos/sudo.h>
 
-char fileman_elevated_path[LEONOS_FS_PATH_LEN];
+char fileman_elevated_path[RELIEFOS_FS_PATH_LEN];
 
 void fileman_forget_elevation(void) { fileman_elevated_path[0] = 0; }
 int fileman_elevation_applies(const char *path)
@@ -12,7 +12,7 @@ int fileman_elevation_applies(const char *path)
 int fileman_prompt_elevation(const char *path)
 {
     uint32_t count;
-    if (leonos_fileop(LEONOS_FILEOP_LIST, path, NULL, NULL, NULL, entries,
+    if (reliefos_fileop(RELIEFOS_FILEOP_LIST, path, NULL, NULL, NULL, entries,
                        FILEMAN_MAX_ENTRIES, &count) < 0) {
         set_status(T("Operation denied or canceled"));
         return -1;
@@ -20,24 +20,24 @@ int fileman_prompt_elevation(const char *path)
     copy_text(fileman_elevated_path, sizeof(fileman_elevated_path), path);
     return 0;
 }
-int fileman_list_elevated(const char *path, struct leonos_dir_entry *out,
+int fileman_list_elevated(const char *path, struct reliefos_dir_entry *out,
                           uint32_t capacity, uint32_t *count)
 {
-    return leonos_fileop(LEONOS_FILEOP_LIST, path, NULL, NULL, NULL, out, capacity, count);
+    return reliefos_fileop(RELIEFOS_FILEOP_LIST, path, NULL, NULL, NULL, out, capacity, count);
 }
 int fileman_mkdir_elevated(const char *parent, const char *name,
-                           struct leonos_dir_entry *out, uint32_t capacity, uint32_t *count)
+                           struct reliefos_dir_entry *out, uint32_t capacity, uint32_t *count)
 {
-    return leonos_fileop(LEONOS_FILEOP_MKDIR, parent, name, NULL, NULL, out, capacity, count);
+    return reliefos_fileop(RELIEFOS_FILEOP_MKDIR, parent, name, NULL, NULL, out, capacity, count);
 }
 int fileman_rename_elevated(const char *from, const char *to,
-                            struct leonos_dir_entry *out, uint32_t capacity, uint32_t *count)
+                            struct reliefos_dir_entry *out, uint32_t capacity, uint32_t *count)
 {
-    return leonos_fileop(LEONOS_FILEOP_RENAME, from, to, NULL, NULL, out, capacity, count);
+    return reliefos_fileop(RELIEFOS_FILEOP_RENAME, from, to, NULL, NULL, out, capacity, count);
 }
 int fileman_delete_elevated(const char *path, uint8_t is_dir,
-                            struct leonos_dir_entry *out, uint32_t capacity, uint32_t *count)
+                            struct reliefos_dir_entry *out, uint32_t capacity, uint32_t *count)
 {
-    return leonos_fileop(LEONOS_FILEOP_UNLINK, path, is_dir ? LEONOS_FILEOP_CONFIRM : NULL,
+    return reliefos_fileop(RELIEFOS_FILEOP_UNLINK, path, is_dir ? RELIEFOS_FILEOP_CONFIRM : NULL,
                          NULL, NULL, out, capacity, count);
 }

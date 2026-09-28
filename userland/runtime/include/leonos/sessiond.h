@@ -1,39 +1,52 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/sessiond.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_SESSIOND_H
 #define LEONOS_SESSIOND_H
+#include <reliefos/sessiond.h>
 
-#include <leonos/startup.h>
-#include <stdint.h>
-
-enum leonos_sessiond_msg {
-    LEONOS_SESSIOND_MSG_HELLO = 10,
-    LEONOS_SESSIOND_MSG_ACK = 11,
-    LEONOS_SESSIOND_MSG_REQUEST = 20,
-    LEONOS_SESSIOND_MSG_REQUEST_STATUS = 21,
-    LEONOS_SESSIOND_MSG_DIALOG_GET = 22,
-    LEONOS_SESSIOND_MSG_DIALOG = 23,
-    LEONOS_SESSIOND_MSG_DIALOG_RESOLVE = 24,
-    LEONOS_SESSIOND_MSG_LIST = 25,
-    LEONOS_SESSIOND_MSG_SET_ENABLED = 26,
-    LEONOS_SESSIOND_MSG_REMOVE = 27,
-    LEONOS_SESSIOND_MSG_LAUNCH_CURRENT = 28,
-};
-
-struct leonos_sessiond_hello {
-    uint32_t pid;
-    uint32_t uid;
-    uint32_t reserved;
-};
-
-struct leonos_sessiond_ack {
-    int32_t code;
-    uint32_t value;
-};
-
-struct leonos_sessiond_list_ack {
-    uint32_t uid;
-    uint32_t count;
-    uint32_t reserved;
-    /* followed by count * struct leonos_startup_entry */
-};
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_SESSIOND_MSG_ACK RELIEFOS_SESSIOND_MSG_ACK
+#define LEONOS_SESSIOND_MSG_DIALOG RELIEFOS_SESSIOND_MSG_DIALOG
+#define LEONOS_SESSIOND_MSG_DIALOG_GET RELIEFOS_SESSIOND_MSG_DIALOG_GET
+#define LEONOS_SESSIOND_MSG_DIALOG_RESOLVE RELIEFOS_SESSIOND_MSG_DIALOG_RESOLVE
+#define LEONOS_SESSIOND_MSG_HELLO RELIEFOS_SESSIOND_MSG_HELLO
+#define LEONOS_SESSIOND_MSG_LAUNCH_CURRENT RELIEFOS_SESSIOND_MSG_LAUNCH_CURRENT
+#define LEONOS_SESSIOND_MSG_LIST RELIEFOS_SESSIOND_MSG_LIST
+#define LEONOS_SESSIOND_MSG_REMOVE RELIEFOS_SESSIOND_MSG_REMOVE
+#define LEONOS_SESSIOND_MSG_REQUEST RELIEFOS_SESSIOND_MSG_REQUEST
+#define LEONOS_SESSIOND_MSG_REQUEST_STATUS RELIEFOS_SESSIOND_MSG_REQUEST_STATUS
+#define LEONOS_SESSIOND_MSG_SET_ENABLED RELIEFOS_SESSIOND_MSG_SET_ENABLED
+#define LEONOS_STARTUP_ARG_LEN RELIEFOS_STARTUP_ARG_LEN
+#define LEONOS_STARTUP_DECISION_ALLOW RELIEFOS_STARTUP_DECISION_ALLOW
+#define LEONOS_STARTUP_DECISION_DENY RELIEFOS_STARTUP_DECISION_DENY
+#define LEONOS_STARTUP_DECISION_DENY_REMEMBERED RELIEFOS_STARTUP_DECISION_DENY_REMEMBERED
+#define LEONOS_STARTUP_H RELIEFOS_STARTUP_H
+#define LEONOS_STARTUP_MAX_ARGS RELIEFOS_STARTUP_MAX_ARGS
+#define LEONOS_STARTUP_MAX_ENTRIES RELIEFOS_STARTUP_MAX_ENTRIES
+#define LEONOS_STARTUP_STATUS_APPROVED RELIEFOS_STARTUP_STATUS_APPROVED
+#define LEONOS_STARTUP_STATUS_CANCELLED RELIEFOS_STARTUP_STATUS_CANCELLED
+#define LEONOS_STARTUP_STATUS_DENIED RELIEFOS_STARTUP_STATUS_DENIED
+#define LEONOS_STARTUP_STATUS_DENIED_REMEMBERED RELIEFOS_STARTUP_STATUS_DENIED_REMEMBERED
+#define LEONOS_STARTUP_STATUS_EXISTS RELIEFOS_STARTUP_STATUS_EXISTS
+#define LEONOS_STARTUP_STATUS_FAILED RELIEFOS_STARTUP_STATUS_FAILED
+#define LEONOS_STARTUP_STATUS_PENDING RELIEFOS_STARTUP_STATUS_PENDING
+#define LEONOS_UAPI_STARTUP_ABI_H RELIEFOS_UAPI_STARTUP_ABI_H
+#define leonos_sessiond_ack reliefos_sessiond_ack
+#define leonos_sessiond_hello reliefos_sessiond_hello
+#define leonos_sessiond_list_ack reliefos_sessiond_list_ack
+#define leonos_sessiond_msg reliefos_sessiond_msg
+#define leonos_startup_command reliefos_startup_command
+#define leonos_startup_dialog_get reliefos_startup_dialog_get
+#define leonos_startup_dialog_request reliefos_startup_dialog_request
+#define leonos_startup_dialog_resolution reliefos_startup_dialog_resolution
+#define leonos_startup_dialog_resolve reliefos_startup_dialog_resolve
+#define leonos_startup_entry reliefos_startup_entry
+#define leonos_startup_launch_current_user reliefos_startup_launch_current_user
+#define leonos_startup_list reliefos_startup_list
+#define leonos_startup_remove reliefos_startup_remove
+#define leonos_startup_request reliefos_startup_request
+#define leonos_startup_request_status reliefos_startup_request_status
+#define leonos_startup_set_enabled reliefos_startup_set_enabled
+#define leonos_startup_update reliefos_startup_update
+#endif /* LEONOS_SESSIOND_H */

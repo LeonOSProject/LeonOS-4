@@ -92,7 +92,7 @@ def main() -> None:
                             "unix-no-entropy" if args.entropy_failure else "unix"],
                            env=env, stdout=output, stderr=subprocess.STDOUT, check=True, timeout=60)
         print(logfile.read_text(), end="")
-    print(f"PASS isolated Linux reference; this is not LeonOS guest evidence: {logfile}")
+    print(f"PASS isolated Linux reference; this is not ReliefOS guest evidence: {logfile}")
 
 
 if __name__ == "__main__":

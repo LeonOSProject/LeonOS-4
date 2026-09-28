@@ -1,83 +1,104 @@
+/* Transitional compatibility forwarder (ReliefOS / ReliefNT rename).
+ * Canonical declarations: <reliefos/psf_font.h>.
+ * No second layout definition exists behind these names. */
 #ifndef LEONOS_PSF_FONT_H
 #define LEONOS_PSF_FONT_H
+#include <reliefos/psf_font.h>
 
-#include <stdint.h>
-
-#include <leonos/layout.h>
-
-#include <leonos/lat15_vga16_psf.inc>
-
-#define LEONOS_FONT_W 8u
-#define LEONOS_FONT_H 16u
-#define LEONOS_SYSTEM_FONT_PATH LEONOS_PATH_SYSTEM_FONT
-
-struct leonos_psf_view {
-    const uint8_t *glyphs;
-    uint32_t glyph_count;
-    uint32_t char_size;
-};
-
-static inline int leonos_psf_view_from_memory(const uint8_t *font, uint32_t len,
-                                              struct leonos_psf_view *out)
-{
-    uint32_t glyph_count = 256;
-    uint32_t char_size = 16;
-    uint32_t header_size = 0;
-    if (!font || !out) {
-        return 0;
-    }
-    if (len >= 4 && font[0] == 0x36 && font[1] == 0x04) {
-        char_size = font[3];
-        glyph_count = (font[2] & 0x01u) ? 512u : 256u;
-        header_size = 4;
-    } else if (len >= 32 &&
-               font[0] == 0x72 && font[1] == 0xb5 && font[2] == 0x4a && font[3] == 0x86) {
-        header_size = (uint32_t)font[8] |
-                      ((uint32_t)font[9] << 8) |
-                      ((uint32_t)font[10] << 16) |
-                      ((uint32_t)font[11] << 24);
-        glyph_count = (uint32_t)font[16] |
-                      ((uint32_t)font[17] << 8) |
-                      ((uint32_t)font[18] << 16) |
-                      ((uint32_t)font[19] << 24);
-        char_size = (uint32_t)font[20] |
-                    ((uint32_t)font[21] << 8) |
-                    ((uint32_t)font[22] << 16) |
-                    ((uint32_t)font[23] << 24);
-    } else {
-        return 0;
-    }
-    if (char_size == 0 || glyph_count == 0 ||
-        header_size > len || (uint64_t)char_size * glyph_count > len - header_size) {
-        return 0;
-    }
-    out->glyphs = font + header_size;
-    out->glyph_count = glyph_count;
-    out->char_size = char_size;
-    return 1;
-}
-
-static inline const uint8_t *leonos_psf_view_glyph(const struct leonos_psf_view *view,
-                                                   char ch)
-{
-    uint32_t glyph = (uint8_t)ch;
-    if (!view || !view->glyphs || view->char_size == 0 || view->glyph_count == 0) {
-        return leonos_lat15_vga16_psf + 4 + (uint32_t)'?' * 16u;
-    }
-    if (glyph < 32 || glyph >= view->glyph_count) {
-        glyph = '?';
-    }
-    return view->glyphs + glyph * view->char_size;
-}
-
-static inline const uint8_t *leonos_psf_glyph(char ch)
-{
-    struct leonos_psf_view view;
-    if (!leonos_psf_view_from_memory(leonos_lat15_vga16_psf,
-                                     leonos_lat15_vga16_psf_len, &view)) {
-        return leonos_lat15_vga16_psf + 4 + (uint32_t)'?' * 16u;
-    }
-    return leonos_psf_view_glyph(&view, ch);
-}
-
-#endif
+/* Old names alias the single canonical declaration. */
+#define LEONOS_DEFAULT_PATH RELIEFOS_DEFAULT_PATH
+#define LEONOS_FONT_H RELIEFOS_FONT_H
+#define LEONOS_FONT_W RELIEFOS_FONT_W
+#define LEONOS_LAYOUT_BIN RELIEFOS_LAYOUT_BIN
+#define LEONOS_LAYOUT_BOOT RELIEFOS_LAYOUT_BOOT
+#define LEONOS_LAYOUT_ETC_LEONOS RELIEFOS_LAYOUT_ETC_RELIEFOS
+#define LEONOS_LAYOUT_ETC_SSL_CERTS RELIEFOS_LAYOUT_ETC_SSL_CERTS
+#define LEONOS_LAYOUT_H RELIEFOS_LAYOUT_H
+#define LEONOS_LAYOUT_LEONOS_APPS RELIEFOS_LAYOUT_RELIEFOS_APPS
+#define LEONOS_LAYOUT_LEONOS_DOC RELIEFOS_LAYOUT_RELIEFOS_DOC
+#define LEONOS_LAYOUT_LEONOS_DRIVERS RELIEFOS_LAYOUT_RELIEFOS_DRIVERS
+#define LEONOS_LAYOUT_LEONOS_FONTS RELIEFOS_LAYOUT_RELIEFOS_FONTS
+#define LEONOS_LAYOUT_LEONOS_LIB RELIEFOS_LAYOUT_RELIEFOS_LIB
+#define LEONOS_LAYOUT_LEONOS_RESOURCES RELIEFOS_LAYOUT_RELIEFOS_RESOURCES
+#define LEONOS_LAYOUT_LEONOS_SHARE RELIEFOS_LAYOUT_RELIEFOS_SHARE
+#define LEONOS_LAYOUT_LEONOS_TESTS RELIEFOS_LAYOUT_RELIEFOS_TESTS
+#define LEONOS_LAYOUT_LIB RELIEFOS_LAYOUT_LIB
+#define LEONOS_LAYOUT_LICENSES RELIEFOS_LAYOUT_LICENSES
+#define LEONOS_LAYOUT_LOCALE RELIEFOS_LAYOUT_LOCALE
+#define LEONOS_LAYOUT_MISC RELIEFOS_LAYOUT_MISC
+#define LEONOS_LAYOUT_OPT_CMD RELIEFOS_LAYOUT_OPT_CMD
+#define LEONOS_LAYOUT_OPT_DYNE RELIEFOS_LAYOUT_OPT_DYNE
+#define LEONOS_LAYOUT_OPT_PYTHON RELIEFOS_LAYOUT_OPT_PYTHON
+#define LEONOS_LAYOUT_RUN_LEONOS RELIEFOS_LAYOUT_RUN_RELIEFOS
+#define LEONOS_LAYOUT_SBIN RELIEFOS_LAYOUT_SBIN
+#define LEONOS_LAYOUT_SRV RELIEFOS_LAYOUT_SRV
+#define LEONOS_LAYOUT_TERMINFO RELIEFOS_LAYOUT_TERMINFO
+#define LEONOS_LAYOUT_USR_BIN RELIEFOS_LAYOUT_USR_BIN
+#define LEONOS_LAYOUT_USR_LIB RELIEFOS_LAYOUT_USR_LIB
+#define LEONOS_LAYOUT_USR_SBIN RELIEFOS_LAYOUT_USR_SBIN
+#define LEONOS_LAYOUT_USR_SHARE RELIEFOS_LAYOUT_USR_SHARE
+#define LEONOS_LAYOUT_VAR_CACHE_LEONOS RELIEFOS_LAYOUT_VAR_CACHE_RELIEFOS
+#define LEONOS_LAYOUT_VAR_LIB_LEONOS RELIEFOS_LAYOUT_VAR_LIB_RELIEFOS
+#define LEONOS_LAYOUT_VAR_LOG RELIEFOS_LAYOUT_VAR_LOG
+#define LEONOS_LAYOUT_VAR_TMP RELIEFOS_LAYOUT_VAR_TMP
+#define LEONOS_PATH_ACCOUNTS_DB RELIEFOS_PATH_ACCOUNTS_DB
+#define LEONOS_PATH_BOOT_DISPLAY_CONF RELIEFOS_PATH_BOOT_DISPLAY_CONF
+#define LEONOS_PATH_BOOT_KERNEL RELIEFOS_PATH_BOOT_KERNEL
+#define LEONOS_PATH_BOOT_KERNELDEBUG_MARKER RELIEFOS_PATH_BOOT_KERNELDEBUG_MARKER
+#define LEONOS_PATH_BROWSER_CJK_FONT RELIEFOS_PATH_BROWSER_CJK_FONT
+#define LEONOS_PATH_BROWSER_FONT RELIEFOS_PATH_BROWSER_FONT
+#define LEONOS_PATH_CACERT RELIEFOS_PATH_CACERT
+#define LEONOS_PATH_DESKTOP_ENTRIES RELIEFOS_PATH_DESKTOP_ENTRIES
+#define LEONOS_PATH_DISPLAY_CONF RELIEFOS_PATH_DISPLAY_CONF
+#define LEONOS_PATH_DRIVERS_CONF RELIEFOS_PATH_DRIVERS_CONF
+#define LEONOS_PATH_ENVIRONMENT_CONF RELIEFOS_PATH_ENVIRONMENT_CONF
+#define LEONOS_PATH_FILEASSOC_CFG RELIEFOS_PATH_FILEASSOC_CFG
+#define LEONOS_PATH_GLIBC_INTERP RELIEFOS_PATH_GLIBC_INTERP
+#define LEONOS_PATH_HELP RELIEFOS_PATH_HELP
+#define LEONOS_PATH_KERNELDEBUG_CONTROL RELIEFOS_PATH_KERNELDEBUG_CONTROL
+#define LEONOS_PATH_KERNELDEBUG_ENABLED RELIEFOS_PATH_KERNELDEBUG_ENABLED
+#define LEONOS_PATH_KERNELDEBUG_MODULE RELIEFOS_PATH_KERNELDEBUG_MODULE
+#define LEONOS_PATH_LEONOS_CONF RELIEFOS_PATH_RELIEFOS_CONF
+#define LEONOS_PATH_LESSKEY RELIEFOS_PATH_LESSKEY
+#define LEONOS_PATH_LIBC RELIEFOS_PATH_LIBC
+#define LEONOS_PATH_LIBLEONOS RELIEFOS_PATH_LIBRELIEFOS
+#define LEONOS_PATH_LIBLEONOS_COMPAT RELIEFOS_PATH_LIBRELIEFOS_COMPAT
+#define LEONOS_PATH_LIBMIMALLOC RELIEFOS_PATH_LIBMIMALLOC
+#define LEONOS_PATH_LICENSE RELIEFOS_PATH_LICENSE
+#define LEONOS_PATH_LOCALE_CONF RELIEFOS_PATH_LOCALE_CONF
+#define LEONOS_PATH_LOGO_PNG RELIEFOS_PATH_LOGO_PNG
+#define LEONOS_PATH_MAGIC RELIEFOS_PATH_MAGIC
+#define LEONOS_PATH_MINESWEEPER_FLAG_BMP RELIEFOS_PATH_MINESWEEPER_FLAG_BMP
+#define LEONOS_PATH_MINESWEEPER_MINE_BMP RELIEFOS_PATH_MINESWEEPER_MINE_BMP
+#define LEONOS_PATH_MOUSE_BMP RELIEFOS_PATH_MOUSE_BMP
+#define LEONOS_PATH_MUSL_INTERP RELIEFOS_PATH_MUSL_INTERP
+#define LEONOS_PATH_NETWORK_BAK RELIEFOS_PATH_NETWORK_BAK
+#define LEONOS_PATH_NETWORK_CONF RELIEFOS_PATH_NETWORK_CONF
+#define LEONOS_PATH_NETWORK_TMP RELIEFOS_PATH_NETWORK_TMP
+#define LEONOS_PATH_OLD_NATIVE_INTERP RELIEFOS_PATH_OLD_NATIVE_INTERP
+#define LEONOS_PATH_OOBE_DONE RELIEFOS_PATH_OOBE_DONE
+#define LEONOS_PATH_SESSION_USER RELIEFOS_PATH_SESSION_USER
+#define LEONOS_PATH_STARTUP_DB RELIEFOS_PATH_STARTUP_DB
+#define LEONOS_PATH_STARTUP_DENIALS_DB RELIEFOS_PATH_STARTUP_DENIALS_DB
+#define LEONOS_PATH_SYSTEM_FONT RELIEFOS_PATH_SYSTEM_FONT
+#define LEONOS_PATH_TASKBAR_CFG RELIEFOS_PATH_TASKBAR_CFG
+#define LEONOS_PATH_UI_METRO_FONT RELIEFOS_PATH_UI_METRO_FONT
+#define LEONOS_PATH_UI_WIN95_FONT RELIEFOS_PATH_UI_WIN95_FONT
+#define LEONOS_PATH_USERS_DB RELIEFOS_PATH_USERS_DB
+#define LEONOS_PATH_WALLPAPER_BMP RELIEFOS_PATH_WALLPAPER_BMP
+#define LEONOS_PATH_WINDOW_CLOSE_BMP RELIEFOS_PATH_WINDOW_CLOSE_BMP
+#define LEONOS_PATH_WINDOW_MAXIMIZE_BMP RELIEFOS_PATH_WINDOW_MAXIMIZE_BMP
+#define LEONOS_PATH_WINDOW_MINIMIZE_BMP RELIEFOS_PATH_WINDOW_MINIMIZE_BMP
+#define LEONOS_PATH_WINDOW_RESTORE_BMP RELIEFOS_PATH_WINDOW_RESTORE_BMP
+#define LEONOS_ROOTFS_DIRECTORIES RELIEFOS_ROOTFS_DIRECTORIES
+#define LEONOS_ROOTFS_H RELIEFOS_ROOTFS_H
+#define LEONOS_ROOTFS_SYMLINKS RELIEFOS_ROOTFS_SYMLINKS
+#define LEONOS_SYSTEM_FONT_PATH RELIEFOS_SYSTEM_FONT_PATH
+#define leonos_lat15_vga16_psf reliefos_lat15_vga16_psf
+#define leonos_lat15_vga16_psf_len reliefos_lat15_vga16_psf_len
+#define leonos_layout reliefos_layout
+#define leonos_psf_glyph reliefos_psf_glyph
+#define leonos_psf_view reliefos_psf_view
+#define leonos_psf_view_from_memory reliefos_psf_view_from_memory
+#define leonos_psf_view_glyph reliefos_psf_view_glyph
+#endif /* LEONOS_PSF_FONT_H */

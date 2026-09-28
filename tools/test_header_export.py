@@ -25,7 +25,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 WHITELIST = ROOT / "configs/header-export.list"
 
-PRIVATE_INCLUDE = re.compile(r'#\s*include\s*[<"](?:ntclks/|\.\./)')
+PRIVATE_INCLUDE = re.compile(r'#\s*include\s*[<"](?:reliefnt/|ntclks/|\.\./)')
 
 
 def whitelist_entries(path=WHITELIST):
@@ -85,7 +85,7 @@ def main():
     entries = whitelist_entries()
     expected = {install_relative(entry) for entry in entries}
 
-    with tempfile.TemporaryDirectory(prefix="leonos-hexport-") as directory:
+    with tempfile.TemporaryDirectory(prefix="reliefos-hexport-") as directory:
         temp = Path(directory)
         if args.out:
             outdir = args.out
