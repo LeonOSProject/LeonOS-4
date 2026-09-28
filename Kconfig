@@ -21,7 +21,7 @@ config INSTALLER_INSTALLED_REQUIRE_LICENSE
 
 config RPR_BASE_URL
     string "ReliefOS remote package repository URL"
-    default "https://leonosproject.github.io/LeonOS-4/rpr"
+    default "https://reliefosproject.github.io/ReliefOS/rpr"
     help
       HTTPS base URL of the RPR directory inside the GitHub Pages site. The
       client appends /apk for signed APK metadata and /kernel for kernel and

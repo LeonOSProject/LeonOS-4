@@ -46,7 +46,7 @@ installer root；真正安装到磁盘的系统分为 `/install/esp`（FAT32
 | 路径 | 职责 |
 | --- | --- |
 | `boot/` | GRUB 配置与 EFI 模块；loader 源码在内核子仓 `boot/loader/`。 |
-| `kernel/reliefnt/` | 内核子仓（gitlink，现有 URL 为 github.com/LeonOSProject/NTCLKS）：内核核心（调度、内存、ELF 进程、syscall、GUI IPC、网络、驱动管理、权限判定与 `lib/` 内部工具）、`drivers/`、`boot/loader/`、`include/uapi` 与内核侧 `include/reliefnt/`。首次使用执行 `git submodule update --init --recursive`，并在子仓内 `make fetch`（其缓存不入库）。 |
+| `kernel/reliefnt/` | ReliefNT 子仓（gitlink，URL 为 github.com/ReliefOSProject/ReliefNT）：内核核心（调度、内存、ELF 进程、syscall、GUI IPC、网络、驱动管理、权限判定与 `lib/` 内部工具）、`drivers/`、`boot/loader/`、`include/uapi` 与内核侧 `include/reliefnt/`。首次使用执行 `git submodule update --init --recursive`，并在子仓内 `make fetch`（其缓存不入库）。 |
 | `userland/runtime/` | ReliefOS libc、syscall 包装、UI/字体、网络/HTTP/TLS、PTY 等公共实现。 |
 | `userland/apps/` | Ring-3 系统与桌面应用；`desktop/` 是窗口服务器，其他应用为它的客户端。 |
 | `userland/{busybox,cmd,stardustui}/` | 第三方软件的 ReliefOS 端口、适配层与构建输入。 |
@@ -304,7 +304,7 @@ int subsystem_handle(const struct request *request, struct result *out_result);
   音频、鼠标、网络或安装交互已经验证。
 - 发布任务应同时考虑 VMDK、普通 ISO、Installer ISO、SDK、API 包、校验和与
   第三方归属文件；任何一项是否包含某个组件由当前 profile 与组件清单决定。
-- 内核子仓（`kernel/reliefnt`，ReliefNT；现有远端 URL 仍指向 NTCLKS）日常开发在子仓内进行：在子仓里开分支或
+- ReliefNT 子仓（`kernel/reliefnt`，`https://github.com/ReliefOSProject/ReliefNT`）日常开发在子仓内进行：在子仓里开分支或
   游离提交（detached HEAD），验证通过后推送其工作分支或 main；主仓只提交
   更新后的 gitlink（`git add kernel/reliefnt`），不把子仓改动拆进主仓提交。
   子仓 checkout 处于 detached HEAD 是正常状态（gitlink 检出即游离），不要

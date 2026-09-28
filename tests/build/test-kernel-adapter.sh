@@ -123,7 +123,7 @@ adapter_contract() {
     git clone -q --no-hardlinks "$source" "$parent/kernel/reliefnt"
     git -C "$parent" config -f .gitmodules submodule.kernel/reliefnt.path kernel/reliefnt
     git -C "$parent" config -f .gitmodules submodule.kernel/reliefnt.url \
-        https://github.com/LeonOSProject/NTCLKS.git
+        https://github.com/ReliefOSProject/ReliefNT.git
     git -C "$parent" add .gitmodules
     git -C "$parent" update-index --add --cacheinfo "160000,$matching,kernel/reliefnt"
     git -C "$parent" commit -q -m 'fixture: record ReliefNT gitlink'

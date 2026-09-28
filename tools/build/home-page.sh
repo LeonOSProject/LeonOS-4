@@ -30,7 +30,7 @@ mkdir -p "$output"
 <ul>
 <li><a href="rpr/index.html">RPR</a> &mdash; the Remote Package Repository.</li>
 <li><a href="download/index.html">Download</a> &mdash; installer ISO with checksums.</li>
-<li><a href="https://github.com/LeonOSProject/LeonOS-4">Source</a> &mdash; project repository (current configured URL).</li>
+<li><a href="https://github.com/ReliefOSProject/ReliefOS">Source</a> &mdash; project repository.</li>
 <li><a href="docs/index.html">Documentation</a> &mdash; guides generated from the source tree.</li>
 </ul>
 </section>

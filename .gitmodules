@@ -45,4 +45,4 @@
 	url = https://github.com/movidius/kconfig-frontends.git
 [submodule "kernel/ntclks"]
 	path = kernel/reliefnt
-	url = https://github.com/LeonOSProject/NTCLKS.git
+	url = https://github.com/ReliefOSProject/ReliefNT.git

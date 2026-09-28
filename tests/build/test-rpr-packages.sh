@@ -105,9 +105,9 @@ cmp "$tmp/pages-output/apk/leonos-rpr.rsa.pub" "$tmp/pages-output/apk/reliefos-r
 grep -F '"public_key":"reliefos-rpr.rsa.pub"' "$tmp/pages-output/apk/repository.json"
 grep -F '"legacy_public_key":"leonos-rpr.rsa.pub"' "$tmp/pages-output/apk/repository.json"
 test -f "$tmp/pages-output/apk/reliefos-base-1-r0.apk"
-printf 'CONFIG_RPR_BASE_URL="https://leonosproject.github.io/LeonOS-4/rpr"\n' > "$tmp/rpr.conf"
+printf 'CONFIG_RPR_BASE_URL="https://reliefosproject.github.io/ReliefOS/rpr"\n' > "$tmp/rpr.conf"
 sh "$src/tools/build/rpr-config.sh" "$tmp/rpr.conf" > "$tmp/rpr.env"
 grep -Fx 'RPR_PUBLIC_KEY=reliefos-rpr.rsa.pub' "$tmp/rpr.env"
-grep -Fx 'RPR_BASE_URL=https://leonosproject.github.io/LeonOS-4/rpr' "$tmp/rpr.env"
+grep -Fx 'RPR_BASE_URL=https://reliefosproject.github.io/ReliefOS/rpr' "$tmp/rpr.env"
 
 printf 'RPR package names, dual key trust and publication validation passed\n'

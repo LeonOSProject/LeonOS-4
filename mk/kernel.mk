@@ -15,7 +15,7 @@
 # moves mtime and never rebuilds its consumers.
 
 # The kernel checkout. Since phase 5 the default path is the kernel/reliefnt
-# git submodule (github.com/LeonOSProject/NTCLKS); when it is not initialized
+# git submodule (github.com/ReliefOSProject/ReliefNT); when it is not initialized
 # the adapter refuses with instructions instead of letting parse-time
 # inventories and config generation bury the cause in follow-on errors (see
 # the guard below and the recipe guards).

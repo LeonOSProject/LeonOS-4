@@ -3,7 +3,7 @@
 ReliefOS RPR is a static, HTTPS-only repository published as a directory of the
 GitHub Pages site. Its machine interface has two independent channels, both
 relative to the RPR base URL (by default
-`https://leonosproject.github.io/LeonOS-4/rpr`):
+`https://reliefosproject.github.io/ReliefOS/rpr`):
 
 - `<base>/apk` contains signed ReliefOS APK packages, including the optional
   official applications, the signed APK v3 index, and the corresponding public
@@ -14,8 +14,7 @@ relative to the RPR base URL (by default
 The Pages site places this machine interface under `/rpr/` and adds
 human-readable HTML pages beside it (package list, per-package pages, kernel
 page). The same base URL is used by clients, so it must end in `/rpr`. The
-configured default remains `https://leonosproject.github.io/LeonOS-4/rpr`
-pending the external target gate in `branding-compatibility.md`; it can be changed
+configured default is `https://reliefosproject.github.io/ReliefOS/rpr`; it can be changed
 under **Build > ReliefOS remote package repository URL** in `menuconfig`. The
 selected value is installed as `/etc/reliefos/rpr.conf`. The canonical command
 links (`reliefos-rpr-ping`, `reliefos-rpr-apkcheck`, `reliefos-kernel-update`) append
@@ -28,17 +27,15 @@ The APK identity must be generated with Alpine `abuild-keygen`. Run the helper
 from an Alpine host with `alpine-sdk`, OpenSSL, and an authenticated GitHub CLI:
 
 ```sh
-./tools/provision_rpr_signing_key.sh LeonOSProject/LeonOS-4
+./tools/provision_rpr_signing_key.sh ReliefOSProject/ReliefOS
 ```
 
 The helper runs `abuild-keygen` in a private temporary home, stores the private
-key as the base64-encoded legacy GitHub Actions secret
-`LEONOS_APK_SIGNING_KEY_B64`, prints the public-key SHA-256 fingerprint, and
+key as the base64-encoded GitHub Actions secret
+`RELIEFOS_APK_SIGNING_KEY_B64`, prints the public-key SHA-256 fingerprint, and
 removes the temporary keypair. It does not write either key into this checkout.
-The workflow prefers `RELIEFOS_APK_SIGNING_KEY_B64` when configured and accepts
-the legacy secret during migration; it derives the public key and publishes
-`/apk/reliefos-rpr.rsa.pub` plus the identical `/apk/leonos-rpr.rsa.pub`
-compatibility alias. Only public keys are part of the Pages artifact.
+The workflow derives the public key and publishes `/apk/reliefos-rpr.rsa.pub`.
+Only public keys are part of the Pages artifact.
 
 After provisioning, the private key must exist only in the GitHub Secret.
 Losing the Secret requires a signing-key rotation. A rotation replaces the

@@ -95,21 +95,19 @@
 层级记录在实现计划复选框与最终交付报告中；本文件只维护契约，不宣称验证
 已经完成。
 
-## 6. 外部目标切换门禁（任务 10）
+## 6. 当前外部目标
 
-未提供并验证新目标前，保留仓库中当前配置的旧目标；本节区分“配置仍在使用”
-和“本轮已实测可达”，不把前者写成后者。
+仓库地址与 Pages 目标已切换到 ReliefOS 品牌；此表记录当前配置和本轮核验结果。
 
 | 外部目标 | 当前配置 | 本轮证据与处理 |
 | --- | --- | --- |
-| 主仓 GitHub slug | `LeonOSProject/ReliefOS` | 已用 `gh repo rename` 从 `LeonOSProject/LeonOS-4` 改名；默认分支 `main` 保持不变，本轮推送 `feature/rename`。 |
-| ReliefNT 子仓远端 | GitHub 仓库现名 `LeonOSProject/ReliefNT`；`.gitmodules` 保留 `https://github.com/LeonOSProject/NTCLKS.git` | 已用 `gh repo rename` 从 `LeonOSProject/NTCLKS` 改名。`.gitmodules` 按原兼容要求不变；本地子仓 remote 指向新名称，GitHub 对旧 URL 保留重定向。经本地 HTTP 代理 `127.0.0.1:12334` 将任务 11 子仓提交 `3132fb6a15dd341c70ddca861f342cc2da08676a` 确认为 `feature/rename` 远端 SHA；干净递归克隆和 `make fetch` 通过。 |
-| Pages / RPR 默认地址 | `https://leonosproject.github.io/LeonOS-4/rpr` | 新 Pages/RPR 地址未提供或实测；保留 Kconfig、默认配置和文档中的现有地址。 |
-| SourceHut 同步目标 | `git@git.sr.ht:~leonmmcoset/LeonOS-4` | 新账号/仓库地址未提供或实测；保留工作流中已配置目标，本轮未运行外部同步。 |
-| APK 签名 Secret | 新名 `RELIEFOS_APK_SIGNING_KEY_B64`；旧名 `LEONOS_APK_SIGNING_KEY_B64` | Pages 工作流优先读取新名，未设置时回退旧名；只检查空值并报告 Secret 名，不输出密钥。新 Secret 是否已在 GitHub 配置，本地无法确认。签名配置脚本仍写入旧名。 |
+| 主仓 GitHub 地址 | `https://github.com/ReliefOSProject/ReliefOS` | 仓库存在，默认分支为 `main`；任务分支 `feature/rename` 已推送。 |
+| ReliefNT 子仓地址 | `https://github.com/ReliefOSProject/ReliefNT` | `.gitmodules` 与本地子仓 remote 均指向此地址；任务提交可从远端取得，干净递归克隆和 `make fetch` 通过。 |
+| Pages / RPR 默认地址 | `https://reliefosproject.github.io/ReliefOS/rpr` | GitHub Pages API 确认站点地址为 `https://reliefosproject.github.io/ReliefOS/`；Kconfig、默认配置与文档使用对应 RPR 路径。 |
+| SourceHut 同步目标 | `git@git.sr.ht:~leonmmcoset/LeonOS-4` | 独立于 GitHub 的外部目标，仍按仓库配置同步；本轮未运行 SourceHut 外部同步。 |
+| APK 签名 Secret | `LEONOS_APK_SIGNING_KEY_B64` | 当前签名配置脚本写入此 GitHub Actions Secret；Secret 是否已配置无法从本地确认。 |
 
-上述地址未切换不代表新目标验证通过。切换前须取得准确的新仓库/Pages/SourceHut
-地址，并分别完成干净递归克隆、下载与目标服务验证。
+SourceHut 同步和 GitHub Actions Secret 的外部状态仍需在对应服务中确认。
 
 ## 7. 历史材料索引
 
