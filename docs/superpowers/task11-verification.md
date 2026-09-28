@@ -67,8 +67,8 @@ APK world 按 canonical 包名迁移后由 APK 重新排序。验证比较排序
 
 ## 外部门禁与未运行项
 
-- `.gitmodules` 原 URL 保持不变。先前原 gitlink `76834e55f2b9eb035856ce86825f70401ffb01d5` 曾返回 `upload-pack: not our ref`，本地任务 11 内核 SHA 首次 fetch 遇到 TLS EOF；用户修复代理后，提交 `3132fb6a15dd341c70ddca861f342cc2da08676a` 已推至原远端 `feature/rename`，代理下精确 `ls-remote`、递归克隆、主仓及子仓 `make fetch` 全部通过。早期失败日志 `clone-current.log`、`remote-final-kernel.log` 保留为历史诊断，不代表最终状态。
-- 新 GitHub 主/子仓、Pages/RPR、SourceHut 地址未提供；外部发布、同步、真实 HTTPS/RPR 下载、CI Secret 切换均未运行。没有推测或替换地址。完整发行迁移尚不能认证完成。
+- `.gitmodules` 原 URL 保持不变。先前原 gitlink `76834e55f2b9eb035856ce86825f70401ffb01d5` 曾返回 `upload-pack: not our ref`，本地任务 11 内核 SHA 首次 fetch 遇到 TLS EOF；用户修复代理后，提交 `3132fb6a15dd341c70ddca861f342cc2da08676a` 已推至重命名后的 `LeonOSProject/ReliefNT` 仓库 `feature/rename`。主仓通过 `gh` 从 `LeonOSProject/LeonOS-4` 改名为 `LeonOSProject/ReliefOS`，任务 1–11 的 `feature/rename` 已推送。代理下两个仓库的远端 SHA 与本地相符，递归克隆及主仓和子仓 `make fetch` 全部通过。早期失败日志 `clone-current.log`、`remote-final-kernel.log` 保留为历史诊断，不代表最终状态。
+- Pages/RPR、SourceHut 目标及 CI Secret 是否切换未验证；外部发布、同步和真实 HTTPS/RPR 下载未运行。完整发布环境迁移尚不能认证完成。
 - VMware 专属运行与 SVGA II 3D 验证未运行；QEMU 不能替代。
 - 完整安装器 TTY 安装分支、所有独立 QEMU helper 的逐个运行未运行；本次执行的是以上明确列出的 GUI/TTY 登录/升级/回滚路径。
 - 额外审查中运行的旧辅助测试未全绿：netmand 主机 adapter 通过，但后续 Dyne 编译器缺失；API/time 辅助入口同样缺旧编译器；sudo 辅助套件引用已删除 authd 头；legacy installer-account fixture 旧新结构不匹配。日志见 `host-c-agent-report.md`。没有删断言或将这些结果算作通过；它们不属于 `make test`/`test-long` 总目标。
