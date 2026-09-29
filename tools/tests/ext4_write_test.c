@@ -23,6 +23,7 @@ static void init_volume(const char *path)
     volume.ext_sector_count = disk_len/512; volume.mount_generation = 1;
     check(storage_ext4_journal_open(&volume));
 }
+#ifndef EXT4_WRITE_FIXTURE_ONLY
 int main(int argc, char **argv)
 {
     assert(argc == 5); init_volume(argv[1]);
@@ -71,3 +72,4 @@ int main(int argc, char **argv)
     puts("PASS native ENOSPC reclaim, file write, split, unwritten, punch, zero, truncate, reload");
     return 0;
 }
+#endif
