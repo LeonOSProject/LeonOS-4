@@ -98,6 +98,7 @@ const char *reliefos_shell_command_path(const char *name)
     if (!name || !name[0]) return 0;
     if (strchr(name, '/') || strchr(name, ':')) return name;
     if (strcmp(name, "fdisk") == 0 || strcmp(name, "mkfs.fat") == 0 ||
+        strcmp(name, "mkfs.ext4") == 0 || strcmp(name, "fsck.ext4") == 0 ||
         strcmp(name, "mkfs.fat32") == 0 || strcmp(name, "mkfs.vfat") == 0 ||
         strcmp(name, "mkfs.ext2") == 0 || strcmp(name, "mkfs.exfat") == 0 ||
         strcmp(name, "mount") == 0 || strcmp(name, "umount") == 0 ||
@@ -179,4 +180,3 @@ __attribute__((__noreturn__)) void BB_EXECVP_or_die(char **argv)
     errno = saved_errno;
     bb_perror_msg_and_die("can't execute '%s'", argv[0]);
 }
-

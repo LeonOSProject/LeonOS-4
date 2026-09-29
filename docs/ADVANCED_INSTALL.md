@@ -26,7 +26,7 @@ less /root/ADVANCED_INSTALL.txt
 | 分区 | 文件系统 | GPT 类型 | 建议名称 | 用途 |
 | --- | --- | --- | --- | --- |
 | 1 | FAT32 | EFI System | `LeonOS 4 ESP` | UEFI、GRUB、loader 和内核 |
-| 2 | ext2 | Linux filesystem | `LEONOS4_ROOT` | ReliefOS 根文件系统 |
+| 2 | ext4 | Linux filesystem | `LEONOS4_ROOT` | ReliefOS 根文件系统 |
 
 ESP 建议至少 128 MiB。根分区应使用剩余空间，并确保能容纳 `/install/root`
 及后续用户数据。分区名称只是便于识别，不参与启动；GPT 类型和文件系统才是
@@ -137,11 +137,11 @@ lsblk /dev/disk0
 fdisk -l /dev/disk0
 ```
 
-## 4. 格式化 ESP 和 ext2 根分区
+## 4. 格式化 ESP 和 ext4 根分区
 
 ```sh
 mkfs.fat -F 32 -n LEONOS4ESP /dev/disk0p1
-mkfs.ext2 -F -L LEONOS4ROOT /dev/disk0p2
+mkfs.ext4 -F -L LEONOS4ROOT /dev/disk0p2
 ```
 
 `mkfs.fat32` 和 `mkfs.vfat` 只是指向上游 `mkfs.fat` 的兼容链接，不会自动添加
@@ -159,7 +159,7 @@ mkfs.fat32 -F 32 /dev/disk0p1
 
 ```sh
 fsck.fat -n /dev/disk0p1
-fsck.ext2 -f -n /dev/disk0p2
+fsck.ext4 -f -n /dev/disk0p2
 blkid /dev/disk0p1 /dev/disk0p2
 ```
 
@@ -170,7 +170,7 @@ blkid /dev/disk0p1 /dev/disk0p2
 
 ```sh
 mkdir -p /mnt/root /mnt/esp
-mount -t ext2 /dev/disk0p2 /mnt/root
+mount -t ext4 /dev/disk0p2 /mnt/root
 mount -t vfat /dev/disk0p1 /mnt/esp
 mount
 ```
@@ -213,7 +213,7 @@ printf 'root=%s\nesp=%s\n' "$ROOT_PARTUUID" "$ESP_PARTUUID"
 ```sh
 cat > /mnt/root/etc/fstab <<EOF
 # <source> <mountpoint> <type> <options> <dump> <pass>
-/dev/disk/by-partuuid/$ROOT_PARTUUID / ext2 defaults 0 1
+/dev/disk/by-partuuid/$ROOT_PARTUUID / ext4 defaults 0 1
 /dev/disk/by-partuuid/$ESP_PARTUUID /boot vfat defaults 0 2
 EOF
 ```
@@ -260,7 +260,7 @@ reboot
 
 ## 可选：使用 exFAT 根分区
 
-ext2 是当前新安装默认值。确需 exFAT 时，分区 2 的 GPT 类型应改为
+ext4 是当前新安装默认值。ext2 仅用于兼容旧镜像。确需 exFAT 时，分区 2 的 GPT 类型应改为
 `Microsoft basic data`，并替换以下命令：
 
 ```sh

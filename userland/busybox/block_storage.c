@@ -10,6 +10,9 @@
 //config:config LEONOS_MKFS_EXT2
 //config: bool "mkfs.ext2 (ext2 formatter)"
 //config: default y
+//config:config LEONOS_MKFS_EXT4
+//config: bool "mkfs.ext4 (upstream ext4 formatter)"
+//config: default y
 //config:config LEONOS_MKFS_EXFAT
 //config: bool "mkfs.exfat (exFAT formatter)"
 //config: default y
@@ -37,6 +40,7 @@
 //applet:IF_LEONOS_MKFS_FAT(APPLET_ODDNAME(mkfs.fat32, leonos_mkfs_fat, BB_DIR_SBIN, BB_SUID_DROP, leonos_mkfs_fat))
 //applet:IF_LEONOS_MKFS_FAT(APPLET_ODDNAME(mkfs.vfat, leonos_mkfs_fat, BB_DIR_SBIN, BB_SUID_DROP, leonos_mkfs_fat))
 //applet:IF_LEONOS_MKFS_EXT2(APPLET_ODDNAME(mkfs.ext2, leonos_mkfs_ext2, BB_DIR_SBIN, BB_SUID_DROP, leonos_mkfs_ext2))
+//applet:IF_LEONOS_MKFS_EXT4(APPLET_ODDNAME(mkfs.ext4, leonos_mkfs_ext4, BB_DIR_SBIN, BB_SUID_DROP, leonos_mkfs_ext4))
 //applet:IF_LEONOS_MKFS_EXFAT(APPLET_ODDNAME(mkfs.exfat, leonos_mkfs_exfat, BB_DIR_SBIN, BB_SUID_DROP, leonos_mkfs_exfat))
 //applet:IF_LEONOS_MOUNT(APPLET(mount, BB_DIR_BIN, BB_SUID_DROP))
 //applet:IF_LEONOS_UMOUNT(APPLET(umount, BB_DIR_SBIN, BB_SUID_DROP))
@@ -45,6 +49,7 @@
 //applet:IF_LEONOS_FSCK(APPLET_ODDNAME(fsck.fat32, leonos_fsck_fat, BB_DIR_SBIN, BB_SUID_DROP, leonos_fsck_fat))
 //applet:IF_LEONOS_FSCK(APPLET_ODDNAME(fsck.vfat, leonos_fsck_fat, BB_DIR_SBIN, BB_SUID_DROP, leonos_fsck_fat))
 //applet:IF_LEONOS_FSCK(APPLET_ODDNAME(fsck.ext2, leonos_fsck_ext2, BB_DIR_SBIN, BB_SUID_DROP, leonos_fsck_ext2))
+//applet:IF_LEONOS_FSCK(APPLET_ODDNAME(fsck.ext4, leonos_fsck_ext4, BB_DIR_SBIN, BB_SUID_DROP, leonos_fsck_ext4))
 //applet:IF_LEONOS_FSCK(APPLET_ODDNAME(fsck.exfat, leonos_fsck_exfat, BB_DIR_SBIN, BB_SUID_DROP, leonos_fsck_exfat))
 //applet:IF_LEONOS_FSCK(APPLET(fsck, BB_DIR_SBIN, BB_SUID_DROP))
 //applet:IF_LEONOS_BLKID(APPLET(blkid, BB_DIR_SBIN, BB_SUID_DROP))
@@ -240,6 +245,8 @@ int leonos_mkfs_fat_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
 int leonos_mkfs_fat_main(int argc, char **argv) { return format_partition(argc, argv, LEONOS_BLOCK_FILESYSTEM_FAT32); }
 int leonos_mkfs_ext2_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
 int leonos_mkfs_ext2_main(int argc, char **argv) { return format_partition(argc, argv, LEONOS_BLOCK_FILESYSTEM_EXT2); }
+int leonos_mkfs_ext4_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
+int leonos_mkfs_ext4_main(int argc, char **argv) { return format_partition(argc, argv, LEONOS_BLOCK_FILESYSTEM_EXT4); }
 int leonos_mkfs_exfat_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
 int leonos_mkfs_exfat_main(int argc, char **argv) { return format_partition(argc, argv, LEONOS_BLOCK_FILESYSTEM_EXFAT); }
 
@@ -293,6 +300,8 @@ int leonos_fsck_fat_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
 int leonos_fsck_fat_main(int argc, char **argv) { return fsck_device(argc == 3 && !strcmp(argv[1], "-n") ? argv[2] : argc == 2 ? argv[1] : (bb_show_usage(), ""), LEONOS_BLOCK_FILESYSTEM_FAT32, 0); }
 int leonos_fsck_ext2_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
 int leonos_fsck_ext2_main(int argc, char **argv) { return fsck_device(argc == 3 && !strcmp(argv[1], "-n") ? argv[2] : argc == 2 ? argv[1] : (bb_show_usage(), ""), LEONOS_BLOCK_FILESYSTEM_EXT2, 0); }
+int leonos_fsck_ext4_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
+int leonos_fsck_ext4_main(int argc, char **argv) { return fsck_device(argc == 3 && !strcmp(argv[1], "-n") ? argv[2] : argc == 2 ? argv[1] : (bb_show_usage(), ""), LEONOS_BLOCK_FILESYSTEM_EXT4, 0); }
 int leonos_fsck_exfat_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
 int leonos_fsck_exfat_main(int argc, char **argv) { return fsck_device(argc == 3 && !strcmp(argv[1], "-n") ? argv[2] : argc == 2 ? argv[1] : (bb_show_usage(), ""), LEONOS_BLOCK_FILESYSTEM_EXFAT, 0); }
 int fsck_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;

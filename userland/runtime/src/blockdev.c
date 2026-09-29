@@ -329,6 +329,7 @@ const char *reliefos_block_filesystem_name(uint32_t filesystem)
     switch (filesystem) {
     case RELIEFOS_BLOCK_FILESYSTEM_FAT32: return "fat32";
     case RELIEFOS_BLOCK_FILESYSTEM_EXT2: return "ext2";
+    case RELIEFOS_BLOCK_FILESYSTEM_EXT4: return "ext4";
     case RELIEFOS_BLOCK_FILESYSTEM_ISO9660: return "iso9660";
     case RELIEFOS_BLOCK_FILESYSTEM_EXFAT: return "exfat";
     default: return "unknown";
@@ -689,8 +690,11 @@ static int block_partition_probe_fd(int fd, uint32_t *out_filesystem)
     else {
         ret = block_io(fd, 1024, sector, sizeof(sector), 0);
         if (ret < 0) return ret;
-        if (*(uint16_t *)(void *)(sector + 56) == EXT2_SUPER_MAGIC)
-            *out_filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXT2;
+        if (*(uint16_t *)(void *)(sector + 56) == EXT2_SUPER_MAGIC) {
+            uint32_t incompat = *(uint32_t *)(void *)(sector + 96);
+            *out_filesystem = (incompat & 0x40u) ?
+                RELIEFOS_BLOCK_FILESYSTEM_EXT4 : RELIEFOS_BLOCK_FILESYSTEM_EXT2;
+        }
     }
     return 0;
 }
@@ -845,6 +849,7 @@ int reliefos_block_gpt_create(const char *disk_path, uint32_t filesystem,
     if (filesystem != RELIEFOS_BLOCK_FILESYSTEM_UNKNOWN &&
         filesystem != RELIEFOS_BLOCK_FILESYSTEM_FAT32 &&
         filesystem != RELIEFOS_BLOCK_FILESYSTEM_EXT2 &&
+        filesystem != RELIEFOS_BLOCK_FILESYSTEM_EXT4 &&
         filesystem != RELIEFOS_BLOCK_FILESYSTEM_EXFAT) return -BLOCK_EINVAL;
     ret = block_gpt_update(disk_path, block_create_entry, &request);
     if (ret == 0 && out_index) *out_index = request.index;
@@ -1182,6 +1187,7 @@ int reliefos_block_format(const char *partition_path, uint32_t filesystem, const
     if (ret < 0) return ret;
     if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_FAT32) ret = block_format_fat32(fd, sectors, label);
     else if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2) ret = block_format_ext2(fd, sectors, label);
+    else if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT4) ret = -BLOCK_ENOTSUP;
     else if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXFAT) ret = block_format_exfat(fd, sectors, label);
     else ret = -BLOCK_EINVAL;
     (void)close(fd);

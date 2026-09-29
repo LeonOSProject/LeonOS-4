@@ -251,7 +251,9 @@ grant allowed permissions; an unchecked permission bit means no grant.
 Disk tools operate on `/dev/diskN` and `/dev/diskNpN`. They obtain capacity
 and sector geometry through `<linux/fs.h>` `BLKGETSIZE64` and `BLKSSZGET`,
 update GPT metadata with aligned raw I/O followed by `BLKRRPART`, and mount
-FAT32, exFAT, or ext2 volumes with `<sys/mount.h>` `mount(2)` and `umount2(2)`.
+FAT32, exFAT, ext2 compatibility, or ext4 volumes with `<sys/mount.h>`
+`mount(2)` and `umount2(2)`. New installations use ext4; ext4-specific
+formatting and checking are delegated to upstream `mkfs.ext4`/`fsck.ext4`.
 The SDK no longer defines ReliefOS-specific disk-management ioctl records.
 
 ## Boot handoff ABI

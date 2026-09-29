@@ -9,8 +9,8 @@ is a separate script, explicitly not GNU `grub-install`.
 
 Both production root targets have built successfully:
 
-- `out/x86_64/release/images/root.ext2`: normal Live root.
-- `out/x86_64/release/images/installer-root.ext2`: ext2 root containing the
+- `out/x86_64/release/images/root.ext4`: normal Live root.
+- `out/x86_64/release/images/installer-root.ext4`: ext4 root containing the
   installer runtime root and the installed-system payload at `/install/root`
   (historically named `root.fat`).
 
@@ -86,7 +86,7 @@ Pinned official archives, SHA256 values and checksum provenance are in
 
 | Package | Version | Commands |
 | --- | --- | --- |
-| [e2fsprogs](https://www.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.3/) | 1.47.3 | mkfs.ext2, fsck.ext2 |
+| [e2fsprogs](https://www.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.3/) | 1.47.3 | mkfs.ext4, fsck.ext4, libext2fs |
 | [dosfstools](https://github.com/dosfstools/dosfstools/releases/tag/v4.2) | 4.2 | mkfs.fat, fsck.fat |
 | [exfatprogs](https://github.com/exfatprogs/exfatprogs/releases/tag/1.4.3) | 1.4.3 | mkfs.exfat, fsck.exfat |
 

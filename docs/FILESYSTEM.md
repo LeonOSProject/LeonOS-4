@@ -2,7 +2,7 @@
 
 ReliefOS uses a multi-filesystem storage layer. The normal installed system is
 not a FAT32 root filesystem: it has a small FAT32 EFI System Partition (ESP)
-and a separate writable ext2 root partition. Existing exFAT installations
+and a separate writable ext4 root partition. Existing ext2 and exFAT installations
 remain readable legacy volumes, but the current Alpine-shaped root layout
 requires real symlinks (for example `/bin/sh` and `/var/run`); FAT32/exFAT
 cannot represent them, so current images do not create an exFAT root and the
@@ -69,9 +69,18 @@ legacy binaries only.
 
 ## Supported Formats
 
-### ext2
+### ext4
 
-The kernel implements the classic, unjournaled ext2 subset used by generated
+Generated and fresh-installed roots use an explicit ext4 profile with extents,
+metadata checksums, 64-bit block groups, flex_bg, a journal, dir_index,
+large_file, huge_file, and extra_isize. Linux ext4 images are readable and
+writable through the native backend. Unknown incompat features are rejected;
+advanced bigalloc, inline-data, encrypted, verity, and casefold profiles remain
+outside the basic interoperability contract.
+
+### ext2 compatibility
+
+The kernel implements the classic, unjournaled ext2 subset used by compatibility
 images and installer-created targets:
 
 - 1 KiB, 2 KiB, and 4 KiB blocks; generated ReliefOS images use 4 KiB.
