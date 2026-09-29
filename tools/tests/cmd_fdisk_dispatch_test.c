@@ -19,7 +19,8 @@ int main(void)
     static const char *const commands[][2] = {
         {"mount", "/bin/mount"}, {"umount", "/bin/umount"},
         {"lsblk", "/bin/lsblk"}, {"blkid", "/usr/sbin/blkid"},
-        {"fsck", "/usr/sbin/fsck"}, {"mkfs.ext2", "/usr/sbin/mkfs.ext2"},
+        {"fsck", "/usr/sbin/fsck"}, {"mkfs.ext4", "/usr/sbin/mkfs.ext4"},
+        {"fsck.ext4", "/usr/sbin/fsck.ext4"}, {"mkfs.ext2", "/usr/sbin/mkfs.ext2"},
         {"mkfs.fat", "/usr/sbin/mkfs.fat"}, {"mkfs.fat32", "/usr/sbin/mkfs.fat32"},
         {"mkfs.vfat", "/usr/sbin/mkfs.vfat"}, {"mkfs.exfat", "/usr/sbin/mkfs.exfat"},
         {"fsck.ext2", "/usr/sbin/fsck.ext2"}, {"fsck.fat", "/usr/sbin/fsck.fat"},

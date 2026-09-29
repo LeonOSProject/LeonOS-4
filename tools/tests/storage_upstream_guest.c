@@ -238,10 +238,15 @@ int main(void)
     struct stat disk_stat;
     check(stat("/dev/sda1",&disk_stat)==0 && S_ISBLK(disk_stat.st_mode) &&
           major(disk_stat.st_rdev)==259 && minor(disk_stat.st_rdev)==1,"block stat device number matches sysfs");
-    RUN("fsck dispatcher", NULL, "fsck.ext2", "/usr/sbin/fsck", "-N", "-t", "ext2", "/tmp/storage-test.img");
+    RUN("fsck dispatcher", NULL, "fsck.ext4", "/usr/sbin/fsck", "-N", "-t", "ext4", "/tmp/storage-test.img");
     if (make_file("/tmp/storage-test.img", 64 << 20)) {
         RUN("fdisk GPT write", "g\nn\n1\n\n+16M\nw\n", NULL, "/usr/sbin/fdisk", "/tmp/storage-test.img");
         RUN("fdisk GPT read", NULL, "gpt", "/usr/sbin/fdisk", "-l", "/tmp/storage-test.img");
+    }
+    if (make_file("/tmp/storage-test.img", 64 << 20)) {
+        RUN("mkfs ext4", NULL, NULL, "/usr/sbin/mkfs.ext4", "-F", "/tmp/storage-test.img");
+        RUN("fsck ext4", NULL, NULL, "/usr/sbin/fsck.ext4", "-n", "/tmp/storage-test.img");
+        RUN("blkid ext4", NULL, "ext4", "/usr/sbin/blkid", "-p", "-o", "value", "-s", "TYPE", "/tmp/storage-test.img");
     }
     if (make_file("/tmp/storage-test.img", 64 << 20)) {
         RUN("mkfs ext2", NULL, NULL, "/usr/sbin/mkfs.ext2", "-F", "/tmp/storage-test.img");
@@ -260,8 +265,8 @@ int main(void)
     }
     unlink("/tmp/storage-test.img");
     check_block_io();
-    RUN("mkfs ext2 on AHCI partition",NULL,NULL,"/usr/sbin/mkfs.ext2","-F","/dev/sda1");
-    RUN("fsck ext2 on AHCI partition",NULL,NULL,"/usr/sbin/fsck.ext2","-n","/dev/sda1");
+    RUN("mkfs ext4 on AHCI partition",NULL,NULL,"/usr/sbin/mkfs.ext4","-F","/dev/sda1");
+    RUN("fsck ext4 on AHCI partition",NULL,NULL,"/usr/sbin/fsck.ext4","-n","/dev/sda1");
     mkdir("/tmp/storage-mount", 0700);
     RUN("mount tmpfs", NULL, NULL, "/bin/mount", "-t", "tmpfs", "tmpfs", "/tmp/storage-mount");
     check_tmpfs();

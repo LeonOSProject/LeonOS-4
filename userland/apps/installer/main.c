@@ -3263,7 +3263,7 @@ static void perform_install(int window_id, struct reliefos_ui_surface *ui)
     copy_done_bytes = 0;
 
     show_progress(window_id, ui, 2, "Preparing target disk", "");
-    show_progress(window_id, ui, 22, "Mounting target filesystems", "Root: /target (ext2 for new installs; exFAT or ext2 for updates), ESP: /target/boot (FAT32)");
+    show_progress(window_id, ui, 22, "Mounting target filesystems", "Root: /target (ext4 for new installs; ext4 or exFAT for updates), ESP: /target/boot (FAT32)");
     ret = installer_mount_targets(disks[selected_disk].path, 1);
     if (ret < 0) {
         finish_install(window_id, ui, ret, "Mount failed");

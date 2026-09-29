@@ -853,7 +853,8 @@ static int block_create_entry(struct block_gpt_table *table, void *context)
             if (end > table->primary.last_usable_lba) return -BLOCK_ENOSPC;
             memset(&table->entries[free_index], 0, sizeof(table->entries[free_index]));
             block_set_guid(table->entries[free_index].type_guid,
-                           request->filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2 ?
+                           (request->filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2 ||
+                            request->filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT4) ?
                            RELIEFOS_BLOCK_GPT_LINUX : RELIEFOS_BLOCK_GPT_BASIC_DATA);
             block_guid_make(table->entries[free_index].unique_guid,
                             cursor ^ ((uint64_t)free_index << 32));
@@ -1018,7 +1019,7 @@ static void block_group_desc(struct block_ext2_group *desc, uint32_t group, uint
     desc->used_dirs_count = group == 0u;
 }
 
-static int block_format_ext2(int fd, uint64_t sectors, const char *label)
+static int block_format_ext_family(int fd, uint64_t sectors, const char *label, int ext4)
 {
     uint32_t blocks, groups, descriptors_per_block, descriptor_blocks, inode_table_blocks, free_blocks = 0, free_inodes = 0;
     uint8_t data[EXT2_BLOCK_SIZE];
@@ -1043,7 +1044,8 @@ static int block_format_ext2(int fd, uint64_t sectors, const char *label)
     super.log_block_size = 2; super.log_frag_size = 2; super.blocks_per_group = EXT2_BLOCKS_PER_GROUP;
     super.frags_per_group = EXT2_BLOCKS_PER_GROUP; super.inodes_per_group = EXT2_INODES_PER_GROUP;
     super.magic = EXT2_SUPER_MAGIC; super.state = 1; super.errors = 1; super.rev_level = 1;
-    super.first_ino = 11; super.inode_size = 128; super.feature_incompat = 2;
+    super.first_ino = 11; super.inode_size = 128;
+    super.feature_incompat = 2u | (ext4 ? 0x40u : 0u);
     memcpy(super.volume_name, label && label[0] ? label : "RELIEFOS", label && label[0] && strlen(label) < 16 ? strlen(label) : 8);
     for (uint32_t group = 0; group < groups; ++group) {
         uint32_t start = group * EXT2_BLOCKS_PER_GROUP;
@@ -1090,8 +1092,19 @@ static int block_format_ext2(int fd, uint64_t sectors, const char *label)
     memset(data, 0, sizeof(data));
     {
         struct block_ext2_inode *root = (struct block_ext2_inode *)(void *)(data + 128u);
+        uint32_t root_block = 3u + descriptor_blocks + inode_table_blocks;
         root->mode = 0040755u; root->size_lo = EXT2_BLOCK_SIZE; root->links_count = 2; root->blocks_512 = 8;
-        root->block[0] = 3u + descriptor_blocks + inode_table_blocks;
+        if (ext4) {
+            root->flags = 0x00080000u;
+            root->block[0] = 0x0001f30au;
+            root->block[1] = 4u;
+            root->block[2] = 0u;
+            root->block[3] = 0u;
+            root->block[4] = 1u;
+            root->block[5] = root_block;
+        } else {
+            root->block[0] = root_block;
+        }
     }
     ret = block_write_ext2_block(fd, 3u + descriptor_blocks, data);
     if (ret < 0) return ret;
@@ -1104,6 +1117,16 @@ static int block_format_ext2(int fd, uint64_t sectors, const char *label)
         dotdot->name[0] = '.'; dotdot->name[1] = '.';
     }
     return block_write_ext2_block(fd, 3u + descriptor_blocks + inode_table_blocks, data);
+}
+
+static int block_format_ext2(int fd, uint64_t sectors, const char *label)
+{
+    return block_format_ext_family(fd, sectors, label, 0);
+}
+
+static int block_format_ext4(int fd, uint64_t sectors, const char *label)
+{
+    return block_format_ext_family(fd, sectors, label, 1);
 }
 
 #include "blockdev_exfat_upcase.inc"
@@ -1221,7 +1244,7 @@ int reliefos_block_format(const char *partition_path, uint32_t filesystem, const
     if (ret < 0) return ret;
     if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_FAT32) ret = block_format_fat32(fd, sectors, label);
     else if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2) ret = block_format_ext2(fd, sectors, label);
-    else if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT4) ret = -BLOCK_ENOTSUP;
+    else if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT4) ret = block_format_ext4(fd, sectors, label);
     else if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXFAT) ret = block_format_exfat(fd, sectors, label);
     else ret = -BLOCK_EINVAL;
     (void)close(fd);

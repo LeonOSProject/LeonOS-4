@@ -11,10 +11,35 @@
 #define lstat fake_lstat
 #define mount fake_mount
 #define umount2 fake_umount2
+#define posix_spawnp fake_posix_spawnp
+#define waitpid fake_waitpid
 #include "../../userland/apps/installer/main.c"
 #undef main
+#undef posix_spawnp
+#undef waitpid
 
 static int root_mounted, esp_mounted, busy_root, busy_esp, mutations;
+
+int fake_posix_spawnp(pid_t *pid, const char *file,
+                      const posix_spawn_file_actions_t *actions,
+                      const posix_spawnattr_t *attr,
+                      char *const argv[], char *const envp[])
+{
+    (void)file;
+    (void)actions;
+    (void)attr;
+    (void)argv;
+    (void)envp;
+    *pid = 1;
+    return 0;
+}
+
+pid_t fake_waitpid(pid_t pid, int *status, int options)
+{
+    (void)options;
+    if (status) *status = 0;
+    return pid;
+}
 
 int fake_mkdir(const char *path, mode_t mode) { return 0; }
 int fake_lstat(const char *path, struct stat *st)
@@ -71,7 +96,7 @@ int reliefos_block_list_partitions(const char *path, struct reliefos_block_parti
     assert(cap >= 2);
     memset(parts, 0, 2 * sizeof(*parts));
     parts[0].filesystem = RELIEFOS_BLOCK_FILESYSTEM_FAT32;
-    parts[1].filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXT2;
+    parts[1].filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXT4;
     strcpy(parts[0].path, "/dev/sda1");
     strcpy(parts[1].path, "/dev/sda2");
     *count = 2;
