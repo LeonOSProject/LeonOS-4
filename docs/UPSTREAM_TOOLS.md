@@ -105,7 +105,7 @@ under `/usr/share/licenses`; build commands and hashes are recorded under
 | --- | --- | --- |
 | fdisk, sfdisk, blkid, fsck, runuser | `/usr/sbin` | util-linux via `storage-util-linux` ownership transfer |
 | mount, umount, lsblk | `/bin` | util-linux via `storage-util-linux` ownership transfer |
-| mkfs.ext2, fsck.ext2, mkfs.fat, fsck.fat, mkfs.exfat, fsck.exfat | `/usr/sbin` | official filesystem packages via `storage-filesystems` ownership transfer |
+| mkfs.ext4, fsck.ext4, mkfs.fat, fsck.fat, mkfs.exfat, fsck.exfat | `/usr/sbin` | official filesystem packages via `storage-filesystems` ownership transfer |
 | leonos-grub-installer | `/usr/sbin` | project shell script staged by `tools/build/rootfs-stage.sh` |
 | sync, shell and selected standard applets | `/bin/busybox` | official BusyBox |
 | find, xargs | `/usr/bin` | official Alpine `findutils` APK |
@@ -161,8 +161,8 @@ python3 tools/test_upstream_tools_runtime.py -v
 python3 tools/test_storage_upstream_runtime.py -v
 LEONOS_STORAGE_TEST_ROOT=out/x86_64/release/stage/esp LEONOS_UPSTREAM_TEST_ROOT=out/x86_64/release/stage/esp \
   python3 tools/test_storage_upstream_runtime.py -v
-python3 tools/test_storage_upstream_guest.py --root out/x86_64/release/images/installer-root.ext2 --smp 2
-python3 tools/test_storage_upstream_guest.py --root out/x86_64/release/images/root.ext2 --smp 1
+python3 tools/test_storage_upstream_guest.py --root out/x86_64/release/images/installer-root.ext4 --smp 2
+python3 tools/test_storage_upstream_guest.py --root out/x86_64/release/images/root.ext4 --smp 1
 python3 tools/test_upstream_tools_images.py -v
 python3 tools/test_regular_file_io.py
 python3 tools/test_tmpfs.py
@@ -172,12 +172,12 @@ python3 tools/test_storage_mkdir_mount.py
 python3 tools/test_storage_rename.py
 python3 tools/test_storage_metadata.py
 python3 tools/test_init_power.py
-python3 tools/test_storage_upstream_guest.py --root out/x86_64/release/images/root.ext2 --power reboot
-python3 tools/test_storage_upstream_guest.py --root out/x86_64/release/images/root.ext2 --power poweroff
+python3 tools/test_storage_upstream_guest.py --root out/x86_64/release/images/root.ext4 --power reboot
+python3 tools/test_storage_upstream_guest.py --root out/x86_64/release/images/root.ext4 --power poweroff
 ```
 
 Host reference tests execute the actual target ELFs with explicit target library
-search paths. They create GPT and ext2/FAT32/exFAT only on disposable regular
+search paths. They create GPT and ext4/ext2/FAT32/exFAT only on disposable regular
 files; checkers must reject unformatted files. Host mount tests are version and
 read-only listing tests. None of these tests writes a host block device.
 
@@ -214,9 +214,9 @@ These passing post-initialization tests do not certify that early-boot case.
 | Previous failure | Implementation and observed result | Status |
 | --- | --- | --- |
 | lsblk inventory | Real disks/partitions, `/sys/dev/block`, `/sys/block`, `/sys/class/block`, sizes and matching `st_rdev`; `sda`/`sda1` or NVMe names listed | Verified subset |
-| mkfs.ext2 | Scalar I/O aggregates transport chunks, retaining progress across asynchronous retries; regular image and QEMU AHCI partition format successfully | Verified subset |
-| fsck.ext2 | Checks both successfully formatted ext2 targets | Verified subset |
-| blkid ext2 | Identifies the ext2 filesystem created by the official formatter | Verified subset |
+| mkfs.ext4 | Scalar I/O aggregates transport chunks, retaining progress across asynchronous retries; regular image and QEMU AHCI partition format successfully | Verified subset |
+| fsck.ext4 | Checks both successfully formatted ext4 targets | Verified subset |
+| blkid ext4 | Identifies the ext4 filesystem created by the official formatter | Verified subset |
 | fsck.fat | Full 516096-byte read is no longer capped at 32768 bytes; checker succeeds | Verified subset |
 | mount tmpfs | Source is a label; real sparse RAM filesystem with inode/page quotas and native metadata | Verified subset |
 | umount tmpfs | Releases the filesystem, rejects live references with EBUSY, restores underlying directory | Verified subset |

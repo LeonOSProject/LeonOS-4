@@ -220,7 +220,7 @@ replaced, but its integrated interactive workflow has not been rerun.
 `/sbin/unix_chkpwd` uses root:root mode 4755, as permitted by the pinned helper
 manual, to read root:root mode 0600 shadow. The nonroot helper probe proves own
 password verification and denial of verification for another account.
-Staging filesystem ownership belongs to the builder; normal installer ext2
+Staging filesystem ownership belongs to the builder; normal installer ext4
 packaging explicitly supplies root ownership and preserves set-ID modes.
 
 Normal login, passwd, sudo, su and Fileman now use the official programs/PAM

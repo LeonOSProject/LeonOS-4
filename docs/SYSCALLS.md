@@ -75,10 +75,10 @@ The kernel-side numbers and errno constants are in:
 | 61 | `wait4` | `wait4` | Waits for a child and writes a Linux-style shifted status. |
 | 79 | `getcwd` | `getcwd` | Copies the task current directory. |
 | 80 | `chdir` | `chdir` | Changes the task current directory after path lookup. |
-| 82 | `rename` | `rename` | Renames exFAT, FAT32, or ext2 files/directories within one filesystem. |
-| 83 | `mkdir` | `mkdir` | Creates an exFAT, FAT32, or ext2 directory. |
-| 84 | `rmdir` | `rmdir` | Removes an empty exFAT, FAT32, or ext2 directory. |
-| 87 | `unlink` | `unlink` | Removes an exFAT, FAT32, or ext2 file. |
+| 82 | `rename` | `rename` | Renames exFAT, FAT32, ext4, or legacy ext2 files/directories within one filesystem. |
+| 83 | `mkdir` | `mkdir` | Creates an exFAT, FAT32, ext4, or legacy ext2 directory. |
+| 84 | `rmdir` | `rmdir` | Removes an empty exFAT, FAT32, ext4, or legacy ext2 directory. |
+| 87 | `unlink` | `unlink` | Removes an exFAT, FAT32, ext4, or legacy ext2 file. |
 
 ## GPU Calls
 
@@ -337,7 +337,7 @@ kills ordinary user tasks in the session, then desktop returns to `login.elf`.
 The kernel makes every file, task-kill, user-management, and installer-storage
 decision itself in `kernel/reliefnt/fs/permissions.c`, against the permissions the
 storage layer reports: the `LEONACL.SYS` sidecar on exFAT and FAT32, native
-inode fields on ext2 and tmpfs, and fixed modes for PTY and device nodes. The
+    inode fields on ext4, legacy ext2, and tmpfs, and fixed modes for PTY and device nodes. The
 mapping is:
 
 - `stat`, directory reads, and file reads: Read/List.
@@ -367,7 +367,7 @@ errors, lifecycle and concurrency cases remain itemized in the ABI ledger.
 - NOFILE/AS soft/hard limits and prlimit64 share state across pthreads and copy
   at fork; other resources and complete enforcement remain incomplete.
 - File access enforces owner/group/other Unix DAC with mode, UID and GID.
-  chmod/chown work for the verified subset. ext2 stores native metadata;
+  chmod/chown work for the verified subset. ext4 and ext2 store native metadata;
   FAT/exFAT use ReliefOS metadata records. Full inode lifetime and special-bit
   behavior remain outstanding.
 - File-backed mappings, INET servers/UDP/IPv6, PTY lock/hangup, event APIs and

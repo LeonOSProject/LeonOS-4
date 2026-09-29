@@ -43,7 +43,7 @@ specified upstream. Musl uses the MIT license. Additional bundled libraries
 retain their own licenses. `/usr/share/licenses/musl-gcc/package.json` records every
 upstream file's SHA256 for comparison with the original archive.
 
-The case-sensitive Linux headers require ext2 in the live/installer root as
-well as on the installed system. The boot module keeps the legacy filename
-`/install/root.fat` for boot configuration compatibility, but new media contain
-ext2 and the kernel recognizes the filesystem magic. EFI boot remains FAT.
+The case-sensitive Linux headers require a writable ext4 live/installer root
+and installed system. The boot module keeps the legacy filename
+`/install/root.fat` for boot configuration compatibility; its contents are an
+ext4 filesystem image. EFI boot remains FAT.

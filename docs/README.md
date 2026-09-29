@@ -14,7 +14,7 @@ when changing the kernel, loader, installer, or user ABI.
 - [Timer validation](LINUX_ABI_TIMER_2026-09-09.md): timer and Vim evidence and remaining gaps.
 - [Syscalls](SYSCALLS.md): syscall entry convention, syscall table,
   `mmap`/`munmap`, process calls, and ioctl groups.
-- [Filesystem](FILESYSTEM.md): Unix-style root paths, ext2 default root plus exFAT/FAT32/ISO 9660 support,
+- [Filesystem](FILESYSTEM.md): Unix-style root paths, ext4 default root plus legacy ext2, exFAT/FAT32/ISO 9660 support,
   bundled `.hlp` help documents, and current limits.
 - [Drivers](DRIVERS.md): bootstrap drivers, loadable `.drv` modules, ABI, and
   management policy.

@@ -20,10 +20,10 @@ the storage layer selects partition 2 as `/`. FAT32 and exFAT data-volume
 backends remain available; the current userspace boot contract requires ext4
 and the new root skeleton. Old images require a fresh installation.
 
-The installer itself keeps using a writable ext2 image as its ramdisk root because it must start
+The installer itself uses a writable ext4 image as its ramdisk root because it must start
 before any target disk is trusted. Its payload is deliberately split:
 
-- `/install/root` is copied to the ext2 target root `/target` (or to an
+- `/install/root` is copied to the ext4 target root `/target` (or to an
   existing target with the same layout during update mode).
 - `/install/esp` is copied to the FAT32 target ESP `/target/boot`.
 
@@ -81,8 +81,8 @@ outside the basic interoperability contract.
 
 ### ext2 compatibility
 
-The kernel implements the classic, unjournaled ext2 subset used by compatibility
-images and installer-created targets:
+The kernel implements the classic, unjournaled ext2 subset used by legacy
+compatibility images and pre-ext4 targets:
 
 - 1 KiB, 2 KiB, and 4 KiB blocks; generated ReliefOS images use 4 KiB.
 - 128-byte-or-larger classic inodes.
@@ -173,11 +173,11 @@ on.
 
 Optical media is discovered through AHCI ATAPI and automatically mounted at
 `/media/cdrom<N>`. ISO 9660 volumes are read-only. This is independent
-of whether the boot/root disk uses exFAT, ext2, or FAT32.
+of whether the boot/root disk uses exFAT, ext4, ext2, or FAT32.
 
 ## Runtime Data Mounts
 
-Disk Manager can mount a supported, unprotected FAT32, exFAT, or ext2 GPT data
+Disk Manager can mount a supported, unprotected FAT32, exFAT, or ext4 GPT data
 partition for the current boot. The kernel mounts it at the stable path
 `/mnt/disk<N>p<M>`, where `N` is the disk ID and `M` is the GPT entry index plus
 one. The mount path is shown in the partition status and appears in File
@@ -188,7 +188,7 @@ Runtime data mounts are deliberately non-persistent in this first version:
 they are removed on reboot and no automatic mounting policy is stored on disk.
 Mounting the same partition again is idempotent and returns its existing mount
 path.
-FAT32, exFAT, and the classic ext2 subsets documented above are accepted; an
+FAT32, exFAT, ext4, and the classic ext2 subsets documented above are accepted; an
 unknown or unsupported on-disk filesystem is rejected rather than mounted
 according to its GPT type alone.
 
@@ -207,16 +207,16 @@ nodes and mappings after a volume is removed.
 
 Disk Manager presents the GPT entries of every detected AHCI, IDE/PATA, or NVMe disk, including
 their name, LBA range, filesystem probe, capacity, GPT role, protection state,
-and mount path when mounted. It can create a 1 MiB-aligned FAT32, exFAT, or ext2
+and mount path when mounted. It can create a 1 MiB-aligned FAT32, exFAT, or ext4
 data partition in free space, format an existing data partition as either
 filesystem, delete an existing data partition's GPT entry, and mount or
 unmount a supported data partition. New partition creation includes formatting
 as part of the operation.
 
-Formatting reuses the installer-grade FAT32, exFAT, and ext2 formatters but
+Formatting reuses the installer-grade FAT32, exFAT, and ext4 formatters but
 applies only to the selected partition extent. FAT32 and exFAT data partitions
-use the Microsoft Basic Data GPT type; ext2 data partitions use the Linux
-filesystem type.
+use the Microsoft Basic Data GPT type; ext4 and ext2 data partitions use the
+Linux filesystem type.
 Deleting a partition removes its GPT metadata only, so it is not a secure-wipe
 operation.
 
@@ -245,7 +245,7 @@ hidden from normal exFAT, FAT32, and ext2 directory enumeration.
 
 ## API Behavior
 
-Current file syscalls support all writable exFAT, ext2, and FAT32 roots:
+Current file syscalls support all writable exFAT, ext4, legacy ext2, and FAT32 roots:
 
 - File reads and short, bounded writes.
 - Create and overwrite through `open` flags.
@@ -253,17 +253,18 @@ Current file syscalls support all writable exFAT, ext2, and FAT32 roots:
 - Directory listing, `stat`, seek, and ACL service integration.
 
 Cross-mount rename is rejected. ISO 9660 returns a read-only error for all
-mutation operations. exFAT allocation updates its bitmap and FAT chains; ext2
-allocation updates its inode/block bitmaps and free counts; FAT32 retains its
-cluster-chain allocator and LFN handling.
+mutation operations. exFAT allocation updates its bitmap and FAT chains; ext4
+allocation updates extents, bitmaps, and journal metadata; legacy ext2 allocation
+updates its inode/block bitmaps and free counts; FAT32 retains its cluster-chain
+allocator and LFN handling.
 
 ## Safety and Recovery
 
-ext2 has no journal, so sudden loss of power during metadata updates can still
-require offline repair. The installer writes a complete target layout before
+ext4 journaling protects normal metadata updates; legacy ext2 has no journal and
+can still require offline repair after sudden power loss. The installer writes a complete target layout before
 copying payload files and treats a failed copy as an installation failure. The
 normal image generator and installer formatter reserve distinct boot and root
 partitions so a large runtime file cannot consume ESP space.
 
 Use `tools/analyze_boot_log.py` when boot diagnostics show a root mount failure.
-The log identifies whether exFAT, ext2, or the legacy FAT32 fallback was used.
+The log identifies whether exFAT, ext4, legacy ext2, or the legacy FAT32 fallback was used.

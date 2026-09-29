@@ -39,7 +39,7 @@ ESP 建议至少 128 MiB。根分区应使用剩余空间，并确保能容纳 `
 - ReliefOS 磁盘命名为 `/dev/sda`、`/dev/sda1`；NVMe 设备使用
   `/dev/nvme0n1`、`/dev/nvme0n1p1` 这类 Linux 名称。
 - 以下示例假定目标是 `/dev/sda`，实际编号不同时必须替换所有相关命令。
-- Installer ISO 根目录是可写的临时 ext2 ramdisk，但重启后其中的修改会丢失；
+- Installer ISO 根目录是可写的临时 ext4 ramdisk，但重启后其中的修改会丢失；
   已写入目标磁盘的内容会保留。
 
 ## 1. 进入 TTY 模式并检查 payload
@@ -270,7 +270,7 @@ fsck.exfat -n /dev/sda2
 mount -t exfat /dev/sda2 /mnt/root
 ```
 
-`/etc/fstab` 中根分区一行的类型也要从 `ext2` 改为 `exfat`。其余复制、ESP、
+`/etc/fstab` 中根分区一行的类型也要从 `ext4` 改为 `exfat`。其余复制、ESP、
 启动文件和卸载步骤不变。
 
 ## 高级模式可用的存储工具
@@ -280,7 +280,7 @@ mount -t exfat /dev/sda2 /mnt/root
 | `fdisk`, `sfdisk` | util-linux | GPT 查看、创建和修改 |
 | `lsblk`, `blkid` | util-linux | 块设备、文件系统和 UUID 查询 |
 | `mount`, `umount` | util-linux | 标准挂载和卸载命令 |
-| `mkfs.ext2`, `fsck.ext2` | e2fsprogs | ext2 创建和检查 |
+| `mkfs.ext4`, `fsck.ext4` | e2fsprogs | ext4 创建和检查 |
 | `mkfs.fat`, `fsck.fat` | dosfstools | FAT32 创建和检查 |
 | `mkfs.exfat`, `fsck.exfat` | exfatprogs | exFAT 创建和检查 |
 | `sync`, `cp`, `mkdir`, `cat`, `less` | BusyBox | 文件复制、同步和教程阅读 |
