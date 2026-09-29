@@ -349,6 +349,12 @@ git commit -m "feat: add ext4 flex group allocator"
 
 ### 任务 6：实现 extent tree、旧 indirect 兼容和读路径
 
+执行勘误（2026-09-29）：接手后采用内联执行。真实节点读取入口位于
+`storage_vfs.c`，而不是 `storage_inode.c`；任务 6 增加最小 ext4 读分支及
+`tools/tests/ext4_vfs_read_test.c`，验证 inode hold/refresh/read/release。
+同时在 `storage.c` 接入 allocator/extent/ops，头文件统一声明新接口。
+完整路径查找、变更操作和 ext-family 分派统一仍由任务 9–10 完成。
+
 **目的：** 让 Linux ext4 regular file、hole 和大文件可以高效读取，同时继续读取 ext2/ext3 indirect inode。
 
 **文件：**
