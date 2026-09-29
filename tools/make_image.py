@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Create a ReliefOS GPT disk with a FAT32 ESP and an ext2 runtime root.
+"""Create a ReliefOS GPT disk with a FAT32 ESP and an ext4 runtime root.
 
-The default root filesystem is ext2 because the Alpine-shaped root layout
-requires real symlinks (for example /var/run and command entries) and
-ext2 preserves them. FAT32 remains the ESP format only.
+The default root filesystem is ext4.  ext2 remains an explicit compatibility
+option for older images.
 """
 from __future__ import annotations
 
@@ -25,6 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 from make_ext2_root import populate_ext2
+from make_ext4_root import populate_ext4
 from image_test_accounts import seed_test_accounts
 from reliefos_layout import (  # noqa: E402  (tools directory is not a package)
     ETC_RELIEFOS,
@@ -158,14 +158,15 @@ def write_gpt(image: Path, partitions: list[tuple[uuid.UUID, int, int, str]]) ->
     return partition_uuids
 
 
-def write_root_fstab(root: Path, root_uuid: uuid.UUID, esp_uuid: uuid.UUID) -> None:
+def write_root_fstab(root: Path, root_uuid: uuid.UUID, esp_uuid: uuid.UUID,
+                     root_fs: str = "ext4") -> None:
     """Describe this disk's actual GPT extents; never reuse host device numbering."""
     fstab = root / "etc/fstab"
     if fstab.is_symlink():
         raise ValueError("root fstab must be a regular configuration file")
     fstab.write_text(
         "# <source> <mountpoint> <type> <options> <dump> <pass>\n"
-        f"/dev/disk/by-partuuid/{root_uuid} / ext2 defaults 0 1\n"
+        f"/dev/disk/by-partuuid/{root_uuid} / {root_fs} defaults 0 1\n"
         f"/dev/disk/by-partuuid/{esp_uuid} /boot vfat defaults 0 2\n",
         encoding="ascii",
     )
@@ -215,13 +216,13 @@ def make_root_tree(staging: Path, destination: Path, language: str) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Create ReliefOS GPT FAT32-ESP/ext2-root VMDK")
+    parser = argparse.ArgumentParser(description="Create ReliefOS GPT FAT32-ESP/ext4-root VMDK")
     parser.add_argument("--out", default="build/images/reliefos.vmdk")
     parser.add_argument("--raw", default="build/images/reliefos.raw")
     parser.add_argument("--esp-tree", default="build/esp")
     parser.add_argument("--root-image")
-    parser.add_argument("--root-fs", choices=("ext2",), default="ext2",
-                        help="Runtime root filesystem (classic ext2)")
+    parser.add_argument("--root-fs", choices=("ext4", "ext2"), default="ext4",
+                        help="Runtime root filesystem (ext4 by default; ext2 compatibility)")
     parser.add_argument("--esp-image", default="build/images/esp.fat")
     parser.add_argument("--default-lang", default="en_US.UTF-8",
                         help="Locale name written into this VMDK root filesystem")
@@ -274,7 +275,7 @@ def main() -> int:
                 root_tree = temp / "root"
                 make_boot_tree(esp_tree, boot_tree)
                 make_root_tree(esp_tree, root_tree, args.default_lang)
-                write_root_fstab(root_tree, partition_uuids[1], partition_uuids[0])
+                write_root_fstab(root_tree, partition_uuids[1], partition_uuids[0], args.root_fs)
 
                 run(["truncate", "-s", str(esp_sectors * SECTOR_SIZE), str(esp_temp)])
                 run(["mkfs.fat", "-F", "32", "-s", "2", "-n", "RELIEFOS", str(esp_temp)])
@@ -283,8 +284,12 @@ def main() -> int:
 
                 root_bytes = (root_last - root_first + 1) * SECTOR_SIZE
                 run(["truncate", "-s", str(root_bytes), str(root_temp)])
-                populate_ext2(root_tree, root_temp,
-                              max(8192, sum(1 for _ in root_tree.rglob("*")) * 2))
+                inode_count = max(8192, sum(1 for _ in root_tree.rglob("*")) * 2)
+                if args.root_fs == "ext4":
+                    populate_ext4(root_tree, root_temp, inode_count,
+                                  str(partition_uuids[1]))
+                else:
+                    populate_ext2(root_tree, root_temp, inode_count)
                 run(["e2fsck", "-f", "-n", str(root_temp)])
 
             run(["dd", f"if={esp_temp}", f"of={raw_temp}", "bs=512",
