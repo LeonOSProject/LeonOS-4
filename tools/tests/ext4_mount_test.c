@@ -391,10 +391,9 @@ static void case_route_probe_fallback(const char *image)
     struct storage_volume *volume;
     load_disk(image, 0, 0);
     volume = &g_volumes[0];
-    assert(storage_mount_ext_family(volume) == 0);
-    assert(ext2_mount_calls == 1);
-    assert(volume->filesystem == STORAGE_FILESYSTEM_EXT2);
-    puts("PASS ext4 root route: unrecognized image still falls back to ext2_mount");
+    assert(storage_mount_ext_family(volume) == -RELIEFOS_EINVAL);
+    assert(ext2_mount_calls == 0);
+    puts("PASS ext-family probe: non-ext media never enters a legacy backend");
 }
 
 static void case_route_corrupt_metadata(const char *image)
@@ -412,9 +411,9 @@ static void case_route_ext2_classify(const char *image)
     load_disk(image, 0, 0);
     volume = &g_volumes[0];
     assert(storage_mount_ext_family(volume) == 0);
-    assert(ext2_mount_calls == 1);
+    assert(ext2_mount_calls == 0);
     assert(volume->filesystem == STORAGE_FILESYSTEM_EXT2);
-    puts("PASS ext4 root route: EXT2 classification falls back to ext2_mount");
+    puts("PASS ext-family route: EXT2 classification uses the unified backend");
 }
 
 static void case_route_ext4(const char *image)
