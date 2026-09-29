@@ -6,6 +6,7 @@ No production image is modified; the existing ioctl regression launch slot is
 used only in a private copy to avoid introducing a new kernel test hook.
 """
 import os
+import argparse
 from pathlib import Path
 import shutil
 import subprocess
@@ -13,8 +14,12 @@ import sys
 import tempfile
 import time
 
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("out", type=Path)
+parser.add_argument("--root", type=Path, help="root image; defaults to root.ext4, then root.ext2")
+args = parser.parse_args()
 src = Path(__file__).resolve().parents[2]
-out = Path(sys.argv[1]).resolve()
+out = args.out.resolve()
 log = out / 'logs/motd-qemu.log'
 firmware = next((Path(p) for p in ('/usr/share/edk2/x64/OVMF.4m.fd',
     '/usr/share/OVMF/OVMF_CODE_4M.fd', '/usr/share/ovmf/OVMF.fd') if Path(p).exists()), None)
@@ -30,8 +35,13 @@ with tempfile.TemporaryDirectory(prefix='reliefos-motd-qemu-') as directory:
          '--gcc-toolchain=/nonexistent', '-fuse-ld=lld', '--rtlib=compiler-rt',
          '--unwindlib=none', '-static', '-O2', '-Wall', '-Wextra', '-Werror',
          src / 'tools/tests/motd_guest_probe.c', '-o', probe])
-    root = work / 'root.ext2'
-    shutil.copyfile(out / 'images/root.ext2', root)
+    source_root = args.root.resolve() if args.root else next(
+        (candidate for candidate in (out / 'images/root.ext4', out / 'images/root.ext2') if candidate.exists()),
+        None,
+    )
+    assert source_root and source_root.exists(), 'an ext4 or ext2 root image is required'
+    root = work / source_root.name
+    shutil.copyfile(source_root, root)
     guest = '/usr/lib/reliefos/tests/linux-ioctl-cloexec.elf'
     for command in ('mkdir /usr/lib/reliefos/tests', f'rm {guest}',
                     f'write {probe} {guest}', f'set_inode_field {guest} mode 0100755'):
