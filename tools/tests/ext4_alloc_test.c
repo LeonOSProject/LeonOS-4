@@ -87,6 +87,8 @@ static char console_log[16384];
 void *kernel_malloc(size_t size) { return malloc(size); }
 int storage_ext4_device_flush(const struct storage_volume *v) { (void)v; return 0; }
 void kernel_free(void *p) { free(p); }
+int time_wall_clock(struct reliefos_time_info *info)
+{ memset(info,0,sizeof(*info)); info->unix_seconds=1790640000; return 0; }
 uint64_t mm_alloc_page(void) { return (uintptr_t)aligned_alloc(4096, 4096); }
 void mm_free_page(uint64_t p) { free((void *)(uintptr_t)p); }
 uint64_t mm_alloc_pages(uint32_t pages)

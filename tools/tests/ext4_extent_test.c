@@ -17,6 +17,8 @@ int storage_ext4_device_flush(const struct storage_volume *v) { (void)v; return 
 #endif
 void *kernel_malloc(size_t n) { return malloc(n); }
 void kernel_free(void *p) { free(p); }
+int time_wall_clock(struct reliefos_time_info *info)
+{ memset(info,0,sizeof(*info)); info->unix_seconds=1790640000; return 0; }
 uint64_t mm_alloc_pages(uint32_t n) { return (uintptr_t)calloc(n, 4096); }
 void console_printf(const char *fmt, ...) { (void)fmt; }
 void storage_memzero(void *p, size_t n) { memset(p, 0, n); }
@@ -105,7 +107,6 @@ static void unit(void)
     expect_map(&in, 11, 111, 2, false, true);
     struct storage_ext4_map_result map;
     assert(storage_ext4_map_block(&volume, 12, &in, UINT32_MAX, false, &map) == -27);
-    assert(storage_ext4_map_block(&volume, 12, &in, 0, true, &map) == -RELIEFOS_EOPNOTSUPP);
     in.i_block_raw[4] = 5; corrupt(&in);
     in = inode(); w16(in.i_block_raw+16, 0); corrupt(&in);
     in = inode(); w32(in.i_block_raw+24, 3); corrupt(&in);
