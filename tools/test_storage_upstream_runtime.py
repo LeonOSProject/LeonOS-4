@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 """Exercise official target tools on disposable files, never host devices."""
+import argparse
 import json
 import os
 from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-FORMATTERS = Path(os.environ.get("LEONOS_STORAGE_TEST_ROOT", ROOT / "build/storage-upstream/root")).resolve()
-UTIL = Path(os.environ.get("LEONOS_UPSTREAM_TEST_ROOT", ROOT / "build/auth-upstream/root")).resolve()
-MUSL = ROOT / "build/musl/sysroot"
+FORMATTERS = Path(os.environ.get("LEONOS_STORAGE_TEST_ROOT", ROOT / "out/x86_64/release/rootfs/raw")).resolve()
+UTIL = Path(os.environ.get("LEONOS_UPSTREAM_TEST_ROOT", ROOT / "out/x86_64/release/rootfs/raw")).resolve()
+MUSL = ROOT / "out/x86_64/release/sysroot/musl"
+_parser = argparse.ArgumentParser(add_help=False)
+_parser.add_argument("--filesystem", choices=("ext2", "ext4"), default="ext4")
+_args, _remaining = _parser.parse_known_args()
+sys.argv = [sys.argv[0], *_remaining]
 
 
 class StorageRuntimeTests(unittest.TestCase):
@@ -26,8 +32,9 @@ class StorageRuntimeTests(unittest.TestCase):
                               capture_output=True, text=True, timeout=60)
 
     def test_filesystem_roundtrips_and_real_corruption_detection(self):
-        for fs, kind, mkfs_args in (("ext2", "ext2", ("-F", "-q")),
-                                   ("fat", "vfat", ("-F", "32")), ("exfat", "exfat", ())):
+        filesystems = [("ext4", "ext4", ("-F", "-q"))] if _args.filesystem == "ext4" else [
+            ("ext2", "ext2", ("-F", "-q")), ("fat", "vfat", ("-F", "32")), ("exfat", "exfat", ())]
+        for fs, kind, mkfs_args in filesystems:
             with self.subTest(fs=fs), tempfile.TemporaryDirectory(prefix="reliefos-fs-") as directory:
                 disk = Path(directory) / "filesystem.img"
                 with disk.open("wb") as stream:

@@ -49,6 +49,13 @@ void x86_64_outb(uint8_t value, uint16_t port) { (void)value; (void)port; assert
 void x86_64_outw(uint16_t value, uint16_t port) { (void)value; (void)port; assert(0); }
 uint64_t time_ticks(void) { return 1; }
 static void exfat_cache_invalidate(void) {}
+void storage_ext4_cache_invalidate_write(const struct storage_volume *writer,
+                                         uint64_t lba, uint32_t count)
+{
+    (void)writer;
+    (void)lba;
+    (void)count;
+}
 
 int main(void)
 {
