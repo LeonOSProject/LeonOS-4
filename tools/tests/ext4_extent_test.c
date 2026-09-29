@@ -12,6 +12,9 @@ static uint8_t *disk;
 static uint64_t disk_len, reads, writes;
 static int fail_read;
 static struct storage_volume volume;
+#ifndef EXT4_JOURNAL_TRANSPORT_FIXTURE
+int storage_ext4_device_flush(const struct storage_volume *v) { (void)v; return 0; }
+#endif
 void *kernel_malloc(size_t n) { return malloc(n); }
 void kernel_free(void *p) { free(p); }
 uint64_t mm_alloc_pages(uint32_t n) { return (uintptr_t)calloc(n, 4096); }
@@ -160,6 +163,7 @@ static void unit(void)
         assert(output[i] == ((i+512 >= 2048 && i+512 < 6144) ? 0x5a : 0));
     assert(storage_ext4_read_file_range(&volume, 12, &in, UINT64_MAX, output, 1, &got) == 0 && got == 0);
     /* Large reads must batch transport I/O, while preserving dirty cache data. */
+    volume.ext4.fs_error = 0; /* Fresh synthetic mount after corruption tests. */
     in = inode(); in.size = 64 * 1024;
     header(in.i_block_raw, 1, 4, 0); extent(in.i_block_raw+12, 0, 100, 64);
     uint8_t *large = malloc(64*1024); assert(large); invalidate();

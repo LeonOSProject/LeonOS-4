@@ -21,6 +21,10 @@ void kernel_execution_unlock_irqrestore(uint64_t flags) { (void)flags; }
 void kernel_spin_lock(struct kernel_spinlock *lock) { (void)lock; }
 void kernel_spin_unlock(struct kernel_spinlock *lock) { (void)lock; }
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_sync.c"
+int storage_ext4_journal_commit(struct storage_volume *v, bool wait)
+{ (void)wait; assert(!v->ext4.journal); return 0; }
+int storage_ext4_journal_checkpoint(struct storage_volume *v)
+{ assert(!v->ext4.journal); return 0; }
 int main(void)
 {
     storage_io_async_context = true;

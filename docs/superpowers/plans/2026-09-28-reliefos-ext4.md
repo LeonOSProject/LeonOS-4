@@ -416,6 +416,12 @@ git commit -m "feat: read ext4 extents and legacy indirect files"
 
 ### 任务 7：实现 journal/JBD2 ordered metadata 和 recovery
 
+执行勘误（2026-09-29）：统一使用 `tools/tests/ext4_crash_replay_test.py`。
+任务 7 同时更新受接口影响的 T5/T6 host fixtures 和 storage_sync_test 显式依赖；
+在 storage.c 接线新模块。journal 状态包含动态分配的指针，因此同步修复
+storage_mount.c / storage_disk.c 的 root→ESP 拷贝及卸载释放，避免共享所有权。
+提前闭合任务 4 暂存问题：识别为 ext-family 的损坏镜像不再回退 legacy ext2。
+
 **目的：** 提供 Linux ext4 镜像的崩溃一致性和挂载恢复，这是写路径进入真实磁盘前的阻塞依赖。
 
 **文件：**

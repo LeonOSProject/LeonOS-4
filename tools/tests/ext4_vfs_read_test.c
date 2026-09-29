@@ -27,6 +27,7 @@ int main(int argc, char **argv)
         assert(n == expected && n && memcmp(got, want, n) == 0); pos += n;
     }
     fclose(f); assert(storage_inode_put(ref) == 0);
+    storage_ext4_journal_close(v);
     storage_ext4_cache_invalidate(v); free(v->ram_base); free(got); free(want);
     puts("PASS ext4 VFS inode hold/refresh/read/release");
 }

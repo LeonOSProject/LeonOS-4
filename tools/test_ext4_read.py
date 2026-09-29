@@ -23,7 +23,7 @@ def main():
         work = Path(directory)
         binary = work / "read-test"
         sources = [STORAGE / f"storage_ext4_{name}.c" for name in
-                   ("format", "checksum", "cache", "alloc", "extent", "ops")]
+                   ("format", "checksum", "cache", "alloc", "extent", "ops", "journal")]
         run(["cc", "-std=c11", "-O1", "-g", "-D_GNU_SOURCE",
              "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
              "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",

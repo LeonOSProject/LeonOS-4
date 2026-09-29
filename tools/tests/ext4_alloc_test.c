@@ -50,6 +50,9 @@
  *     kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_checksum.c \
  *     kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_cache.c \
  *     kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_alloc.c \
+ *     kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_extent.c \
+ *     kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_ops.c \
+ *     kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_journal.c \
  *     -o /tmp/reliefos-ext4-alloc-test
  *   ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 \
  *     /tmp/reliefos-ext4-alloc-test
@@ -82,6 +85,7 @@ static uint64_t test_read_commands, test_write_commands;
 static char console_log[16384];
 
 void *kernel_malloc(size_t size) { return malloc(size); }
+int storage_ext4_device_flush(const struct storage_volume *v) { (void)v; return 0; }
 void kernel_free(void *p) { free(p); }
 uint64_t mm_alloc_page(void) { return (uintptr_t)aligned_alloc(4096, 4096); }
 void mm_free_page(uint64_t p) { free((void *)(uintptr_t)p); }
@@ -1364,6 +1368,10 @@ static void case_commit_rollback(void)
     }
     /* The rolled-back run is available again. */
     assert(storage_ext4_alloc_blocks(volume, 11 * 64 - 2, 2, &first,
+                                     &allocated) == -RELIEFOS_EROFS);
+    assert(storage_ext4_cache_flush(volume) == 0);
+    assert(storage_ext4_mount(volume) == 0);
+    assert(storage_ext4_alloc_blocks(volume, 11 * 64 - 2, 2, &first,
                                      &allocated) == 0);
     assert(first == 11 * 64 - 2 && allocated == 2);
     assert(storage_ext4_read_group(volume, 10, &v10) == 0);
@@ -1428,7 +1436,7 @@ static void case_pin_discipline(void)
     patch_flip_byte(ibm_block(1), 5);
     storage_ext4_cache_invalidate(volume);
     assert(storage_ext4_alloc_inode(volume, false, &ino) == -RELIEFOS_EIO);
-    assert(storage_ext4_alloc_inode(volume, true, &ino) == -RELIEFOS_EIO);
+    assert(storage_ext4_alloc_inode(volume, true, &ino) == -RELIEFOS_EROFS);
     assert(storage_ext4_cache_read(volume, 300, buf) == 0);
 
     /* (c) a failing straddling write_group releases both block pins. */

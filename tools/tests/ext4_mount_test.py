@@ -179,6 +179,7 @@ def build_images(work: Path) -> dict[str, Path]:
     gd_csum = clone(work, full, "gd-csum.ext4")
     patch_flip_byte(gd_csum, gd_offset(full, 0, 4096) + GD_CHECKSUM)
     images["gd-checksum-broken"] = gd_csum
+    images["route-corrupt-metadata"] = gd_csum
 
     gd_group3 = clone(work, multi, "gd-group3.ext4")
     patch_flip_byte(gd_group3, gd_offset(multi, 3, 4096) + GD_CHECKSUM)
@@ -219,6 +220,10 @@ def build_images(work: Path) -> dict[str, Path]:
     feature_case("journal-recover", journal, SB_FEATURE_INCOMPAT, 0x4)
     feature_case("bare-recover", ext2, SB_FEATURE_INCOMPAT, 0x4)
     images["journal-clean"] = journal
+    bad_journal = clone(work, journal, "journal-corrupt.img")
+    journal_blocks = run_checked(["debugfs", "-R", "blocks <8>", str(journal)]).stdout.split()
+    patch_flip_byte(bad_journal, int(journal_blocks[0]) * 4096)
+    images["journal-corrupt"] = bad_journal
 
     # Root-route cases (storage_mount_ext_family): a policy-rejected image
     # must fail without the legacy ext2 fallback, while unrecognized images
@@ -263,8 +268,10 @@ CASE_ORDER = [
     "ro-unknown-rocompat-ext2shape",
     "journal-recover",
     "journal-clean",
+    "journal-corrupt",
     "bare-recover",
     "route-policy-reject",
+    "route-corrupt-metadata",
     "route-probe-fallback",
     "route-ext2-classify",
     "route-ext4",

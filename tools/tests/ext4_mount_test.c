@@ -181,6 +181,10 @@ static void storage_scan_nvme_controller(uint8_t bus, uint8_t slot, uint8_t func
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_format.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_checksum.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_cache.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_alloc.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_extent.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_ops.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_journal.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_mount.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_mount.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_sync.c"
@@ -339,6 +343,11 @@ static void case_ro(const char *image, uint32_t reason, uint8_t filesystem, cons
     assert(volume->filesystem == filesystem);
     assert(volume->read_only_reason == reason);
     assert(volume->ext4.block_size == 4096 && volume->ext4.blocks_count > 0);
+    if (reason != STORAGE_EXT4_READ_ONLY_NONE) {
+        uint64_t first; uint32_t allocated;
+        assert(storage_ext4_alloc_blocks(volume, 100, 1, &first, &allocated) == -RELIEFOS_EROFS);
+        assert(test_write_commands == 0);
+    }
     printf("PASS ext4 mount read-only: %s\n", label);
 }
 
@@ -386,6 +395,14 @@ static void case_route_probe_fallback(const char *image)
     assert(ext2_mount_calls == 1);
     assert(volume->filesystem == STORAGE_FILESYSTEM_EXT2);
     puts("PASS ext4 root route: unrecognized image still falls back to ext2_mount");
+}
+
+static void case_route_corrupt_metadata(const char *image)
+{
+    load_disk(image, 0, 0);
+    assert(storage_mount_ext_family(&g_volumes[0]) == -RELIEFOS_EIO);
+    assert(ext2_mount_calls == 0 && test_write_commands == 0);
+    puts("PASS corrupt ext metadata never falls back to legacy ext2");
 }
 
 static void case_route_ext2_classify(const char *image)
@@ -630,14 +647,17 @@ int main(int argc, char **argv)
         case_ro(image, STORAGE_EXT4_READ_ONLY_UNKNOWN_RO_COMPAT, STORAGE_FILESYSTEM_EXT4,
                 "UNKNOWN_RO_COMPAT on a classic ext2 shape");
     else if (!strcmp(test_case, "journal-recover"))
-        case_ro(image, STORAGE_EXT4_READ_ONLY_JOURNAL_NEEDS_RECOVERY, STORAGE_FILESYSTEM_EXT4,
-                "JOURNAL_NEEDS_RECOVERY");
+        case_ro(image, STORAGE_EXT4_READ_ONLY_NONE, STORAGE_FILESYSTEM_EXT4,
+                "empty journal recovered");
     else if (!strcmp(test_case, "journal-clean"))
         case_ro(image, STORAGE_EXT4_READ_ONLY_NONE, STORAGE_FILESYSTEM_EXT4, "clean journal");
+    else if (!strcmp(test_case, "journal-corrupt"))
+        case_ro(image, STORAGE_EXT4_READ_ONLY_JOURNAL_CORRUPT, STORAGE_FILESYSTEM_EXT4, "corrupt journal");
     else if (!strcmp(test_case, "bare-recover"))
         case_ro(image, STORAGE_EXT4_READ_ONLY_JOURNAL_NEEDS_RECOVERY, STORAGE_FILESYSTEM_EXT4,
                 "bare RECOVER without HAS_JOURNAL");
     else if (!strcmp(test_case, "route-policy-reject")) case_route_policy_reject(image);
+    else if (!strcmp(test_case, "route-corrupt-metadata")) case_route_corrupt_metadata(image);
     else if (!strcmp(test_case, "route-probe-fallback")) case_route_probe_fallback(image);
     else if (!strcmp(test_case, "route-ext2-classify")) case_route_ext2_classify(image);
     else if (!strcmp(test_case, "route-ext4")) case_route_ext4(image);
