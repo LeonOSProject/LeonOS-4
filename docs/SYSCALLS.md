@@ -207,7 +207,7 @@ or AF_UNIX service protocols. What the kernel still accepts, keyed by the
   `struct leonos_driver_control`; administrator tasks only. Ordinary clients
   go through devmand instead (`system_driver_list()`/
   `system_driver_control()`).
-- `/dev/diskN` and partition nodes: Linux `BLKGETSIZE64`, `BLKGETSIZE`,
+- `/dev/sdX`, `/dev/sdXN`, and `/dev/nvmeXnY[pZ]` nodes: Linux `BLKGETSIZE64`, `BLKGETSIZE`,
   `BLKSSZGET`, `BLKROGET`, `BLKROSET`, `BLKRRPART`.
 - `/dev/input/event0` and `event1`: Linux `struct input_event` records via
   `read(2)`; the kernel implements `EVIOCGVERSION`, `EVIOCGID`, `EVIOCGNAME`,
@@ -373,4 +373,3 @@ errors, lifecycle and concurrency cases remain itemized in the ABI ledger.
 - File-backed mappings, INET servers/UDP/IPv6, PTY lock/hangup, event APIs and
   all remaining audit rows are still in scope. AP user scheduling is disabled;
   BSP preemption tests do not establish SMP compatibility.
-

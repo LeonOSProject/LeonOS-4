@@ -13,7 +13,7 @@ before the tests exist):
   M2      exec drops TASK_FLAG_SERVICE / TASK_FLAG_WINDOW_SERVER
   M4      setuid-root exec observed through AT_SECURE, the euid transition
           and PR_GET_DUMPABLE; no_new_privs blocking setid
-  M10     raw block device reads (/dev/disk0) denied without the installer
+  M10     raw block device reads (/dev/sda) denied without the installer
           root bypass, for non-root and for installed-system root
   M17     forged SCM_CREDENTIALS over a unix socket rejected
   M1(c)   case-variant path impersonation: authority rides on the inode's
@@ -184,8 +184,8 @@ def check_m1c_case_variant(guest):
 
 
 def check_m10_root_rawdisk(guest):
-    """M10: installed-system root (no installer root) reads /dev/disk0."""
-    guest.sh("/tmp/pp rd m10r /dev/disk0", "PR m10r ")
+    """M10: installed-system root (no installer root) reads /dev/sda."""
+    guest.sh("/tmp/pp rd m10r /dev/sda", "PR m10r ")
     fields = guest.one("m10r")
     assert (num(fields, "open_errno") == 13 or num(fields, "read_errno") == 13), (
         f"raw disk read not denied: {fields}")
@@ -319,7 +319,7 @@ def check_m4_no_new_privs(guest):
 
 def check_m10_nonroot_rawdisk(guest):
     """M10: non-root read of the raw disk device node fails with EACCES."""
-    guest.sh("/tmp/pp rd m10u /dev/disk0", "PR m10u ")
+    guest.sh("/tmp/pp rd m10u /dev/sda", "PR m10u ")
     fields = guest.one("m10u")
     assert (num(fields, "open_errno") == 13 or num(fields, "read_errno") == 13), (
         f"non-root raw disk read not denied: {fields}")

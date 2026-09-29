@@ -22,6 +22,15 @@ int storage_disk_block_info(uint32_t disk, int32_t part, uint64_t *start, uint64
     *count = part < 0 ? 131072 : 32768;
     return 0;
 }
+/* sysfs.c is compiled as a standalone host fixture, so provide the same
+ * deterministic spelling that the real storage mount module exports. */
+int storage_disk_device_name(uint32_t disk, int32_t part, char *out, uint32_t capacity)
+{
+    int written;
+    if (!out || capacity == 0 || disk != 0 || part < -1 || part >= 128) return -2;
+    written = snprintf(out, capacity, "/dev/sda%s", part < 0 ? "" : "1");
+    return written < 0 || (uint32_t)written >= capacity ? -22 : 0;
+}
 uint32_t smp_cpu_count(void) { return fixture_cpus; }
 bool smp_cpu_online(uint32_t cpu)
 {
@@ -90,14 +99,14 @@ int main(void)
     char value[16384];
     struct storage_node node;
     assert(proc_lookup("/sys/dev/block", &node) == 0 && node.type == RELIEFOS_FS_TYPE_DIR);
-    read_value("/sys/devices/platform/leonos-block/disk0/dev", value, sizeof(value));
+    read_value("/sys/devices/platform/leonos-block/sda/dev", value, sizeof(value));
     assert(!strcmp(value, "259:0\n"));
-    read_value("/sys/devices/platform/leonos-block/disk0/disk0p1/partition", value, sizeof(value));
+    read_value("/sys/devices/platform/leonos-block/sda/sda1/partition", value, sizeof(value));
     assert(!strcmp(value, "1\n"));
-    read_value("/sys/devices/platform/leonos-block/disk0/disk0p1/size", value, sizeof(value));
+    read_value("/sys/devices/platform/leonos-block/sda/sda1/size", value, sizeof(value));
     assert(!strcmp(value, "32768\n"));
-    read_value("/sys/devices/platform/leonos-block/disk0/uevent", value, sizeof(value));
-    assert(!strcmp(value, "MAJOR=259\nMINOR=0\nDEVNAME=disk0\nDEVTYPE=disk\n"));
+    read_value("/sys/devices/platform/leonos-block/sda/uevent", value, sizeof(value));
+    assert(!strcmp(value, "MAJOR=259\nMINOR=0\nDEVNAME=sda\nDEVTYPE=disk\n"));
     assert(proc_readlink("/sys/dev/block/259:1", value, sizeof(value)) > 0);
     read_value("/proc/sys/kernel/ostype", value, sizeof(value));
     assert(!strcmp(value, "ReliefNT\n"));

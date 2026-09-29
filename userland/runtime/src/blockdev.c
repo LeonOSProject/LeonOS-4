@@ -289,15 +289,31 @@ static int block_open_info(const char *path, int writable, int *out_fd,
 
 static int block_disk_index(const char *path, uint32_t *out_index)
 {
-    const char *digits;
-    char *end;
-    unsigned long index;
-    if (!path || !out_index || strncmp(path, "/dev/disk", 9) != 0) return -BLOCK_EINVAL;
-    digits = path + 9;
-    if (!digits[0] || strchr(digits, 'p')) return -BLOCK_EINVAL;
-    index = strtoul(digits, &end, 10);
-    if (*end || index >= RELIEFOS_BLOCK_MAX_DISKS) return -BLOCK_EINVAL;
-    *out_index = (uint32_t)index;
+    const char *p;
+    uint32_t value = 0;
+    if (!path || !out_index || strncmp(path, "/dev/", 5) != 0) return -BLOCK_EINVAL;
+    p = path + 5;
+    if (p[0] == 's' && p[1] == 'd' && p[2] >= 'a' && p[2] <= 'z') {
+        uint32_t letters = 0;
+        do {
+            if (*p < 'a' || *p > 'z') return -BLOCK_EINVAL;
+            letters = letters * 26u + (uint32_t)(*p - 'a' + 1u);
+            ++p;
+        } while (*p >= 'a' && *p <= 'z');
+        if (*p) return -BLOCK_EINVAL;
+        *out_index = letters - 1u;
+        return 0;
+    }
+    if (strncmp(p, "nvme", 4) != 0) return -BLOCK_EINVAL;
+    p += 4;
+    if (*p < '0' || *p > '9') return -BLOCK_EINVAL;
+    while (*p >= '0' && *p <= '9') {
+        value = value * 10u + (uint32_t)(*p++ - '0');
+    }
+    if (*p++ != 'n' || *p < '1' || *p > '9') return -BLOCK_EINVAL;
+    while (*p >= '0' && *p <= '9') ++p;
+    if (*p) return -BLOCK_EINVAL;
+    *out_index = value;
     return 0;
 }
 
@@ -311,7 +327,7 @@ int reliefos_block_partition_path(const char *disk_path, uint32_t index,
     length = (uint32_t)strlen(disk_path);
     if (length + 8u >= capacity) return -BLOCK_EINVAL;
     memcpy(out, disk_path, length);
-    if (strncmp(disk_path, "/dev/nvme", 9) == 0 || strncmp(disk_path, "/dev/disk", 9) == 0)
+    if (strncmp(disk_path, "/dev/nvme", 9) == 0)
         out[length++] = 'p';
     {
         char digits[12];
@@ -605,7 +621,7 @@ int reliefos_block_list_disks(struct reliefos_block_disk_info *disks, uint32_t c
     for (uint32_t index = 0; index < RELIEFOS_BLOCK_MAX_DISKS; ++index) {
         char path[RELIEFOS_BLOCK_PATH_LEN];
         struct reliefos_block_disk_info info;
-        snprintf(path, sizeof(path), "/dev/disk%u", index);
+        snprintf(path, sizeof(path), "/dev/sd%c", (char)('a' + index));
         int ret = reliefos_block_get_info(path, &info);
         if (ret < 0) {
             if (ret != -BLOCK_ENOENT && !first_error) first_error = ret;
@@ -614,6 +630,24 @@ int reliefos_block_list_disks(struct reliefos_block_disk_info *disks, uint32_t c
         info.id = index;
         if (count < capacity) disks[count] = info;
         ++count;
+    }
+    for (uint32_t controller = 0; controller < RELIEFOS_BLOCK_MAX_DISKS; ++controller) {
+        for (uint32_t namespace_id = 1; namespace_id <= RELIEFOS_BLOCK_MAX_PARTITIONS / 16u;
+             ++namespace_id) {
+            char path[RELIEFOS_BLOCK_PATH_LEN];
+            struct reliefos_block_disk_info info;
+            snprintf(path, sizeof(path), "/dev/nvme%un%u", controller, namespace_id);
+            int ret = reliefos_block_get_info(path, &info);
+            if (ret < 0) {
+                if (ret != -BLOCK_ENOENT && !first_error) first_error = ret;
+                continue;
+            }
+            info.id = count;
+            if (count < capacity) disks[count] = info;
+            ++count;
+            if (count >= RELIEFOS_BLOCK_MAX_DISKS) break;
+        }
+        if (count >= RELIEFOS_BLOCK_MAX_DISKS) break;
     }
     *out_count = count;
     return first_error;

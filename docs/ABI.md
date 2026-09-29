@@ -104,8 +104,8 @@ The runtime exposes a synthetic devfs namespace. Common nodes are
 `/dev/tty` (`tty1`–`tty6`), `/dev/console`, `/dev/kmsg`,
 `/dev/ptmx` and `/dev/pts/<id>`, `/dev/fb0`, `/dev/gpu`, `/dev/dsp` (aliased
 `/dev/audio`), `/dev/serial0` (aliased `/dev/ttyS0`), `/dev/ethernet0`,
-`/dev/rtc`, `/dev/driverctl`, `/dev/shm0`, `/dev/disk0` (aliased `/dev/sda`,
-`/dev/vda`, `/dev/nvme0n1`), and `/dev/input/event0`/`event1`.
+`/dev/rtc`, `/dev/driverctl`, `/dev/shm0`, Linux-style storage nodes such as
+`/dev/sda` and `/dev/nvme0n1`, and `/dev/input/event0`/`event1`.
 `/dev/stdin`, `/dev/stdout`, and `/dev/stderr` alias the current process
 streams. `/dev/input`, `/dev/disk`, `/dev/pts`, and `/dev/shm` are
 directories and are enumerated through normal directory syscalls. Device
@@ -248,7 +248,10 @@ grant allowed permissions; an unchecked permission bit means no grant.
 
 ## Block Storage ABI
 
-Disk tools operate on `/dev/diskN` and `/dev/diskNpN`. They obtain capacity
+Disk tools operate on Linux-style `/dev/sdX`, `/dev/sdXN`, `/dev/nvmeXnY`, and
+`/dev/nvmeXnYpZ` nodes. Legacy `/dev/diskN` and `/dev/diskNpN` nodes are not
+created.
+They obtain capacity
 and sector geometry through `<linux/fs.h>` `BLKGETSIZE64` and `BLKSSZGET`,
 update GPT metadata with aligned raw I/O followed by `BLKRRPART`, and mount
 FAT32, exFAT, ext2 compatibility, or ext4 volumes with `<sys/mount.h>`

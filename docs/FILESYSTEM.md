@@ -42,12 +42,13 @@ the complete set of device nodes, including `/dev/null`, `/dev/zero`,
 `/dev/tty`, `/dev/console`, `/dev/fb0`, `/dev/input/event0`,
 `/dev/input/event1`, `/dev/dsp`, `/dev/serial0`, `/dev/ethernet0`, `/dev/gpu`,
 `/dev/rtc`, `/dev/driverctl`, `/dev/kmsg`, `/dev/ptmx`, and block-device
-aliases such as `/dev/disk0`, `/dev/sda`, `/dev/vda`, `/dev/nvme0n1`.
-The corresponding libc APIs open these paths before issuing device ioctls;
-legacy fd 3 calls are translated for older binaries.
+Linux-style block nodes are exposed as `/dev/sda`, `/dev/sdb`, and so on for
+ATA/SATA disks, and `/dev/nvme0n1`, `/dev/nvme1n1`, and so on for NVMe
+namespaces. Partitions use `/dev/sda1` and `/dev/nvme0n1p1` spelling.
+The corresponding libc APIs open these paths before issuing device ioctls.
 
-Whole disks and GPT partitions are exposed as `/dev/diskN` and
-`/dev/diskNpN` block nodes. They support sector-aligned `read`/`write`, and
+Whole disks and GPT partitions are exposed using those Linux block names. They
+support sector-aligned `read`/`write`, and
 the Linux UAPI requests `BLKGETSIZE64`, `BLKGETSIZE`, `BLKSSZGET`, `BLKROGET`
 and `BLKRRPART` from `<linux/fs.h>`. Raw sector reads/writes require an
 administrator (or the installer ISO's uid-0 shell); writes and partition-table

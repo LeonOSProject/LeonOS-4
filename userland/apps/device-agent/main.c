@@ -54,8 +54,9 @@ static void devmand_fill_device(const char *name, struct reliefos_device_info *o
     if (!strcmp(name, "fb0")) out->device_class = RELIEFOS_DEVICE_CLASS_DISPLAY;
     else if (!strcmp(name, "keyboard") || !strcmp(name, "mouse"))
         out->device_class = RELIEFOS_DEVICE_CLASS_INPUT;
-    else if (!strcmp(name, "sda") || !strcmp(name, "vda") ||
-             !strcmp(name, "nvme0n1") || !strcmp(name, "disk0"))
+    else if (!strcmp(name, "sda") ||
+             (name[0] == 's' && name[1] == 'd') ||
+             (name[0] == 'n' && name[1] == 'v' && name[2] == 'm' && name[3] == 'e'))
         out->device_class = RELIEFOS_DEVICE_CLASS_STORAGE;
     else if (!strcmp(name, "dsp") || !strcmp(name, "audio"))
         out->device_class = RELIEFOS_DEVICE_CLASS_AUDIO;

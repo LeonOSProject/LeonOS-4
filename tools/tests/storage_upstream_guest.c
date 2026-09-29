@@ -121,7 +121,7 @@ static void check_tmpfs(void)
 }
 static void check_block_io(void)
 {
-    int fd=open("/dev/disk0p1",O_RDWR);
+    int fd=open("/dev/sda1",O_RDWR);
     unsigned char *data=malloc(1<<20), *got=malloc(1<<20);
     if (fd<0 || !data || !got) { check(0,"block transfer setup"); close(fd); free(data); free(got); return; }
     memset(data,0xa5,1<<20);
@@ -234,9 +234,9 @@ int main(void)
     RUN("mount version", NULL, "util-linux 2.41.6", "/bin/mount", "--version");
     RUN("mount listing", NULL, " on /", "/bin/mount");
     RUN("lsblk inventory", NULL, "blockdevices", "/bin/lsblk", "--json", "--output", "NAME,TYPE");
-    RUN("lsblk actual disk and partition",NULL,"disk0p1","/bin/lsblk","--bytes","--output","NAME,TYPE,SIZE,MAJ:MIN");
+    RUN("lsblk actual disk and partition",NULL,"sda1","/bin/lsblk","--bytes","--output","NAME,TYPE,SIZE,MAJ:MIN");
     struct stat disk_stat;
-    check(stat("/dev/disk0p1",&disk_stat)==0 && S_ISBLK(disk_stat.st_mode) &&
+    check(stat("/dev/sda1",&disk_stat)==0 && S_ISBLK(disk_stat.st_mode) &&
           major(disk_stat.st_rdev)==259 && minor(disk_stat.st_rdev)==1,"block stat device number matches sysfs");
     RUN("fsck dispatcher", NULL, "fsck.ext2", "/usr/sbin/fsck", "-N", "-t", "ext2", "/tmp/storage-test.img");
     if (make_file("/tmp/storage-test.img", 64 << 20)) {
@@ -260,8 +260,8 @@ int main(void)
     }
     unlink("/tmp/storage-test.img");
     check_block_io();
-    RUN("mkfs ext2 on AHCI partition",NULL,NULL,"/usr/sbin/mkfs.ext2","-F","/dev/disk0p1");
-    RUN("fsck ext2 on AHCI partition",NULL,NULL,"/usr/sbin/fsck.ext2","-n","/dev/disk0p1");
+    RUN("mkfs ext2 on AHCI partition",NULL,NULL,"/usr/sbin/mkfs.ext2","-F","/dev/sda1");
+    RUN("fsck ext2 on AHCI partition",NULL,NULL,"/usr/sbin/fsck.ext2","-n","/dev/sda1");
     mkdir("/tmp/storage-mount", 0700);
     RUN("mount tmpfs", NULL, NULL, "/bin/mount", "-t", "tmpfs", "tmpfs", "/tmp/storage-mount");
     check_tmpfs();

@@ -6,7 +6,7 @@ static int fail_open, fail_ioctl, fail_seek, fail_io;
 int open(const char *path, int flags, ...)
 {
     (void)flags;
-    if (fail_open || strcmp(path, "/dev/disk0")) {
+    if (fail_open || strcmp(path, "/dev/sda")) {
         errno = fail_open ? EACCES : ENOENT;
         return -1;
     }
@@ -52,9 +52,9 @@ int main(void)
     assert(reliefos_block_list_disks(disks, RELIEFOS_BLOCK_MAX_DISKS, &count) == 0);
     assert(count == 1 && disks[0].sector_count == 4194304 && disks[0].sector_size == 512);
     fail_open = 1;
-    assert(reliefos_block_get_info("/dev/disk0", disks) == -EACCES);
+    assert(reliefos_block_get_info("/dev/sda", disks) == -EACCES);
     fail_open = 0; fail_ioctl = 1;
-    assert(reliefos_block_get_info("/dev/disk0", disks) == -EIO);
+    assert(reliefos_block_get_info("/dev/sda", disks) == -EIO);
     assert(block_reread(42) == -EIO);
     fail_ioctl = 0;
     char buffer[512];
