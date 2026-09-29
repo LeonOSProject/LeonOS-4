@@ -56,8 +56,9 @@ class ImageToolsTests(unittest.TestCase):
 
     def test_embedded_tools_and_library_bytes_match_staging(self):
         paths = ("bin/busybox", "usr/sbin/fdisk", "usr/sbin/sfdisk", "bin/mount", "bin/umount",
-                 "bin/lsblk", "usr/sbin/blkid", "usr/sbin/fsck", "usr/sbin/mkfs.ext2",
-                 "usr/sbin/fsck.ext2", "usr/sbin/mkfs.fat", "usr/sbin/fsck.fat",
+                 "bin/lsblk", "usr/sbin/blkid", "usr/sbin/fsck", "usr/sbin/mkfs.ext4",
+                 "usr/sbin/fsck.ext4", "usr/sbin/mkfs.ext2", "usr/sbin/fsck.ext2",
+                 "usr/sbin/mkfs.fat", "usr/sbin/fsck.fat",
                  "usr/sbin/mkfs.exfat", "usr/sbin/fsck.exfat", "usr/sbin/leonos-grub-installer",
                  "usr/lib/libfdisk.so.1", "usr/lib/libuuid.so.1", "usr/lib/libsmartcols.so.1",
                  "usr/lib/libmount.so.1", "usr/lib/libblkid.so.1")

@@ -67,9 +67,9 @@ class StorageRuntimeTests(unittest.TestCase):
         self.assertIsInstance(json.loads(result.stdout)["blockdevices"], list)
 
     def test_fsck_dry_run_resolves_a_filesystem_checker(self):
-        result = self.tool(UTIL, "usr/sbin/fsck", "-N", "-t", "ext2", "/dev/nonexistent-reliefos-test")
+        result = self.tool(UTIL, "usr/sbin/fsck", "-N", "-t", "ext4", "/dev/nonexistent-reliefos-test")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("fsck.ext2", result.stdout)
+        self.assertIn("fsck.ext4", result.stdout)
 
 
 if __name__ == "__main__":

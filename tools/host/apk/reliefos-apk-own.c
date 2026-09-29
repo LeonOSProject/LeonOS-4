@@ -184,7 +184,7 @@ static int load_rules(struct state *state, const char *policy_path, json_value *
             "usr/lib/libblkid.so.1", "usr/lib/libmount.so.1"
         };
         static const char *const filesystem_commands[] = {
-            "usr/sbin/mkfs.ext2", "usr/sbin/fsck.ext2", "usr/sbin/mkfs.fat",
+            "usr/sbin/mkfs.ext4", "usr/sbin/fsck.ext4", "usr/sbin/mkfs.ext2", "usr/sbin/fsck.ext2", "usr/sbin/mkfs.fat",
             "usr/sbin/fsck.fat", "usr/sbin/mkfs.exfat", "usr/sbin/fsck.exfat"
         };
         size_t item;
