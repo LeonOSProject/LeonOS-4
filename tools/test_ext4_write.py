@@ -14,7 +14,7 @@ def build(work):
          "-Ikernel/reliefnt/include/uapi", "-Ikernel/reliefnt/kernel/reliefnt/include",
          "-include", str(STORAGE / "storage_internal.h"), "tools/tests/ext4_write_test.c",
          *[str(STORAGE / f"storage_ext4_{n}.c") for n in
-           ("format", "checksum", "cache", "alloc", "extent", "ops", "journal")], "-o", str(binary)])
+           ("format", "checksum", "cache", "alloc", "extent", "ops", "xattr", "journal")], "-o", str(binary)])
     return binary
 
 def main():

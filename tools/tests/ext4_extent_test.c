@@ -238,7 +238,8 @@ static void image_test(char **argv)
     assert(storage_ext4_fiemap(&volume, ino, 31, 100, maps, 1, &count) == 0);
     assert(count == 1 && maps[0].logical == 31 && maps[0].length == 100);
     assert(!(maps[0].flags & EXT4_FIEMAP_LAST));
-    assert(storage_ext4_fiemap(&volume, ino, in.size, UINT64_MAX, maps, 128, &count) == 0 && count == 0);
+    assert(storage_ext4_fiemap(&volume, ino, (in.size+sb.block_size-1)/sb.block_size*sb.block_size,
+                              UINT64_MAX, maps, 128, &count) == 0 && count == 0);
     if (sb.feature_ro_compat & 0x400) {
         /* Break a real inode checksum, not a synthetic mirror of the parser. */
         struct storage_ext4_group_view group;

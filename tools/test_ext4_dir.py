@@ -17,7 +17,7 @@ def main():
              "-Ikernel/reliefnt/include/uapi","-Ikernel/reliefnt/kernel/reliefnt/include",
              "-include",str(STORAGE/"storage_internal.h"),"tools/tests/ext4_dir_test.c",
              *[str(STORAGE/f"storage_ext4_{n}.c") for n in
-               ("format","checksum","cache","alloc","extent","ops","journal","dir")],"-lext2fs","-o",str(binary)])
+               ("format","checksum","cache","alloc","extent","ops","xattr","journal","dir")],"-lext2fs","-o",str(binary)])
         stage=work/"stage"; (stage/"linux").mkdir(parents=True)
         for i in range(1000): (stage/"linux"/f"linux-file-{i:05d}").touch()
         for bs in (1024,4096):

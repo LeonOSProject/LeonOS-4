@@ -89,6 +89,7 @@ int storage_ext4_device_flush(const struct storage_volume *v) { (void)v; return 
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_alloc.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_extent.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_ops.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_xattr.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_journal.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_dir.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_mount.c"

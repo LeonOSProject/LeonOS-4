@@ -50,6 +50,11 @@ int main(int argc, char **argv)
     }
     check(storage_ext4_fallocate(&volume, ino, 1, bs*710, bs*20));
     check(storage_ext4_read_inode(&volume, ino, &in)); assert(in.size == 698*bs+96);
+    struct storage_ext4_fiemap_extent preallocated[32]; uint32_t nr;
+    check(storage_ext4_fiemap(&volume,ino,710*bs,20*bs,preallocated,32,&nr));
+    uint64_t mapped=0; for (unsigned i=0;i<nr;i++) mapped+=preallocated[i].length;
+    assert(nr && mapped==20*bs);
+    if (in.flags&EXT4_EXTENTS_FL) for (unsigned i=0;i<nr;i++) assert(preallocated[i].flags&EXT4_FIEMAP_UNWRITTEN);
     memset(out, 0xa7, bs*9+121);
     check(storage_ext4_write_file_range(&volume, ino, bs*713+31, out, bs*9+121, &done));
     memcpy(expected+bs*713+31, out, done);

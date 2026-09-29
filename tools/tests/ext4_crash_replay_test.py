@@ -33,7 +33,7 @@ def main():
              "-include", str(storage / "storage_internal.h"),
              "tools/tests/ext4_journal_test.c",
              *[str(storage / f"storage_ext4_{name}.c") for name in
-               ("format", "checksum", "cache", "alloc", "extent", "ops", "journal")],
+               ("format", "checksum", "cache", "alloc", "extent", "ops", "xattr", "journal")],
              "-o", str(binary)])
         vfs = work / "vfs-read"
         run(["cc", "-std=c11", "-O1", "-g", "-fsanitize=address,undefined",

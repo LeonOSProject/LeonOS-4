@@ -184,6 +184,7 @@ static void storage_scan_nvme_controller(uint8_t bus, uint8_t slot, uint8_t func
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_alloc.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_extent.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_ops.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_xattr.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_journal.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_mount.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_mount.c"
