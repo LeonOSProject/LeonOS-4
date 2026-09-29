@@ -47,6 +47,31 @@ static int fat32_read_fat_entry(uint32_t cluster, uint32_t *out)
 static int exfat_bitmap_get_cached(uint32_t cluster, uint8_t *out)
 { *out = cluster != 3 && cluster != 5; return read_error; }
 
+/* Unit-test boundaries follow the unified backend; full-facade ext4_vfs_test
+ * independently checks these operations against checksummed real images. */
+int storage_ext4_check_node(struct storage_volume *v,const struct storage_node *node,struct ext4_inode_view *out)
+{
+    (void)v; struct ext2_inode raw; int ret=ext2_read_inode(node->first_cluster,&raw); if (ret<0) return ret;
+    *out=(struct ext4_inode_view){.mode=raw.mode,.uid=raw.uid|((uint32_t)raw.osd2[4]<<16)|((uint32_t)raw.osd2[5]<<24),
+        .gid=raw.gid|((uint32_t)raw.osd2[6]<<16)|((uint32_t)raw.osd2[7]<<24),.links_count=raw.links_count,
+        .size=raw.size_lo|((uint64_t)raw.size_high<<32),.blocks=raw.blocks_512,
+        .atime=raw.atime,.mtime=raw.mtime,.ctime=raw.ctime}; memcpy(out->i_block_raw,raw.block,60); return 0;
+}
+int storage_ext4_write_inode(struct storage_volume *v,uint64_t ino,const struct ext4_inode_view *in)
+{
+    (void)v; struct ext2_inode raw; int ret=ext2_read_inode(ino,&raw); if (ret<0) return ret;
+    raw.mode=in->mode; raw.uid=in->uid; raw.gid=in->gid; raw.atime=in->atime; raw.mtime=in->mtime; raw.ctime=in->ctime;
+    raw.osd2[4]=in->uid>>16; raw.osd2[5]=in->uid>>24; raw.osd2[6]=in->gid>>16; raw.osd2[7]=in->gid>>24;
+    return ext2_write_inode(ino,&raw);
+}
+int storage_ext4_journal_start(struct storage_volume *v,uint32_t credits,struct storage_ext4_handle *h)
+{ assert(locked); *h=(struct storage_ext4_handle){v,credits,true}; return 0; }
+void storage_ext4_journal_abort(struct storage_ext4_handle *h,int error) { (void)h;(void)error; }
+int storage_ext4_journal_stop(struct storage_ext4_handle *h) { assert(h->active); h->active=false; return 0; }
+uint32_t ext4_get_le32(const uint8_t *p)
+{ return p[0]|((uint32_t)p[1]<<8)|((uint32_t)p[2]<<16)|((uint32_t)p[3]<<24); }
+const struct storage_ext4_operations storage_ext4_ops={0};
+
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_permissions.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_statfs.c"
 
@@ -62,6 +87,7 @@ int main(int argc, char **argv)
     g_storage.kind = STORAGE_VOLUME_AHCI;
     g_storage.filesystem = STORAGE_FILESYSTEM_EXT2;
     g_storage.ext2_block_size = 1024;
+    g_storage.ext4.block_size = 1024;
     g_storage.ext2_inode_size = super.inode_size;
     g_storage.ext2_inodes_per_group = super.inodes_per_group;
     g_storage.ext2_group_count = (super.blocks_count - super.first_data_block + super.blocks_per_group - 1) / super.blocks_per_group;

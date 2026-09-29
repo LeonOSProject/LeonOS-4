@@ -220,7 +220,7 @@ static void test_fileop_validation(void)
     assert(sudo_fileop_check(OP_LIST, "/proc/self", NULL) < 0);
     assert(sudo_fileop_check(OP_LIST, "/sys/kernel", NULL) < 0);
     assert(sudo_fileop_check(OP_LIST, "/dev", NULL) < 0);
-    assert(sudo_fileop_check(OP_LIST, "/dev/disk0", NULL) < 0);
+    assert(sudo_fileop_check(OP_LIST, "/dev/sda", NULL) < 0);
     assert(sudo_fileop_check(OP_RENAME, "/root/a", "/proc/x") < 0);
     /* A prefix match must not degrade into a substring match. */
     assert(sudo_fileop_check(OP_LIST, "/process", NULL) == 0);

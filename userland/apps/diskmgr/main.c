@@ -55,7 +55,7 @@ static char create_label_text[RELIEFOS_BLOCK_NAME_LEN] = "Data";
 static struct reliefos_ui_edit_state confirm_edit;
 static struct reliefos_ui_edit_state create_size_edit;
 static struct reliefos_ui_edit_state create_label_edit;
-static uint32_t selected_filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXFAT;
+static uint32_t selected_filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXT4;
 static uint32_t action_mode;
 static uint8_t action_armed;
 static uint8_t filesystem_dropdown_open;
@@ -203,6 +203,9 @@ static const char *filesystem_label(uint32_t filesystem)
     }
     if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2) {
         return "ext2";
+    }
+    if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT4) {
+        return "ext4";
     }
     if (filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXFAT) {
         return "exFAT";
@@ -362,6 +365,7 @@ static int selected_partition_mountable(void)
     return index >= 0 && selected_disk_mutable() &&
            (partitions[index].filesystem == RELIEFOS_BLOCK_FILESYSTEM_FAT32 ||
             partitions[index].filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2 ||
+            partitions[index].filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT4 ||
             partitions[index].filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXFAT);
 }
 
@@ -501,17 +505,20 @@ static void open_action(uint32_t mode)
     action_mode = mode;
     if (mode == DISKMGR_ACTION_FORMAT && part_index >= 0 &&
         (partitions[part_index].filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2 ||
+         partitions[part_index].filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT4 ||
          partitions[part_index].filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXFAT)) {
-        selected_filesystem = partitions[part_index].filesystem;
+        selected_filesystem = partitions[part_index].filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2
+                                  ? RELIEFOS_BLOCK_FILESYSTEM_EXT4
+                                  : partitions[part_index].filesystem;
     } else if (mode == DISKMGR_ACTION_CREATE) {
-        selected_filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXFAT;
+        selected_filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXT4;
         copy_text(create_size_text, sizeof(create_size_text), "512");
         copy_text(create_label_text, sizeof(create_label_text), "Data");
         reliefos_ui_edit_state_init(&create_size_edit, create_size_text, sizeof(create_size_text));
         reliefos_ui_edit_state_init(&create_label_edit, create_label_text, sizeof(create_label_text));
         create_size_edit.focused = 1;
     } else {
-        selected_filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXFAT;
+        selected_filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXT4;
     }
     confirm_edit.focused = mode != DISKMGR_ACTION_CREATE;
     copy_text(status_text, sizeof(status_text),
@@ -590,7 +597,7 @@ static void mount_selected_partition(void)
     uint32_t pos = 0;
     if (disk_index < 0 || part_index < 0 || !selected_partition_mountable()) {
         copy_text(status_text, sizeof(status_text),
-                  T("Select an unmounted exFAT, FAT32, or ext2 data partition"));
+                  T("Select an unmounted exFAT, FAT32, ext4, or legacy ext2 data partition"));
         return;
     }
     if (!reliefos_admin_elevate()) {
@@ -672,7 +679,7 @@ static void draw_action_panel(struct reliefos_ui_surface *ui)
     static const struct reliefos_ui_dropdown_item filesystem_items[] = {
         {"exFAT", RELIEFOS_BLOCK_FILESYSTEM_EXFAT, 0},
         {"FAT32", RELIEFOS_BLOCK_FILESYSTEM_FAT32, 0},
-        {"ext2", RELIEFOS_BLOCK_FILESYSTEM_EXT2, 0},
+        {"ext4", RELIEFOS_BLOCK_FILESYSTEM_EXT4, 0},
     };
     uint32_t y = action_panel_y();
     uint32_t height = action_panel_height();
@@ -820,7 +827,7 @@ static void draw_diskmgr(struct reliefos_ui_surface *ui)
         reliefos_ui_groupbox(ui, 16, y, view_w > 32u ? view_w - 32u : 1u, action_panel_height(),
                            T("Partition safety"));
         reliefos_ui_text_clipped(ui, 30, y + 22, view_w > 60u ? view_w - 60u : 1u,
-                               T("Mount exFAT, FAT32, or ext2 data partitions at stable /mnt paths."),
+                               T("Mount exFAT, FAT32, ext4, or legacy ext2 data partitions at stable /mnt paths."),
                                RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
         reliefos_ui_text_clipped(ui, 30, y + 46, view_w > 60u ? view_w - 60u : 1u,
                                T("Unmount requires administrator approval and no task may use the mount."),
@@ -841,7 +848,7 @@ static int select_filesystem_from_dropdown(int32_t x, int32_t y)
     static const struct reliefos_ui_dropdown_item filesystem_items[] = {
         {"exFAT", RELIEFOS_BLOCK_FILESYSTEM_EXFAT, 0},
         {"FAT32", RELIEFOS_BLOCK_FILESYSTEM_FAT32, 0},
-        {"ext2", RELIEFOS_BLOCK_FILESYSTEM_EXT2, 0},
+        {"ext4", RELIEFOS_BLOCK_FILESYSTEM_EXT4, 0},
     };
     uint32_t selected = 0;
     if (!filesystem_dropdown_open) {
@@ -853,7 +860,7 @@ static int select_filesystem_from_dropdown(int32_t x, int32_t y)
         return 0;
     }
     if (selected == RELIEFOS_BLOCK_FILESYSTEM_FAT32 ||
-        selected == RELIEFOS_BLOCK_FILESYSTEM_EXT2 ||
+        selected == RELIEFOS_BLOCK_FILESYSTEM_EXT4 ||
         selected == RELIEFOS_BLOCK_FILESYSTEM_EXFAT) {
         selected_filesystem = selected;
     }

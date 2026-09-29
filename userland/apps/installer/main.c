@@ -901,6 +901,18 @@ static void reset_confirm(void)
 
 static char installer_root_uuid[37], installer_esp_uuid[37];
 
+static int installer_format_ext4(const char *path)
+{
+    char *const argv[] = { (char *)"mkfs.ext4", (char *)"-F", (char *)path, NULL };
+    pid_t child;
+    int status;
+    int ret = posix_spawnp(&child, "mkfs.ext4", NULL, NULL, argv, environ);
+    if (ret) return -ret;
+    while (waitpid(child, &status, 0) < 0 && errno == EINTR) {}
+    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) return -EIO;
+    return 0;
+}
+
 /* Commit fstab only after the root payload is copied; failure aborts install. */
 static int installer_write_fstab(void)
 {
@@ -908,7 +920,7 @@ static int installer_write_fstab(void)
     if (!installer_root_uuid[0] || !installer_esp_uuid[0]) return -EINVAL;
     int length = snprintf(text, sizeof(text),
         "# <source> <mountpoint> <type> <options> <dump> <pass>\n"
-        "/dev/disk/by-partuuid/%s / ext2 defaults 0 1\n"
+        "/dev/disk/by-partuuid/%s / ext4 defaults 0 1\n"
         "/dev/disk/by-partuuid/%s /boot vfat defaults 0 2\n",
         installer_root_uuid, installer_esp_uuid);
     if (length < 0 || (size_t)length >= sizeof(text)) return -EOVERFLOW;
@@ -953,11 +965,11 @@ static int installer_target_partitions(const char *disk_path, int fresh,
         if (ret < 0) return ret;
         root_mib = (uint32_t)((info.sector_count * info.sector_size) / (1024ULL * 1024ULL));
         /* Match main's install_write_gpt layout: a fixed 128 MiB ESP, then
-         * the ext2 root consumes the remaining usable GPT area. The extra
+         * the ext4 root consumes the remaining usable GPT area. The extra
          * 3 MiB reserve covers the primary/backup GPT and 1 MiB alignment
          * slop after the ESP. */
         if (root_mib > 256u) root_mib -= 131u; else root_mib = 64u;
-        ret = reliefos_block_gpt_create(disk_path, RELIEFOS_BLOCK_FILESYSTEM_EXT2,
+        ret = reliefos_block_gpt_create(disk_path, RELIEFOS_BLOCK_FILESYSTEM_EXT4,
                                       root_mib, "RELIEFOS_ROOT", &root);
         if (ret < 0) return ret;
         ret = reliefos_block_gpt_set_type(disk_path, root, RELIEFOS_BLOCK_GPT_LINUX);
@@ -969,8 +981,8 @@ static int installer_target_partitions(const char *disk_path, int fresh,
         if (ret < 0) return ret;
         ret = reliefos_block_format(esp_path, RELIEFOS_BLOCK_FILESYSTEM_FAT32, "RELIEFOS");
         if (ret < 0) return ret;
-        *root_filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXT2;
-        ret = reliefos_block_format(root_path, RELIEFOS_BLOCK_FILESYSTEM_EXT2, "RELIEFOS");
+        *root_filesystem = RELIEFOS_BLOCK_FILESYSTEM_EXT4;
+        ret = installer_format_ext4(root_path);
         if (!ret) ret = reliefos_block_partition_uuid(disk_path, root, installer_root_uuid);
         if (!ret) ret = reliefos_block_partition_uuid(disk_path, esp, installer_esp_uuid);
         return ret;
@@ -984,6 +996,7 @@ static int installer_target_partitions(const char *disk_path, int fresh,
                i, parts[i].path, parts[i].filesystem, parts[i].gpt_type);
         if (parts[i].filesystem == RELIEFOS_BLOCK_FILESYSTEM_FAT32 && esp == UINT32_MAX) esp = i;
         if ((parts[i].filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2 ||
+             parts[i].filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT4 ||
              parts[i].filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXFAT) && root == UINT32_MAX) root = i;
     }
     if (esp == UINT32_MAX || root == UINT32_MAX) {
@@ -1044,8 +1057,9 @@ static int installer_mount_targets(const char *disk_path, int fresh)
            root_filesystem);
     if (root_filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXFAT) {
         root_fs_name = "exfat";
-    } else if (root_filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2) {
-        root_fs_name = "ext2";
+    } else if (root_filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2 ||
+               root_filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT4) {
+        root_fs_name = root_filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT4 ? "ext4" : "ext2";
     }
     if (mount(root_path, INSTALL_ROOT_MOUNT, root_fs_name, 0, NULL) < 0) {
         printf("[installer.elf] mount root failed path=%s errno=%d\n", root_path, errno);
@@ -1454,7 +1468,7 @@ static void draw_confirm_page(struct reliefos_ui_surface *ui)
     reliefos_ui_text_clipped(ui, l.content_x, l.content_y + 130, l.content_w,
                            install_mode == INSTALL_MODE_UPDATE
                        ? T("Alpine packages and local configuration are retained. Boot files are updated after the package transaction succeeds.")
-                               : T("The selected disk will be erased and formatted with a FAT32 ESP and ext2 system root."),
+                               : T("The selected disk will be erased and formatted with a FAT32 ESP and ext4 system root."),
                            RELIEFOS_UI_BLACK, RELIEFOS_UI_WHITE);
     reliefos_ui_text(ui, l.content_x, l.content_y + 174,
                    install_mode == INSTALL_MODE_UPDATE
@@ -2322,7 +2336,7 @@ static int check_update_target_required(void)
         if (path_join(path, sizeof(path), INSTALL_ROOT_MOUNT, required_dirs[i]) < 0)
             return -ENAMETOOLONG;
         if (path_type_nofollow(path) != RELIEFOS_FS_TYPE_DIR) {
-            set_status(T("Unsupported root layout; use a fresh ext2 installation"), path);
+            set_status(T("Unsupported root layout; use a fresh ext4 installation"), path);
             return -EINVAL;
         }
     }
@@ -3249,7 +3263,7 @@ static void perform_install(int window_id, struct reliefos_ui_surface *ui)
     copy_done_bytes = 0;
 
     show_progress(window_id, ui, 2, "Preparing target disk", "");
-    show_progress(window_id, ui, 22, "Mounting target filesystems", "Root: /target (ext2 for new installs; exFAT or ext2 for updates), ESP: /target/boot (FAT32)");
+    show_progress(window_id, ui, 22, "Mounting target filesystems", "Root: /target (ext4 for new installs; ext4 or exFAT for updates), ESP: /target/boot (FAT32)");
     ret = installer_mount_targets(disks[selected_disk].path, 1);
     if (ret < 0) {
         finish_install(window_id, ui, ret, "Mount failed");
@@ -3328,7 +3342,7 @@ static void perform_update(int window_id, struct reliefos_ui_surface *ui)
          * them, so an update would silently produce an unusable namespace.
          * Refuse instead of materializing directory copies. */
         finish_install(window_id, ui, -38,
-                       T("exFAT root cannot carry the current symlink layout; use a fresh ext2 install"));
+                       T("exFAT root cannot carry the current symlink layout; use a fresh ext4 install"));
         return;
     }
 

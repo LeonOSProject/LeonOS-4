@@ -6,21 +6,21 @@
 
 static int parse_disk(const char *path)
 {
-    const char *digits;
-    char *end;
-    unsigned long value;
-    if (!path || strncmp(path, "/dev/disk", 9) != 0) {
-        return -1;
+    const char *p;
+    if (!path || strncmp(path, "/dev/", 5) != 0) return -1;
+    p = path + 5;
+    if (p[0] == 's' && p[1] == 'd' && p[2] >= 'a' && p[2] <= 'z') {
+        p += 2;
+        while (*p >= 'a' && *p <= 'z') ++p;
+        return *p ? -1 : 0;
     }
-    digits = path + 9;
-    if (!digits[0] || strchr(digits, 'p')) {
-        return -1;
-    }
-    value = strtoul(digits, &end, 10);
-    if (!end || *end || value >= RELIEFOS_BLOCK_MAX_DISKS) {
-        return -1;
-    }
-    return 0;
+    if (strncmp(p, "nvme", 4) != 0) return -1;
+    p += 4;
+    if (*p < '0' || *p > '9') return -1;
+    while (*p >= '0' && *p <= '9') ++p;
+    if (*p++ != 'n' || *p < '1' || *p > '9') return -1;
+    while (*p >= '0' && *p <= '9') ++p;
+    return *p ? -1 : 0;
 }
 
 static int confirm_initialization(const char *path)
@@ -46,11 +46,11 @@ int main(int argc, char **argv)
         path = argv[2];
         force = 1;
     } else {
-        puts("usage: gptinit [--force] /dev/diskN");
+        puts("usage: gptinit [--force] /dev/sdX or /dev/nvmeXnY");
         return 2;
     }
     if (parse_disk(path) < 0) {
-        puts("gptinit: expected a whole disk such as /dev/disk0");
+        puts("gptinit: expected a whole disk such as /dev/sda or /dev/nvme0n1");
         return 2;
     }
     if (!force && !confirm_initialization(path)) {

@@ -2,7 +2,7 @@
 # Validate real freshly built ELF outputs (never execute target programs).
 set -eu
 root=${1:?usage: upstream-products.sh UPSTREAM_ROOT}
-for entry in libmd/lib/libmd.so.0 libbsd/lib/libbsd.so.0 util-linux/bin/su util-linux/bin/mount util-linux/bin/lsblk util-linux/usr/sbin/fdisk sudo/usr/bin/sudo sudo/usr/lib/sudo/sudoers.so shadow/bin/login shadow/usr/sbin/useradd shadow/usr/sbin/usermod shadow/usr/sbin/userdel e2fsprogs/usr/sbin/mkfs.ext2 e2fsprogs/usr/sbin/fsck.ext2 dosfstools/usr/sbin/mkfs.fat dosfstools/usr/sbin/fsck.fat exfatprogs/usr/sbin/mkfs.exfat exfatprogs/usr/sbin/fsck.exfat; do
+for entry in libmd/lib/libmd.so.0 libbsd/lib/libbsd.so.0 util-linux/bin/su util-linux/bin/mount util-linux/bin/lsblk util-linux/usr/sbin/fdisk sudo/usr/bin/sudo sudo/usr/lib/sudo/sudoers.so shadow/bin/login shadow/usr/sbin/useradd shadow/usr/sbin/usermod shadow/usr/sbin/userdel e2fsprogs/usr/sbin/mkfs.ext4 e2fsprogs/usr/sbin/fsck.ext4 e2fsprogs/usr/sbin/mkfs.ext2 e2fsprogs/usr/sbin/fsck.ext2 dosfstools/usr/sbin/mkfs.fat dosfstools/usr/sbin/fsck.fat exfatprogs/usr/sbin/mkfs.exfat exfatprogs/usr/sbin/fsck.exfat; do
  pkg=${entry%%/*}; path=$root/$pkg/root/${entry#*/}
  test -f "$path"
  readelf -h "$path" | grep -q 'Advanced Micro Devices X86-64'

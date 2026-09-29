@@ -68,7 +68,7 @@ power policy. These older consumer tests need migration to the new sudo path.
 The QEMU checks click the real controls and require guest-originated RESET or
 SHUTDOWN events. A reboot must reach a second kernel boot; shutdown must exit
 QEMU. The installer case performs a full GUI install on a new 2 GiB test disk,
-ejects the ISO before clicking Restart, and checks the installed ext2 system
+ejects the ISO before clicking Restart, and checks the installed ext4 system
 reaches OOBE. It refuses to overwrite an existing test disk; use a fresh
 `--output` directory for repeat installations. Logs, screenshots and event
 records are saved under `build/power-regressions`.
@@ -140,8 +140,8 @@ Common build outputs (under `$(O)`, default `out/x86_64/release`):
 - `images/reliefos.vmdk` / `images/reliefos.raw`
 - `images/reliefos-live.iso`
 - `images/reliefos-installer.iso`
-- `images/installer-root.ext2` (historically `install/root.fat`)
-- `images/root.ext2` (Live / disk root; default ext2 because FAT/exFAT cannot represent the current real symlinks)
+- `images/installer-root.ext4` (historically `install/root.fat`)
+- `images/root.ext4` (Live / disk root; ext4 preserves the current real symlinks and inode metadata)
 - `stage/esp` (ESP staging directory; esp.fat is generated from it during ISO/VMDK assembly)
 
 The common system staging tree is:
@@ -177,11 +177,11 @@ accounts and require PAM login:
 
 Both use the default `%wheel ALL=(ALL:ALL) ALL` policy, without NOPASSWD.
 The image-only seed is `system/test-accounts`; `/home/test` is mode 0700 and
-owned by 1000:1000 inside ext2. Shared staging stays unchanged, so the installer
+owned by 1000:1000 inside ext4. Shared staging stays unchanged, so the installer
 runtime and `/install/root` retain locked account seeds until the installer
 provisions the chosen passwords. No authd binary or AUS2 seed is packaged.
 `python3 tools/test_image_accounts.py` checks both tree-generation paths,
-yescrypt password matching and actual ext2 ownership in small temporary images;
+yescrypt password matching and actual ext4 ownership in small temporary images;
 it is not a QEMU login or sudo execution test.
 
 ## Installer packaging
@@ -213,7 +213,7 @@ component set.
 
 `install/root.fat` is one Multiboot module. It is mapped directly by
 the kernel and is not copied into a second RAM buffer. The installer ISO mounts
-this ext2 image (the historical filename is retained) as a writable live
+this ext4 image (the historical filename is retained) as a writable live
 environment: file and directory changes are
 kept in the mapped RAM image for the session and discarded on reboot; they never
 modify the ISO. The guest nevertheless
@@ -233,7 +233,7 @@ build 3531 showed the first mount succeeding and the second preparation failing
 with `Mount failed ret=-22`, before partition enumeration.
 
 The failing operation was `mkdir("/target", 0755)`. Storage routing translated
-the existing mountpoint to the ext2 backend's `/`; splitting that root into a
+the existing mountpoint to the ext4 backend's `/`; splitting that root into a
 parent and filename returned `EINVAL`. `storage_mkdir` now checks the global
 namespace first and returns `EEXIST` for existing objects, including mount roots,
 while preserving lookup failures. This follows Linux v6.12 `filename_create`
@@ -254,7 +254,7 @@ python3 tools/test_installer_update_qemu.py \
   --output build/installer-update-fixed
 ```
 
-The host test executes the real storage VFS and ext2 code on isolated RAM-backed
+The host test executes the real storage VFS and ext4 code on isolated RAM-backed
 filesystem images. The QEMU script copies the supplied installed test disk and
 only modifies the copy. Use a new output directory per run. Optical boot gets
 an explicit firmware priority so the installed disk cannot bypass the installer.
@@ -486,7 +486,7 @@ the license server. To build an image without license validation, change the
 corresponding source macro through Kconfig and regenerate/rebuild so the
 generated binaries contain `RELIEFOS_LICENSE_REQUIRE 0`.
 
-Installer update mode refreshes FAT32 ESP boot files from `/install/esp`, ext2
+Installer update mode refreshes FAT32 ESP boot files from `/install/esp`, ext4
 system files from `/install/root`, selected changed or missing application
 packages under `/usr/lib/reliefos/apps`, and bundled docs from
 `/install/root/usr/share/doc/reliefos`. The core update refreshes the real
@@ -516,13 +516,15 @@ identity at runtime instead of being stored in `/etc/install.id`. The stable
 identity source is SMBIOS System UUID when firmware provides it, otherwise the
 boot GPT disk and ESP partition GUIDs. A fresh install copies the staged
 `etc/reliefos` and `var/lib/reliefos` trees, then writes the chosen accounts before
-publishing the ESP boot payload. Update supports only an existing non-usr-merge ext2 layout; old
+publishing the ESP boot payload. Update supports an existing non-usr-merge ext4 layout; legacy
+ext2 targets remain readable for compatibility, while old
 pre-FHS installations need a fresh install. There is no migration/archive
 stage. Populated legacy private account databases are rejected before overlay;
 standard account and policy files are preserved. See
 `docs/ROOTFS_LAYOUT_AND_MIGRATION.md` and `docs/SUDO_AND_ELEVATION.md`.
 
-All ext2 image producers require `fakeroot` and `e2fsprogs`. File ownership is
+All ext4 image producers require `fakeroot` and `e2fsprogs`; legacy ext2 image
+producers use the same tools. File ownership is
 normalized to root:root inside fakeroot before mke2fs imports the payload;
 this does not change host workspace ownership.
 

@@ -24,7 +24,7 @@ During early boot, normal disk images load components from the FAT32 ESP:
 - `/boot/loader.elf`
 - `/reliefos/kernel.sys` (the loader also accepts `/leonos/kernel.sys` for old disks)
 
-After the kernel starts, its storage layer mounts the separate ext2 partition
+After the kernel starts, its storage layer mounts the separate ext4 partition
 as the normal `/` runtime root. The ESP stays separate so a full root cannot
 consume UEFI boot space.
 
@@ -111,7 +111,7 @@ The installer payload is built from the same matched runtime staging tree:
 - `build/esp` contains the loader, kernel, resources, config, and
   userland applications for the installed system.
 - `tools/make_installer_root.py` splits `build/esp` into `install/esp` (the
-  FAT32 ESP boot subset) and `install/root` (the ext2 runtime root) inside
+  FAT32 ESP boot subset) and `install/root` (the ext4 runtime root) inside
   `build/install/root.fat`.
 - `tools/make_installer_iso.py` stages top-level installer copies of
   `boot/loader.elf`, `system/kernel.sys`, and

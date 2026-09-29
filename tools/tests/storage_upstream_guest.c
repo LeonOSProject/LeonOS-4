@@ -121,7 +121,7 @@ static void check_tmpfs(void)
 }
 static void check_block_io(void)
 {
-    int fd=open("/dev/disk0p1",O_RDWR);
+    int fd=open("/dev/sda1",O_RDWR);
     unsigned char *data=malloc(1<<20), *got=malloc(1<<20);
     if (fd<0 || !data || !got) { check(0,"block transfer setup"); close(fd); free(data); free(got); return; }
     memset(data,0xa5,1<<20);
@@ -221,11 +221,11 @@ int main(void)
         "else echo FILE_MISSING_OK; fi");
     RUN("boot payload copy", NULL, "COPY_OK", "/bin/sh", "-c",
         "set -e; s=/tmp/storage-copy-source; d='/tmp/storage copy target'; "
-        "mkdir -p \"$s/EFI/BOOT\" \"$s/leonos\" \"$s/grub/fonts\" \"$d\"; "
-        "for f in EFI/BOOT/BOOTX64.EFI loader.elf leonos/kernel.sys grub/fonts/test.pf2; "
+        "mkdir -p \"$s/EFI/BOOT\" \"$s/reliefos\" \"$s/leonos\" \"$s/grub/fonts\" \"$d\"; "
+        "for f in EFI/BOOT/BOOTX64.EFI loader.elf reliefos/loader.elf reliefos/kernel.sys leonos/kernel.sys grub/grub.cfg grub/fonts/test.pf2; "
         "do printf '%s' \"$f\" > \"$s/$f\"; done; "
         "/usr/sbin/leonos-grub-installer --source \"$s\" \"$d\"; "
-        "for f in EFI/BOOT/BOOTX64.EFI loader.elf leonos/kernel.sys grub/fonts/test.pf2; "
+        "for f in EFI/BOOT/BOOTX64.EFI loader.elf reliefos/loader.elf reliefos/kernel.sys leonos/kernel.sys grub/grub.cfg grub/fonts/test.pf2; "
         "do test \"$(cat \"$d/$f\")\" = \"$f\"; done; echo COPY_OK");
     RUN("boot missing payload rejected", NULL, "REJECT_OK", "/bin/sh", "-c",
         "if /usr/sbin/leonos-grub-installer --source /tmp/missing-boot-payload '/tmp/storage copy target'; "
@@ -234,14 +234,19 @@ int main(void)
     RUN("mount version", NULL, "util-linux 2.41.6", "/bin/mount", "--version");
     RUN("mount listing", NULL, " on /", "/bin/mount");
     RUN("lsblk inventory", NULL, "blockdevices", "/bin/lsblk", "--json", "--output", "NAME,TYPE");
-    RUN("lsblk actual disk and partition",NULL,"disk0p1","/bin/lsblk","--bytes","--output","NAME,TYPE,SIZE,MAJ:MIN");
+    RUN("lsblk actual disk and partition",NULL,"sda1","/bin/lsblk","--bytes","--output","NAME,TYPE,SIZE,MAJ:MIN");
     struct stat disk_stat;
-    check(stat("/dev/disk0p1",&disk_stat)==0 && S_ISBLK(disk_stat.st_mode) &&
+    check(stat("/dev/sda1",&disk_stat)==0 && S_ISBLK(disk_stat.st_mode) &&
           major(disk_stat.st_rdev)==259 && minor(disk_stat.st_rdev)==1,"block stat device number matches sysfs");
-    RUN("fsck dispatcher", NULL, "fsck.ext2", "/usr/sbin/fsck", "-N", "-t", "ext2", "/tmp/storage-test.img");
+    RUN("fsck dispatcher", NULL, "fsck.ext4", "/usr/sbin/fsck", "-N", "-t", "ext4", "/tmp/storage-test.img");
     if (make_file("/tmp/storage-test.img", 64 << 20)) {
         RUN("fdisk GPT write", "g\nn\n1\n\n+16M\nw\n", NULL, "/usr/sbin/fdisk", "/tmp/storage-test.img");
         RUN("fdisk GPT read", NULL, "gpt", "/usr/sbin/fdisk", "-l", "/tmp/storage-test.img");
+    }
+    if (make_file("/tmp/storage-test.img", 64 << 20)) {
+        RUN("mkfs ext4", NULL, NULL, "/usr/sbin/mkfs.ext4", "-F", "/tmp/storage-test.img");
+        RUN("fsck ext4", NULL, NULL, "/usr/sbin/fsck.ext4", "-n", "/tmp/storage-test.img");
+        RUN("blkid ext4", NULL, "ext4", "/usr/sbin/blkid", "-p", "-o", "value", "-s", "TYPE", "/tmp/storage-test.img");
     }
     if (make_file("/tmp/storage-test.img", 64 << 20)) {
         RUN("mkfs ext2", NULL, NULL, "/usr/sbin/mkfs.ext2", "-F", "/tmp/storage-test.img");
@@ -260,8 +265,8 @@ int main(void)
     }
     unlink("/tmp/storage-test.img");
     check_block_io();
-    RUN("mkfs ext2 on AHCI partition",NULL,NULL,"/usr/sbin/mkfs.ext2","-F","/dev/disk0p1");
-    RUN("fsck ext2 on AHCI partition",NULL,NULL,"/usr/sbin/fsck.ext2","-n","/dev/disk0p1");
+    RUN("mkfs ext4 on AHCI partition",NULL,NULL,"/usr/sbin/mkfs.ext4","-F","/dev/sda1");
+    RUN("fsck ext4 on AHCI partition",NULL,NULL,"/usr/sbin/fsck.ext4","-n","/dev/sda1");
     mkdir("/tmp/storage-mount", 0700);
     RUN("mount tmpfs", NULL, NULL, "/bin/mount", "-t", "tmpfs", "tmpfs", "/tmp/storage-mount");
     check_tmpfs();

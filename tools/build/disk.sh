@@ -1,7 +1,7 @@
 #!/bin/sh
-# Rootless GPT/FAT/ext2 disk composition through upstream format tools.
+# Rootless GPT/FAT/ext4 disk composition through upstream format tools.
 set -eu
-[ "$#" = 5 ] || { echo 'usage: disk ESP ROOT_EXT2 OUTPUT_RAW OUTPUT_VMDK EPOCH' >&2; exit 2; }
+[ "$#" = 5 ] || { echo 'usage: disk ESP ROOT_EXT4 OUTPUT_RAW OUTPUT_VMDK EPOCH' >&2; exit 2; }
 esp=$1 root=$2 raw=$3 vmdk=$4 epoch=$5
 export SOURCE_DATE_EPOCH=$epoch TZ=UTC LC_ALL=C
 mkdir -p "$(dirname "$raw")" "$(dirname "$vmdk")"

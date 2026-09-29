@@ -26,7 +26,7 @@ less /root/ADVANCED_INSTALL.txt
 | 分区 | 文件系统 | GPT 类型 | 建议名称 | 用途 |
 | --- | --- | --- | --- | --- |
 | 1 | FAT32 | EFI System | `LeonOS 4 ESP` | UEFI、GRUB、loader 和内核 |
-| 2 | ext2 | Linux filesystem | `LEONOS4_ROOT` | ReliefOS 根文件系统 |
+| 2 | ext4 | Linux filesystem | `LEONOS4_ROOT` | ReliefOS 根文件系统 |
 
 ESP 建议至少 128 MiB。根分区应使用剩余空间，并确保能容纳 `/install/root`
 及后续用户数据。分区名称只是便于识别，不参与启动；GPT 类型和文件系统才是
@@ -36,9 +36,10 @@ ESP 建议至少 128 MiB。根分区应使用剩余空间，并确保能容纳 `
 
 - `g`、`d`、`w`、`mkfs.*` 会破坏目标磁盘上的数据。
 - 根据容量和控制器信息确认目标磁盘；不要把安装 ISO 或其他数据盘当成目标盘。
-- ReliefOS 磁盘命名为 `/dev/disk0`、`/dev/disk0p1`，不使用 `/dev/sda`。
-- 以下示例假定目标是 `/dev/disk0`，实际编号不同时必须替换所有相关命令。
-- Installer ISO 根目录是可写的临时 ext2 ramdisk，但重启后其中的修改会丢失；
+- ReliefOS 磁盘命名为 `/dev/sda`、`/dev/sda1`；NVMe 设备使用
+  `/dev/nvme0n1`、`/dev/nvme0n1p1` 这类 Linux 名称。
+- 以下示例假定目标是 `/dev/sda`，实际编号不同时必须替换所有相关命令。
+- Installer ISO 根目录是可写的临时 ext4 ramdisk，但重启后其中的修改会丢失；
   已写入目标磁盘的内容会保留。
 
 ## 1. 进入 TTY 模式并检查 payload
@@ -76,7 +77,7 @@ fdisk -l
 也可以只查看候选盘：
 
 ```sh
-fdisk -l /dev/disk0
+fdisk -l /dev/sda
 ```
 
 空白磁盘没有有效分区表属于正常情况。新版 util-linux `fdisk` 可以直接创建
@@ -87,7 +88,7 @@ GPT，不需要先运行 `gptinit`。
 启动分区工具：
 
 ```sh
-fdisk /dev/disk0
+fdisk /dev/sda
 ```
 
 依次输入以下内容。空行表示接受默认值：
@@ -133,34 +134,34 @@ r
 
 ```sh
 sync
-lsblk /dev/disk0
-fdisk -l /dev/disk0
+lsblk /dev/sda
+fdisk -l /dev/sda
 ```
 
-## 4. 格式化 ESP 和 ext2 根分区
+## 4. 格式化 ESP 和 ext4 根分区
 
 ```sh
-mkfs.fat -F 32 -n LEONOS4ESP /dev/disk0p1
-mkfs.ext2 -F -L LEONOS4ROOT /dev/disk0p2
+mkfs.fat -F 32 -n LEONOS4ESP /dev/sda1
+mkfs.ext4 -F -L LEONOS4ROOT /dev/sda2
 ```
 
 `mkfs.fat32` 和 `mkfs.vfat` 只是指向上游 `mkfs.fat` 的兼容链接，不会自动添加
 参数。即使使用这些名称，也必须显式指定 `-F 32`：
 
 ```sh
-mkfs.fat32 -F 32 /dev/disk0p1
+mkfs.fat32 -F 32 /dev/sda1
 ```
 
-不要把整盘 `/dev/disk0` 传给格式化工具，也不要格式化已挂载的分区。
+不要把整盘 `/dev/sda` 传给格式化工具，也不要格式化已挂载的分区。
 
 ## 5. 检查文件系统和标识
 
 新建文件系统后可以做一次只读检查：
 
 ```sh
-fsck.fat -n /dev/disk0p1
-fsck.ext2 -f -n /dev/disk0p2
-blkid /dev/disk0p1 /dev/disk0p2
+fsck.fat -n /dev/sda1
+fsck.ext4 -f -n /dev/sda2
+blkid /dev/sda1 /dev/sda2
 ```
 
 `fsck.fat32`/`fsck.vfat` 是 `fsck.fat` 的别名。通用 `fsck`、`blkid` 和
@@ -170,8 +171,8 @@ blkid /dev/disk0p1 /dev/disk0p2
 
 ```sh
 mkdir -p /mnt/root /mnt/esp
-mount -t ext2 /dev/disk0p2 /mnt/root
-mount -t vfat /dev/disk0p1 /mnt/esp
+mount -t ext4 /dev/sda2 /mnt/root
+mount -t vfat /dev/sda1 /mnt/esp
 mount
 ```
 
@@ -203,8 +204,8 @@ ls -l /mnt/root/lib/ld-musl-x86_64.so.1
 PARTUUID：
 
 ```sh
-ROOT_PARTUUID="$(blkid -s PARTUUID -o value /dev/disk0p2)"
-ESP_PARTUUID="$(blkid -s PARTUUID -o value /dev/disk0p1)"
+ROOT_PARTUUID="$(blkid -s PARTUUID -o value /dev/sda2)"
+ESP_PARTUUID="$(blkid -s PARTUUID -o value /dev/sda1)"
 printf 'root=%s\nesp=%s\n' "$ROOT_PARTUUID" "$ESP_PARTUUID"
 ```
 
@@ -213,7 +214,7 @@ printf 'root=%s\nesp=%s\n' "$ROOT_PARTUUID" "$ESP_PARTUUID"
 ```sh
 cat > /mnt/root/etc/fstab <<EOF
 # <source> <mountpoint> <type> <options> <dump> <pass>
-/dev/disk/by-partuuid/$ROOT_PARTUUID / ext2 defaults 0 1
+/dev/disk/by-partuuid/$ROOT_PARTUUID / ext4 defaults 0 1
 /dev/disk/by-partuuid/$ESP_PARTUUID /boot vfat defaults 0 2
 EOF
 ```
@@ -260,16 +261,16 @@ reboot
 
 ## 可选：使用 exFAT 根分区
 
-ext2 是当前新安装默认值。确需 exFAT 时，分区 2 的 GPT 类型应改为
+ext4 是当前新安装默认值。ext2 仅用于兼容旧镜像。确需 exFAT 时，分区 2 的 GPT 类型应改为
 `Microsoft basic data`，并替换以下命令：
 
 ```sh
-mkfs.exfat -L LEONOS4ROOT /dev/disk0p2
-fsck.exfat -n /dev/disk0p2
-mount -t exfat /dev/disk0p2 /mnt/root
+mkfs.exfat -L LEONOS4ROOT /dev/sda2
+fsck.exfat -n /dev/sda2
+mount -t exfat /dev/sda2 /mnt/root
 ```
 
-`/etc/fstab` 中根分区一行的类型也要从 `ext2` 改为 `exfat`。其余复制、ESP、
+`/etc/fstab` 中根分区一行的类型也要从 `ext4` 改为 `exfat`。其余复制、ESP、
 启动文件和卸载步骤不变。
 
 ## 高级模式可用的存储工具
@@ -279,7 +280,7 @@ mount -t exfat /dev/disk0p2 /mnt/root
 | `fdisk`, `sfdisk` | util-linux | GPT 查看、创建和修改 |
 | `lsblk`, `blkid` | util-linux | 块设备、文件系统和 UUID 查询 |
 | `mount`, `umount` | util-linux | 标准挂载和卸载命令 |
-| `mkfs.ext2`, `fsck.ext2` | e2fsprogs | ext2 创建和检查 |
+| `mkfs.ext4`, `fsck.ext4` | e2fsprogs | ext4 创建和检查 |
 | `mkfs.fat`, `fsck.fat` | dosfstools | FAT32 创建和检查 |
 | `mkfs.exfat`, `fsck.exfat` | exfatprogs | exFAT 创建和检查 |
 | `sync`, `cp`, `mkdir`, `cat`, `less` | BusyBox | 文件复制、同步和教程阅读 |
@@ -288,11 +289,12 @@ mount -t exfat /dev/disk0p2 /mnt/root
 ## 常见失败原因
 
 - `fdisk` 看不到磁盘：先用 `lsblk` 确认设备路径；高级模式示例中的目标盘不一定
-  总是 `/dev/disk0`。
+  总是 `/dev/sda`。
 - `fdisk` 报没有有效分区表：进入目标盘后用 `g` 创建 GPT；不再需要先运行
   `gptinit`。
 - `mkfs.fat` 得到的不是 FAT32：必须提供 `-F 32`。
-- `mkfs.*` 报设备忙：确认分区未挂载，并且传入的是 `/dev/diskNpM` 分区节点。
+- `mkfs.*` 报设备忙：确认分区未挂载，并且传入的是 `/dev/sdXN` 或
+  `/dev/nvmeXnYpZ` 分区节点。
 - `mount` 失败：确认挂载点存在、文件系统类型正确，并检查 `blkid` 输出。
 - `blkid -s PARTUUID` 输出为空：不要写入 fstab；返回 `fdisk -l` 检查 GPT，并
   确认分区节点已刷新。

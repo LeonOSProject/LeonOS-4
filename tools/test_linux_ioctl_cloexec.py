@@ -245,9 +245,15 @@ def grub_efi_dir() -> str:
 
 
 def build_iso(root: Path, output: Path, config: Path, work: Path) -> Path:
-    for name in ("build/boot/loader.elf", "build/system/kernel.sys",
-                 "build/generated/grub/leonos-unicode.pf2"):
-        assert (ROOT / name).is_file(), f"missing {name}; build kernel and userland targets separately"
+    def artifact(*names: str) -> str:
+        for name in names:
+            if (ROOT / name).is_file():
+                return name
+        raise AssertionError(f"missing build artifact (tried {names}); build kernel and userland targets separately")
+
+    loader = artifact("build/boot/loader.elf", "out/x86_64/release/generated/boot/loader.elf")
+    kernel = artifact("build/system/kernel.sys", "out/x86_64/release/generated/system/kernel.sys")
+    font = artifact("build/generated/grub/leonos-unicode.pf2", "out/x86_64/release/generated/grub/leonos-unicode.pf2")
     config.write_text(GRUB_TEMPLATE, encoding="ascii")
     assert "bootlog=1" not in config.read_text(encoding="ascii")
     run([
@@ -255,9 +261,9 @@ def build_iso(root: Path, output: Path, config: Path, work: Path) -> Path:
         "--grub-efi-dir", grub_efi_dir(),
         "--stage", str((work / "iso").relative_to(ROOT)),
         "--boot-image", str((work / "efiboot.img").relative_to(ROOT)),
-        "--loader", "build/boot/loader.elf", "--kernel", "build/system/kernel.sys",
+        "--loader", loader, "--kernel", kernel,
         "--installer-root", str(root.relative_to(ROOT)),
-        "--grub-font", "build/generated/grub/leonos-unicode.pf2",
+        "--grub-font", font,
         "--work-dir", str(work.relative_to(ROOT)),
         "--grub-config", str(config.relative_to(ROOT)),
     ], stdout=subprocess.DEVNULL)

@@ -28,7 +28,7 @@ uses its normal upstream interaction. FAT32 formatting requires
 `mkfs.fat -F 32`; the `mkfs.fat32` name is only a symlink. Pass `-n` to a
 filesystem checker when a read-only check is intended.
 
-These programs access `/dev/disk0` and `/dev/disk0pN` through standard file
+These programs access `/dev/sda` and `/dev/sdapN` through standard file
 I/O, Linux block-device ioctls, and `mount(2)`/`umount2(2)`. Formatting,
 partition changes, and mount operations require an administrator account.
 `leonos-grub-installer ESP` remains a separate ReliefOS script that copies the
@@ -39,14 +39,14 @@ for blank disks because upstream `fdisk` can create GPT itself.
 Examples:
 
 ```text
-fdisk -l /dev/disk0
-fdisk /dev/disk0
+fdisk -l /dev/sda
+fdisk /dev/sda
 blkid
 lsblk
-fsck.ext2 /dev/disk0p3
-mkfs.ext2 -F /dev/disk0p3
-mkfs.fat -F 32 /dev/disk0p1
-mount -t ext2 /dev/disk0p3 /mnt/data
+fsck.ext2 /dev/sdap3
+mkfs.ext2 -F /dev/sdap3
+mkfs.fat -F 32 /dev/sda1
+mount -t ext2 /dev/sdap3 /mnt/data
 umount /mnt/data
 ```
 

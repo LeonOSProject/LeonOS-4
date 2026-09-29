@@ -22,11 +22,14 @@ WORK = ROOT / "build/storage-upstream-guest"
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--filesystem", choices=("ext2", "ext4"), default="ext4")
     parser.add_argument("--timeout", type=int, default=360)
-    parser.add_argument("--root", type=Path, default=ROOT / "build/live/root.ext2")
+    parser.add_argument("--root", type=Path)
     parser.add_argument("--power", choices=("reboot", "poweroff"))
     parser.add_argument("--smp", type=int, choices=(1,2), default=2)
     args = parser.parse_args()
+    if args.root is None:
+        args.root = ROOT / "out/x86_64/release/images/disk-root.ext4" if args.filesystem == "ext4" else ROOT / "build/live/root.ext2"
     args.root = args.root.resolve()
     work = WORK / (args.root.parent.name + ("-" + args.power if args.power else "") + f"-smp{args.smp}")
     work.mkdir(parents=True, exist_ok=True)
@@ -34,8 +37,13 @@ def main():
     with args.root.open("rb") as source:
         base_hash = hashlib.file_digest(source, "sha256").hexdigest()
     compiler = ROOT / "build/musl-gcc/root/opt/dyne/gcc-musl/bin/x86_64-linux-musl-gcc"
+    compiler_args = [str(compiler)]
+    if not compiler.exists():
+        compiler_args = ["clang", "--target=x86_64-linux-musl",
+                         f"--sysroot={ROOT / 'out/x86_64/release/sysroot/musl'}",
+                         "-fuse-ld=lld"]
     probe = work / "probe.elf"
-    subprocess.run([str(compiler), "-static", "-O2", "-Wall", "-Wextra",
+    subprocess.run([*compiler_args, "-static", "-O2", "-Wall", "-Wextra",
                     *([f'-DPROBE_POWER_COMMAND="{args.power}"'] if args.power else []),
                     "tools/tests/storage_upstream_guest.c", "tools/tests/tmpfs_mmap_test.c",
                     "-o", str(probe)], cwd=ROOT, check=True)
@@ -53,7 +61,8 @@ def main():
         "autospawn=ioctlcloexec autospawn=python315", "autospawn=inventory").replace(
         "syscall-trace=/opt/python/", "").replace("ioctl CLOEXEC regression", "official storage tools probe")
     iso = iso_tools.build_iso(image, work / "storage-test.iso", work / "grub.cfg", work)
-    kernel_hash = hashlib.sha256((ROOT / "build/system/kernel.sys").read_bytes()).hexdigest()
+    kernel_path = ROOT / "out/x86_64/release/generated/system/kernel.sys"
+    kernel_hash = hashlib.sha256(kernel_path.read_bytes()).hexdigest()
     probe_hash = hashlib.sha256(probe.read_bytes()).hexdigest()
     serial = work / "serial.log"
     serial.write_text("")

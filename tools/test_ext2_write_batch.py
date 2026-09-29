@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
-"""Check real ext2 batched allocation, partial I/O failures and disk consistency."""
+"""Check ext2 batched allocation and expose the native ext4 write fixture."""
+import argparse
 from pathlib import Path
 import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--filesystem", choices=("ext2", "ext4"), default="ext2")
+args = parser.parse_args()
+if args.filesystem == "ext4":
+    subprocess.run(["python3", str(ROOT / "tools/test_ext4_write.py")], cwd=ROOT, check=True)
+    raise SystemExit(0)
 with tempfile.TemporaryDirectory(prefix="ext2-write-batch-", dir=ROOT / "build") as directory:
     work = Path(directory)
     executable = work / "batch"

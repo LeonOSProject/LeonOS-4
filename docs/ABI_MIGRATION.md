@@ -17,7 +17,7 @@ libc，但新应用不得增加对私有硬件入口的依赖。Linux 兼容范�
 | 原始键盘和鼠标输入 | evdev (`/dev/input/event*`) | 基础完成 | `/dev/input/event0` 是键盘、`event1` 是鼠标；独立 FD 游标支持 `read`、`O_NONBLOCK`、`poll` 和常用 `EVIOC*` 查询 |
 | 输入法管理私有 ioctl | 版本化 GUI 文本输入服务 | 基础完成 | 输入法不是硬件事件设备；私有 ioctl 与过渡节点 `/dev/input-method` 均已删除，libc 改走 imd 守护进程的 `/run/leonos/input-method.sock` Unix socket |
 | 音频私有 ioctl | OSS `/dev/dsp` | 基础完成 | 16-bit little-endian stereo playback，首版不引入 ALSA ABI |
-| 磁盘/分区私有 ioctl | `/dev/*` 块设备 + Linux 风格 ioctl | 基础完成 | BusyBox、installer、gptinit 和 diskmgr 使用 `/dev/diskN[pN]`、`BLK*`、原始对齐 I/O 与 `mount(2)`；旧公开 ioctl 已移除 |
+| 磁盘/分区私有 ioctl | `/dev/*` 块设备 + Linux 风格 ioctl | 基础完成 | BusyBox、installer、gptinit 和 diskmgr 使用 `/dev/sdX[n]`、`/dev/nvmeCnN[pM]`、`BLK*`、原始对齐 I/O 与 `mount(2)`；旧公开 ioctl 已移除 |
 | `leonos_device_list` | `/dev` 枚举、`stat`、设备服务 IPC | 已完成 | `/dev` devfs 提供稳定节点；设备列表 ioctl 已删除，`leonos_device_list()` 走 devmand AF_UNIX 协议（device-agent 服务） |
 | 私有 signal ioctl | `rt_sigaction`/`rt_sigprocmask` | 基础完成 | 用户 handler frame 已实现（`signal_setup_frame` 构造 `linux_rt_sigframe`，`rt_sigreturn` 恢复现场，返回用户态前投递 pending signal） |
 
@@ -60,7 +60,7 @@ libc，但新应用不得增加对私有硬件入口的依赖。Linux 兼容范�
 - [x] evdev `/dev/input/event*` 原始读写、非阻塞、`poll` 和基础 `EVIOC*` 查询
 - [ ] evdev 独占抓取、热插拔和完整能力/状态位图
 - [x] OSS `/dev/dsp` 音频设备接口：`SNDCTL_DSP_SETFMT`、`CHANNELS`、`SPEED`、能力/缓冲区查询、非阻塞写入和 `poll(POLLOUT)`
-- [x] 块设备 `/dev/diskN`、`/dev/diskNpN` 原始扇区读写和 `BLKGETSIZE64`、`BLKGETSIZE`、`BLKSSZGET`、`BLKROGET`、`BLKRRPART`
+- [x] 块设备 `/dev/sdX[n]`、`/dev/nvmeCnN[pM]` 原始扇区读写和 `BLKGETSIZE64`、`BLKGETSIZE`、`BLKSSZGET`、`BLKROGET`、`BLKRRPART`
 - [x] 磁盘工具迁移：BusyBox、installer、gptinit、diskmgr 使用块设备和 `mount(2)`
 - [ ] 应用迁移完成并启用严格旧 ABI 检查（Terminal、通用启动器、TTY OOBE/login、bugtest 已迁移）
 - [x] 删除公开磁盘 ioctl 和过渡头文件；内部启动期存储辅助代码不导出给用户态

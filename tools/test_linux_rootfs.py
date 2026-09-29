@@ -24,7 +24,7 @@ class RootfsInterfaces(unittest.TestCase):
             ])
             make_image.write_root_fstab(root, partitions[1], partitions[0])
             lines = (root / "etc/fstab").read_text().splitlines()[1:]
-            self.assertEqual(lines[0].split(), [f"/dev/disk/by-partuuid/{partitions[1]}", "/", "ext2", "defaults", "0", "1"])
+            self.assertEqual(lines[0].split(), [f"/dev/disk/by-partuuid/{partitions[1]}", "/", "ext4", "defaults", "0", "1"])
             self.assertEqual(lines[1].split(), [f"/dev/disk/by-partuuid/{partitions[0]}", "/boot", "vfat", "defaults", "0", "2"])
             with image.open("rb") as stream:
                 stream.seek(2 * 512 + 16)

@@ -231,8 +231,9 @@ static const char *const busybox_applets[] = {
 static const char *const storage_commands[] = {
     "/usr/sbin/fdisk", "/usr/sbin/sfdisk", "/usr/sbin/blkid", "/usr/sbin/fsck",
     "/usr/sbin/mkfs.fat", "/usr/sbin/mkfs.fat32", "/usr/sbin/mkfs.vfat",
-    "/usr/sbin/mkfs.ext2", "/usr/sbin/mkfs.exfat", "/usr/sbin/fsck.fat",
-    "/usr/sbin/fsck.fat32", "/usr/sbin/fsck.vfat", "/usr/sbin/fsck.ext2",
+    "/usr/sbin/mkfs.ext4", "/usr/sbin/fsck.ext4", "/usr/sbin/mkfs.ext2",
+    "/usr/sbin/mkfs.exfat", "/usr/sbin/fsck.fat", "/usr/sbin/fsck.fat32",
+    "/usr/sbin/fsck.vfat", "/usr/sbin/fsck.ext2",
     "/usr/sbin/fsck.exfat", "/usr/sbin/leonos-grub-installer",
     "/bin/mount", "/bin/umount", "/bin/lsblk", NULL,
 };

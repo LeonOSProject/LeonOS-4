@@ -8,7 +8,7 @@ entry starts a root Ash shell. Run "installer" to launch the interactive TTY
 installer, or continue with this guide for a manual installation.
 
 The TTY environment provides standard Linux command-line tools: fdisk, mount,
-lsblk, and blkid from util-linux; mkfs.ext2 and fsck.ext2 from e2fsprogs;
+lsblk, and blkid from util-linux; mkfs.ext4 and fsck.ext4 from e2fsprogs;
 mkfs.fat and fsck.fat from dosfstools; mkfs.exfat and fsck.exfat from
 exfatprogs; and the standard BusyBox file utilities.
 
@@ -16,8 +16,9 @@ WARNING
 -------
 
 The partitioning and formatting commands below destroy data on the target
-disk. The examples use /dev/disk0. Verify the actual target by its size and
-controller, and do not overwrite the Installer ISO or another data disk.
+disk. The examples use /dev/sda. NVMe disks use /dev/nvmeXnY and partitions
+use /dev/nvmeXnYpZ. Verify the actual target by its size and controller, and
+do not overwrite the Installer ISO or another data disk.
 
 Copying the payload manually does not run the regular installer's account
 transaction and does not create the installed-system marker. Use the regular
@@ -40,7 +41,7 @@ fdisk -l
 
 Run:
 
-fdisk /dev/disk0
+fdisk /dev/sda
 
 Enter the following commands in order. A blank line means accept the default:
 
@@ -81,28 +82,28 @@ fdisk creates a GPT directly; running gptinit first is no longer necessary.
 Check the new partition table and device nodes:
 
 sync
-lsblk /dev/disk0
-fdisk -l /dev/disk0
+lsblk /dev/sda
+fdisk -l /dev/sda
 
 3. Format and check the filesystems
 ----------------------------------
 
-mkfs.fat -F 32 -n LEONOS4ESP /dev/disk0p1
-mkfs.ext2 -F -L LEONOS4ROOT /dev/disk0p2
-fsck.fat -n /dev/disk0p1
-fsck.ext2 -f -n /dev/disk0p2
-blkid /dev/disk0p1 /dev/disk0p2
+mkfs.fat -F 32 -n LEONOS4ESP /dev/sda1
+mkfs.ext4 -F -L LEONOS4ROOT /dev/sda2
+fsck.fat -n /dev/sda1
+fsck.ext4 -f -n /dev/sda2
+blkid /dev/sda1 /dev/sda2
 
 mkfs.fat32 is only a link to mkfs.fat. You must still pass -F 32 when using
-that name. Do not format the whole /dev/disk0 device, and do not format a
+that name. Do not format the whole /dev/sda device, and do not format a
 mounted partition.
 
 4. Mount the target filesystems
 ------------------------------
 
 mkdir -p /mnt/root /mnt/esp
-mount -t ext2 /dev/disk0p2 /mnt/root
-mount -t vfat /dev/disk0p1 /mnt/esp
+mount -t ext4 /dev/sda2 /mnt/root
+mount -t vfat /dev/sda1 /mnt/esp
 mount
 
 5. Copy the system
@@ -119,15 +120,15 @@ ls -l /mnt/root/lib/ld-musl-x86_64.so.1
 6. Write /etc/fstab
 -------------------
 
-ROOT_PARTUUID="$(blkid -s PARTUUID -o value /dev/disk0p2)"
-ESP_PARTUUID="$(blkid -s PARTUUID -o value /dev/disk0p1)"
+ROOT_PARTUUID="$(blkid -s PARTUUID -o value /dev/sda2)"
+ESP_PARTUUID="$(blkid -s PARTUUID -o value /dev/sda1)"
 printf 'root=%s\nesp=%s\n' "$ROOT_PARTUUID" "$ESP_PARTUUID"
 
 Both values must be non-empty UUIDs. Then enter:
 
 cat > /mnt/root/etc/fstab <<EOF
 # <source> <mountpoint> <type> <options> <dump> <pass>
-/dev/disk/by-partuuid/$ROOT_PARTUUID / ext2 defaults 0 1
+/dev/disk/by-partuuid/$ROOT_PARTUUID / ext4 defaults 0 1
 /dev/disk/by-partuuid/$ESP_PARTUUID /boot vfat defaults 0 2
 EOF
 
@@ -162,14 +163,14 @@ menu.
 Optional exFAT root filesystem
 ------------------------------
 
-ext2 is the default. To use exFAT, set partition 2 to the Microsoft basic data
-GPT type and replace the ext2 format, check, and mount commands with:
+ext4 is the default. To use exFAT, set partition 2 to the Microsoft basic data
+GPT type and replace the ext4 format, check, and mount commands with:
 
-mkfs.exfat -L LEONOS4ROOT /dev/disk0p2
-fsck.exfat -n /dev/disk0p2
-mount -t exfat /dev/disk0p2 /mnt/root
+mkfs.exfat -L LEONOS4ROOT /dev/sda2
+fsck.exfat -n /dev/sda2
+mount -t exfat /dev/sda2 /mnt/root
 
-Also change the root filesystem type in /etc/fstab from ext2 to exfat.
+Also change the root filesystem type in /etc/fstab from ext4 to exfat.
 
 Troubleshooting
 ---------------
@@ -181,7 +182,7 @@ The ESP was not formatted as FAT32:
   mkfs.fat requires the explicit -F 32 option.
 
 mkfs reports that the device is busy:
-  Use an unmounted /dev/diskNpM partition device.
+  Use an unmounted /dev/sdXN or /dev/nvmeXnYpZ partition device.
 
 PARTUUID output is empty:
   Do not write fstab. Check the GPT and device nodes with fdisk -l and lsblk.

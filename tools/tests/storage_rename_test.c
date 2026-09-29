@@ -78,7 +78,23 @@ static int storage_select_node_volume(const struct storage_node *node, struct st
 static void storage_restore_volume(struct storage_volume *previous) { g_active_volume = previous; }
 
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext2_cache.c"
+static int storage_read_device(const struct storage_volume *v,uint64_t lba,uint32_t n,void *out)
+{ (void)v; return storage_read_sectors(lba,n,out); }
+static int storage_write_device(const struct storage_volume *v,uint64_t lba,uint32_t n,const void *in)
+{ storage_ext4_cache_invalidate_write(v,lba,n); return storage_write_sectors(lba,n,in); }
+int storage_ext4_device_flush(const struct storage_volume *v) { (void)v; return fflush(disk)?-5:0; }
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_format.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_checksum.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_cache.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_alloc.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_extent.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_ops.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_xattr.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_journal.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_dir.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_mount.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_inode.c"
+#include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext4_vfs.c"
 #include "../../kernel/reliefnt/drivers/bootstrap/storage/storage_ext2.c"
 
 static void test_held_inode(void)
@@ -241,6 +257,7 @@ int main(int argc, char **argv)
     assert(ext2_write_file("/deleted-socket", "", 0) == 0);
     assert(ext2_lookup_path("/deleted-socket", &source) == 0);
     assert(ext2_mark_special("/deleted-socket", &source, LINUX_S_IFSOCK) == 0 && ext2_unlink("/deleted-socket") == 0);
+    assert(storage_ext4_ops.fsync(&g_storage)==0);
     assert(fclose(disk) == 0);
     puts("ext2 rename: replacement, inode identity, type errors, empty-directory rules PASS");
     return 0;
