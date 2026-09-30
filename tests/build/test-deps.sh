@@ -70,6 +70,7 @@ entry_lock() {
 
 mkdir -p "$work" || exit 1
 [ -x "$deps" ] || { printf 'FAIL - %s is missing; run make tools\n' "$deps" >&2; exit 1; }
+D='0000000000000000000000000000000000000000000000000000000000000000'
 
 # --- the shipped lock file ---------------------------------------------------
 check 'the shipped lock file validates' "$deps" --lock "$lock" --check
@@ -112,6 +113,22 @@ expect_failure 'an unknown field fails rather than printing nothing' \
     "$deps" --lock "$lock" --id musl --print not-a-field
 expect_failure 'querying a field the entry lacks fails' \
     "$deps" --lock "$lock" --id musl --print sha256
+expect_output_is 'an xorg APK reports its optional feature' xorg \
+    "$deps" --lock "$(entry_lock "{\"id\":\"alpine-xorg-server\",\"kind\":\"apk\",\"version\":\"1\",\"url\":\"https://x/xorg-server.apk\",\"sha256\":\"$D\",\"license_in_source\":\"APKINDEX\",\"feature\":\"xorg\"}")" \
+    --id alpine-xorg-server --print feature
+expect_output_is 'an unmarked dependency defaults to the base feature' base \
+    "$deps" --lock "$lock" --id alpine-openrc --print feature
+expect_failure 'an invalid optional feature is rejected' \
+    "$deps" --lock "$(entry_lock "{\"id\":\"alpine-xorg-server\",\"kind\":\"apk\",\"version\":\"1\",\"url\":\"https://x/xorg-server.apk\",\"sha256\":\"$D\",\"license_in_source\":\"APKINDEX\",\"feature\":\"desktop\"}")" --check
+for xorg_id in alpine-xorg-server alpine-xorg-server-common alpine-xinit \
+    alpine-xterm alpine-xf86-video-fbdev alpine-xf86-input-evdev \
+    alpine-xkeyboard-config alpine-font-cursor-misc alpine-font-misc-misc; do
+    expect_output_is "$xorg_id is locked as an xorg feature" xorg \
+        "$deps" --lock "$lock" --id "$xorg_id" --print feature
+done
+expect_output_is 'the Xorg server uses the official Alpine repository' \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/community/x86_64/xorg-server-21.1.24-r0.apk \
+    "$deps" --lock "$lock" --id alpine-xorg-server --print url
 
 # --- the fetch list -----------------------------------------------------------
 fetch_list=$("$deps" --lock "$lock" --fetch-list 2>/dev/null)
@@ -145,8 +162,6 @@ else
 fi
 
 # --- rejected lock files ------------------------------------------------------
-D='0000000000000000000000000000000000000000000000000000000000000000'
-
 expect_failure 'an entry missing required fields is rejected' \
     "$deps" --lock "$(entry_lock '{"id":"a","kind":"tarball"}')" --check
 
