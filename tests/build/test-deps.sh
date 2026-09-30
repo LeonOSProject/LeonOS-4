@@ -91,7 +91,7 @@ else
     failures=$((failures + 1))
 fi
 checks=$((checks + 1))
-if [ "$(printf '%s\n' "$ids" | sort)" = "$ids" ]; then
+if [ "$(printf '%s\n' "$ids" | LC_ALL=C sort)" = "$ids" ]; then
     printf 'ok   - --list output is sorted\n'
 else
     printf 'FAIL - --list output must be sorted\n'
