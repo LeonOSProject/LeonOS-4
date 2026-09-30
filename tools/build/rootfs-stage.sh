@@ -48,6 +48,11 @@ if [ "$desktop_backend" = xorg ]; then
     for service in reliefos-windowd reliefos-session; do
         record x - "/etc/runlevels/default/$service" 0000 product-policy override
     done
+    # Xorg payload exists only in Xorg rootfs trees; native trees must not
+    # carry the configuration or the session wrappers.
+    file "$src/system/xorg/xorg.conf" etc/X11/xorg.conf 0644 product-policy override
+    file "$src/system/xorg/reliefos-xorg-session" usr/lib/reliefos/reliefos-xorg-session 0755 reliefos-apps override
+    file "$src/system/xorg/reliefos-xorg-client" usr/lib/reliefos/reliefos-xorg-client 0755 reliefos-apps override
 fi
 legacy=$src/system/rootfs/var/lib/leonos/users.db
 if [ -e "$legacy" ] || [ -L "$legacy" ]; then

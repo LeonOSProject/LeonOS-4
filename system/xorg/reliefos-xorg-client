@@ -1,0 +1,24 @@
+#!/bin/sh
+# X11 client for the minimal ReliefOS Xorg session.
+#
+# Started by xinit once the Xorg server accepts connections. Presents exactly
+# one xterm whose session is a real /bin/login prompt; this file must never
+# default to an interactive root shell. POSIX /bin/sh only.
+set -u
+
+log=/var/log/xorg-session.log
+
+timestamp() { date '+%Y-%m-%dT%H:%M:%S'; }
+say() { printf '%s xorg-client: %s\n' "$(timestamp)" "$*" >> "$log"; }
+
+say "Xorg server started (client connected on display ${DISPLAY:-:0})"
+for need in /usr/bin/xterm /bin/login; do
+    [ -x "$need" ] || { say "missing executable: $need"; exit 1; }
+done
+say "xterm client started (/usr/bin/xterm running /bin/login)"
+
+# The non-interactive shim only logs the reached login prompt and immediately
+# replaces itself with /bin/login; the user never gets a shell from it.
+shim='echo "$(date "+%Y-%m-%dT%H:%M:%S") xorg-client: /bin/login prompt reached (/bin/login in xterm)" >> /var/log/xorg-session.log
+exec /bin/login'
+exec /usr/bin/xterm -T reliefos-login -e /bin/sh -c "$shim"

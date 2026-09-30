@@ -14,12 +14,44 @@ if test "$1" = tty1; then
         cd "$HOME" || exit 1
         exec /usr/lib/reliefos/apps/login/login.elf --installer-shell
     fi
-    if test -f /etc/reliefos/desktop-session &&
-       test ! -e /run/reliefos/graphical-session-started; then
-        : > /run/reliefos/graphical-session-started
-        /usr/lib/reliefos/apps/login/login.elf --graphical-session \
-            >>/var/log/desktop.log 2>&1
+    # The installer runtime always keeps the native ReliefOS graphical
+    # session, whatever desktop backend the installed system selected.
+    if test -f /etc/reliefos/installer-runtime; then
+        backend=reliefos
+    else
+        # /etc/reliefos/desktop-backend is a plain single-line marker file.
+        # Only exact reliefos/xorg values are accepted and it is never sourced.
+        backend=
+        marker_lines=0
+        if test -f /etc/reliefos/desktop-backend; then
+            while IFS= read -r marker_line || test -n "$marker_line"; do
+                marker_lines=$((marker_lines + 1))
+                test "$marker_lines" -gt 1 || backend=$marker_line
+                marker_line=
+            done < /etc/reliefos/desktop-backend
+        fi
+        case $backend in
+            reliefos|xorg) test "$marker_lines" = 1 || backend= ;;
+        esac
     fi
+    case $backend in
+        reliefos)
+            if test ! -e /run/reliefos/graphical-session-started; then
+                : > /run/reliefos/graphical-session-started
+                /usr/lib/reliefos/apps/login/login.elf --graphical-session \
+                    >>/var/log/desktop.log 2>&1
+            fi
+            ;;
+        xorg)
+            if test ! -e /run/reliefos/graphical-session-started; then
+                : > /run/reliefos/graphical-session-started
+                /usr/lib/reliefos/reliefos-xorg-session >>/var/log/xorg-session.log 2>&1
+            fi
+            ;;
+        *)
+            echo 'console-session: desktop backend marker is missing or invalid; falling back to text login' >>/var/log/desktop.log
+            ;;
+    esac
 fi
 # Installation media has locked account passwords; offer the same local
 # rescue shell on every text VT, including tty1 after the graphical session.

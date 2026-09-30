@@ -41,6 +41,28 @@ class ConsoleBootPolicyTests(unittest.TestCase):
         self.assertNotIn("RELIEFOS_BOOT_MODE", script)
         self.assertNotIn("/bin/sleep", script)
 
+    def test_console_session_dispatches_on_the_desktop_backend_marker(self):
+        script = (ROOTFS / "usr/lib/reliefos/console-session").read_text()
+        self.assertIn("/etc/reliefos/desktop-backend", script)
+        self.assertIn("reliefos-xorg-session", script)
+        self.assertIn("missing or invalid", script)
+        # The installer runtime keeps the native path ahead of the marker
+        # dispatch, and the native branch stays ahead of the Xorg branch.
+        self.assertLess(script.index("installer-runtime"),
+                        script.index("desktop-backend"))
+        self.assertLess(script.index("login.elf --graphical-session"),
+                        script.index("reliefos-xorg-session"))
+        # The old marker is retired; the plain single-line backend marker is
+        # the only dispatch input and it is never sourced.
+        self.assertNotIn("/etc/reliefos/desktop-session", script)
+        self.assertNotIn(". /etc/reliefos/desktop-backend", script)
+
+    def test_xorg_payload_is_staged_only_for_the_xorg_backend(self):
+        staging = (ROOT / "tools/build/rootfs-stage.sh").read_text()
+        self.assertIn("system/xorg/xorg.conf", staging)
+        self.assertIn("reliefos-xorg-session", staging)
+        self.assertIn("reliefos-xorg-client", staging)
+
     def test_graphical_and_installer_sessions_claim_a_controlling_terminal(self):
         source = (ROOT / "userland/apps/login/main.c").read_text()
         for item in ("setsid()", "TIOCSCTTY", "tcsetpgrp", "VT_ACTIVATE",

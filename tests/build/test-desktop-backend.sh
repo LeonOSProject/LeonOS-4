@@ -25,7 +25,7 @@ grep -q '^CONFIG_DESKTOP_BACKEND_XORG=y$' "$work/xorg/config/.config"
 hostcc=${HOSTCC:-cc}
 mkdir -p "$work/src/system" "$work/out"
 cp -a "$root/system/rootfs" "$work/src/system/rootfs"
-for name in certs config docs fonts resources test-accounts; do
+for name in certs config docs fonts resources test-accounts xorg; do
     ln -s "$root/system/$name" "$work/src/system/$name"
 done
 for name in configs docs resources test third_party tools userland; do
@@ -97,6 +97,12 @@ test -L "$reliefos_root/etc/runlevels/default/reliefos-windowd"
 test -L "$reliefos_root/etc/runlevels/default/reliefos-session"
 test ! -e "$xorg_root/etc/runlevels/default/reliefos-windowd"
 test ! -e "$xorg_root/etc/runlevels/default/reliefos-session"
+test -f "$xorg_root/etc/X11/xorg.conf"
+test -x "$xorg_root/usr/lib/reliefos/reliefos-xorg-session"
+test -x "$xorg_root/usr/lib/reliefos/reliefos-xorg-client"
+test ! -e "$reliefos_root/etc/X11/xorg.conf"
+test ! -e "$reliefos_root/usr/lib/reliefos/reliefos-xorg-session"
+test ! -e "$reliefos_root/usr/lib/reliefos/reliefos-xorg-client"
 
 cat > "$work/invalid.config" <<'CONFIG'
 CONFIG_DESKTOP_BACKEND_RELIEFOS=n

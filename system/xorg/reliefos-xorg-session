@@ -1,0 +1,26 @@
+#!/bin/sh
+# Minimal ReliefOS Xorg graphical session for tty1.
+#
+# Runs the stock Alpine Xorg server against the fixed Linux fbdev/evdev
+# devices through xinit, with exactly one X11 client (reliefos-xorg-client)
+# that presents a real /bin/login prompt. POSIX /bin/sh only.
+set -u
+
+log=/var/log/xorg-session.log
+
+timestamp() { date '+%Y-%m-%dT%H:%M:%S'; }
+say() { printf '%s xorg-session: %s\n' "$(timestamp)" "$*" >> "$log"; }
+
+say 'start on tty1: /usr/bin/xinit /usr/lib/reliefos/reliefos-xorg-client -- /usr/bin/Xorg :0 -config /etc/X11/xorg.conf -vt 1 -keeptty -novtswitch'
+say 'native windowd/sessiond not started (xorg desktop backend)'
+for need in /usr/bin/xinit /usr/bin/Xorg /usr/lib/reliefos/reliefos-xorg-client; do
+    [ -x "$need" ] || { say "missing executable: $need"; exit 1; }
+done
+[ -f /etc/X11/xorg.conf ] || { say 'missing Xorg configuration: /etc/X11/xorg.conf'; exit 1; }
+
+/usr/bin/xinit /usr/lib/reliefos/reliefos-xorg-client -- \
+    /usr/bin/Xorg :0 -config /etc/X11/xorg.conf -vt 1 -keeptty -novtswitch >> "$log" 2>&1
+status=$?
+say "Xorg server exited with status $status"
+say 'tty1 restored to text login'
+exit "$status"
