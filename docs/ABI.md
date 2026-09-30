@@ -129,6 +129,51 @@ device accepts 16-bit little-endian stereo output and provides normal
 `SNDCTL_DSP_*` format and queue ioctls. `/dev/audio` is a compatibility
 alias for the same node.
 
+## Xorg fbdev/evdev ABI
+
+The optional Xorg desktop backend (see [XORG.md](XORG.md)) drives display and
+input only through the standard Linux UAPI and POSIX interfaces: ELF/musl
+dynamic linking, files, processes, the controlling terminal, VT state, fbdev
+ioctls, evdev `read`/`poll`/ioctl, signals and Unix permissions. The
+ReliefOS-private framebuffer and VT extensions (`RELIEFOS_FBIOBLIT`,
+`RELIEFOS_FBIOUPDATE_REGION`, `RELIEFOS_FBIOGET_CAPABILITIES`,
+`RELIEFOS_EVIOCSVT`) stay internal to the native desktop stack; Xorg never
+calls them and none of them is part of the Xorg contract. No Xorg-specific
+syscall exists or may be added.
+
+Fixed device paths, no udev enumeration:
+
+- Display: `/dev/fb0` through the `fbdev` video driver.
+- Keyboard: `/dev/input/event0` through the `evdev` input driver.
+- Mouse: `/dev/input/event1` through the `evdev` input driver.
+- The server runs on the active graphical VT1 (`tty1`), pinned by
+  `Xorg -vt 1 -keeptty -novtswitch`.
+
+Supported fbdev ioctls on a `/dev/fb0` descriptor, with the public
+`<linux/fb.h>` structures: `FBIOGET_VSCREENINFO`, `FBIOPUT_VSCREENINFO`,
+`FBIOGET_FSCREENINFO` and `FBIOPAN_DISPLAY` (the fbdev flush request). The
+framebuffer is also mappable with standard `mmap`. Read-only queries are
+unrestricted. Mode setting (`FBIOPUT_VSCREENINFO`) obeys the graphical-control
+VT policy: a task without a controlling VT fails with `EPERM`, and a
+controlling VT that is not the active graphical VT fails with `EAGAIN`; a
+descriptor that is not `/dev/fb0` fails with `ENOTTY`, and an invalid mode or
+bad user pointer fails with `EINVAL`/`EFAULT`. Callers must treat `EAGAIN` as
+a state boundary and must not retry in a loop.
+
+Supported evdev operations on `/dev/input/event0` and `/dev/input/event1`, with
+the public `<linux/input.h>` structures: `EVIOCGVERSION`, `EVIOCGID`,
+`EVIOCGNAME`, `EVIOCGPHYS`, `EVIOCGBIT` capability bitmaps, `EVIOCGKEY`,
+`EVIOCGLED`, `EVIOCGABS` and `EVIOCGRAB`, plus the event stream itself through
+`poll` and `read` of complete `struct input_event` records. Descriptor,
+session and permission rules follow POSIX; a non-input descriptor fails with
+`ENOTTY` and a bad user pointer with `EFAULT`.
+
+Error boundaries: a missing device node fails `open` with `ENOENT`; every
+failed probe step is reported together with its `errno`, and
+`tools/tests/xorg_device_probe.c` is the reference probe that records these
+results. DRM/KMS, Mesa modesetting, libinput and Wayland are not supported and
+are not dependencies of this backend.
+
 ## Driver Module ABI
 
 Loadable Ring 0 driver modules use the public definitions in
