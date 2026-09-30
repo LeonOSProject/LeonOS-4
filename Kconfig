@@ -1,5 +1,29 @@
 menu "ReliefOS"
 
+menu "Desktop"
+
+choice
+    prompt "Desktop backend"
+    default DESKTOP_BACKEND_RELIEFOS
+
+config DESKTOP_BACKEND_RELIEFOS
+    bool "ReliefOS Desktop + desktopd"
+    help
+      Use the existing ReliefOS graphical stack: windowd, desktop.elf and
+      sessiond. This is the default backend and is not an independent
+      desktopd daemon.
+
+config DESKTOP_BACKEND_XORG
+    bool "Xorg + xinit + xterm"
+    help
+      Use the Alpine Xorg server with a minimal xinit/xterm login session.
+      ReliefOS native GUI applications are not X11 clients in this mode.
+      The two desktop backends are mutually exclusive.
+
+endchoice
+
+endmenu
+
 menu "Build"
 
 source "Kconfig.components"
