@@ -23,8 +23,18 @@ package_root() {
     SOURCE_DATE_EPOCH=$epoch APK_MUSL_SYSROOT=$out/sysroot/musl sh "$src/tools/build/apk-stage.sh" "$src" "$1" "$2" "$3" \
         "$APK_TOOL" "$APK_UPSTREAM" "$src/configs/apk-ownership.json" "$APK_OWN_TOOL" "$APK_KEY" "$APK_VERSION"
 }
+restore_native_desktop_policy() {
+    runtime_root=$1
+    mkdir -p "$runtime_root/etc/reliefos" "$runtime_root/etc/runlevels/default"
+    printf 'reliefos\n' > "$runtime_root/etc/reliefos/desktop-backend"
+    for service in reliefos-windowd reliefos-session; do
+        rm -f "$runtime_root/etc/runlevels/default/$service"
+        ln -s "../../init.d/$service" "$runtime_root/etc/runlevels/default/$service"
+    done
+}
 package_root "$work/installed-raw" "$work/installed" "$out/packages/apk-installed"
 cp -a "$raw" "$work/runtime-raw"
+restore_native_desktop_policy "$work/runtime-raw"
 mkdir -p "$work/runtime-raw/usr/lib/reliefos/apps/installer"
 cp "$out/userland/installer.elf" "$work/runtime-raw/usr/lib/reliefos/apps/installer/installer.elf"
 chmod 755 "$work/runtime-raw/usr/lib/reliefos/apps/installer/installer.elf"
