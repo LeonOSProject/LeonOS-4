@@ -21,7 +21,9 @@ rm -f "$work/installed-raw/etc/license.conf" "$work/installed-raw/etc/install.id
 package_root() {
     reliefos_log APK "$3"
     SOURCE_DATE_EPOCH=$epoch APK_MUSL_SYSROOT=$out/sysroot/musl sh "$src/tools/build/apk-stage.sh" "$src" "$1" "$2" "$3" \
-        "$APK_TOOL" "$APK_UPSTREAM" "$src/configs/apk-ownership.json" "$APK_OWN_TOOL" "$APK_KEY" "$APK_VERSION"
+        "$APK_TOOL" "$APK_UPSTREAM" "${APK_DEPS_TOOL:-$out/host/bin/reliefos-deps}" \
+        "${APK_LOCK:-$src/configs/dependencies.lock.json}" \
+        "$src/configs/apk-ownership.json" "$APK_OWN_TOOL" "$APK_KEY" "$APK_VERSION"
 }
 restore_native_desktop_policy() {
     runtime_root=$1
