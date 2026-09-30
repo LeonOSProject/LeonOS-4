@@ -80,6 +80,11 @@ RELIEFNT_PUBLISHED := $(RELIEFOS_KERNEL_SYS) $(RELIEFOS_KERNEL_DEBUG) \
 # toolchain choice; only ARCH, PROFILE and SOURCE_DATE_EPOCH are pinned here.
 RELIEFNT_TOOL_PASSTHRU := $(strip $(foreach tool,CC CXX AR RANLIB LD OBJCOPY STRIP, \
 	$(if $(filter command line,$(origin $(tool))),$(tool)=$(strip $($(tool))))))
+# Forward configured suffixes and explicit empty command-line overrides.
+# Otherwise the standalone kernel's editable Makefile defaults apply.
+RELIEFNT_VERSION_PASSTHRU := $(strip $(foreach suffix,EXTRAVERSION LOCALVERSION, \
+	$(if $(strip $($(suffix))),$(suffix)='$($(suffix))',\
+	$(if $(filter command line,$(origin $(suffix))),$(suffix)=''))))
 
 # --- the delegation and publish rule -----------------------------------------
 # Grouped targets: one recipe builds and installs the whole kernel product set
@@ -124,7 +129,7 @@ $(RELIEFNT_PUBLISHED) &: FORCE $(RELIEFOS_EMIT) $(RELIEFNT_KERNEL_HEADER_ORDER_O
 	fi; \
 	exec $(MAKE) -C '$(RELIEFNT_DIR)' O='$(RELIEFNT_SUBBUILD_O)' ARCH='$(ARCH)' \
 	    PROFILE='$(PROFILE)' SOURCE_DATE_EPOCH='$(or $(SOURCE_DATE_EPOCH),0)' \
-	    $(RELIEFNT_TOOL_PASSTHRU) all install DESTDIR='$(RELIEFNT_SUBBUILD_DEST)'
+	    $(RELIEFNT_TOOL_PASSTHRU) $(RELIEFNT_VERSION_PASSTHRU) all install DESTDIR='$(RELIEFNT_SUBBUILD_DEST)'
 	$(Q)set -eu; \
 	test -f $(RELIEFNT_DEST)/manifest.txt || { \
 	    echo "reliefnt adapter: $(RELIEFNT_DEST)/manifest.txt missing after install" >&2; \

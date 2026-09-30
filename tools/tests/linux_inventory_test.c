@@ -22,6 +22,14 @@ int storage_disk_block_info(uint32_t disk, int32_t part, uint64_t *start, uint64
     *count = part < 0 ? 131072 : 32768;
     return 0;
 }
+/* This fixture has partition geometry but no filesystem sector contents. */
+int storage_disk_block_read(uint32_t disk, int32_t part, uint64_t offset,
+                           void *buffer, uint32_t length, uint32_t *got)
+{
+    (void)disk; (void)part; (void)offset; (void)buffer; (void)length;
+    *got = 0;
+    return -2;
+}
 /* sysfs.c is compiled as a standalone host fixture, so provide the same
  * deterministic spelling that the real storage mount module exports. */
 int storage_disk_device_name(uint32_t disk, int32_t part, char *out, uint32_t capacity)
@@ -110,6 +118,7 @@ int main(void)
     assert(proc_readlink("/sys/dev/block/259:1", value, sizeof(value)) > 0);
     read_value("/proc/sys/kernel/ostype", value, sizeof(value));
     assert(!strcmp(value, "ReliefNT\n"));
+    /* Release interfaces must match the system-info record, including suffixes. */
     read_value("/proc/sys/kernel/osrelease", value, sizeof(value));
     assert(!strcmp(value, "9.8.7-0123\n"));
     read_value("/proc/sys/kernel/version", value, sizeof(value));

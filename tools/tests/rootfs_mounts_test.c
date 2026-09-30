@@ -39,11 +39,11 @@ int main(void)
     g_install_disks[0].present = 1; g_install_disks[0].transport = STORAGE_TRANSPORT_AHCI;
     g_install_disks[1].present = 1; g_install_disks[1].transport = STORAGE_TRANSPORT_AHCI;
     g_install_disk_count = 2;
-    g_volumes[1] = (struct storage_volume){.ready=1, .filesystem=STORAGE_FILESYSTEM_FAT32,
+    g_volumes[1] = (struct storage_volume){.ready=1, .volume_id=1, .filesystem=STORAGE_FILESYSTEM_FAT32,
         .mount_path="/boot", .data_partition_mount=1, .source_disk_id=0, .source_partition_index=0};
-    g_volumes[2] = (struct storage_volume){.ready=1, .filesystem=STORAGE_FILESYSTEM_EXT2,
+    g_volumes[2] = (struct storage_volume){.ready=1, .volume_id=2, .filesystem=STORAGE_FILESYSTEM_EXT2,
         .mount_path="/media/a b\\c\td\ne", .data_partition_mount=1, .source_disk_id=1, .source_partition_index=3};
-    g_volumes[3] = (struct storage_volume){.ready=1, .filesystem=STORAGE_FILESYSTEM_EXT2,
+    g_volumes[3] = (struct storage_volume){.ready=1, .volume_id=3, .filesystem=STORAGE_FILESYSTEM_EXT2,
         .mount_path="/media/a b\\c\td\ne/child"};
     char text[4096]={0}, chunks[4096]={0};
     uint32_t length, got;
@@ -56,10 +56,20 @@ int main(void)
     fclose(stream);
     assert(storage_read_mountinfo(0,text,sizeof(text)-1,&length)==0); text[length]=0;
     assert(strstr(text,"1 0 0:1 / / rw - ext4 ramdisk rw\n"));
-    assert(strstr(text,"2 1 0:2 / /boot rw - vfat /dev/sda1 rw\n"));
+    assert(strstr(text,"2 1 259:1 / /boot rw - vfat /dev/sda1 rw\n"));
+    assert(strstr(text,"3 1 259:260 / /media/"));
     assert(strstr(text,"4 3 0:4 "));
     assert(strstr(text,"0:200 / /dev rw - devfs devfs rw"));
     assert(strstr(text,"0:201 / /proc ro - proc proc ro"));
+    assert(storage_volume_device(1) == storage_block_rdev(STORAGE_BLOCK_VOLUME_ID(0, 0)));
+    assert(storage_volume_device(2) == storage_block_rdev(STORAGE_BLOCK_VOLUME_ID(1, 3)));
+    assert(storage_volume_device(0) == 1 && storage_volume_device(3) == 4);
+    assert(storage_volume_device(STORAGE_MAX_VOLUMES) == 0);
+    /* Boot-selected GPT identities must also work before an fstab mount. */
+    g_volumes[0].ram_base = NULL;
+    g_volumes[0].ext_device = storage_block_rdev(STORAGE_BLOCK_VOLUME_ID(1, 7));
+    assert(storage_volume_device(0) == g_volumes[0].ext_device);
+    g_volumes[0].ram_base = (void *)1;
     for (uint32_t pos=0;pos<length;pos+=got) {
         assert(storage_read_mountinfo(pos,chunks+pos,7,&got)==0 && got);
     }

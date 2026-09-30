@@ -50,9 +50,15 @@ The corresponding libc APIs open these paths before issuing device ioctls.
 Whole disks and GPT partitions are exposed using those Linux block names. They
 support sector-aligned `read`/`write`, and
 the Linux UAPI requests `BLKGETSIZE64`, `BLKGETSIZE`, `BLKSSZGET`, `BLKROGET`
-and `BLKRRPART` from `<linux/fs.h>`. Raw sector reads/writes require an
-administrator (or the installer ISO's uid-0 shell); writes and partition-table
-rereads are rejected for booted or mounted disks.
+and `BLKRRPART` from `<linux/fs.h>`. Raw reads use the device's Linux open-time
+DAC permissions, including readable descriptors inherited across a UID change.
+Raw writes require an administrator (or the installer ISO's uid-0 shell);
+writes and partition-table rereads are rejected for booted or mounted disks.
+Disk-backed filesystem `stat.st_dev` and `/proc/self/mountinfo` use the same
+device numbers as `/dev` and sysfs. The util-linux build uses direct blkid
+probing, including filesystem versions, so root's `lsblk -f` reports real
+types, labels, UUIDs and mounted filesystem usage. Without a udev cache,
+ordinary users need `sudo lsblk -f` for fields requiring device reads.
 
 `/dev/input/event0` is the Linux evdev keyboard stream and
 `/dev/input/event1` is the mouse stream. Each opened descriptor has its own

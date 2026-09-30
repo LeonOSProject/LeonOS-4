@@ -213,7 +213,7 @@ These passing post-initialization tests do not certify that early-boot case.
 
 | Previous failure | Implementation and observed result | Status |
 | --- | --- | --- |
-| lsblk inventory | Real disks/partitions, `/sys/dev/block`, `/sys/block`, `/sys/class/block`, sizes and matching `st_rdev`; `sda`/`sda1` or NVMe names listed | Verified subset |
+| lsblk inventory | Real disks/partitions, sysfs sizes and matching device numbers; root's `-f` probes filesystem type/version, label and UUID, with mounted space/usage from statvfs | Verified subset |
 | mkfs.ext4 | Scalar I/O aggregates transport chunks, retaining progress across asynchronous retries; regular image and QEMU AHCI partition format successfully | Verified subset |
 | fsck.ext4 | Checks both successfully formatted ext4 targets | Verified subset |
 | blkid ext4 | Identifies the ext4 filesystem created by the official formatter | Verified subset |

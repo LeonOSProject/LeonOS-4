@@ -901,9 +901,21 @@ static void reset_confirm(void)
 
 static char installer_root_uuid[37], installer_esp_uuid[37];
 
+/* The feature profile is stated explicitly instead of inheriting mke2fs
+ * defaults: it must match the images built by tools/build/images.sh, and it
+ * must stay inside the kernel's accepted mask (extents, 64bit, flex_bg,
+ * filetype, csum_seed incompat; metadata_csum/extra_isize/dir_nlink/... ro). */
+#define INSTALLER_MKFS_EXT4_FEATURES \
+    "none,filetype,extents,dir_index,metadata_csum,64bit,flex_bg," \
+    "has_journal,large_file,huge_file,extra_isize"
+
 static int installer_format_ext4(const char *path)
 {
-    char *const argv[] = { (char *)"mkfs.ext4", (char *)"-F", (char *)path, NULL };
+    char *const argv[] = { (char *)"mkfs.ext4", (char *)"-F",
+                           (char *)"-b", (char *)"4096",
+                           (char *)"-I", (char *)"256",
+                           (char *)"-O", (char *)INSTALLER_MKFS_EXT4_FEATURES,
+                           (char *)path, NULL };
     pid_t child;
     int status;
     int ret = posix_spawnp(&child, "mkfs.ext4", NULL, NULL, argv, environ);
@@ -1060,6 +1072,10 @@ static int installer_mount_targets(const char *disk_path, int fresh)
     } else if (root_filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT2 ||
                root_filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT4) {
         root_fs_name = root_filesystem == RELIEFOS_BLOCK_FILESYSTEM_EXT4 ? "ext4" : "ext2";
+    } else {
+        /* An unknown root filesystem must not reach mount() with a null type. */
+        printf("[installer.elf] unsupported root filesystem fs=%u\n", root_filesystem);
+        return -ENODEV;
     }
     if (mount(root_path, INSTALL_ROOT_MOUNT, root_fs_name, 0, NULL) < 0) {
         printf("[installer.elf] mount root failed path=%s errno=%d\n", root_path, errno);

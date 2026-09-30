@@ -126,7 +126,15 @@ int main(void)
     assert(result == sizeof(data) && yields == 31);
     assert(!memcmp(data, disk, sizeof(data)) && file.offset == 123);
     assert(!task->regular_io.active);
+    clock_step = 0;
+    task->syscall_file_number = LINUX_SYS_PREAD64;
+    file.flags |= TASK_FILE_FLAG_DEV_BLOCK | TASK_FILE_FLAG_DEV_NODE;
+    assert(syscall_regular_io(task, &file, (uintptr_t)data, 2, 510, false, true) == -LINUX_EBADF);
+    file.node.flags = STORAGE_NODE_FLAG_DEV_BLOCK | STORAGE_NODE_FLAG_DEV_NODE;
+    file.node.first_cluster = STORAGE_DEV_KIND_DISK;
+    assert(syscall_regular_io(task, &file, (uintptr_t)data, 2, 510, false, true) == 2);
+    assert(!memcmp(data, disk + 510, 2));
     free(task);
     free(other);
-    puts("PASS full file transfers, async continuation, shared offsets, EOF and error progress");
+    puts("PASS full file transfers, async continuation, shared offsets, EOF, error progress and genuine block-node validation");
 }

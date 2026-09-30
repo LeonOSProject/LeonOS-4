@@ -36,6 +36,14 @@ libmd|libbsd) set -- "$@" --libdir=/lib ;;
 sudo) set -- "$@" --with-pam --with-pam-login --with-secure-path=/usr/sbin:/usr/bin:/sbin:/bin --with-rundir=/run/sudo --with-vardir=/var/lib/sudo --libexecdir=/usr/lib ;;
 shadow) set -- "$@" --bindir=/bin --sbindir=/sbin --with-libpam --with-yescrypt --without-su --disable-logind ;;
 util-linux) CPPFLAGS="$CPPFLAGS -include linux/openat2.h"; export CPPFLAGS
+ # Without libudev, lsblk probes the device directly. Upstream's flags omit
+ # VERSION even though -f requests FSVER; request it from the real superblock.
+ awk '
+ /BLKID_SUBLKS_TYPE\);/ {sub(/BLKID_SUBLKS_TYPE\);/, "BLKID_SUBLKS_TYPE | BLKID_SUBLKS_VERSION);"); changed++}
+ {print}
+ END {if (changed != 1) exit 1}
+ ' "$source/misc-utils/lsblk-properties.c" > "$source/misc-utils/lsblk-properties.c.new"
+ mv "$source/misc-utils/lsblk-properties.c.new" "$source/misc-utils/lsblk-properties.c"
  set -- "$@" --sbindir=/usr/sbin --disable-all-programs --enable-su --enable-runuser --enable-libuuid --enable-libfdisk --enable-libsmartcols --enable-fdisks=check --enable-libblkid --enable-libmount --enable-mount --enable-blkid --enable-lsblk --enable-fsck --without-python --without-systemd --without-systemdsystemunitdir --disable-makeinstall-chown ;;
 e2fsprogs) LDFLAGS="-static -L$auth/usr/lib"; export LDFLAGS
  set -- "$@" --sbindir=/usr/sbin --with-root-prefix=/usr --disable-libuuid --disable-libblkid --disable-elf-shlibs --disable-fsck --disable-uuidd --disable-nls --disable-fuse2fs --without-libarchive --with-udev-rules-dir=no --with-systemd-unit-dir=no --with-crond-dir=no ;;

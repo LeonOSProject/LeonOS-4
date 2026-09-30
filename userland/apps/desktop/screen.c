@@ -71,6 +71,33 @@ static void cursor_put_pixel(int x, int y, uint32_t color)
     screen[(uint64_t)y * MAX_FB_W + (uint32_t)x] = color;
 }
 
+static void cursor_put_argb(int x, int y, uint32_t argb)
+{
+    uint32_t alpha = argb >> 24;
+    uint32_t base;
+    if (!alpha || x < 0 || y < 0 || x >= (int)fb_w() || y >= (int)fb_h()) return;
+    if (alpha == 255) {
+        cursor_put_pixel(x, y, argb & 0x00ffffffu);
+        return;
+    }
+    if (cursor_target) {
+        int tx = x - cursor_target_x, ty = y - cursor_target_y;
+        if (tx < 0 || ty < 0 || (uint32_t)tx >= cursor_target_width ||
+            (uint32_t)ty >= cursor_target_height) return;
+        base = cursor_target[(uint64_t)ty * cursor_target_stride + (uint32_t)tx];
+    } else {
+        base = screen[(uint64_t)y * MAX_FB_W + (uint32_t)x];
+    }
+    uint32_t inverse = 255 - alpha;
+    uint32_t color = 0;
+    for (uint32_t shift = 0; shift < 24; shift += 8) {
+        uint32_t channel = (((argb >> shift) & 255) * alpha +
+                            ((base >> shift) & 255) * inverse + 127) / 255;
+        color |= channel << shift;
+    }
+    cursor_put_pixel(x, y, color);
+}
+
 static void format_taskbar_clock(char *buf, uint32_t cap)
 {
     struct reliefos_time_info time_info;
@@ -601,8 +628,7 @@ static void draw_cursor_shape_target(uint32_t x, uint32_t y)
                     draw_y + (int)row >= 0 &&
                     draw_x + (int)col < (int)fb_w() &&
                     draw_y + (int)row < (int)fb_h()) {
-                    cursor_put_pixel(draw_x + (int)col, draw_y + (int)row,
-                                     px & 0x00ffffffu);
+                    cursor_put_argb(draw_x + (int)col, draw_y + (int)row, px);
                 }
             }
         }
@@ -620,9 +646,9 @@ static void draw_cursor_shape_target(uint32_t x, uint32_t y)
         for (uint32_t col = 0; col < FALLBACK_CURSOR_W; ++col) {
             char cell = cursor_art[row][col];
             if (cell == 'X') {
-                put_pixel(x + col, y + row, 0x00000000);
+                cursor_put_pixel(draw_x + (int)col, draw_y + (int)row, 0x00000000);
             } else if (cell == 'O') {
-                put_pixel(x + col, y + row, 0x00ffffff);
+                cursor_put_pixel(draw_x + (int)col, draw_y + (int)row, 0x00ffffff);
             }
         }
     }
