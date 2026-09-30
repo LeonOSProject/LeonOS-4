@@ -20,16 +20,29 @@
 
 static int root_mounted, esp_mounted, busy_root, busy_esp, mutations;
 
+/* The format step is the reason this test exists: capture the spelling of the
+ * mkfs.ext4 invocation so a silently-degrading default (the mke2fs revision-0
+ * fallback) cannot creep back in unnoticed. */
+static char spawn_file[64];
+static char spawn_args[16][128];
+static int spawn_argc;
+static int spawn_calls;
+
 int fake_posix_spawnp(pid_t *pid, const char *file,
                       const posix_spawn_file_actions_t *actions,
                       const posix_spawnattr_t *attr,
                       char *const argv[], char *const envp[])
 {
-    (void)file;
     (void)actions;
     (void)attr;
-    (void)argv;
     (void)envp;
+    ++spawn_calls;
+    snprintf(spawn_file, sizeof(spawn_file), "%s", file ? file : "");
+    spawn_argc = 0;
+    for (int i = 0; argv && argv[i] && spawn_argc < 16; ++i) {
+        snprintf(spawn_args[spawn_argc], sizeof(spawn_args[0]), "%s", argv[i]);
+        ++spawn_argc;
+    }
     *pid = 1;
     return 0;
 }
@@ -103,12 +116,43 @@ int reliefos_block_list_partitions(const char *path, struct reliefos_block_parti
     return 0;
 }
 
+/* The fresh path must hand mkfs.ext4 an explicit ext4 profile: an inherited
+ * default can degrade to revision 0 (ext2) whenever uname() reports a release
+ * the tool considers pre-2.2, which is exactly the mount EINVAL this guards. */
+static void assert_format_args(void)
+{
+    assert(spawn_calls == 1);
+    assert(!strcmp(spawn_file, "mkfs.ext4"));
+    int seen_f = 0, seen_b = 0, seen_i = 0, seen_o = 0;
+    for (int i = 1; i < spawn_argc; ++i) {
+        if (!strcmp(spawn_args[i], "-F")) seen_f = 1;
+        else if (!strcmp(spawn_args[i], "-b")) { seen_b = 1; assert(!strcmp(spawn_args[i + 1], "4096")); }
+        else if (!strcmp(spawn_args[i], "-I")) { seen_i = 1; assert(!strcmp(spawn_args[i + 1], "256")); }
+        else if (!strcmp(spawn_args[i], "-O")) {
+            seen_o = 1;
+            const char *features = spawn_args[i + 1];
+            assert(strstr(features, "extents"));
+            assert(strstr(features, "64bit"));
+            assert(strstr(features, "metadata_csum"));
+            assert(strstr(features, "has_journal"));
+        }
+    }
+    assert(seen_f && seen_b && seen_i && seen_o);
+    /* The device is the last argument. Check it is a partition of the target
+     * disk rather than pinning this test to the stub's naming scheme. */
+    assert(!strncmp(spawn_args[spawn_argc - 1], "/dev/sda", 8));
+}
+
 int main(void)
 {
     assert(installer_mount_targets("/dev/sda", 0) == 0);
     assert(root_mounted && esp_mounted);
+    assert(spawn_calls == 0);   /* an update never formats */
     assert(installer_mount_targets("/dev/sda", 1) == 0);
     assert(root_mounted && esp_mounted && mutations == 1);
+    assert_format_args();
+    assert(installer_mount_targets("/dev/sda", 0) == 0);
+    assert(spawn_calls == 1);   /* returning to update does not re-format */
     assert(installer_mount_targets("/dev/sda", 0) == 0);
     busy_esp = 1;
     assert(installer_mount_targets("/dev/sda", 1) == -EBUSY);
