@@ -32,6 +32,7 @@ uint32_t smp_cpu_count(void) { return 1; }
 void sched_cpu_ticks(uint64_t *busy, uint64_t *idle) { *busy = 10; *idle = 20; }
 void sched_cpu_ticks_per_cpu(uint64_t *busy, uint64_t *idle, uint32_t capacity)
 { if (capacity) sched_cpu_ticks(busy, idle); }
+/* All release interfaces must use this record, including its suffix. */
 static const struct reliefos_system_info fixture_system = {
     .kernel_name = "ReliefNT", .kernel_version = "9.8.7-0123",
     .build_time = "2026-09-11 01:02:03",
@@ -73,6 +74,12 @@ int main(void)
     assert(proc_lookup("/proc/42/stat", &node) == 0 && node.type == RELIEFOS_FS_TYPE_FILE);
     char contents[512];
     uint32_t got;
+    assert(proc_read("/proc/sys/kernel/osrelease", 0, contents, sizeof(contents) - 1, &got) == 0);
+    contents[got] = 0;
+    assert(!strcmp(contents, "9.8.7-0123\n"));
+    assert(proc_read("/proc/version", 0, contents, sizeof(contents) - 1, &got) == 0);
+    contents[got] = 0;
+    assert(!strcmp(contents, "ReliefNT version 9.8.7-0123 (2026-09-11 01:02:03)\n"));
     assert(proc_read("/proc/42/stat", 0, contents, sizeof(contents) - 1, &got) == 0 && got);
     contents[got] = 0;
     assert(strstr(contents, "42 (test)"));
@@ -151,8 +158,10 @@ int main(void)
     assert(proc_read("/proc/self/mountinfo", 0, contents, sizeof(contents), &got) == 0 && got == 1);
     assert(proc_read("/proc/filesystems", 0, contents, sizeof(contents) - 1, &got) == 0);
     contents[got] = 0;
-    /* tmpfs now has a real mount backend, also exercised by the FIFO VM probe. */
-    assert(strstr(contents, "\text2\n") && strstr(contents, "\ttmpfs\n"));
+    /* tmpfs now has a real mount backend, also exercised by the FIFO VM probe.
+     * ext4 is listed because the ext-family backend serves both revisions. */
+    assert(strstr(contents, "\text2\n") && strstr(contents, "\text4\n") &&
+           strstr(contents, "\ttmpfs\n"));
     assert(proc_read("/proc/sys/kernel/hostname", 0, contents, sizeof(contents) - 1, &got) == 0);
     contents[got] = 0;
     assert(!strcmp(contents, "fixture-host\n"));

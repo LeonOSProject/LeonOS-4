@@ -27,6 +27,23 @@ Kconfig 菜单（Build、Image defaults 等）决定默认配置，configs/compo
 生成文件只写 O。`SOURCE_DATE_EPOCH` 默认为提交时间，仅用于时间元数据与可复现打包；
 版本为 `major.minor.patch`，没有构建号覆盖或计数器，提交身份另存 RELIEFOS_SOURCE_ID。
 
+内核基础版本为 `5.0.0`，由 `kernel/reliefnt/configs/build-version` 定义。
+`uname -r`、`/proc/sys/kernel/osrelease`、`/proc/version` 和系统信息使用同一份
+生成的内核版本，包含后缀；不再单独报告 `6.12.0`。
+
+后缀采用 Linux Makefile 的 `EXTRAVERSION` 和 `LOCALVERSION` 变量，按顺序直接拼接：
+
+```sh
+make -j8 EXTRAVERSION=-perf kernel                # 5.0.0-perf
+make -j8 EXTRAVERSION=-perf LOCALVERSION=-test kernel # 5.0.0-perf-test
+make -j8 kernel                                  # 5.0.0（默认无后缀）
+```
+
+也可以修改根 `Makefile` 或 `kernel/reliefnt/Makefile` 的 `EXTRAVERSION` 默认值。
+根 Makefile 的非空设置或显式命令行设置会传给内核；否则采用内核 Makefile 的默认值。
+切换后缀会重新生成版本头并重建内核，无需 clean。后缀仅接受字母、数字、`._+-`，
+完整版本最多 31 字节，以适配现有系统信息 ABI。包和发布元数据继续使用数字基础版本。
+
 | 目标 | 输出 |
 | --- | --- |
 | kernel / loader / drivers | generated/system、generated/boot、generated/drivers |

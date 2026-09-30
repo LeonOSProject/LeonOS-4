@@ -34,6 +34,10 @@ endif
 V ?= 0
 CPUS ?=
 MEMORY ?=
+# Kernel-only suffixes; an empty default leaves the standalone kernel's
+# Makefile defaults in effect. Package release versions remain numeric.
+EXTRAVERSION ?=
+LOCALVERSION ?=
 SOURCE_DATE_EPOCH ?= $(shell git -C $(RELIEFOS_SRC) show -s --format=%ct HEAD 2>/dev/null || echo 0)
 TOOLCHAIN ?= $(RELIEFOS_SRC)/configs/toolchains/llvm-x86_64.mk
 
@@ -49,6 +53,11 @@ RELIEFOS_ALLOWED_CHARS := a b c d e f g h i j k l m n o p q r s t u v w x y z \
 
 # $(call strip_allowed,text,chars): keep only characters outside the allow-list.
 strip_allowed = $(if $(2),$(call strip_allowed,$(subst $(firstword $(2)),,$(1)),$(wordlist 2,9999,$(2))),$(1))
+
+reliefos_suffix_residual := $(call strip_allowed,$(EXTRAVERSION)$(LOCALVERSION),$(filter-out /,$(RELIEFOS_ALLOWED_CHARS)) +)
+ifneq ($(reliefos_suffix_residual),)
+$(error EXTRAVERSION and LOCALVERSION accept only A-Z a-z 0-9 . _ + -)
+endif
 
 ifeq ($(O),)
 $(error O= must not be empty; it names this build's output directory)
