@@ -8,9 +8,11 @@ staging, the installer runtime or its installed-system payload.
 - `root` / `root`: UID/GID 0.
 - `nobody`: locked.
 
-These are intentionally public test credentials. The yescrypt hashes have
-independent random salts; the positive shadow change date avoids forcing a
-password change at first login. sudo uses the normal password-authenticated
+These are intentionally public test credentials. The SHA-512 crypt hashes use
+independent fixed salts (the guest libcrypt resolves `crypt()` to the bundled
+musl implementation, which verifies DES/MD5/SHA-256/SHA-512 but not yescrypt);
+the positive shadow change date avoids forcing a password change at first
+login. sudo uses the normal password-authenticated
 wheel policy and therefore asks for `test` when run by the test account.
 
 The image-specific root gets an installed marker to require PAM login, and a
