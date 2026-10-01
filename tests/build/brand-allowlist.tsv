@@ -565,3 +565,5 @@ main	compatibility	userland/storage/leonos-kernel-update	旧命令源文件名�
 main	compatibility	userland/storage/leonos-rpr-apkcheck	旧命令源文件名为既有构建输入与兼容入口；当前帮助/私有 key 临时名已 canonical
 main	compatibility	userland/storage/leonos-rpr-ping	旧命令源文件名与外部服务冻结 leonos-rpr-ok 响应；当前帮助/临时名已 canonical
 main	history	docs/superpowers/task11-verification.md	任务 11 实际执行记录：旧快照 SHA、兼容 ABI/旧安装验证与未通过的外部旧 URL 证据，非现行品牌残留
+main	compatibility	tools/test_xorg_abi.py	ABI 审计的禁用词表引用旧私有 ioctl/头路径名作为检测项
+main	compatibility	tests/build/test-desktop-backend.sh	后端契约测试的 fixture 使用产品兼容文件名（libleonos/leonos 字体与消息）
