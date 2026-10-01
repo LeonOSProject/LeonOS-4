@@ -1,9 +1,10 @@
 #!/bin/sh
 # X11 client for the minimal ReliefOS Xorg session.
 #
-# Started by xinit once the Xorg server accepts connections. Presents exactly
-# one xterm whose session is a real /bin/login prompt; this file must never
-# default to an interactive root shell. POSIX /bin/sh only.
+# Started by xinit once the Xorg server accepts connections. The default
+# desktop is twm as window manager plus exactly one xterm whose session is a
+# real /bin/login prompt; this file must never default to an interactive root
+# shell. POSIX /bin/sh only.
 set -u
 
 log=/var/log/xorg-session.log
@@ -12,13 +13,22 @@ timestamp() { date '+%Y-%m-%dT%H:%M:%S'; }
 say() { printf '%s xorg-client: %s\n' "$(timestamp)" "$*" >> "$log"; }
 
 say "Xorg server started (client connected on display ${DISPLAY:-:0})"
-for need in /usr/bin/xterm /bin/login; do
+for need in /usr/bin/twm /usr/bin/xterm /bin/login; do
     [ -x "$need" ] || { say "missing executable: $need"; exit 1; }
 done
+
+# twm is the default desktop window manager: it decorates the login terminal
+# and every window the signed-in user starts from its shell (for example
+# xeyes). The shipped twmrc disables twm's interactive placement outline and
+# pins the core "fixed" fonts; the login terminal is pinned to the top-left
+# corner so it is under the pointer at startup (twm focuses the window under
+# the pointer). It stays in the background; the xterm below holds the session.
+/usr/bin/twm -f /etc/X11/twm/twmrc >> "$log" 2>&1 &
+say "twm window manager started (default desktop)"
 say "xterm client started (/usr/bin/xterm running /bin/login)"
 
 # The non-interactive shim only logs the reached login prompt and immediately
 # replaces itself with /bin/login; the user never gets a shell from it.
 shim='echo "$(date "+%Y-%m-%dT%H:%M:%S") xorg-client: /bin/login prompt reached (/bin/login in xterm)" >> /var/log/xorg-session.log
 exec /bin/login'
-exec /usr/bin/xterm -T reliefos-login -e /bin/sh -c "$shim"
+exec /usr/bin/xterm -T reliefos-login -geometry 100x32+0+0 -e /bin/sh -c "$shim"

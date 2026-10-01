@@ -3,9 +3,9 @@
 ReliefOS can run one of two mutually exclusive desktop backends. The default
 is the native ReliefOS Desktop stack (`windowd`, `desktop.elf`, `sessiond`,
 advertised to users as *ReliefOS Desktop + desktopd*); the alternative is a
-minimal X11 session built from the stock Alpine `xorg-server`, `xinit` and
-`xterm` binaries. This document describes the Xorg option, its boundaries and
-how to verify it.
+minimal X11 session built from the stock Alpine `xorg-server`, `xinit`, `twm`
+and `xterm` binaries. This document describes the Xorg option, its boundaries
+and how to verify it.
 
 ## Selecting the backend
 
@@ -36,8 +36,12 @@ A minimal, bootable and loggable X11 session on `tty1`:
 2. The wrapper runs `xinit /usr/lib/reliefos/reliefos-xorg-client --
    /usr/bin/Xorg :0 -config /etc/X11/xorg.conf vt1 -keeptty -novtswitch`
    (`vt1` is the X server's positional VT argument).
-3. The client runs `xterm`, and inside the xterm a real `/bin/login` prompt -
-   never a root shell.
+3. The client starts `twm` as the default desktop window manager with the
+   shipped `/etc/X11/twm/twmrc` (`RandomPlacement`, core `fixed` fonts - bare
+   twm would otherwise show its interactive placement outline and ask for
+   Helvetica), then runs `xterm`, and inside the xterm a real `/bin/login`
+   prompt - never a root shell. Windows the signed-in user starts from that
+   shell (for example `xeyes`) are managed by twm on the same desktop.
 4. When the Xorg session ends, `tty1` returns to the ordinary text login and
    the other VTs are unaffected.
 
@@ -108,7 +112,8 @@ native service scripts and ELF programs stay in place.
 ## Session diagnostics
 
 - `/var/log/xorg-session.log` - session wrapper milestones: server start,
-  xterm client, `/bin/login` prompt, exit status, text-login restore.
+  twm window manager, xterm client, `/bin/login` prompt, exit status,
+  text-login restore.
 - `/var/log/Xorg.0.log` - the Xorg server's own log.
 - `/var/log/desktop.log` - native session log; it stays silent in Xorg mode.
 

@@ -21,6 +21,7 @@ expect_order() {
 conf=$root/system/xorg/xorg.conf
 session=$root/system/xorg/reliefos-xorg-session
 client=$root/system/xorg/reliefos-xorg-client
+twmrc=$root/system/xorg/twmrc
 console=$root/system/rootfs/usr/lib/reliefos/console-session
 
 # --- Xorg configuration pins standard Linux fbdev/evdev devices ---
@@ -40,8 +41,17 @@ expect_grep "$conf" 'tty1'
 expect_grep "$session" 'xinit'
 expect_grep "$session" '/usr/bin/xinit /usr/lib/reliefos/reliefos-xorg-client --'
 expect_grep "$session" '/usr/bin/Xorg :0 -config /etc/X11/xorg.conf vt1 -keeptty -novtswitch'
+expect_grep "$client" '/usr/bin/twm'
 expect_grep "$client" 'xterm'
 expect_grep "$client" '/bin/login'
+expect_order "$client" 'twm window manager started' 'xterm client started'
+# twm without a config shows an interactive placement outline and wants
+# Helvetica fonts; the shipped twmrc must avoid both.
+expect_grep "$client" '/etc/X11/twm/twmrc'
+expect_grep "$twmrc" 'RandomPlacement'
+expect_grep "$twmrc" 'MenuFont[[:space:]]*"fixed"'
+! sed 's/#.*//' "$twmrc" | grep -qi 'helvetica' ||
+    fail "$twmrc must not require Helvetica fonts"
 expect_grep "$client" 'exec /bin/login'
 expect_no_grep "$client" 'graphical-session'
 for script in "$session" "$client" "$console"; do

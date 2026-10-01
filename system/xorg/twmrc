@@ -1,0 +1,57 @@
+# ReliefOS default twm configuration for the Xorg desktop backend.
+#
+# twm without this file shows its interactive placement outline (a window
+# outline with a 3x3 grid tracking the pointer) until someone clicks, and
+# requests Helvetica fonts the minimal font set does not carry. This file
+# makes windows appear on their own, pins the core "fixed" fonts and keeps a
+# small root menu for everyday window management.
+
+RandomPlacement
+BorderWidth 2
+TitleButtonBorderWidth 1
+MenuFont "fixed"
+TitleFont "fixed"
+ResizeFont "fixed"
+IconFont "fixed"
+IconManagerFont "fixed"
+
+Color {
+    DefaultBackground "rgb:2/a/9"
+    DefaultForeground "gray85"
+    Border "slategrey"
+    TitleBackground "rgb:2/a/9"
+    TitleForeground "gray85"
+    MenuBackground "rgb:2/a/9"
+    MenuForeground "gray85"
+    MenuTitleBackground "rgb:2/a/9"
+    MenuTitleForeground "gray85"
+    IconBackground "rgb:2/a/9"
+    IconForeground "gray85"
+    IconManagerBackground "rgb:2/a/9"
+    IconManagerForeground "gray85"
+}
+
+menu "defops"
+{
+    "ReliefOS Xorg"     f.title
+    "Iconify"           f.iconify
+    "Resize"            f.resize
+    "Move"              f.move
+    "Raise"             f.raise
+    "Lower"             f.lower
+    ""                  f.nop
+    "Focus"             f.focus
+    "Unfocus"           f.unfocus
+    ""                  f.nop
+    "New xterm"         f.exec "exec xterm &"
+    ""                  f.nop
+    "Kill"              f.destroy
+    "Delete"            f.delete
+    ""                  f.nop
+    "Restart twm"       f.restart
+    "Exit session"      f.quit
+}
+
+Button1 = : root : f.menu "defops"
+Button2 = : root : f.menu "defops"
+Button3 = : root : f.menu "defops"
