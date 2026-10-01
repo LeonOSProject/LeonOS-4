@@ -20,9 +20,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_O = ROOT / "out/xorg-qemu"
 SEMANTIC_LINES = {
-    "Xorg server started": "xterm client connected to the Xorg server",
-    "xterm client started": "the xterm X11 client launched",
-    "/bin/login prompt reached": "xterm runs /bin/login for real sign-in",
+    "Xorg server started": "urxvt client connected to the Xorg server",
+    "authenticated tty1 login starting Xorg": "Xorg started by the authenticated tty1 login shell",
+    "urxvt client started": "the urxvt X11 client launched",
+    "authenticated login shell ended": "the authenticated X terminal shell ended",
     "native windowd/sessiond not started": "the native desktop stack stayed out",
     "Xorg server exited with status": "the Xorg session ended with a status",
     "tty1 restored to text login": "tty1 fell back to the text login",
@@ -80,6 +81,17 @@ class Qmp:
     def screendump(self, path: Path) -> None:
         self.hmp(f"screendump {path}", 0.4)
 
+    def mouse(self, dx: int, dy: int) -> None:
+        self.execute("input-send-event", {"events": [
+            {"type": "rel", "data": {"axis": "x", "value": dx}},
+            {"type": "rel", "data": {"axis": "y", "value": dy}},
+            {"type": "sync", "data": {"type": 0}}]}, 0.3)
+
+    def mouse_button(self, button: int, down: bool) -> None:
+        self.execute("input-send-event", {"events": [
+            {"type": "btn", "data": {"button": button, "down": down}},
+            {"type": "sync", "data": {"type": 0}}]}, 0.2)
+
 
 SPECIAL_KEYS = {
     " ": "spc", ".": "dot", "/": "slash", "-": "minus", "_": "shift-minus",
@@ -118,6 +130,12 @@ def ppm_stats(path: Path) -> tuple[float, float, int]:
             peak = value
         samples += 1
     return luminance_sum / samples, bright / samples, peak
+
+
+def frames_differ(first: Path, second: Path) -> bool:
+    """True when two screendumps capture different visible content."""
+    return (first.exists() and second.exists()
+            and first.read_bytes() != second.read_bytes())
 
 
 def read_config() -> dict:
@@ -306,11 +324,25 @@ def main() -> int:
         qmp = Qmp(qmp_socket)
         qmp.execute("qmp_capabilities")
 
-        # UEFI, GRUB and the userland handoff need about half a minute; the
-        # Xterm window then paints the first bright frame on the VGA surface.
+        # UEFI, GRUB and the userland handoff need about half a minute; tty1
+        # first presents the ordinary text login prompt.
         x_frame = None
         deadline = time.time() + args.boot_timeout
         time.sleep(40)
+        tty_login_frame = output / "tty1-login-before-xorg.ppm"
+        qmp.screendump(tty_login_frame)
+        tty_mean, tty_bright, tty_peak = ppm_stats(tty_login_frame)
+        checks["tty1 text login appears before Xorg"] = (
+            tty_login_frame.exists() and tty_peak > 80,
+            f"{tty_login_frame.name} mean={tty_mean:.1f} bright={tty_bright:.3f} peak={tty_peak}")
+        serial_before_login = serial_log.read_text(errors="replace") if serial_log.exists() else ""
+        qmp.send_keys(text_keys("root") + ("ret",))
+        time.sleep(2.0)
+        qmp.send_keys(text_keys("root") + ("ret",))
+        time.sleep(5.0)
+        checks["tty login precedes Xorg startup"] = (
+            "path=/usr/libexec/Xorg" not in serial_before_login,
+            "Xorg was absent before tty1 authentication")
         frame_index = 0
         while time.time() < deadline:
             frame_index += 1
@@ -328,24 +360,117 @@ def main() -> int:
                        f"last frame kept in {output}")
         else:
             checks["X11 frame appeared"] = (True, str(x_frame))
-            # The login prompt owns the xterm; public test image credentials
-            # apply. Authentication (PAM) settles for about ten seconds before
-            # the shell prompt appears, so wait for it before typing commands.
-            qmp.send_keys(text_keys("root") + ("ret",))
+            # The tty1 credentials were accepted before Xorg started. The
+            # urxvt terminal now contains that authenticated user's shell.
+            time.sleep(8.0)
+
+            # --- mouse input reaches the X session through evdev ---
+            # xeyes tracks the pointer with its pupils, so a pointer move is
+            # directly visible in the screendump; a click on the empty desktop
+            # opens twm's root menu.
+            qmp.send_keys(text_keys("DISPLAY=:0 xeyes &") + ("ret",))
+            time.sleep(4.0)
+            base = output / "vt-xorg-base.ppm"
+            qmp.screendump(base)
+            qmp.mouse(-320, -220)
+            qmp.mouse(-140, -100)
             time.sleep(2.0)
-            qmp.send_keys(text_keys("root") + ("ret",))
-            time.sleep(15.0)
+            moved = output / "vt-xorg-mouse.ppm"
+            qmp.screendump(moved)
+            checks["mouse movement reaches the X session"] = (
+                frames_differ(base, moved),
+                "xeyes pupils track the pointer")
+            qmp.mouse(900, 700)
+            qmp.mouse(900, 700)
+            time.sleep(1.0)
+            qmp.mouse_button(0x110, True)
+            qmp.mouse_button(0x110, False)
+            time.sleep(2.0)
+            clicked = output / "vt-xorg-click.ppm"
+            qmp.screendump(clicked)
+            checks["mouse clicks reach the X session"] = (
+                frames_differ(moved, clicked),
+                "a click on the desktop opened the twm root menu")
+            qmp.send_keys(("esc",))
+            time.sleep(1.0)
+
+            # Capture everything the X terminal receives from the keyboard so
+            # the VT isolation round trip can prove tty2 input never leaks in.
+            qmp.send_keys(text_keys("cat > /root/xkeys.log") + ("ret",))
+            time.sleep(2.0)
+
+            # --- Ctrl+Alt+F2 must hand the display to the text console ---
+            qmp.send_keys(("ctrl-alt-f2",))
+            time.sleep(5.0)
+            tty2 = output / "vt-tty2-text.ppm"
+            qmp.screendump(tty2)
+            m2, b2, p2 = ppm_stats(tty2)
+            checks["Ctrl+Alt+F2 switches to the tty2 text console"] = (
+                p2 > 80 and b2 < 0.05,
+                f"{tty2.name} mean={m2:.1f} bright={b2:.3f} peak={p2}")
+
+            # --- tty2 keystrokes stay on tty2 ---
+            qmp.send_keys(text_keys("ISOL7421") + ("ret",))
+            time.sleep(2.5)
+            tty2_typed = output / "vt-tty2-typed.ppm"
+            qmp.screendump(tty2_typed)
+            checks["tty2 accepts its own keystrokes"] = (
+                frames_differ(tty2, tty2_typed),
+                "the marker typed on tty2 changed the tty2 screen")
+
+            # --- Ctrl+Alt+F1 returns to the live X desktop ---
+            qmp.send_keys(("ctrl-alt-f1",))
+            time.sleep(5.0)
+            back = output / "vt-xorg-back.ppm"
+            qmp.screendump(back)
+            mb, bb, pb = ppm_stats(back)
+            checks["Ctrl+Alt+F1 restores the X desktop"] = (
+                bb > 0.05,
+                f"{back.name} mean={mb:.1f} bright={bb:.3f} peak={pb}")
+
+            # --- keyboard and mouse resume on the X desktop ---
+            qmp.send_keys(text_keys("XTYPE9999") + ("ret",))
+            time.sleep(1.5)
+            qmp.send_keys(("ctrl-d",))
+            time.sleep(1.5)
+            qmp.mouse(-200, -120)
+            qmp.mouse_button(0x110, True)
+            qmp.mouse_button(0x110, False)
+            time.sleep(1.5)
+            resumed = output / "vt-xorg-resumed.ppm"
+            qmp.screendump(resumed)
+            checks["input resumes on the X desktop"] = (
+                frames_differ(back, resumed),
+                "keyboard and pointer activity changed the X screen")
+
+            # --- stress: repeated VT round trips keep both sides alive ---
+            for i in range(3):
+                qmp.send_keys(("ctrl-alt-f2",))
+                time.sleep(3.0)
+                qmp.send_keys(text_keys(f"stress{i}") + ("ret",))
+                time.sleep(1.0)
+                qmp.send_keys(("ctrl-alt-f1",))
+                time.sleep(3.0)
+            stress = output / "vt-xorg-stress.ppm"
+            qmp.screendump(stress)
+            ms, bs, ps = ppm_stats(stress)
+            checks["repeated VT switches survive"] = (
+                bs > 0.05,
+                f"{stress.name} mean={ms:.1f} bright={bs:.3f} peak={ps}")
+
+            qmp.send_keys(text_keys("echo back >/root/back.log") + ("ret",))
+            time.sleep(3.0)
             qmp.send_keys(text_keys("/root/xorg-device-probe >/root/p.log") + ("ret",))
             time.sleep(6.0)
-            # Leaving the login shell closes xterm, xinit and Xorg in order and
-            # console-session returns tty1 to the text login.
+            # Leaving the authenticated shell closes urxvt, xinit and Xorg in
+            # order; getty then presents a fresh tty1 login prompt.
             qmp.send_keys(text_keys("exit") + ("ret",))
             time.sleep(10.0)
             text_frame = output / "frame-after-exit.ppm"
             qmp.screendump(text_frame)
             mean_after, bright_after, peak_after = ppm_stats(text_frame)
             # A restored text console shows glyph content on a dark
-            # background; the bright X11 xterm frame must be gone.
+            # background; the bright X11 urxvt frame must be gone.
             checks["tty1 text frame after Xorg exit"] = (
                 peak_after > 80 and bright_after < 0.03,
                 f"{text_frame.name} mean={mean_after:.1f} bright={bright_after:.3f} peak={peak_after}")
@@ -372,6 +497,8 @@ def main() -> int:
     for guest, name in (("/var/log/xorg-session.log", "xorg-session.log"),
                         ("/var/log/Xorg.0.log", "xorg-server.log"),
                         ("/var/log/desktop.log", "desktop.log"),
+                        ("/root/xkeys.log", "xorg-xkeys.log"),
+                        ("/root/back.log", "xorg-back.log"),
                         ("/root/p.log", "xorg-probe.log")):
         logs[name] = output / name
         guest_dump(slice_path, guest, logs[name])
@@ -380,6 +507,14 @@ def main() -> int:
     desktop_text = logs["desktop.log"].read_text() if logs["desktop.log"].exists() else ""
     for marker, meaning in SEMANTIC_LINES.items():
         checks[marker] = (marker in session_text, meaning)
+    xkeys_text = logs["xorg-xkeys.log"].read_text() if logs["xorg-xkeys.log"].exists() else ""
+    checks["tty2 keystrokes never reach the X session"] = (
+        "XTYPE9999" in xkeys_text and "ISOL7421" not in xkeys_text and
+        "stress" not in xkeys_text,
+        "the X terminal captured its own input and nothing typed on tty2")
+    checks["keyboard input resumes on the X desktop"] = (
+        logs["xorg-back.log"].exists(),
+        str(logs["xorg-back.log"]))
     checks["native desktop log stayed silent"] = (
         "graphical-session" not in desktop_text and "windowd" not in desktop_text,
         "the native desktop session never logged anything")

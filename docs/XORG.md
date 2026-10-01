@@ -4,7 +4,7 @@ ReliefOS can run one of two mutually exclusive desktop backends. The default
 is the native ReliefOS Desktop stack (`windowd`, `desktop.elf`, `sessiond`,
 advertised to users as *ReliefOS Desktop + desktopd*); the alternative is a
 minimal X11 session built from the stock Alpine `xorg-server`, `xinit`, `twm`
-and `xterm` binaries. This document describes the Xorg option, its boundaries
+and `rxvt-unicode` (`urxvt`) binaries. This document describes the Xorg option, its boundaries
 and how to verify it.
 
 ## Selecting the backend
@@ -32,18 +32,39 @@ executed or sourced.
 
 A minimal, bootable and loggable X11 session on `tty1`:
 
-1. `console-session` starts `/usr/lib/reliefos/reliefos-xorg-session`.
-2. The wrapper runs `xinit /usr/lib/reliefos/reliefos-xorg-client --
-   /usr/bin/Xorg :0 -config /etc/X11/xorg.conf vt1 -keeptty -novtswitch`
-   (`vt1` is the X server's positional VT argument).
-3. The client starts `twm` as the default desktop window manager with the
+1. After `CONFIG_DESKTOP_BACKEND_XORG=y` is selected and the image is
+   rebuilt, the existing `tty1` inittab entry starts the ordinary text
+   `getty` and `/bin/login`; do not run `startx` manually.
+2. After tty1 authentication succeeds, the login shell sources the Xorg-only
+   `/etc/profile.d/reliefos-xorg.sh` hook and starts
+   `/usr/lib/reliefos/reliefos-xorg-session`.
+3. The wrapper checks that it owns `/dev/tty1`, then runs
+   `xinit /usr/lib/reliefos/reliefos-xorg-client --
+   /usr/bin/Xorg :0 -config /etc/X11/xorg.conf vt1 -keeptty`
+   (`vt1` is the X server's positional VT argument; the server activates and
+   waits for the VT through the standard handshake).
+4. The client starts `twm` as the default desktop window manager with the
    shipped `/etc/X11/twm/twmrc` (`RandomPlacement`, core `fixed` fonts - bare
    twm would otherwise show its interactive placement outline and ask for
-   Helvetica), then runs `xterm`, and inside the xterm a real `/bin/login`
-   prompt - never a root shell. Windows the signed-in user starts from that
-   shell (for example `xeyes`) are managed by twm on the same desktop.
-4. When the Xorg session ends, `tty1` returns to the ordinary text login and
-   the other VTs are unaffected.
+   Helvetica), then runs `urxvt` with the already authenticated user's
+   `/bin/sh -l`. The X terminal keeps that user's uid, gid, `HOME` and
+   environment; it never creates a second login prompt or a root shell.
+   Windows the user starts from that shell (for example `xeyes`) are managed
+   by twm on the same desktop.
+5. When the authenticated Xorg session ends, `tty1` returns to the ordinary
+   text login and the other VTs are unaffected.
+
+### VT switching and input isolation
+
+Ctrl+Alt+F1..F6 use the standard Linux VT process-ownership handshake (see
+[ABI.md](ABI.md)): the kernel sends the X server its release signal and the
+display switches only after `VT_RELDISP`, and switching back reacquires
+through the acquire signal. While tty2-tty6 own the display, keyboard and
+mouse events stay on those consoles - each evdev descriptor is scoped to the
+opening session's VT, so the X session never consumes another console's
+input. Leaving the authenticated X terminal shell (logout or timeout) closes
+urxvt, xinit and the X server in order; the wrapper reaps any orphaned X11
+process and the kernel restores the text console even if the server was killed.
 
 Existing ReliefOS GUI applications are **not** X11 clients and are not
 migrated to X11; they remain native-only. No `desktopd` daemon exists - the
@@ -71,14 +92,18 @@ per package - never by package-name matching - so native builds keep zero
 Xorg APKs in their transaction while cached downloads stay reusable.
 
 The local ReliefOS root remains the ABI authority where Alpine and local
-products would both provide one SONAME. Alpine `musl`, `libbsd`, `libmd` and
-`libuuid` are deliberately **not** locked: the local musl/libbsd/libmd and
-util-linux builds already provide those SONAMEs (`so:libc.musl-x86_64.so.1`,
-`so:libbsd.so.0`, `so:libmd.so.0`, `so:libuuid.so.1`), and a second provider
-in one rootfs is refused. Packages whose SONAME exists nowhere else - for
-example `zlib` and `libpng`, which freetype/libxfont2/mesa need - are locked
-normally. If a future closure pulls in another duplicate, exclude the Alpine
-package and keep the local provider.
+products would both provide one SONAME. Alpine `musl`, `libbsd`, `libmd`,
+`libuuid`, `libblkid` and `libmount` are deliberately **not** locked: the
+local musl/libbsd/libmd and util-linux builds already provide those SONAMEs
+(`so:libc.musl-x86_64.so.1`, `so:libbsd.so.0`, `so:libmd.so.0`,
+`so:libuuid.so.1`, `so:libblkid.so.1`, `so:libmount.so.1`), and a second
+provider in one rootfs is refused. Packages whose SONAME exists nowhere else
+- for example `zlib` and `libpng`, which freetype/libxfont2/mesa need - are
+locked normally. If a future closure pulls in another duplicate, exclude the
+Alpine package and keep the local provider. The terminal is `rxvt-unicode`
+with its terminfo and complete runtime closure (`glib`, `gdk-pixbuf`, `perl`
+for the urxvtperl layer, `libptytty`, `startup-notification`); no `xterm`
+package is locked or installed.
 
 ## Devices and ABI
 
@@ -111,8 +136,8 @@ native service scripts and ELF programs stay in place.
 
 ## Session diagnostics
 
-- `/var/log/xorg-session.log` - session wrapper milestones: server start,
-  twm window manager, xterm client, `/bin/login` prompt, exit status,
+- `/var/log/xorg-session.log` - tty1 authentication handoff, session wrapper
+  milestones, server start, twm window manager, urxvt client, exit status and
   text-login restore.
 - `/var/log/Xorg.0.log` - the Xorg server's own log.
 - `/var/log/desktop.log` - native session log; it stays silent in Xorg mode.
@@ -137,14 +162,17 @@ existing `out/xorg-qemu` image. The script:
 3. builds `out/xorg-qemu` (isolated from the default output tree);
 4. compiles `tools/tests/xorg_device_probe.c` with the musl SDK and installs
    it into the test disk;
-5. boots the image under UEFI/OVMF with VGA, serial and QMP, waits for the
-   X11 frame, signs in through the xterm `/bin/login` prompt, runs the
-   device probe and leaves the session;
-6. collects the serial log, `xorg-session.log`, `Xorg.0.log` and the probe
-   log, and checks: *Xorg server started*, *xterm client started*,
-   */bin/login prompt reached*, *native windowd/sessiond not started*, and
-   that Xorg exit restores the tty1 text login. Screenshots are captured via
-   QMP and rejected when black or blank.
+5. boots the image under UEFI/OVMF with VGA, serial and QMP, verifies the
+   tty1 text login, authenticates there, waits for the X11 frame, exercises mouse
+   input, the Ctrl+Alt+F2/F1 VT round trip with per-console input isolation
+   (a marker typed on tty2 must never reach the X terminal), repeated switch
+   stress, runs the device probe and leaves the session;
+6. collects the serial log, `xorg-session.log`, `Xorg.0.log`, the captured
+   X-terminal input log and the probe log, and checks: *Xorg server started*,
+   *urxvt client started*, *authenticated tty1 login starting Xorg*,
+   *native windowd/sessiond not started*, mouse/keyboard delivery, VT switch and isolation,
+   and that Xorg exit restores the tty1 text login. Screenshots are captured
+   via QMP and rejected when black or blank.
 
 All artifacts (screenshots, serial log, guest logs, probe output) are kept in
 `--output` for inspection, including on failure.
@@ -154,7 +182,8 @@ All artifacts (screenshots, serial log, guest logs, probe output) are kept in
 - Any physical display path other than the QEMU VGA/fbdev device: real GPU
   framebuffers, DRM/KMS drivers, multi-head and hot-plugged input devices are
   out of scope and untested.
-- Suspend/resume and VT switching stress while Xorg runs.
+- Suspend/resume while Xorg runs (VT switching itself is covered by the QEMU
+  round-trip and stress checks above).
 - Localized keyboards beyond the default keymap from `xkeyboard-config`.
 - The native ReliefOS desktop is not offered as an X11 client set; only the
-  minimal xterm/login session is verified.
+   minimal urxvt/login session is verified.

@@ -14,9 +14,9 @@ config DESKTOP_BACKEND_RELIEFOS
       desktopd daemon.
 
 config DESKTOP_BACKEND_XORG
-    bool "Xorg + xinit + xterm"
+    bool "Xorg + xinit + urxvt"
     help
-      Use the Alpine Xorg server with a minimal xinit/xterm login session.
+      Use the Alpine Xorg server with a minimal xinit/urxvt login session.
       ReliefOS native GUI applications are not X11 clients in this mode.
       The two desktop backends are mutually exclusive.
 

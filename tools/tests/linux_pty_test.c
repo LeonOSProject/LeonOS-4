@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <linux/vt.h>
 #include <stdio.h>
 #include <string.h>
 #include "../../kernel/reliefnt/kernel/reliefnt/pty.c"
@@ -112,6 +113,7 @@ int main(void)
     assert(pty_acquire_controlling(other, owner.pid, 0, 1) == -1);
     assert(pty_get_foreground_pgid(id, &group) == 0 && group == owner.pid);
     assert(pty_destroy(owner.pid, id) == 0 && signals == 2);
+    signals = 0;
     pty_init();
     assert(pty_vt_init() == 0);
     id = 1;
@@ -158,6 +160,13 @@ int main(void)
     pty_init();
     assert(pty_vt_init() == 0);
     assert(pty_vt_active() == 1 && shown_vt == 1 && shown_graphical == 0);
+    struct vt_mode vt_mode;
+    assert(pty_vt_get_mode(1, &vt_mode) == 0 && vt_mode.mode == VT_AUTO);
+    vt_mode.mode = VT_PROCESS;
+    vt_mode.relsig = 10;
+    vt_mode.acqsig = 12;
+    vt_mode.frsig = 0;
+    assert(pty_vt_set_mode(1, owner.pid, &vt_mode) == 0);
     for (uint32_t number = 1; number <= 6; ++number) {
         char path[16];
         snprintf(path, sizeof(path), "/dev/tty%u", number);
@@ -173,6 +182,9 @@ int main(void)
     pty_console_key_event(29, 1); /* Ctrl */
     pty_console_key_event(56, 1); /* Alt */
     pty_console_key_event(60, 1); /* F2 */
+    assert(pty_vt_active() == 1 && shown_vt == 1 && pty_vt_release_pending(1));
+    assert(signals == 1);
+    assert(pty_vt_release(1, owner.pid, 1) == 0);
     assert(pty_vt_active() == 2 && shown_vt == 2);
     assert(pty_read_input(1, &ch, 1) == -11);
     assert(pty_read_input(2, &ch, 1) == -11);

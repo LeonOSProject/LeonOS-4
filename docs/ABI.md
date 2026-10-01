@@ -147,19 +147,48 @@ Fixed device paths, no udev enumeration:
 - Keyboard: `/dev/input/event0` through the `evdev` input driver.
 - Mouse: `/dev/input/event1` through the `evdev` input driver.
 - The server runs on the active graphical VT1 (`tty1`), pinned by
-  `Xorg :0 vt1 -keeptty -novtswitch` (the X server takes the VT as the
-  positional `vt1` argument).
+  `Xorg :0 vt1 -keeptty` (the X server takes the VT as the positional
+  `vt1` argument and cooperates with the standard VT switch handshake).
+
+### VT process ownership
+
+The virtual-console ioctls follow the Linux VT ownership protocol on a VT
+descriptor (the controlling terminal), with `<linux/vt.h>` structures and
+errno values:
+
+- `VT_GETSTATE`, `VT_ACTIVATE`, `VT_WAITACTIVE`, `KDGETMODE`, `KDSETMODE`
+  behave as before; `VT_ACTIVATE` now runs the release handshake below.
+- `VT_GETMODE` reports the VT's switching mode; the default is `VT_AUTO`.
+- `VT_SETMODE` accepts `VT_AUTO` or `VT_PROCESS` (with valid `relsig`/`acqsig`
+  numbers 1-64). Only the VT's controlling terminal may set it (`EPERM`
+  otherwise); a second live `VT_PROCESS` controller is refused with `EBUSY`,
+  and a bad mode, signal or pointer fails with `EINVAL`/`EFAULT`.
+- While a live `VT_PROCESS` controller owns the active VT, switching away is
+  deferred: the controller receives `relsig` and the display changes hands
+  only after it answers `VT_RELDISP` with `1`. Switching to a `VT_PROCESS` VT
+  sends `acqsig` and completes when the controller answers `VT_RELDISP
+  VT_ACKACQ`. A dead controller falls back to `VT_AUTO` switching.
+- Ctrl+Alt+F1..F6 keyboard switches use the same handshake and never write the
+  combination into any text PTY.
+
+### fbdev display ownership
 
 Supported fbdev ioctls on a `/dev/fb0` descriptor, with the public
-`<linux/fb.h>` structures: `FBIOGET_VSCREENINFO`, `FBIOPUT_VSCREENINFO`,
-`FBIOGET_FSCREENINFO` and `FBIOPAN_DISPLAY` (the fbdev flush request). The
-framebuffer is also mappable with standard `mmap`. Read-only queries are
-unrestricted. Mode setting (`FBIOPUT_VSCREENINFO`) obeys the graphical-control
-VT policy: a task without a controlling VT fails with `EPERM`, and a
-controlling VT that is not the active graphical VT fails with `EAGAIN`; a
-descriptor that is not `/dev/fb0` fails with `ENOTTY`, and an invalid mode or
-bad user pointer fails with `EINVAL`/`EFAULT`. Callers must treat `EAGAIN` as
-a state boundary and must not retry in a loop.
+`<linux/fb.h>` structures (`fb_var_screeninfo`, `fb_fix_screeninfo`,
+`fb_cmap`): `FBIOGET_VSCREENINFO`, `FBIOPUT_VSCREENINFO`, `FBIOGET_FSCREENINFO`,
+`FBIOGETCMAP`, `FBIOPUTCMAP`, `FBIOBLANK` and `FBIOPAN_DISPLAY` (the fbdev
+flush request). The framebuffer is also mappable with standard `mmap`.
+Read-only queries (`FBIOGET_*`) are unrestricted. Every display-mutating
+operation (`FBIOPUT_VSCREENINFO`, `FBIOPAN_DISPLAY`, `FBIOBLANK`,
+`FBIOPUTCMAP`, and the native present path) obeys VT ownership: a task
+without a controlling VT fails with `EPERM`, a controlling VT that is not
+the active VT fails with `EAGAIN`, and a VT released through the
+`VT_PROCESS` handshake fails with `EAGAIN` until it is reacquired. A
+descriptor that is not `/dev/fb0` fails with `ENOTTY`, and an invalid mode
+or bad user pointer fails with `EINVAL`/`EFAULT`. Callers must treat
+`EAGAIN` as a state boundary and must not retry in a loop.
+
+### evdev VT scoping
 
 Supported evdev operations on `/dev/input/event0` and `/dev/input/event1`, with
 the public `<linux/input.h>` structures: `EVIOCGVERSION`, `EVIOCGID`,
@@ -171,6 +200,16 @@ wire-identical to the mainline x86_64 `struct timeval` field Alpine's evdev
 uses (24-byte records: 8-byte seconds, 8-byte microseconds, `type`, `code`,
 `value`). Descriptor, session and permission rules follow POSIX; a non-input
 descriptor fails with `ENOTTY` and a bad user pointer with `EFAULT`.
+
+Each evdev descriptor is scoped to the opener's VT at `open` time: a graphics
+server bound to `tty1` only ever reads events produced while its VT owned the
+display, so input typed on tty2-tty6 never reaches it. A dynamic PTY session
+sees the raw all-VT stream. `EVIOCGRAB` remains an exclusive-access device
+lock and is not a VT isolation mechanism; `RELIEFOS_EVIOCSVT` stays a
+compatibility override, never a runtime requirement. When a graphical VT
+resumes, the kernel republishes the current pointer position, button state
+and modifier state followed by `SYN_REPORT` so the server cannot inherit
+stuck buttons or keys.
 
 Error boundaries: a missing device node fails `open` with `ENOENT`; every
 failed probe step is reported together with its `errno`, and

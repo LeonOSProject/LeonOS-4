@@ -5,7 +5,7 @@
 为 ReliefOS 增加一个 Kconfig 桌面后端选择，使系统可以在以下两种互斥模式中选择一种：
 
 1. 默认的 ReliefOS Desktop 栈（用户可见名称为 `ReliefOS Desktop + desktopd`，实现由现有的 `windowd`、`desktop.elf` 和 `sessiond` 组成）。
-2. Alpine 官方二进制包提供的 Xorg + `xinit` + `xterm` 最小 X11 会话。
+2. Alpine 官方二进制包提供的 Xorg + `xinit` + `urxvt` 最小 X11 会话。
 
 默认构建必须保持现有 ReliefOS Desktop 行为不变。Xorg 模式只承诺提供可启动、可登录的最小 X11 会话；现有 ReliefOS 原生 GUI 应用不在本规格内迁移到 X11。
 
@@ -25,7 +25,7 @@
 - 将桌面后端选择传递到 rootfs staging 和运行时启动脚本。
 - 为 Xorg 后端加入 Alpine 官方 x86_64/musl APK 及完整传递依赖的锁定、签名、所有权和离线 staging。
 - 使用 `xf86-video-fbdev` 和 `xf86-input-evdev` 对接现有显示和输入设备。
-- 增加 Xorg 配置、Xorg 会话包装脚本和最小 `xterm` 登录会话。
+- 增加 Xorg 配置、Xorg 会话包装脚本和最小 `urxvt` 登录会话。
 - 在 Xorg 模式下禁用安装后系统的 `reliefos-windowd` 和 `reliefos-session` default runlevel，防止图形资源争用。
 - 在安装器运行时强制恢复 ReliefOS 原生图形会话。
 - 增加构建、staging、APK、ABI 和 QEMU 启动验证，以及对应文档。
@@ -43,7 +43,7 @@
 在顶层 `Kconfig` 增加桌面后端 `choice`：
 
 - `DESKTOP_BACKEND_RELIEFOS`：`ReliefOS Desktop + desktopd`，默认值为 `y`。
-- `DESKTOP_BACKEND_XORG`：`Xorg + xinit + xterm`。
+- `DESKTOP_BACKEND_XORG`：`Xorg + xinit + urxvt`。
 
 两个符号必须互斥。`configs/default.conf` 必须显式保存默认选择 `DESKTOP_BACKEND_RELIEFOS=y`。配置继续由现有 Kconfig front-end、generated autoconf 和 Make 配置链路生成；不在 Makefile、C 源码常量或 rootfs 脚本中维护第二套默认值。
 
@@ -62,7 +62,8 @@ Xorg 模式使用 Alpine 官方 x86_64/musl 包。直接需求包为：
 - `xorg-server`
 - `xorg-server-common`
 - `xinit`
-- `xterm`
+- `rxvt-unicode`
+- `rxvt-unicode-terminfo`
 - `xf86-video-fbdev`
 - `xf86-input-evdev`
 - `xkeyboard-config`
@@ -102,14 +103,14 @@ rootfs staging 生成 `/etc/reliefos/desktop-backend`，内容严格为单行 `r
 
 1. 如果存在 `/etc/reliefos/installer-runtime`，无条件走现有 ReliefOS 原生桌面路径。
 2. 如果后端为 `reliefos`，保持现有 `login.elf --graphical-session` 行为。
-3. 如果后端为 `xorg`，执行新的 `reliefos-xorg-session`。
+3. 如果后端为 `xorg`，保留 tty1 的普通 `getty`/`/bin/login`，由已认证登录 shell 的 `/etc/profile.d/reliefos-xorg.sh` 执行新的 `reliefos-xorg-session`。
 4. 对未知或缺失后端值，记录错误并回退到文本登录，不得启动两个图形后端。
 
 `reliefos-xorg-session` 必须：
 
 - 从 tty1 的控制终端启动 `xinit`/`Xorg`。
 - 显式使用 `/etc/X11/xorg.conf` 和 vt1。
-- 启动一个 X11 client：`xterm` 内执行 `/bin/login`，提供真实登录提示，而不是默认 root shell。
+- 启动一个 X11 client：`urxvt` 内执行已认证用户的 `/bin/sh -l`，不创建第二个登录提示，也不默认进入 root shell。
 - 将 Xorg 和会话错误分别写入可诊断日志。
 - 在 Xorg 退出后恢复文本 VT，并返回可用的文本登录路径。
 - 使用 POSIX `/bin/sh` 语法和现有用户态运行时，不引入 Bash 专属语法。
@@ -129,7 +130,7 @@ rootfs staging 生成 `/etc/reliefos/desktop-backend`，内容严格为单行 `r
 - 若发现缺少标准 Linux ABI，必须按照现有公共头、内核、运行库、导出清单、测试和 ABI 文档的闭环补齐。
 - `/dev/fb0` 写入和模式设置必须继续遵守当前图形控制 VT 权限；失去活动 VT 时返回标准错误，不得由用户态无限重试。
 - 图形启动失败不得导致 OpenRC 或 tty1 无限快速重启；失败后应能进入文本登录并保留日志。
-- Xorg 进程不应以可交互 root shell 作为默认会话；登录由 xterm 内的 `/bin/login` 完成。
+- Xorg 进程不应以可交互 root shell 作为默认会话；登录由 tty1 的普通 `/bin/login` 完成，Xorg 只继承认证后的会话身份。
 - 所有 staging、APK 解包和运行时启动失败都必须清理临时状态，并保留可诊断错误。
 
 ## 验收标准
@@ -144,7 +145,7 @@ rootfs staging 生成 `/etc/reliefos/desktop-backend`，内容严格为单行 `r
 ### Rootfs 与 APK
 
 - ReliefOS rootfs 不包含 Xorg 运行时包，且保留原生图形 runlevel。
-- Xorg rootfs 包含完整 Xorg 依赖、`/etc/X11/xorg.conf`、`desktop-backend=xorg` 语义和 `xinit`/`xterm` 启动脚本。
+- Xorg rootfs 包含完整 Xorg 依赖、`/etc/X11/xorg.conf`、`desktop-backend=xorg` 语义和 `xinit`/`urxvt` 启动脚本。
 - Xorg rootfs 不启用 `reliefos-windowd` 和 `reliefos-session` default runlevel。
 - Installer runtime 无论目标系统后端如何配置，都保留原生 ReliefOS 图形服务和启动路径。
 - APK ownership、签名、数据库、依赖和许可证测试通过。
@@ -152,7 +153,7 @@ rootfs staging 生成 `/etc/reliefos/desktop-backend`，内容严格为单行 `r
 ### 运行验证
 
 - 在目标 QEMU 图形环境中，Xorg 能打开 tty1、`/dev/fb0` 和两个 evdev 设备。
-- Xorg server 进入运行状态，xterm 显示登录提示，输入可以到达登录程序。
+- Xorg server 进入运行状态，urxvt 显示登录提示，输入可以到达登录程序。
 - 退出 Xorg 后 tty1 回到文本模式，tty2～tty6 仍可登录。
 - ReliefOS 后端仍能启动原生桌面；切换配置不产生两个图形 server 同时运行的状态。
 - 未实现或不兼容的 ABI 必须以明确的失败日志呈现，不能用“构建成功”替代运行成功。

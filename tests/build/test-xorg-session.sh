@@ -23,6 +23,8 @@ session=$root/system/xorg/reliefos-xorg-session
 client=$root/system/xorg/reliefos-xorg-client
 twmrc=$root/system/xorg/twmrc
 console=$root/system/rootfs/usr/lib/reliefos/console-session
+inittab=$root/system/rootfs/etc/inittab
+profile=$root/system/xorg/reliefos-xorg-profile
 
 # --- Xorg configuration pins standard Linux fbdev/evdev devices ---
 expect_grep "$conf" 'Driver[[:space:]]*"fbdev"'
@@ -37,14 +39,24 @@ expect_grep "$conf" 'tty1'
 ! sed 's/#.*//' "$conf" | grep -qi 'libinput\|drm\|kms\|modesetting\|wayland\|udev' ||
     fail "$conf must not depend on DRM/KMS/Mesa/libinput/Wayland/udev"
 
-# --- session and client keep the xinit -> Xorg -> xterm -> login contract ---
+# --- session and client keep the xinit -> Xorg -> urxvt -> shell contract ---
 expect_grep "$session" 'xinit'
 expect_grep "$session" '/usr/bin/xinit /usr/lib/reliefos/reliefos-xorg-client --'
-expect_grep "$session" '/usr/bin/Xorg :0 -config /etc/X11/xorg.conf vt1 -keeptty -novtswitch'
+expect_grep "$session" '/usr/bin/Xorg :0 -config /etc/X11/xorg.conf vt1 -keeptty'
+expect_no_grep "$session" 'novtswitch'
+expect_grep "$session" '/dev/tty1'
+expect_grep "$profile" '/dev/tty1'
+expect_grep "$profile" '/etc/reliefos/desktop-backend'
+expect_grep "$profile" 'reliefos-xorg-session'
+expect_no_grep "$profile" '/bin/login'
 expect_grep "$client" '/usr/bin/twm'
-expect_grep "$client" 'xterm'
-expect_grep "$client" '/bin/login'
-expect_order "$client" 'twm window manager started' 'xterm client started'
+expect_grep "$client" 'urxvt'
+! grep -q 'xterm' "$client" || fail "$client must not use xterm"
+expect_grep "$conf" 'GrabDevice.*"true"'
+expect_grep "$conf" 'Emulate3Buttons.*"false"'
+expect_no_grep "$client" '/bin/login'
+expect_grep "$client" '/bin/sh -l'
+expect_order "$client" 'twm window manager started' 'urxvt client started'
 # twm without a config shows an interactive placement outline and wants
 # Helvetica fonts; the shipped twmrc must avoid both.
 expect_grep "$client" '/etc/X11/twm/twmrc'
@@ -52,20 +64,21 @@ expect_grep "$twmrc" 'RandomPlacement'
 expect_grep "$twmrc" 'MenuFont[[:space:]]*"fixed"'
 ! sed 's/#.*//' "$twmrc" | grep -qi 'helvetica' ||
     fail "$twmrc must not require Helvetica fonts"
-expect_grep "$client" 'exec /bin/login'
+expect_no_grep "$client" 'exec /bin/login'
 expect_no_grep "$client" 'graphical-session'
-for script in "$session" "$client" "$console"; do
+for script in "$session" "$client" "$console" "$profile"; do
     [ "$(head -n 1 "$script")" = '#!/bin/sh' ] || fail "$script must use /bin/sh"
     sh -n "$script" || fail "$script has invalid POSIX shell syntax"
 done
 
 # --- console-session branches: installer first, then exact backend marker ---
 expect_grep "$console" '/etc/reliefos/desktop-backend'
-expect_grep "$console" 'reliefos-xorg-session'
 expect_grep "$console" 'missing or invalid'
 expect_no_grep "$console" '/etc/reliefos/desktop-session'
 expect_order "$console" 'installer-runtime' 'desktop-backend'
-expect_order "$console" 'login.elf --graphical-session' 'reliefos-xorg-session'
+expect_no_grep "$console" 'reliefos-xorg-session >>'
+expect_grep "$inittab" 'tty1::respawn:/usr/lib/reliefos/console-session tty1'
+expect_no_grep "$console" 'startx'
 
 # --- behavioral branches run the real console-session in a private root ---
 unshare -Ur true >/dev/null 2>&1 || fail 'user namespaces are required for the boot branch tests'
@@ -105,18 +118,14 @@ expect_grep "$fx/var/log/calls.log" 'getty'
 expect_no_grep "$fx/var/log/calls.log" 'xorg-session'
 expect_order "$fx/var/log/calls.log" 'login.elf --graphical-session' 'getty'
 
-# xorg backend: the Xorg session once; its exit returns tty1 to text login.
+# xorg backend: tty1 first authenticates through getty. The authenticated
+# login shell starts Xorg from the profile.
 fx=$w/xorg
 make_fixture "$fx"
 printf 'xorg\n' > "$fx/etc/reliefos/desktop-backend"
 run_console "$fx"
-expect_grep "$fx/var/log/calls.log" 'xorg-session'
-expect_no_grep "$fx/var/log/calls.log" 'login.elf --'
 expect_grep "$fx/var/log/calls.log" 'getty'
-run_console "$fx"
-[ "$(grep -c 'xorg-session' "$fx/var/log/calls.log")" = 1 ] ||
-    fail 'the Xorg session must not restart after it exits'
-expect_order "$fx/var/log/calls.log" 'xorg-session' 'getty'
+expect_no_grep "$fx/var/log/calls.log" 'xorg-session'
 
 # installer runtime: the native path wins over the installed system marker.
 fx=$w/installer

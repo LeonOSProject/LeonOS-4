@@ -60,6 +60,24 @@ HANDWRITTEN_UAPI = re.compile(
 NUMERIC_IOCTL = re.compile(r"ioctl\s*\(\s*[^,]+,\s*(?:0[xX][0-9a-fA-F]+|\d+)")
 
 
+def check_fbdev_uapi_source() -> None:
+    source = (ROOT / "kernel/reliefnt/include/uapi/linux/fb.h").read_text()
+    required = {
+        "struct fb_cmap",
+        "FBIOGETCMAP",
+        "FBIOPUTCMAP",
+        "FBIOBLANK",
+        "reserved[4]",
+        "type_aux",
+        "visual",
+        "mmio_start",
+        "capabilities",
+    }
+    missing = sorted(token for token in required if token not in source)
+    if missing:
+        raise AssertionError("fbdev UAPI is missing: " + ", ".join(missing))
+
+
 def strip_comments(source: str) -> str:
     source = re.sub(r"/\*.*?\*/", "", source, flags=re.S)
     return re.sub(r"//[^\n]*", "", source)
@@ -70,6 +88,12 @@ def stage_source_check() -> tuple[bool, list[str]]:
     code = strip_comments(source)
     notes = []
     ok = True
+
+    try:
+        check_fbdev_uapi_source()
+    except AssertionError as error:
+        ok = False
+        notes.append(str(error))
 
     includes = re.findall(r"#include\s*<([^>]+)>", source)
     unknown = sorted(set(includes) - ALLOWED_INCLUDES)

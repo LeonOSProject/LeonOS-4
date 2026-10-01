@@ -1,9 +1,10 @@
 #!/bin/sh
 # Minimal ReliefOS Xorg graphical session for tty1.
 #
-# Runs the stock Alpine Xorg server against the fixed Linux fbdev/evdev
-# devices through xinit, with exactly one X11 client (reliefos-xorg-client)
-# that presents a real /bin/login prompt. POSIX /bin/sh only.
+# console-session starts this script automatically from tty1 when the
+# rootfs backend marker is xorg. It runs the stock Alpine Xorg server against
+# the fixed Linux fbdev/evdev devices through xinit, with exactly one X11
+# client (reliefos-xorg-client). POSIX /bin/sh only.
 set -u
 
 log=/var/log/xorg-session.log
@@ -16,18 +17,44 @@ trap '' HUP INT TERM QUIT
 timestamp() { date '+%Y-%m-%dT%H:%M:%S'; }
 say() { printf '%s xorg-session: %s\n' "$(timestamp)" "$*" >> "$log"; }
 
-say 'start on tty1: /usr/bin/xinit /usr/lib/reliefos/reliefos-xorg-client -- /usr/bin/Xorg :0 -config /etc/X11/xorg.conf vt1 -keeptty -novtswitch'
+say 'automatic tty1 start: /usr/bin/xinit /usr/lib/reliefos/reliefos-xorg-client -- /usr/bin/Xorg :0 -config /etc/X11/xorg.conf vt1 -keeptty'
 say 'native windowd/sessiond not started (xorg desktop backend)'
 for need in /usr/bin/xinit /usr/bin/Xorg /usr/lib/reliefos/reliefos-xorg-client; do
     [ -x "$need" ] || { say "missing executable: $need"; exit 1; }
 done
 [ -f /etc/X11/xorg.conf ] || { say 'missing Xorg configuration: /etc/X11/xorg.conf'; exit 1; }
 
+# The session owns tty1: the X server pins itself there with `vt1` and asks
+# for the display through the standard VT_ACTIVATE/VT_WAITACTIVE handshake.
+# Starting on any other console is a configuration error.
+if [ "$(tty 2>/dev/null)" != /dev/tty1 ]; then
+    say "refusing to start on $(tty 2>/dev/null): the Xorg session requires /dev/tty1"
+    exit 1
+fi
+exec 3<>/dev/tty1 || { say 'cannot open /dev/tty1'; exit 1; }
+say 'tty1 opened and owned before the X server starts'
+
 /usr/bin/xinit /usr/lib/reliefos/reliefos-xorg-client -- \
-    /usr/bin/Xorg :0 -config /etc/X11/xorg.conf vt1 -keeptty -novtswitch >> "$log" 2>&1
+    /usr/bin/Xorg :0 -config /etc/X11/xorg.conf vt1 -keeptty >> "$log" 2>&1
 status=$?
+
+# A login timeout or killed client can leave X11 processes behind; reap them
+# so the respawned text getty never competes with an orphaned window manager.
+leftover=$(pidof Xorg twm urxvt 2>/dev/null || true)
+if [ -n "$leftover" ]; then
+    say "reaping orphaned X11 processes: $leftover"
+    # shellcheck disable=SC2086
+    kill $leftover 2>/dev/null
+    sleep 1
+    # shellcheck disable=SC2086
+    kill -9 $leftover 2>/dev/null
+fi
+exec 3>&-
+
 # One atomic record for both milestones: the text login on tty1 is restored
-# as soon as the X server leaves, and the next console-session respawn runs
-# the text getty again.
+# as soon as the X server leaves (Xorg resets KD_TEXT on a clean exit, and the
+# kernel reclaims the display when the graphics owner dies), and the next
+# console-session respawn runs the text getty again. A finished login timeout
+# is a normal session end, never a crash.
 say "Xorg server exited with status $status; tty1 restored to text login"
 exit "$status"

@@ -18,7 +18,7 @@ IconManagerFont "fixed"
 Color {
     DefaultBackground "rgb:2/a/9"
     DefaultForeground "gray85"
-    Border "slategrey"
+    BorderColor "slategrey"
     TitleBackground "rgb:2/a/9"
     TitleForeground "gray85"
     MenuBackground "rgb:2/a/9"
@@ -43,7 +43,7 @@ menu "defops"
     "Focus"             f.focus
     "Unfocus"           f.unfocus
     ""                  f.nop
-    "New xterm"         f.exec "exec xterm &"
+    "New urxvt"          f.exec "exec urxvt &"
     ""                  f.nop
     "Kill"              f.destroy
     "Delete"            f.delete

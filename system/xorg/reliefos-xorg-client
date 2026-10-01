@@ -1,10 +1,10 @@
 #!/bin/sh
 # X11 client for the minimal ReliefOS Xorg session.
 #
-# Started by xinit once the Xorg server accepts connections. The default
-# desktop is twm as window manager plus exactly one xterm whose session is a
-# real /bin/login prompt; this file must never default to an interactive root
-# shell. POSIX /bin/sh only.
+# Started automatically by xinit after tty1 authentication. The default
+# desktop is twm as window manager plus exactly one urxvt whose session is the
+# authenticated user's login shell; this file must never create a second login
+# prompt or default to an interactive root shell. POSIX /bin/sh only.
 set -u
 
 log=/var/log/xorg-session.log
@@ -13,7 +13,7 @@ timestamp() { date '+%Y-%m-%dT%H:%M:%S'; }
 say() { printf '%s xorg-client: %s\n' "$(timestamp)" "$*" >> "$log"; }
 
 say "Xorg server started (client connected on display ${DISPLAY:-:0})"
-for need in /usr/bin/twm /usr/bin/xterm /bin/login; do
+for need in /usr/bin/twm /usr/bin/urxvt /bin/sh; do
     [ -x "$need" ] || { say "missing executable: $need"; exit 1; }
 done
 
@@ -22,13 +22,21 @@ done
 # xeyes). The shipped twmrc disables twm's interactive placement outline and
 # pins the core "fixed" fonts; the login terminal is pinned to the top-left
 # corner so it is under the pointer at startup (twm focuses the window under
-# the pointer). It stays in the background; the xterm below holds the session.
+# the pointer). urxvt below holds the authenticated user's session and twm is
+# reaped with it.
 /usr/bin/twm -f /etc/X11/twm/twmrc >> "$log" 2>&1 &
+twm_pid=$!
 say "twm window manager started (default desktop)"
-say "xterm client started (/usr/bin/xterm running /bin/login)"
+say "urxvt client started (/usr/bin/urxvt running the authenticated login shell)"
 
-# The non-interactive shim only logs the reached login prompt and immediately
-# replaces itself with /bin/login; the user never gets a shell from it.
-shim='echo "$(date "+%Y-%m-%dT%H:%M:%S") xorg-client: /bin/login prompt reached (/bin/login in xterm)" >> /var/log/xorg-session.log
-exec /bin/login'
-exec /usr/bin/xterm -T reliefos-login -geometry 100x32+0+0 -e /bin/sh -c "$shim"
+# The tty1 login shell authenticated the user before this client was started.
+# Keep the same uid, gid, HOME and environment in the X terminal. Exiting this
+# shell ends urxvt, xinit and the Xorg server in order.
+/usr/bin/urxvt -name reliefos-login -title reliefos-login -geometry 100x32+0+0 \
+    -e /bin/sh -l >> "$log" 2>&1
+status=$?
+say "urxvt client exited with status $status (authenticated login shell ended)"
+kill "$twm_pid" 2>/dev/null
+wait "$twm_pid" 2>/dev/null
+say "twm window manager exited"
+exit "$status"

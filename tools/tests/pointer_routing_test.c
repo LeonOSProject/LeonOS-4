@@ -22,8 +22,10 @@ static uint64_t read_cursor;
 static struct reliefos_input_event delivered[128];
 static unsigned delivered_count;
 static int vt_active = 1;
+static int graphical_active;
 static unsigned console_key_calls;
 uint32_t pty_vt_active(void) { return 1; }
+int pty_vt_graphical_active(void) { return graphical_active; }
 void pty_console_key_event(uint8_t keycode, uint8_t pressed)
 { (void)keycode; (void)pressed; ++console_key_calls; }
 
@@ -172,6 +174,14 @@ int main(void)
     assert(console_key_calls == 0); /* Physical IRQ must not render a VT. */
     input_process_pending();
     assert(console_key_calls == 1);
+    graphical_active = 1;
+    console_key_calls = 0;
+    input_handle_scancode(29, 1); /* Ctrl */
+    input_handle_scancode(56, 1); /* Alt */
+    input_handle_scancode(60, 1); /* Ctrl+Alt+F2 must reach VT switching. */
+    input_process_pending();
+    assert(console_key_calls == 3);
+    graphical_active = 0;
     test_keyboard_led_protocol();
     test_evdev_damaged_records();
     test_caps_lock_routing();

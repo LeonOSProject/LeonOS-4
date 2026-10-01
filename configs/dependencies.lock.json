@@ -15,6 +15,19 @@
       "license_in_source": ".PKGINFO"
     },
     {
+      "id": "alpine-bubblewrap",
+      "kind": "apk",
+      "version": "0.12.0-r0",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/bubblewrap-0.12.0-r0.apk",
+      "sha256": "7755592c3f7c6de79a5c3c13554ada6302dbd98e520fe6dd8064f87ba77092e5",
+      "directory": "bubblewrap-0.12.0-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 main x86_64 APKINDEX license = LGPL-2.1-or-later; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
       "id": "alpine-busybox-openrc",
       "kind": "apk",
       "version": "1.37.0-r31",
@@ -142,6 +155,32 @@
       "license_in_source": ".PKGINFO"
     },
     {
+      "id": "alpine-gdk-pixbuf",
+      "kind": "apk",
+      "version": "2.44.7-r1",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/community/x86_64/gdk-pixbuf-2.44.7-r1.apk",
+      "sha256": "71c422b35822af144fbc14baf7308fa6bd59c490b19842de93aef4ed46c88422",
+      "directory": "gdk-pixbuf-2.44.7-r1",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 community x86_64 APKINDEX license = LGPL-2.1-or-later; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-glib",
+      "kind": "apk",
+      "version": "2.88.1-r1",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/glib-2.88.1-r1.apk",
+      "sha256": "2f32203b97789bc9a92e57e2d9b89eb2e6951b69534ba082a683c6e49031cb5d",
+      "directory": "glib-2.88.1-r1",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 main x86_64 APKINDEX license = LGPL-2.1-or-later; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
       "id": "alpine-gmp",
       "kind": "apk",
       "version": "6.3.0-r4",
@@ -165,6 +204,19 @@
       "target": "apk-root",
       "feature": "xorg",
       "note": "Alpine v3.24 main x86_64 APKINDEX license = GPL-2.0-or-later OR XFree86-1.1; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-lcms2",
+      "kind": "apk",
+      "version": "2.19-r0",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/lcms2-2.19-r0.apk",
+      "sha256": "b4cb038af3c2f02bedd8456ae876c97ac0a9f29789add77871bfd6ce084ff136",
+      "directory": "lcms2-2.19-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 main x86_64 APKINDEX license = MIT; embedded APK signature is verified by apk-tools",
       "license_in_source": ".PKGINFO"
     },
     {
@@ -211,6 +263,19 @@
       "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libdrm-2.4.134-r0.apk",
       "sha256": "584fd84ad5030040e613fa1816097cd1706ddd542100070852b0eab6e09e12ca",
       "directory": "libdrm-2.4.134-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 main x86_64 APKINDEX license = MIT; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-libeconf",
+      "kind": "apk",
+      "version": "0.8.3-r0",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libeconf-0.8.3-r0.apk",
+      "sha256": "2a791c7957961f830cf31b04f35f814a63afcf633badc9052425ff1cf2f64380",
+      "directory": "libeconf-0.8.3-r0",
       "script": "tools/build/upstream-apk.sh",
       "target": "apk-root",
       "feature": "xorg",
@@ -309,6 +374,19 @@
       "license_in_source": ".PKGINFO"
     },
     {
+      "id": "alpine-libglycin",
+      "kind": "apk",
+      "version": "2.1.5-r0",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/community/x86_64/libglycin-2.1.5-r0.apk",
+      "sha256": "3541d1a5d4d2599d145904f4febf26e56942403b6d80834461e196636b35b280",
+      "directory": "libglycin-2.1.5-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 community x86_64 APKINDEX license = MPL-2.0 OR LGPL-2.0-or-later; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
       "id": "alpine-libice",
       "kind": "apk",
       "version": "1.1.2-r0",
@@ -319,6 +397,19 @@
       "target": "apk-root",
       "feature": "xorg",
       "note": "Alpine v3.24 main x86_64 APKINDEX license = X11; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-libintl",
+      "kind": "apk",
+      "version": "1.0-r0",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libintl-1.0-r0.apk",
+      "sha256": "cb03919cba5624b5e8759d04f3b31913b02585355988b914bc31de4746ff5ef6",
+      "directory": "libintl-1.0-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 main x86_64 APKINDEX license = LGPL-2.1-or-later; embedded APK signature is verified by apk-tools",
       "license_in_source": ".PKGINFO"
     },
     {
@@ -369,6 +460,32 @@
       "target": "apk-root",
       "feature": "xorg",
       "note": "Alpine v3.24 main x86_64 APKINDEX license = Libpng; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-libptytty",
+      "kind": "apk",
+      "version": "2.0-r0",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/community/x86_64/libptytty-2.0-r0.apk",
+      "sha256": "3f905798c193c19d25fe209f4ff49fcb5e0d830372fece4f7a8fa12f6136ce0e",
+      "directory": "libptytty-2.0-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 community x86_64 APKINDEX license = GPL-2.0-or-later; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-libseccomp",
+      "kind": "apk",
+      "version": "2.6.0-r2",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libseccomp-2.6.0-r2.apk",
+      "sha256": "2c7fb3ef531c96e980599bb3ff57b40f34d3ef9e2a51bfb831746c130f621415",
+      "directory": "libseccomp-2.6.0-r2",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 main x86_64 APKINDEX license = LGPL-2.1-or-later; embedded APK signature is verified by apk-tools",
       "license_in_source": ".PKGINFO"
     },
     {
@@ -798,6 +915,32 @@
       "license_in_source": ".LICENSE"
     },
     {
+      "id": "alpine-pcre2",
+      "kind": "apk",
+      "version": "10.49-r0",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/pcre2-10.49-r0.apk",
+      "sha256": "2919897914820f42a17a8d7d37df310d2dfad1c82ebe5f539cc5c765f916752a",
+      "directory": "pcre2-10.49-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 main x86_64 APKINDEX license = BSD-3-Clause; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-perl",
+      "kind": "apk",
+      "version": "5.42.2-r1",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/perl-5.42.2-r1.apk",
+      "sha256": "0c57f655954b9183711d850b9ccb369f22aabd70f3ce617fe9f67eac2ef2afa7",
+      "directory": "perl-5.42.2-r1",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 main x86_64 APKINDEX license = Artistic-1.0-Perl OR GPL-1.0-or-later; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
       "id": "alpine-pixman",
       "kind": "apk",
       "version": "0.46.4-r0",
@@ -824,6 +967,45 @@
       "license_in_source": ".PKGINFO"
     },
     {
+      "id": "alpine-rxvt-unicode",
+      "kind": "apk",
+      "version": "9.31-r9",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/community/x86_64/rxvt-unicode-9.31-r9.apk",
+      "sha256": "ec0118640b50871ce4e02c52a6f955d716f0b28e5edaaf0445ecd44e1b59de41",
+      "directory": "rxvt-unicode-9.31-r9",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 community x86_64 APKINDEX license = GPL-3.0-or-later; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-rxvt-unicode-terminfo",
+      "kind": "apk",
+      "version": "9.31-r9",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/community/x86_64/rxvt-unicode-terminfo-9.31-r9.apk",
+      "sha256": "97f415c70b58996662d4f208c3d95ab89baa384246309e43450cfd6b1c04cd69",
+      "directory": "rxvt-unicode-terminfo-9.31-r9",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 community x86_64 APKINDEX license = GPL-3.0-or-later; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-shared-mime-info",
+      "kind": "apk",
+      "version": "2.4-r7",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/shared-mime-info-2.4-r7.apk",
+      "sha256": "b0ed78b502cacfa2dfb6ff87aaef36a034258026873ab5b73f5e603d6623a147",
+      "directory": "shared-mime-info-2.4-r7",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 main x86_64 APKINDEX license = GPL-2.0-or-later; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
       "id": "alpine-spirv-tools",
       "kind": "apk",
       "version": "1.4.341.0-r0",
@@ -834,6 +1016,19 @@
       "target": "apk-root",
       "feature": "xorg",
       "note": "Alpine v3.24 main x86_64 APKINDEX license = Apache-2.0; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-startup-notification",
+      "kind": "apk",
+      "version": "0.12-r8",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/community/x86_64/startup-notification-0.12-r8.apk",
+      "sha256": "6c49e495e24eb9476fb9cac20187bcdc0ea5a42d2632776ff064f3278050584f",
+      "directory": "startup-notification-0.12-r8",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 community x86_64 APKINDEX license = LGPL-2.0-or-later; embedded APK signature is verified by apk-tools",
       "license_in_source": ".PKGINFO"
     },
     {
@@ -910,6 +1105,19 @@
       "target": "apk-root",
       "feature": "xorg",
       "note": "Alpine v3.24 community x86_64 APKINDEX license = custom; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-xcb-util",
+      "kind": "apk",
+      "version": "0.4.1-r3",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/xcb-util-0.4.1-r3.apk",
+      "sha256": "16fb7ea2908f9f6525577fc7d1fba3476d740b5bc0b531353ba024f796b1ce47",
+      "directory": "xcb-util-0.4.1-r3",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 main x86_64 APKINDEX license = MIT; embedded APK signature is verified by apk-tools",
       "license_in_source": ".PKGINFO"
     },
     {
@@ -1036,19 +1244,6 @@
       "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/community/x86_64/xrdb-1.2.2-r0.apk",
       "sha256": "29649088693b5974dec3f928a5303e354f7b91e381b778006fe3011d003b1369",
       "directory": "xrdb-1.2.2-r0",
-      "script": "tools/build/upstream-apk.sh",
-      "target": "apk-root",
-      "feature": "xorg",
-      "note": "Alpine v3.24 community x86_64 APKINDEX license = MIT; embedded APK signature is verified by apk-tools",
-      "license_in_source": ".PKGINFO"
-    },
-    {
-      "id": "alpine-xterm",
-      "kind": "apk",
-      "version": "410-r0",
-      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/community/x86_64/xterm-410-r0.apk",
-      "sha256": "eff11da325ffb1dcfa4c9902ef27d34cc27b76457e1fc8dad90f10944ecb33b8",
-      "directory": "xterm-410-r0",
       "script": "tools/build/upstream-apk.sh",
       "target": "apk-root",
       "feature": "xorg",

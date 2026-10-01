@@ -35,8 +35,6 @@ class ConsoleBootPolicyTests(unittest.TestCase):
         self.assertIn("/run/reliefos/graphical-session-started", script)
         self.assertIn("login.elf --installer-shell", script)
         self.assertIn("exec /sbin/getty -n -l", script)
-        self.assertLess(script.index("login.elf --graphical-session"),
-                        script.index("exec /sbin/getty"))
         self.assertNotIn("LEONOS_BOOT_MODE", script)
         self.assertNotIn("RELIEFOS_BOOT_MODE", script)
         self.assertNotIn("/bin/sleep", script)
@@ -44,22 +42,28 @@ class ConsoleBootPolicyTests(unittest.TestCase):
     def test_console_session_dispatches_on_the_desktop_backend_marker(self):
         script = (ROOTFS / "usr/lib/reliefos/console-session").read_text()
         self.assertIn("/etc/reliefos/desktop-backend", script)
-        self.assertIn("reliefos-xorg-session", script)
         self.assertIn("missing or invalid", script)
         # The installer runtime keeps the native path ahead of the marker
         # dispatch, and the native branch stays ahead of the Xorg branch.
         self.assertLess(script.index("installer-runtime"),
                         script.index("desktop-backend"))
-        self.assertLess(script.index("login.elf --graphical-session"),
-                        script.index("reliefos-xorg-session"))
+        self.assertNotIn("reliefos-xorg-session >>", script)
         # The old marker is retired; the plain single-line backend marker is
         # the only dispatch input and it is never sourced.
         self.assertNotIn("/etc/reliefos/desktop-session", script)
         self.assertNotIn(". /etc/reliefos/desktop-backend", script)
 
+    def test_xorg_starts_only_after_a_tty_login_shell(self):
+        profile = (ROOT / "system/xorg/reliefos-xorg-profile").read_text()
+        self.assertIn("/dev/tty1", profile)
+        self.assertIn("/etc/reliefos/desktop-backend", profile)
+        self.assertIn("reliefos-xorg-session", profile)
+        self.assertNotIn("/bin/login", profile)
+
     def test_xorg_payload_is_staged_only_for_the_xorg_backend(self):
         staging = (ROOT / "tools/build/rootfs-stage.sh").read_text()
         self.assertIn("system/xorg/xorg.conf", staging)
+        self.assertIn("reliefos-xorg-profile", staging)
         self.assertIn("reliefos-xorg-session", staging)
         self.assertIn("reliefos-xorg-client", staging)
 

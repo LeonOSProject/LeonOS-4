@@ -52,6 +52,7 @@ if [ "$desktop_backend" = xorg ]; then
     # carry the configuration or the session wrappers.
     file "$src/system/xorg/xorg.conf" etc/X11/xorg.conf 0644 product-policy override
     file "$src/system/xorg/twmrc" etc/X11/twm/twmrc 0644 product-policy override
+    file "$src/system/xorg/reliefos-xorg-profile" etc/profile.d/reliefos-xorg.sh 0644 product-policy override
     file "$src/system/xorg/reliefos-xorg-session" usr/lib/reliefos/reliefos-xorg-session 0755 reliefos-apps override
     file "$src/system/xorg/reliefos-xorg-client" usr/lib/reliefos/reliefos-xorg-client 0755 reliefos-apps override
 fi

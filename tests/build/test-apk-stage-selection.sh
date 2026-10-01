@@ -32,7 +32,7 @@ printf '%s\t%s\t%s\n' "$lock" "$id" "$field" >> "$FAKE_DEPS_LOG"
 [ "$field" = feature ] || { echo "fake-deps: unsupported field: $field" >&2; exit 1; }
 case $id in
     alpine-openrc|alpine-xorg-fonts) printf 'base\n' ;;
-    alpine-xorg-server|alpine-xterm) printf 'xorg\n' ;;
+    alpine-xorg-server|alpine-rxvt-unicode) printf 'xorg\n' ;;
     alpine-broken-feature) printf 'weird\n' ;;
     *) echo "no dependency named \"$id\"" >&2; exit 1 ;;
 esac
@@ -121,7 +121,7 @@ build_archive() {
 build_archive "$w/upstream/packages" openrc 0.1 etc/fixture-openrc.conf etc/openrc-extra.conf
 build_archive "$w/upstream/packages" xorg-fonts 0.1 usr/share/fonts/xorg-fonts.fixture
 build_archive "$w/upstream/packages" xorg-server 0.1 usr/bin/xorg-server usr/lib/xorg/modules/raw-overlay-probe
-build_archive "$w/upstream/packages" xterm 0.1 usr/bin/xterm
+build_archive "$w/upstream/packages" rxvt-unicode 0.1 usr/bin/urxvt
 
 printf 'raw openrc overlay\n' > "$w/raw/etc/fixture-openrc.conf"
 printf 'raw probe\n' > "$w/raw/usr/lib/xorg/modules/raw-overlay-probe"
@@ -166,27 +166,27 @@ s=$w/reliefos
 expect_present "$s/repository/openrc-0.1.apk"
 expect_present "$s/repository/xorg-fonts-0.1.apk"
 expect_absent "$s/repository/xorg-server-0.1.apk"
-expect_absent "$s/repository/xterm-0.1.apk"
+expect_absent "$s/repository/rxvt-unicode-0.1.apk"
 expect_present "$s/managed/usr/share/reliefos/apk/repository/openrc-0.1.apk"
 expect_absent "$s/managed/usr/share/reliefos/apk/repository/xorg-server-0.1.apk"
-expect_absent "$s/managed/usr/share/reliefos/apk/repository/xterm-0.1.apk"
+expect_absent "$s/managed/usr/share/reliefos/apk/repository/rxvt-unicode-0.1.apk"
 expect_present "$s/managed/usr/bin/keep-me.txt"
 expect_present "$s/managed/usr/lib/xorg/modules/raw-overlay-probe"
 expect_present "$s/managed/etc/fixture-openrc.conf"
 expect_present "$s/managed/etc/openrc-extra.conf"
 expect_present "$s/managed/usr/share/fonts/xorg-fonts.fixture"
 expect_absent "$s/managed/usr/bin/xorg-server"
-expect_absent "$s/managed/usr/bin/xterm"
+expect_absent "$s/managed/usr/bin/urxvt"
 expect_grep "$s/own.log" 'usr/lib/xorg/modules/raw-overlay-probe'
 expect_grep "$s/own.log" 'usr/bin/keep-me.txt'
 expect_no_grep "$s/own.log" 'etc/fixture-openrc.conf'
 expect_no_grep "$s/own.log" 'usr/bin/xorg-server'
-expect_no_grep "$s/own.log" 'usr/bin/xterm'
+expect_no_grep "$s/own.log" 'usr/bin/urxvt'
 expect_no_grep "$s/own.log" 'etc/openrc-extra.conf'
 expect_no_grep "$s/apk.log" 'xorg-server'
-expect_no_grep "$s/apk.log" 'xterm'
+expect_no_grep "$s/apk.log" 'rxvt-unicode'
 expect_grep "$s/apk.log" 'add reliefos-base openrc=0.1 xorg-fonts=0.1'
-for id in alpine-openrc alpine-xorg-fonts alpine-xorg-server alpine-xterm; do
+for id in alpine-openrc alpine-xorg-fonts alpine-xorg-server alpine-rxvt-unicode; do
     expect_grep "$s/deps.log" "$id"
 done
 expect_grep "$s/deps.log" "$w/lock.json"
@@ -196,12 +196,12 @@ set_marker "xorg
 "
 stage xorg
 s=$w/xorg
-for archive in openrc-0.1.apk xorg-fonts-0.1.apk xorg-server-0.1.apk xterm-0.1.apk; do
+for archive in openrc-0.1.apk xorg-fonts-0.1.apk xorg-server-0.1.apk rxvt-unicode-0.1.apk; do
     expect_present "$s/repository/$archive"
     expect_present "$s/managed/usr/share/reliefos/apk/repository/$archive"
 done
 expect_present "$s/managed/usr/bin/xorg-server"
-expect_present "$s/managed/usr/bin/xterm"
+expect_present "$s/managed/usr/bin/urxvt"
 expect_present "$s/managed/etc/openrc-extra.conf"
 expect_present "$s/managed/usr/share/fonts/xorg-fonts.fixture"
 expect_present "$s/managed/usr/bin/keep-me.txt"
@@ -209,7 +209,7 @@ expect_grep "$s/own.log" 'usr/bin/keep-me.txt'
 expect_no_grep "$s/own.log" 'usr/lib/xorg/modules/raw-overlay-probe'
 expect_no_grep "$s/own.log" 'etc/fixture-openrc.conf'
 expect_no_grep "$s/own.log" 'usr/bin/xorg-server'
-expect_grep "$s/apk.log" 'add reliefos-base openrc=0.1 xorg-fonts=0.1 xorg-server=0.1 xterm=0.1'
+expect_grep "$s/apk.log" 'add reliefos-base openrc=0.1 rxvt-unicode=0.1 xorg-fonts=0.1 xorg-server=0.1'
 
 # --- marker failures stop staging before any scan or transaction ---
 for marker in '' 'bogus' 'reliefos extra' "reliefos${newline}xorg${newline}" 'xorg '; do

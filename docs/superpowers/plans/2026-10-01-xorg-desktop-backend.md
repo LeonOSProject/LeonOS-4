@@ -2,9 +2,9 @@
 
 > **面向 AI 代理的工作者：** 必需子技能：使用 subagent-driven-development（推荐）或 executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
 
-**目标：** 为 ReliefOS 增加一个默认保持原生桌面的 Kconfig 后端选择，并接入 Alpine 官方 x86_64 APK 提供的 Xorg + `xinit` + `xterm` 最小 X11 会话。
+**目标：** 为 ReliefOS 增加一个默认保持原生桌面的 Kconfig 后端选择，并接入 Alpine 官方 x86_64 APK 提供的 Xorg + `xinit` + `urxvt` 最小 X11 会话。
 
-**架构：** 顶层 Kconfig 产生互斥的 `DESKTOP_BACKEND_RELIEFOS`/`DESKTOP_BACKEND_XORG` 选择；rootfs staging 将选择编译为不可执行的 `desktop-backend` 标记和对应服务/文件集合。原生桌面继续由现有 `windowd`、`desktop.elf`、`sessiond` 提供，Xorg 模式由 tty1 会话包装脚本启动 Xorg、fbdev、evdev 和 xterm，安装器 runtime 强制使用原生后端。
+**架构：** 顶层 Kconfig 产生互斥的 `DESKTOP_BACKEND_RELIEFOS`/`DESKTOP_BACKEND_XORG` 选择；rootfs staging 将选择编译为不可执行的 `desktop-backend` 标记和对应服务/文件集合。原生桌面继续由现有 `windowd`、`desktop.elf`、`sessiond` 提供，Xorg 模式由 tty1 会话包装脚本启动 Xorg、fbdev、evdev 和 urxvt，安装器 runtime 强制使用原生后端。
 
 **技术栈：** Kconfig/kconfig-frontends、POSIX `/bin/sh`、GNU Make、Alpine APK/musl x86_64 二进制、现有 Linux fbdev/evdev ABI、C shell contract tests、QEMU/UEFI smoke test。
 
@@ -16,7 +16,7 @@
 - 用户可见的原生后端名称为 `ReliefOS Desktop + desktopd`，实现映射为现有 `windowd`、`desktop.elf`、`sessiond`，不新增 `desktopd` 守护进程。
 - Xorg 后端只提供最小 X11 会话，不迁移现有 ReliefOS 原生 GUI 应用。
 - Xorg 运行时包必须来自 Alpine v3.24 x86_64/musl 官方 APK，并逐包锁定版本、URL、SHA-256、签名和许可证信息。
-- 直接 Xorg 包版本固定为：`xorg-server=21.1.24-r0`、`xorg-server-common=21.1.24-r0`、`xinit=1.4.4-r0`、`xterm=410-r0`、`xf86-video-fbdev=0.5.0-r6`、`xf86-input-evdev=2.11.0-r0`、`xkeyboard-config=2.47-r0`、`font-cursor-misc=1.0.4-r1`、`font-misc-misc=1.1.3-r1`；完整传递依赖必须按同一 APKINDEX 逐一锁定。
+- 直接 Xorg 包版本固定为：`xorg-server=21.1.24-r0`、`xorg-server-common=21.1.24-r0`、`xinit=1.4.4-r0`、`rxvt-unicode=9.31-r9`、`rxvt-unicode-terminfo=9.31-r9`、`xf86-video-fbdev=0.5.0-r6`、`xf86-input-evdev=2.11.0-r0`、`xkeyboard-config=2.47-r0`、`font-cursor-misc=1.0.4-r1`、`font-misc-misc=1.1.3-r1`；完整传递依赖必须按同一 APKINDEX 逐一锁定。
 - 只有显式 `make fetch` 可以联网；普通构建消费已验证缓存，缺包时必须报告具体依赖和修复命令。
 - Xorg 使用标准 `/dev/fb0`、`/dev/input/event0`、`/dev/input/event1` 和 Linux fbdev/evdev/POSIX 接口，不新增 Xorg 专用 syscall 或 ReliefOS 私有 ioctl。
 - Xorg 后端不得启动 `reliefos-windowd` 或 `reliefos-session`；安装器 runtime 始终恢复原生桌面服务。
@@ -43,7 +43,7 @@
 - `tools/build/apk-stage.sh`：按 raw root 的后端标记过滤可选 Xorg APK，并把选中的包纳入 APK 数据库。
 - `mk/apk.mk`：向 APK staging 传递锁文件和依赖查询工具。
 - `tools/build/installer-stage.sh`：为 installer runtime 恢复原生后端和原生 default runlevel。
-- `system/rootfs/usr/lib/reliefos/console-session`：根据后端标记选择原生图形会话或 Xorg 会话。
+- `system/rootfs/usr/lib/reliefos/console-session`：根据后端标记选择原生图形会话或等待 tty 登录。
 - `tools/test_console_boot_policy.py`：扩展启动分支、未知值和 installer 优先级测试。
 - `tests/build/test-installer-stage.sh`：适配新的 APK staging 参数并覆盖 installer runtime 恢复策略。
 - `docs/ABI.md`：记录 Xorg 所消费的标准 fbdev/evdev 接口和当前限制。
@@ -52,7 +52,7 @@
 
 - `system/xorg/xorg.conf`：Xorg fbdev/evdev 的固定配置源。
 - `system/xorg/reliefos-xorg-session`：从 tty1 启动 `xinit`/Xorg 的 POSIX shell 包装器。
-- `system/xorg/reliefos-xorg-client`：启动 `xterm` 和 `/bin/login` 的 X11 client 脚本。
+- `system/xorg/reliefos-xorg-client`：启动 `urxvt` 和已认证登录 shell 的 X11 client 脚本。
 - `tests/build/test-desktop-backend.sh`：Kconfig、rootfs policy 和启动脚本 contract test。
 - `tests/build/test-apk-stage-selection.sh`：Xorg/base APK 选择和离线 staging contract test。
 - `tools/tests/xorg_device_probe.c`：使用标准 fbdev/evdev UAPI 的来宾设备探针。
@@ -200,7 +200,8 @@ expect_output_is 'an unmarked dependency defaults to the base feature' base \
 alpine-xorg-server       21.1.24-r0
 alpine-xorg-server-common 21.1.24-r0
 alpine-xinit             1.4.4-r0
-alpine-xterm             410-r0
+alpine-rxvt-unicode      9.31-r9
+alpine-rxvt-unicode-terminfo 9.31-r9
 alpine-xf86-video-fbdev  0.5.0-r6
 alpine-xf86-input-evdev  2.11.0-r0
 alpine-xkeyboard-config  2.47-r0
@@ -244,7 +245,7 @@ run_stage reliefos
 grep -q 'openrc' "$log"
 run_stage xorg
 grep -q 'xorg-server' "$log"
-grep -q 'xterm' "$log"
+grep -q 'urxvt' "$log"
 ```
 
 同时验证被过滤的 Xorg archive 不会被复制到最终 repository，也不会参与 raw overlay 删除或 ownership/APK database transaction。
@@ -297,7 +298,7 @@ grep -q '/dev/fb0' system/xorg/xorg.conf
 grep -q '/dev/input/event0' system/xorg/xorg.conf
 grep -q '/dev/input/event1' system/xorg/xorg.conf
 grep -q 'xinit' system/xorg/reliefos-xorg-session
-grep -q 'xterm' system/xorg/reliefos-xorg-client
+grep -q 'urxvt' system/xorg/reliefos-xorg-client
 grep -q '/bin/login' system/xorg/reliefos-xorg-client
 ```
 
@@ -321,11 +322,11 @@ grep -q '/bin/login' system/xorg/reliefos-xorg-client
 /usr/bin/xinit /usr/lib/reliefos/reliefos-xorg-client -- /usr/bin/Xorg :0 -config /etc/X11/xorg.conf -vt 1 -keeptty -novtswitch
 ```
 
-创建 `reliefos-xorg-client`，使用 `/usr/bin/xterm` 在其伪终端内执行 `/bin/login`，不执行 root shell，不使用 Bash 专属语法。脚本必须保留退出状态并让 `console-session` 回到文本 getty。
+创建 `reliefos-xorg-client`，使用 `/usr/bin/urxvt` 在其伪终端内执行已认证用户的 `/bin/sh -l`，不执行 root shell，不使用 Bash 专属语法。脚本必须保留退出状态并让 `console-session` 回到文本 getty。
 
 - [ ] **步骤 5：接入 console-session 分支**
 
-修改 `console-session`：installer runtime 无条件调用现有原生图形会话；普通系统按 `desktop-backend` 精确选择原生 `login.elf --graphical-session` 或 `reliefos-xorg-session`；未知/缺失值写错误到日志并跳过图形启动，继续文本登录。
+修改 `console-session`：installer runtime 无条件调用现有原生图形会话；普通系统按 `desktop-backend` 精确选择原生 `login.elf --graphical-session` 或普通 tty 登录；Xorg 后端由认证后的 tty1 登录 shell 通过 `/etc/profile.d/reliefos-xorg.sh` 启动；未知/缺失值写错误到日志并跳过图形启动，继续文本登录。
 
 - [ ] **步骤 6：运行启动测试确认通过**
 
@@ -390,14 +391,14 @@ git commit -m "test: cover Xorg Linux device ABI"
 
 - [ ] **步骤 1：编写失败的 QEMU 验收脚本**
 
-让 `tools/test_xorg_qemu.py` 接受 `--output`、`--cache` 和 `--qemu`，启动一个从 `.config` 选择 Xorg backend 的 VMDK/ISO，验证串口日志出现 Xorg 会话启动、Xorg 日志路径和 xterm client 路径；若 QMP/显示可用，再抓取屏幕并确认非黑屏 X11 输出。
+让 `tools/test_xorg_qemu.py` 接受 `--output`、`--cache` 和 `--qemu`，启动一个从 `.config` 选择 Xorg backend 的 VMDK/ISO，验证串口日志出现 Xorg 会话启动、Xorg 日志路径和 urxvt client 路径；若 QMP/显示可用，再抓取屏幕并确认非黑屏 X11 输出。
 
 必须额外验证：
 
 ```text
 Xorg server started
-xterm client started
-/bin/login prompt reached
+urxvt client started
+authenticated tty1 login starting Xorg
 native windowd/sessiond not started
 ```
 
@@ -415,11 +416,11 @@ native windowd/sessiond not started
 
 - [ ] **步骤 4：实现日志和图像验收**
 
-让脚本等待 Xorg session 的有限时间，读取串口和 guest 日志，检查 Xorg server、xterm、login prompt、未启动原生 server、退出后文本 VT 五个状态；超时必须输出 QEMU 日志、Xorg 日志和最后一帧证据。
+让脚本等待 tty1 文本登录并完成认证，再等待 Xorg session 的有限时间，读取串口和 guest 日志，检查 Xorg server、urxvt、认证后启动、未启动原生 server、退出后文本 VT 五个状态；超时必须输出 QEMU 日志、Xorg 日志和最后一帧证据。
 
 - [ ] **步骤 5：编写使用文档**
 
-在 `docs/XORG.md` 说明 Kconfig/menuconfig 选择、`make fetch`、离线构建、Xorg 的 fbdev/evdev 限制、最小 xterm 登录流程、安装器仍使用原生桌面，以及 QEMU 验证命令和未验证的硬件范围。
+在 `docs/XORG.md` 说明 Kconfig/menuconfig 选择、`make fetch`、离线构建、Xorg 的 fbdev/evdev 限制、最小 urxvt 登录流程、安装器仍使用原生桌面，以及 QEMU 验证命令和未验证的硬件范围。
 
 - [ ] **步骤 6：运行完整验证**
 

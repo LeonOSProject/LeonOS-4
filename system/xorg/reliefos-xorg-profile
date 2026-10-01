@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if [ "$(tty 2>/dev/null)" = /dev/tty1 ] &&
+   [ "$(cat /etc/reliefos/desktop-backend 2>/dev/null)" = xorg ]; then
+    printf '%s xorg-profile: authenticated tty1 login starting Xorg\n' \
+        "$(date '+%Y-%m-%dT%H:%M:%S')" >>/var/log/xorg-session.log
+    exec /usr/lib/reliefos/reliefos-xorg-session >>/var/log/xorg-session.log 2>&1
+fi
