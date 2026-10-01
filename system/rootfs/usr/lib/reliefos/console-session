@@ -46,6 +46,8 @@ if test "$1" = tty1; then
             if test ! -e /run/reliefos/graphical-session-started; then
                 : > /run/reliefos/graphical-session-started
                 /usr/lib/reliefos/reliefos-xorg-session >>/var/log/xorg-session.log 2>&1
+                xorg_status=$?
+                echo "$(date '+%Y-%m-%dT%H:%M:%S') xorg-session: Xorg server exited with status $xorg_status, tty1 restored to text login" >>/var/log/xorg-session.log
             fi
             ;;
         *)

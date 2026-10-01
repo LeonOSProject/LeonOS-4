@@ -147,7 +147,8 @@ Fixed device paths, no udev enumeration:
 - Keyboard: `/dev/input/event0` through the `evdev` input driver.
 - Mouse: `/dev/input/event1` through the `evdev` input driver.
 - The server runs on the active graphical VT1 (`tty1`), pinned by
-  `Xorg -vt 1 -keeptty -novtswitch`.
+  `Xorg :0 vt1 -keeptty -novtswitch` (the X server takes the VT as the
+  positional `vt1` argument).
 
 Supported fbdev ioctls on a `/dev/fb0` descriptor, with the public
 `<linux/fb.h>` structures: `FBIOGET_VSCREENINFO`, `FBIOPUT_VSCREENINFO`,
@@ -164,9 +165,12 @@ Supported evdev operations on `/dev/input/event0` and `/dev/input/event1`, with
 the public `<linux/input.h>` structures: `EVIOCGVERSION`, `EVIOCGID`,
 `EVIOCGNAME`, `EVIOCGPHYS`, `EVIOCGBIT` capability bitmaps, `EVIOCGKEY`,
 `EVIOCGLED`, `EVIOCGABS` and `EVIOCGRAB`, plus the event stream itself through
-`poll` and `read` of complete `struct input_event` records. Descriptor,
-session and permission rules follow POSIX; a non-input descriptor fails with
-`ENOTTY` and a bad user pointer with `EFAULT`.
+`poll` and `read` of complete `struct input_event` records. The exported UAPI
+spells the record timestamp as `int64_t time_sec/time_usec`; this is
+wire-identical to the mainline x86_64 `struct timeval` field Alpine's evdev
+uses (24-byte records: 8-byte seconds, 8-byte microseconds, `type`, `code`,
+`value`). Descriptor, session and permission rules follow POSIX; a non-input
+descriptor fails with `ENOTTY` and a bad user pointer with `EFAULT`.
 
 Error boundaries: a missing device node fails `open` with `ENOENT`; every
 failed probe step is reported together with its `errno`, and

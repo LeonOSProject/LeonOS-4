@@ -127,12 +127,17 @@ int main(void)
         close(fb);
     }
 
-    if (offsetof(struct input_event, type) == sizeof(struct timeval) &&
-        offsetof(struct input_event, code) == sizeof(struct timeval) + 2u &&
-        offsetof(struct input_event, value) == sizeof(struct timeval) + 4u &&
-        sizeof(struct input_event) == sizeof(struct timeval) + 8u) {
-        snprintf(detail, sizeof detail, "sizeof=%zu timeval=%zu",
-                 sizeof(struct input_event), sizeof(struct timeval));
+    /* Mainline x86_64 wire layout: 8-byte seconds, 8-byte microseconds,
+     * type/code/value. The exported UAPI spells the timestamp as int64
+     * time_sec/time_usec; Alpine's evdev sees the same bytes as timeval. */
+    if (offsetof(struct input_event, type) == 16 &&
+        offsetof(struct input_event, code) == 18 &&
+        offsetof(struct input_event, value) == 20 &&
+        sizeof(struct input_event) == 24) {
+        snprintf(detail, sizeof detail, "sizeof=%zu type@%zu value@%zu",
+                 sizeof(struct input_event),
+                 (size_t)offsetof(struct input_event, type),
+                 (size_t)offsetof(struct input_event, value));
         step_ok("evdev-input-event-layout", detail);
     } else {
         step_fail("evdev-input-event-layout", 0);

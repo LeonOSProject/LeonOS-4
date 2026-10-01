@@ -39,7 +39,7 @@ expect_grep "$conf" 'tty1'
 # --- session and client keep the xinit -> Xorg -> xterm -> login contract ---
 expect_grep "$session" 'xinit'
 expect_grep "$session" '/usr/bin/xinit /usr/lib/reliefos/reliefos-xorg-client --'
-expect_grep "$session" '/usr/bin/Xorg :0 -config /etc/X11/xorg.conf -vt 1 -keeptty -novtswitch'
+expect_grep "$session" '/usr/bin/Xorg :0 -config /etc/X11/xorg.conf vt1 -keeptty -novtswitch'
 expect_grep "$client" 'xterm'
 expect_grep "$client" '/bin/login'
 expect_grep "$client" 'exec /bin/login'

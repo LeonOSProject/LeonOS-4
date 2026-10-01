@@ -8,10 +8,15 @@ set -u
 
 log=/var/log/xorg-session.log
 
+# The VT layer and xinit signal the foreground process group when the X
+# server leaves; the wrapper must survive to record the session outcome and
+# hand tty1 back to the text login.
+trap '' HUP INT TERM QUIT
+
 timestamp() { date '+%Y-%m-%dT%H:%M:%S'; }
 say() { printf '%s xorg-session: %s\n' "$(timestamp)" "$*" >> "$log"; }
 
-say 'start on tty1: /usr/bin/xinit /usr/lib/reliefos/reliefos-xorg-client -- /usr/bin/Xorg :0 -config /etc/X11/xorg.conf -vt 1 -keeptty -novtswitch'
+say 'start on tty1: /usr/bin/xinit /usr/lib/reliefos/reliefos-xorg-client -- /usr/bin/Xorg :0 -config /etc/X11/xorg.conf vt1 -keeptty -novtswitch'
 say 'native windowd/sessiond not started (xorg desktop backend)'
 for need in /usr/bin/xinit /usr/bin/Xorg /usr/lib/reliefos/reliefos-xorg-client; do
     [ -x "$need" ] || { say "missing executable: $need"; exit 1; }
@@ -19,8 +24,10 @@ done
 [ -f /etc/X11/xorg.conf ] || { say 'missing Xorg configuration: /etc/X11/xorg.conf'; exit 1; }
 
 /usr/bin/xinit /usr/lib/reliefos/reliefos-xorg-client -- \
-    /usr/bin/Xorg :0 -config /etc/X11/xorg.conf -vt 1 -keeptty -novtswitch >> "$log" 2>&1
+    /usr/bin/Xorg :0 -config /etc/X11/xorg.conf vt1 -keeptty -novtswitch >> "$log" 2>&1
 status=$?
-say "Xorg server exited with status $status"
-say 'tty1 restored to text login'
+# One atomic record for both milestones: the text login on tty1 is restored
+# as soon as the X server leaves, and the next console-session respawn runs
+# the text getty again.
+say "Xorg server exited with status $status; tty1 restored to text login"
 exit "$status"
