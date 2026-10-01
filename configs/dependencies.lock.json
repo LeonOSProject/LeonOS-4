@@ -359,6 +359,19 @@
       "license_in_source": ".PKGINFO"
     },
     {
+      "id": "alpine-libpng",
+      "kind": "apk",
+      "version": "1.6.59-r0",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libpng-1.6.59-r0.apk",
+      "sha256": "d16aeb0597f2bc43e0583ac9ff779388ec160c3e22568b640122e94ba55be6d7",
+      "directory": "libpng-1.6.59-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 main x86_64 APKINDEX license = Libpng; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
       "id": "alpine-libsm",
       "kind": "apk",
       "version": "1.2.6-r0",
@@ -382,19 +395,6 @@
       "target": "apk-root",
       "feature": "xorg",
       "note": "Alpine v3.24 main x86_64 APKINDEX license = GPL-2.0-or-later AND LGPL-2.1-or-later; embedded APK signature is verified by apk-tools",
-      "license_in_source": ".PKGINFO"
-    },
-    {
-      "id": "alpine-libuuid",
-      "kind": "apk",
-      "version": "2.42.3-r1",
-      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libuuid-2.42.3-r1.apk",
-      "sha256": "8306e5bb577696c9069fe1dfd9e1dcc39d2d481c6a1b0e707fd03c3e21aa6aa2",
-      "directory": "libuuid-2.42.3-r1",
-      "script": "tools/build/upstream-apk.sh",
-      "target": "apk-root",
-      "feature": "xorg",
-      "note": "Alpine v3.24 main x86_64 APKINDEX license = BSD-3-Clause; embedded APK signature is verified by apk-tools",
       "license_in_source": ".PKGINFO"
     },
     {
@@ -1039,6 +1039,19 @@
       "target": "apk-root",
       "feature": "xorg",
       "note": "Alpine v3.24 main x86_64 APKINDEX license = GPL-2.0-or-later AND 0BSD AND Public-Domain AND LGPL-2.1-or-later; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
+      "id": "alpine-zlib",
+      "kind": "apk",
+      "version": "1.3.2-r0",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/zlib-1.3.2-r0.apk",
+      "sha256": "b636306cbf8a0c15493b38de608ba11605fd8f11ade631f5ece6f7fdf5a1e09e",
+      "directory": "zlib-1.3.2-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 main x86_64 APKINDEX license = Zlib; embedded APK signature is verified by apk-tools",
       "license_in_source": ".PKGINFO"
     },
     {
