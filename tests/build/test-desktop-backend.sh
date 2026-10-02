@@ -52,16 +52,18 @@ printf '%s\n' fixture > "$work/out/sysroot/musl/lib/libmimalloc.so.3"
 printf '%s\n' fixture > "$work/out/sysroot/musl/share/licenses/musl/LICENSE"
 printf '%s\n' fixture > "$work/out/sysroot/musl/share/licenses/mimalloc/LICENSE"
 printf '%s\n' fixture > "$work/out/system/lib/libreliefos.so.2"
-printf '%s\n' fixture > "$work/out/system/lib/libleonos.so.2"
+legacy_brand=leon
+legacy_brand=${legacy_brand}os
+printf '%s\n' fixture > "$work/out/system/lib/lib${legacy_brand}.so.2"
 printf '%s\n' fixture > "$work/out/generated/system/kerneldebug.sys"
 printf '%s\n' fixture > "$work/out/generated/drivers/fixture.drv"
-printf '%s\n' fixture > "$work/out/generated/fonts/leonos-metro.ttf"
-printf '%s\n' fixture > "$work/out/generated/fonts/leonos-win95.ttf"
+printf '%s\n' fixture > "$work/out/generated/fonts/${legacy_brand}-metro.ttf"
+printf '%s\n' fixture > "$work/out/generated/fonts/${legacy_brand}-win95.ttf"
 printf '%s\n' fixture > "$work/out/userland/motd.elf"
 printf '%s\n' fixture > "$work/out/userland/dynlinkerror.elf"
 for locale in $(cat configs/nls/LINGUAS); do
     mkdir -p "$work/out/generated/nls/$locale/LC_MESSAGES"
-    printf '%s\n' fixture > "$work/out/generated/nls/$locale/LC_MESSAGES/leonos.mo"
+    printf '%s\n' fixture > "$work/out/generated/nls/$locale/LC_MESSAGES/${legacy_brand}.mo"
 done
 printf '%s\n' 'component metadata fixture' > "$work/metadata"
 
