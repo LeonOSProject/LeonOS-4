@@ -64,6 +64,9 @@ class ConsoleBootPolicyTests(unittest.TestCase):
             self.assertIn(event, launcher)
         for event in ("PAM authentication accepted", "twm started for uid=", "xterm started", "xdm session ended"):
             self.assertIn(event, session)
+        self.assertIn("/run/reliefos/xorg-events.log", launcher)
+        self.assertIn("/run/reliefos/xorg-events.log", session)
+        self.assertNotIn(">&3", session)
         self.assertIn("tty1 restored to text login", console)
         self.assertNotIn("password", launcher.lower() + session.lower())
 
