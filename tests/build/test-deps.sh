@@ -147,6 +147,13 @@ fi
 # --- rejected lock files ------------------------------------------------------
 D='0000000000000000000000000000000000000000000000000000000000000000'
 
+expect_output_is 'xorg entry reports feature' xorg \
+    "$deps" --lock "$lock" --id alpine-xdm --print feature
+expect_output_is 'unmarked entry defaults to base' base \
+    "$deps" --lock "$lock" --id alpine-openrc --print feature
+expect_failure 'invalid feature is rejected' \
+    "$deps" --lock "$(entry_lock '{"id":"a","kind":"apk","version":"1","url":"https://x/a.apk","sha256":"'$D'","directory":"a-1","license_in_source":".PKGINFO","feature":"desktop"}')" --check
+
 expect_failure 'an entry missing required fields is rejected' \
     "$deps" --lock "$(entry_lock '{"id":"a","kind":"tarball"}')" --check
 
