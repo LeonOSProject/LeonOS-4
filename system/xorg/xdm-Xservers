@@ -1,0 +1,1 @@
+:0 local /usr/bin/Xorg :0 -config /etc/X11/xorg.conf vt1 -keeptty

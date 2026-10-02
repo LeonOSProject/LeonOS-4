@@ -14,11 +14,20 @@ if test "$1" = tty1; then
         cd "$HOME" || exit 1
         exec /usr/lib/reliefos/apps/login/login.elf --installer-shell
     fi
-    if test -f /etc/reliefos/desktop-session &&
+    desktop_backend=reliefos
+    if test -f /etc/reliefos/desktop-backend; then
+        desktop_backend=$(cat /etc/reliefos/desktop-backend) || desktop_backend=
+    fi
+    if test "$desktop_backend" = xorg &&
        test ! -e /run/reliefos/graphical-session-started; then
         : > /run/reliefos/graphical-session-started
+        /usr/lib/reliefos/reliefos-xdm >>/var/log/xorg-session.log 2>&1 || :
+    elif test "$desktop_backend" = reliefos &&
+         test -f /etc/reliefos/desktop-session &&
+         test ! -e /run/reliefos/graphical-session-started; then
+        : > /run/reliefos/graphical-session-started
         /usr/lib/reliefos/apps/login/login.elf --graphical-session \
-            >>/var/log/desktop.log 2>&1
+            >>/var/log/desktop.log 2>&1 || :
     fi
 fi
 # Installation media has locked account passwords; offer the same local

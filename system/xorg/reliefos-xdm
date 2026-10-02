@@ -1,0 +1,19 @@
+#!/bin/sh
+# Root-owned XDM launcher used only by tty1's foreground console session.
+set -eu
+
+log=/var/log/xorg-session.log
+mkdir -p /var/lib/xdm
+touch "$log"
+chmod 0644 "$log"
+
+for path in /usr/bin/xdm /etc/reliefos/xdm.conf /etc/reliefos/xdm-Xservers \
+    /etc/X11/xorg.conf /usr/lib/reliefos/xdm-session; do
+    if test ! -r "$path"; then
+        printf '%s\n' "reliefos-xdm: missing $path" >> "$log"
+        exit 1
+    fi
+done
+
+printf '%s\n' 'reliefos-xdm: starting xdm on vt1' >> "$log"
+exec /usr/bin/xdm -nodaemon -config /etc/reliefos/xdm.conf

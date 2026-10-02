@@ -41,6 +41,15 @@ class ConsoleBootPolicyTests(unittest.TestCase):
         self.assertNotIn("RELIEFOS_BOOT_MODE", script)
         self.assertNotIn("/bin/sleep", script)
 
+    def test_xorg_session_is_selected_by_raw_marker(self):
+        script = (ROOTFS / "usr/lib/reliefos/console-session").read_text()
+        self.assertIn("/etc/reliefos/desktop-backend", script)
+        self.assertIn("reliefos-xdm", (ROOT / "system/xorg/reliefos-xdm").read_text())
+        self.assertIn("xdm -nodaemon -config", (ROOT / "system/xorg/reliefos-xdm").read_text())
+        self.assertNotIn("source ", script)
+        self.assertNotIn(". /etc/reliefos/desktop-backend", script)
+        self.assertNotIn("-novtswitch", (ROOT / "system/xorg/xdm-Xservers").read_text())
+
     def test_graphical_and_installer_sessions_claim_a_controlling_terminal(self):
         source = (ROOT / "userland/apps/login/main.c").read_text()
         for item in ("setsid()", "TIOCSCTTY", "tcsetpgrp", "VT_ACTIVATE",

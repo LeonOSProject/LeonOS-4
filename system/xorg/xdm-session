@@ -1,0 +1,30 @@
+#!/bin/sh
+# XDM invokes this script as the authenticated user.
+set -u
+umask 077
+
+if test -z "${HOME:-}" || test -z "${DISPLAY:-}"; then
+    exit 1
+fi
+
+session_log=$HOME/.xsession-errors
+: > "$session_log" 2>/dev/null || session_log=${XDG_CACHE_HOME:-/tmp}/reliefos-xsession-errors
+exec >> "$session_log" 2>&1
+
+test -x /usr/bin/twm || exit 1
+test -x /usr/bin/xterm || exit 1
+
+xterm_pid=
+cleanup() {
+    if test -n "$xterm_pid"; then
+        kill "$xterm_pid" 2>/dev/null || :
+        wait "$xterm_pid" 2>/dev/null || :
+    fi
+}
+trap cleanup EXIT HUP INT TERM
+
+/usr/bin/xterm -title ReliefOS -geometry 100x32+0+0 &
+xterm_pid=$!
+/usr/bin/twm -f /etc/reliefos/twmrc
+status=$?
+exit "$status"

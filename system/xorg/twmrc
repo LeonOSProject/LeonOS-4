@@ -1,0 +1,24 @@
+RandomPlacement
+BorderWidth 2
+TitleButtonBorderWidth 1
+MenuFont "fixed"
+TitleFont "fixed"
+ResizeFont "fixed"
+IconFont "fixed"
+IconManagerFont "fixed"
+
+menu "defops"
+{
+    "ReliefOS Xorg" f.title
+    "New xterm" f.exec "xterm &"
+    "Raise" f.raise
+    "Lower" f.lower
+    "Move" f.move
+    "Resize" f.resize
+    "Delete" f.delete
+    "Exit session" f.quit
+}
+
+Button1 = : root : f.menu "defops"
+Button2 = : root : f.menu "defops"
+Button3 = : root : f.menu "defops"
