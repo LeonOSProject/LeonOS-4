@@ -997,7 +997,7 @@
       "kind": "apk",
       "version": "1.1.4-r0",
       "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/community/x86_64/sessreg-1.1.4-r0.apk",
-      "sha256": "949f54ededb5af82c9da90d021a80cab309c52784a36671cd52d3ec681643534",
+      "sha256": "949f54ededb5af82cda90d021a80cab309c52784a36671cd52d3ec6816435344",
       "directory": "sessreg-1.1.4-r0",
       "script": "tools/build/upstream-apk.sh",
       "target": "apk-root",
