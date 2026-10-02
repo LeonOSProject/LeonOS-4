@@ -50,6 +50,23 @@ class ConsoleBootPolicyTests(unittest.TestCase):
         self.assertNotIn(". /etc/reliefos/desktop-backend", script)
         self.assertNotIn("-novtswitch", (ROOT / "system/xorg/xdm-Xservers").read_text())
 
+    def test_invalid_backend_marker_never_falls_back_to_native_desktop(self):
+        script = (ROOTFS / "usr/lib/reliefos/console-session").read_text()
+        self.assertIn("exactly one line", script)
+        self.assertIn("invalid desktop backend", script)
+        self.assertNotIn("desktop_backend=reliefos", script)
+
+    def test_xorg_evidence_events_are_safe_and_orderable(self):
+        launcher = (ROOT / "system/xorg/reliefos-xdm").read_text()
+        session = (ROOT / "system/xorg/xdm-session").read_text()
+        console = (ROOTFS / "usr/lib/reliefos/console-session").read_text()
+        for event in ("desktop-backend=xorg", "xdm started on vt1"):
+            self.assertIn(event, launcher)
+        for event in ("PAM authentication accepted", "twm started for uid=", "xterm started", "xdm session ended"):
+            self.assertIn(event, session)
+        self.assertIn("tty1 restored to text login", console)
+        self.assertNotIn("password", launcher.lower() + session.lower())
+
     def test_graphical_and_installer_sessions_claim_a_controlling_terminal(self):
         source = (ROOT / "userland/apps/login/main.c").read_text()
         for item in ("setsid()", "TIOCSCTTY", "tcsetpgrp", "VT_ACTIVATE",

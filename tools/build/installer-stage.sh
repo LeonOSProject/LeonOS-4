@@ -35,6 +35,7 @@ restore_native_desktop_policy() {
     done
     rm -f "$runtime_root/etc/reliefos/xdm.conf" "$runtime_root/etc/reliefos/xdm-Xservers" \
         "$runtime_root/etc/X11/xorg.conf" "$runtime_root/etc/pam.d/xdm" \
+        "$runtime_root/etc/reliefos/xdm-session" "$runtime_root/etc/reliefos/twmrc" \
         "$runtime_root/usr/lib/reliefos/reliefos-xdm" "$runtime_root/usr/lib/reliefos/xdm-session"
 }
 package_root "$work/installed-raw" "$work/installed" "$out/packages/apk-installed"

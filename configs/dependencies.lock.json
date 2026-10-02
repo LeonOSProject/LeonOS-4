@@ -1160,6 +1160,19 @@
       "license_in_source": ".PKGINFO"
     },
     {
+      "id": "alpine-xterm",
+      "kind": "apk",
+      "version": "410-r0",
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/community/x86_64/xterm-410-r0.apk",
+      "sha256": "eff11da325ffb1dcfa4c9902ef27d34cc27b76457e1fc8dad90f10944ecb33b8",
+      "directory": "xterm-410-r0",
+      "script": "tools/build/upstream-apk.sh",
+      "target": "apk-root",
+      "feature": "xorg",
+      "note": "Alpine v3.24 community x86_64 APKINDEX license = MIT; embedded APK signature is verified by apk-tools",
+      "license_in_source": ".PKGINFO"
+    },
+    {
       "id": "alpine-xf86-input-evdev",
       "kind": "apk",
       "version": "2.11.0-r0",

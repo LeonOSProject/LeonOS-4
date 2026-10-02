@@ -16,4 +16,9 @@ for path in /usr/bin/xdm /etc/reliefos/xdm.conf /etc/reliefos/xdm-Xservers \
 done
 
 printf '%s\n' 'reliefos-xdm: starting xdm on vt1' >> "$log"
+printf '%s\n' 'desktop-backend=xorg' >> "$log"
+printf '%s\n' 'xdm started on vt1' >> "$log"
+# Keep a root-open status channel available to the authenticated session.  The
+# session writes only fixed lifecycle events to this descriptor.
+exec 3>>"$log"
 exec /usr/bin/xdm -nodaemon -config /etc/reliefos/xdm.conf
