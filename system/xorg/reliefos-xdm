@@ -3,7 +3,11 @@
 set -eu
 
 log=/var/log/xorg-session.log
+events=/run/reliefos/xorg-events.log
 mkdir -p /var/lib/xdm
+mkdir -p /run/reliefos
+: > "$events"
+chmod 0666 "$events"
 touch "$log"
 chmod 0644 "$log"
 
@@ -18,7 +22,11 @@ done
 printf '%s\n' 'reliefos-xdm: starting xdm on vt1' >> "$log"
 printf '%s\n' 'desktop-backend=xorg' >> "$log"
 printf '%s\n' 'xdm started on vt1' >> "$log"
-# Keep a root-open status channel available to the authenticated session.  The
-# session writes only fixed lifecycle events to this descriptor.
-exec 3>>"$log"
-exec /usr/bin/xdm -nodaemon -config /etc/reliefos/xdm.conf
+# XDM may close or redirect inherited descriptors for the user session.  Use a
+# root-created lifecycle sink instead, then merge fixed, non-secret events.
+/usr/bin/xdm -nodaemon -config /etc/reliefos/xdm.conf
+status=$?
+cat "$events" >> "$log"
+printf '%s\n' 'tty1 restored to text login' >> "$log"
+rm -f "$events"
+exit "$status"
