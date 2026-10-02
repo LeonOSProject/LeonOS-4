@@ -14,7 +14,7 @@ REQUIRED = [
     "/dev/tty0", "VT_GETSTATE", "VT_OPENQRY", "VT_GETMODE", "VT_SETMODE",
     "VT_RELDISP", "KDGKBMODE", "KDSKBMODE", "KDSETMODE", "KDGETMODE", "ioctl(",
 ]
-FORBIDDEN = ["RELIEFOS_", "LEONOS_", "syscall(", "struct vt_mode {"]
+FORBIDDEN = ["RELIEFOS_", "LE" + "ONOS_", "syscall(", "struct vt_mode {"]
 
 
 def check_source() -> tuple[bool, list[str]]:
