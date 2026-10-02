@@ -7,7 +7,9 @@ events=/run/reliefos/xorg-events.log
 mkdir -p /var/lib/xdm
 mkdir -p /run/reliefos
 : > "$events"
-chmod 0666 "$events"
+# The authenticated session only needs append access; it must not be able to
+# read or truncate the root-owned lifecycle evidence.
+chmod 0622 "$events"
 touch "$log"
 chmod 0644 "$log"
 
