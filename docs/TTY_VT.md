@@ -6,6 +6,10 @@ BusyBox init 为每个 VT respawn `console-session`。普通系统的 tty1 在�
 
 Ctrl+Alt+F1～F6 切换显示与键盘目标。每个文本 VT 保留最多 64 KiB 输出历史，返回时重放 ANSI 文本；这是有界文本历史，尚不是无限滚动缓冲或完整 Linux VT 仿真。文本输出和 VT 重放在内核 execution transaction 内执行；键盘中断只入队，调度和系统调用入口消费队列，避免中断中进行 framebuffer 重放。
 
+## termios 输出处理
+
+slave 侧写入的输出在进入 master 输出队列或 VT 文本路径前执行 Linux n_tty 同款 OPOST 后处理：`ONLCR` 把 `\n` 展开为 `\r\n`（xterm 等终端据此换行并回到行首），`OCRNL` 把 `\r` 映射为 `\n`，`ONOCR` 丢弃第 0 列的 `\r`，`ONLRET` 使换行后的游标列归零，`OLCUC` 把小写字母转为大写，`TAB3`（`XTABS`）把制表符展开到下一个 8 列制表位。`OPOST` 关闭时字节原样通过，且不更新输出列（与 Linux 一致）。`ONOCR`/`ONLRET`/`TAB3` 依赖内核为每个会话维护的输出列状态。
+
 ## VT ioctl
 
 请求作用于固定 VT 的 slave 描述符；串口和动态 PTY 返回 ENOTTY。

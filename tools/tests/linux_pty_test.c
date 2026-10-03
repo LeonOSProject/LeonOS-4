@@ -17,10 +17,17 @@ uint8_t input_caps_lock_active(void) { return keyboard_caps; }
 void input_set_graphical_vt(uint32_t number) { (void)number; }
 static uint32_t shown_vt;
 static uint32_t shown_graphical;
+static char vt_written[256];
+static size_t vt_written_len;
 void console_vt_activate(uint32_t number, bool graphical)
 { shown_vt = number; shown_graphical = graphical; }
 void console_vt_write(uint32_t number, const char *text, size_t count)
-{ (void)number; (void)text; (void)count; }
+{
+    (void)number;
+    if (vt_written_len + count > sizeof(vt_written)) return;
+    memcpy(vt_written + vt_written_len, text, count);
+    vt_written_len += count;
+}
 void sched_set_controlling_pty(uint32_t pid, uint32_t id)
 { assert(pid == owner.pid); owner.controlling_pty_id = id; }
 void sched_clear_controlling_pty(uint32_t id)
@@ -247,6 +254,65 @@ int main(void)
         assert(pty_read_input(1, &ch, 1) == -11);
         assert(pty_vt_set_keyboard_mode(1, K_XLATE) == 0);
     }
-    puts("PASS native PTY modes, controlling-session isolation and queued-rights lifetime");
+    /* ---- Linux OPOST output post-processing on the slave write path. ---- */
+    {
+        char out[32];
+        pty_init();
+        id = pty_create(owner.pid);
+        assert(id > 0);
+        /* Defaults carry OPOST|ONLCR: a bare NL reaches the reader as CR NL. */
+        assert(pty_get_termios(id, &mode) == 0);
+        assert((mode.c_oflag & LINUX_OPOST) && (mode.c_oflag & LINUX_ONLCR));
+        assert(pty_write_output(id, "ab\ncd\n", 6) == 6);
+        assert(pty_read_output(owner.pid, id, out, sizeof(out)) == 8);
+        assert(!memcmp(out, "ab\r\ncd\r\n", 8));
+        /* OPOST off: bytes pass through untouched. */
+        mode.c_oflag &= ~LINUX_OPOST;
+        assert(pty_set_termios(id, &mode) == 0);
+        assert(pty_write_output(id, "x\ny", 3) == 3);
+        assert(pty_read_output(owner.pid, id, out, sizeof(out)) == 3 && !memcmp(out, "x\ny", 3));
+        /* OPOST on with ONLCR off: NL stays NL. */
+        pty_init();
+        id = pty_create(owner.pid);
+        assert(pty_get_termios(id, &mode) == 0);
+        mode.c_oflag &= ~LINUX_ONLCR;
+        assert(pty_set_termios(id, &mode) == 0);
+        assert(pty_write_output(id, "q\nr\n", 4) == 4);
+        assert(pty_read_output(owner.pid, id, out, sizeof(out)) == 4 && !memcmp(out, "q\nr\n", 4));
+        /* ONOCR suppresses CR at column 0 and keeps it elsewhere. */
+        pty_init();
+        id = pty_create(owner.pid);
+        assert(pty_get_termios(id, &mode) == 0);
+        mode.c_oflag = LINUX_OPOST | LINUX_ONOCR;
+        assert(pty_set_termios(id, &mode) == 0);
+        assert(pty_write_output(id, "\ra", 2) == 2);
+        assert(pty_read_output(owner.pid, id, out, sizeof(out)) == 1 && out[0] == 'a');
+        assert(pty_write_output(id, "\rb", 2) == 2);
+        assert(pty_read_output(owner.pid, id, out, sizeof(out)) == 2 && !memcmp(out, "\rb", 2));
+        /* OCRNL maps CR to NL. */
+        pty_init();
+        id = pty_create(owner.pid);
+        assert(pty_get_termios(id, &mode) == 0);
+        mode.c_oflag = LINUX_OPOST | LINUX_OCRNL;
+        assert(pty_set_termios(id, &mode) == 0);
+        assert(pty_write_output(id, "a\rb", 3) == 3);
+        assert(pty_read_output(owner.pid, id, out, sizeof(out)) == 3 && !memcmp(out, "a\nb", 3));
+        /* OLCUC upper-cases and TAB3 expands to the next 8-column stop. */
+        pty_init();
+        id = pty_create(owner.pid);
+        assert(pty_get_termios(id, &mode) == 0);
+        mode.c_oflag = LINUX_OPOST | LINUX_OLCUC | LINUX_TAB3;
+        assert(pty_set_termios(id, &mode) == 0);
+        assert(pty_write_output(id, "a\tb", 3) == 3);
+        assert(pty_read_output(owner.pid, id, out, sizeof(out)) == 9);
+        assert(!memcmp(out, "A       B", 9));
+        /* Console sessions take the same translated path into the VT. */
+        pty_init();
+        assert(pty_vt_init() == 0);
+        vt_written_len = 0;
+        assert(pty_write_output(1, "h\ni", 3) == 3);
+        assert(vt_written_len == 4 && !memcmp(vt_written, "h\r\ni", 4));
+    }
+    puts("PASS native PTY modes, OPOST output post-processing, controlling-session isolation and queued-rights lifetime");
     return 0;
 }
