@@ -1374,15 +1374,6 @@
       "license": "third_party/busybox/LICENSE"
     },
     {
-      "id": "cmd",
-      "kind": "submodule",
-      "commit": "2290c38bc9da54db53aa56161a7204a27b388e21",
-      "directory": "third_party/cmd",
-      "script": "tools/build/upstream-app.sh",
-      "target": "cmd",
-      "license": "third_party/cmd/LICENSE"
-    },
-    {
       "id": "dosfstools",
       "kind": "tarball",
       "version": "4.2",

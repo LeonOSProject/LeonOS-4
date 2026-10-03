@@ -107,10 +107,6 @@ $(FASTFETCH_ELF): $(RELIEFOS_LOCK) $(RELIEFOS_DEPS_TOOL) $(RELIEFOS_SRC)/mk/upst
 	$(Q)mkdir -p $(dir $@)
 	$(Q)set -eu; url=$$($(RELIEFOS_DEPS_TOOL) --lock $(RELIEFOS_LOCK) --id fastfetch --print url); digest=$$($(RELIEFOS_DEPS_TOOL) --lock $(RELIEFOS_LOCK) --id fastfetch --print sha256); source=$(RELIEFOS_CACHE)/$${url##*/}; test -f "$$source" || { echo 'missing fastfetch: run make fetch' >&2; exit 1; }; test "$$(sha256sum "$$source" | cut -d' ' -f1)" = "$$digest"; readelf -h "$$source" | grep -q 'Advanced Micro Devices X86-64'; if readelf -l -d "$$source" | grep -E 'INTERP|\(NEEDED\)'; then exit 1; fi; cp "$$source" $@.tmp; chmod 755 $@.tmp; mv $@.tmp $@
 reliefos-upstream: $(FASTFETCH_ELF)
-upstream_app_cmd_outputs := cmd.elf
-$(eval $(call RELIEFOS_UPSTREAM_APP,cmd))
-$(UPSTREAM_APP_DIR)/cmd.elf: $(RELIEFOS_SRC)/tools/build/upstream-cmd-patch.sh
-reliefos-upstream: upstream-app-cmd
 
 # A content/presence signature avoids creating thousands of grouped peer nodes
 # for terminfo/manpages, while detecting deletion of every installed product.

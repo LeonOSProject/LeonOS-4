@@ -31,10 +31,10 @@
 ## 2. 工作区与环境约束(仍然生效)
 
 - **工作区**:本工作区是 `/home/xiaobai/Projects/Projects/ReliefOS_Xorg`(分支 `feature/xorg`)。另一个 Codex Agent 在 `/home/xiaobai/Projects/Projects/ReliefOS` 工作,两者独立,**只修改本工作区文件**。
-- **`third_party/cmd`**:worktree 已用 `git -C third_party/cmd restore --source=HEAD --worktree .` 恢复到 HEAD 内容;index 中仍是用户自己的 staged deletions(`D ` 状态)。**不 reset、不覆盖、不提交**,保持现状即可。
-- **reliefos-check-lock / fetch**:用户明示"不用管 third_party 的 cmd 了,想办法破开 reliefos-check-lock,直接 make fetch";fetch 走代理 **端口 12334**。
+- **`third_party/cmd`**:已按用户要求彻底移除(2026-10-03):submodule 注册、gitlink、检出目录、构建接线与全部现行引用一并清除,原先 index 里的 staged deletions 随之销毁。
+- **reliefos-check-lock / fetch**:用户明示想办法破开 reliefos-check-lock,直接 make fetch;fetch 走代理 **端口 12334**。
 - **TMPDIR**:`/tmp` 是几乎满的 tmpfs,构建/测试必须 `TMPDIR=/home/xiaobai/Projects/Projects/ReliefOS_Xorg/build/tmp`。
-- **AGENT.md 约定**:内核代码 Doxygen `/** @brief @param @return */`;源码改动后跑 `git diff --check`;QEMU QMP socket 不放 /mnt/d 下;报告简体中文、结论先行;除非用户要求不提交(**全程未做任何提交**)。
+- **AGENT.md 约定**:内核代码 Doxygen `/** @brief @param @return */`;源码改动后跑 `git diff --check`;QEMU QMP socket 不放 /mnt/d 下;报告简体中文、结论先行;除非用户要求不提交(2026-10-03 用户已授权提交并推送本次改动)。
 - 构建命令习惯形式:`make -C /home/xiaobai/Projects/Projects/ReliefOS_Xorg O=out/xorg-vmware-debug olddefconfig`(注意必须带 `-C`,shell cwd 会漂移)→ `make O=out/xorg-vmware-debug -j8 kernel userland image-vmdk`;全量门禁 `TMPDIR=…/build/tmp make O=out/xorg-vmware-debug test`。
 
 ---
@@ -169,6 +169,6 @@ Xorg.0.log(`/tmp/xorg-probe.log` XORG-LOG 段)同时存在:
 
 - 简体中文、结论先行;逐项标注:源码已检查 / 已修改 / 已编译打包 / 已在 QEMU 验证 / 已在 VMware 验证。
 - **VMware 相关一律标注"未完成"**——从未做过独立 VMware 实机验证(图形、输入、VT 操作),QEMU 结果不得表述为"VMware 下正常使用"。
-- 收尾检查:`git diff --check`、`git status --short`(superproject + kernel/reliefnt 子模块;third_party/cmd 的用户 staged deletions 保持不动)。
-- 不提交任何改动。
-- 环境适配两件事需在报告中注明:reliefos-check-lock 绕过并直接 `make fetch`(代理 12334)、third_party/cmd worktree 用 git restore 恢复但 index 保留用户 staged 状态。
+- 收尾检查:`git diff --check`、`git status --short`(superproject + kernel/reliefnt 子模块)。
+- 2026-10-03 用户已授权提交并推送本次改动;除此之外不主动提交。
+- 环境适配需在报告中注明:reliefos-check-lock 绕过并直接 `make fetch`(代理 12334)。

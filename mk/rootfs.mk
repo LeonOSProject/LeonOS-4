@@ -12,12 +12,12 @@ APK_RAW_ROOT := $(ROOTFS_RAW)
 APK_RAW_STAMP := $(ROOTFS_RAW_STAMP)
 ROOTFS_SOURCE_DIRS := $(RELIEFOS_SRC)/system $(RELIEFOS_SRC)/resources/build-art $(RELIEFOS_SRC)/userland/storage $(RELIEFOS_SRC)/userland/apps
 ROOTFS_SOURCE_DIRS += $(RELIEFOS_SRC)/userland/fastfetch $(RELIEFOS_SRC)/logo.png $(RELIEFOS_SRC)/test/test.mp3 $(RELIEFOS_SRC)/docs/APK_PREPARATION.md $(RELIEFOS_SRC)/configs/apk-ownership.json $(RELIEFOS_SRC)/third_party/stardustui/docs/zh-cn/example
-ROOTFS_SOURCE_DIRS += $(wildcard $(addprefix $(RELIEFOS_SRC)/third_party/,busybox/LICENSE cmd/LICENSE sl/LICENSE pl_editor/LICENSE portablegl/LICENSE))
+ROOTFS_SOURCE_DIRS += $(wildcard $(addprefix $(RELIEFOS_SRC)/third_party/,busybox/LICENSE sl/LICENSE pl_editor/LICENSE portablegl/LICENSE))
 ROOTFS_SOURCE_DIRS += $(RELIEFOS_SRC)/tools/build/rpr-config.sh
 $(O_META)/rootfs-sources.sig: FORCE $(RELIEFOS_SRC)/tools/build/tree-signature.sh
 	$(Q)sh $(RELIEFOS_SRC)/tools/build/tree-signature.sh $@ $(ROOTFS_SOURCE_DIRS)
 ROOTFS_UPSTREAM_PRODUCTS = $(foreach package,$(UPSTREAM_PACKAGES) ncurses,$(UPSTREAM_ROOT)/$(package)/root/.complete $(upstream_$(package)_products))
-ROOTFS_APP_PRODUCTS = $(USERLAND_DIR)/motd.elf $(addprefix $(USERLAND_DIR)/,$(addsuffix .elf,$(RELIEFOS_COMPONENT_APPS))) $(USERLAND_DIR)/dynlinkerror.elf $(BUSYBOX_ELF) $(BUSYBOX_LINKS) $(SQLITE_SO) $(PORTABLEGL_SO) $(USERLAND_DIR)/cmd.elf $(USERLAND_DIR)/sl.elf
+ROOTFS_APP_PRODUCTS = $(USERLAND_DIR)/motd.elf $(addprefix $(USERLAND_DIR)/,$(addsuffix .elf,$(RELIEFOS_COMPONENT_APPS))) $(USERLAND_DIR)/dynlinkerror.elf $(BUSYBOX_ELF) $(BUSYBOX_LINKS) $(SQLITE_SO) $(PORTABLEGL_SO) $(USERLAND_DIR)/sl.elf
 $(ROOTFS_RAW_STAMP) $(ROOTFS_MANIFEST): $(NLS_MO) $(NLS_MUSL_MO) $(RELIEFOS_SRC)/configs/nls/LINGUAS
 RELIEFOS_SIG_rootfs := epoch=$(SOURCE_DATE_EPOCH)|sources=$(O_META)/rootfs-sources.sig|components=$(RELIEFOS_COMPONENTS_ENABLED)
 $(if $(RELIEFOS_PASSIVE),,$(eval $(call RELIEFOS_SIGNATURE_RULE,rootfs)))

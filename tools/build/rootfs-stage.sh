@@ -92,7 +92,7 @@ file "$out/userland/dynlinkerror.elf" usr/lib/reliefos/apps/dynlinkerror/dynlink
 # awk reads TSV without collapsing empty label/extension fields. No data is
 # interpreted as a command; only validated component IDs are used in paths.
 awk -F '\t' -v dir="$work/manifests" -v src="$src" '
-$4==1 && ($2 ~ /-app$/ || $1 ~ /^(busybox|cmd|sl)$/) {
+$4==1 && ($2 ~ /-app$/ || $1 ~ /^(busybox|sl)$/) {
   terminal=0; ini=src "/userland/apps/" $1 "/" $1 ".app.ini";
   while ((getline line < ini)>0) {split(line,a,"="); if(a[1]=="terminal" && a[2]~/^(1|true|yes)$/) terminal=1} close(ini);
   ini=src "/userland/" $1 "/" $1 ".app.ini";
@@ -119,7 +119,7 @@ while read -r app entry; do
 done < "$work/apps"
 # Tool executables keep their native locations; registry entries use a local
 # symlink so the registry's relative exec contract remains the same as apps.
-for app in busybox cmd sl; do
+for app in busybox sl; do
     if enabled "$app"; then
         file "$work/manifests/$app.ini" "usr/lib/reliefos/apps/$app/manifest.ini" 0644 "$app"
         target=/usr/bin/$app
@@ -141,12 +141,6 @@ done
 for app in fastfetch sl; do
     if enabled "$app"; then file "$out/userland/$app.elf" "usr/bin/$app" 0755 "$app" override; fi
 done
-for app in cmd; do
-    if enabled "$app"; then
-        file "$out/userland/$app.elf" "opt/$app/$app.elf" 0755 "$app"
-        link "usr/bin/$app" "../../opt/$app/$app.elf" "$app"
-    fi
-done
 for spec in 'sqlite sqlite.so.3'; do
     set -- $spec
     if enabled "$1"; then file "$out/userland/$2" "usr/lib/$2" 0755 "$1"; fi
@@ -157,7 +151,7 @@ if enabled fastfetch; then
     file "$src/userland/fastfetch/leonos-ascii.txt" usr/share/fastfetch/leonos-ascii.txt 0644 fastfetch
     file "$src/userland/fastfetch/hyfetch.json" etc/skel/.config/hyfetch.json 0644 fastfetch
 fi
-for spec in 'busybox third_party/busybox/LICENSE' 'cmd third_party/cmd/LICENSE' 'sl third_party/sl/LICENSE' 'pleditor third_party/pl_editor/LICENSE'; do
+for spec in 'busybox third_party/busybox/LICENSE' 'sl third_party/sl/LICENSE' 'pleditor third_party/pl_editor/LICENSE'; do
     set -- $spec
     if enabled "$1"; then file "$src/$2" "usr/share/licenses/$1/${2##*/}" 0644 "$1" override; fi
 done
