@@ -22,7 +22,7 @@ def source_check():
     required = {
         "docs/XORG.md": ["CONFIG_DESKTOP_BACKEND_XORG", "make fetch", "QEMU"],
         "docs/APK_PREPARATION.md": ["feature=xorg", "xdm", "v3.24"],
-        "system/xorg/xdm-Xservers": ["/usr/bin/Xorg", "vt1", "-keeptty"],
+        "system/xorg/xdm-Xservers": ["/usr/lib/reliefos/xorg-tty-wrapper", "vt1", "-keeptty"],
         "system/xorg/xdm-session": ["/usr/bin/twm", "/usr/bin/xterm"],
     }
     for relative, needles in required.items():

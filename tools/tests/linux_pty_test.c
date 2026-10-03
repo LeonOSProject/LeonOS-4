@@ -167,7 +167,10 @@ int main(void)
         assert(pty_lookup_path("/dev/pts/1", &node) == -2);
     }
     assert(pty_vt_id(0) == 0 && pty_vt_id(7) == 0);
-    assert(pty_lookup_vt_path("/dev/tty0", &node) == -2);
+    /* Linux /dev/tty0 is the active console, which is exactly the descriptor
+     * tools/tests/xorg_vt_abi_test.c opens to exercise the VT ABI. */
+    assert(pty_lookup_vt_path("/dev/tty0", &node) == 0 &&
+           node.first_cluster == pty_vt_active());
     assert(pty_lookup_vt_path("/dev/ttyS0", &node) == -2);
     assert(pty_create(owner.pid) == 7);
     pty_console_key_event(29, 1); /* Ctrl */
@@ -176,6 +179,12 @@ int main(void)
     assert(pty_vt_active() == 2 && shown_vt == 2);
     assert(pty_read_input(1, &ch, 1) == -11);
     assert(pty_read_input(2, &ch, 1) == -11);
+    /* A VT hand-off clears the kernel's modifier snapshot. Model the user
+     * releasing the first chord before pressing a new Ctrl+Alt+Fn chord. */
+    pty_console_key_event(29, 0); /* Ctrl */
+    pty_console_key_event(56, 0); /* Alt */
+    pty_console_key_event(29, 1); /* Ctrl */
+    pty_console_key_event(56, 1); /* Alt */
     pty_console_key_event(64, 1); /* F6 */
     assert(pty_vt_active() == 6 && shown_vt == 6);
     pty_console_key_event(29, 0);
@@ -183,8 +192,8 @@ int main(void)
     assert(pty_vt_switch(1) == 0);
     assert(pty_vt_set_graphics(1, 1) == 0);
     assert(pty_vt_graphical_active() && shown_graphical == 1);
-    assert(pty_vt_switch(2) == 0 && !pty_vt_graphical_active());
-    assert(pty_vt_switch(1) == 0 && pty_vt_graphical_active());
+    /* Linux VT_AUTO + KD_GRAPHICS refuses switches without a controller. */
+    assert(pty_vt_switch(2) == 0 && pty_vt_active() == 1 && pty_vt_graphical_active());
     assert(pty_vt_set_graphics(1, 0) == 0 && !pty_vt_graphical_active());
     assert(pty_vt_wait_active(1) == 0 && blocked == 0);
     assert(pty_vt_wait_active(7) == -22 && blocked == 0);
@@ -196,6 +205,48 @@ int main(void)
     assert(pty_vt_wait_active(2) == 0);
     assert(pty_vt_switch(1) == 0);
     assert(pty_vt_switch(0) == -22 && pty_vt_active() == 1);
+
+    /* ---- Linux VT_PROCESS hand-off contract on the fixed consoles. ---- */
+    {
+        struct vt_mode probe;
+        struct vt_mode controller = { .mode = VT_PROCESS, .relsig = 10, .acqsig = 12 };
+        /* VT_ACKACQ is an acknowledgement, never a persistent ownership mode. */
+        assert(pty_vt_set_mode(1, &(struct vt_mode){ .mode = VT_ACKACQ }) == -22);
+        owner.process_session = owner.pid;
+        owner.process_group = owner.pid;
+        owner.controlling_pty_id = 1;
+        assert(pty_vt_set_mode(1, &controller) == 0);
+        assert(pty_vt_set_graphics(1, 1) == 0);
+        signals = 0;
+        assert(pty_vt_switch(2) == 0);
+        assert(pty_vt_active() == 1 && pty_vt_graphical_active()); /* held */
+        assert(signals == 1);                                      /* relsig */
+        assert(pty_vt_release_display(1, 0) == 0);                 /* refuse */
+        assert(pty_vt_active() == 1 && pty_vt_graphical_active());
+        assert(pty_vt_switch(2) == 0);
+        assert(signals == 2);
+        assert(pty_vt_release_display(1, 1) == 0);                 /* grant */
+        assert(pty_vt_active() == 2 && !pty_vt_graphical_active());
+        assert(pty_vt_get_mode(2, &probe) == 0 && probe.mode == VT_AUTO);
+        signals = 0;
+        assert(pty_vt_switch(1) == 0);
+        assert(pty_vt_active() == 1 && signals == 1); /* acqsig to tty1's controller */
+        /* A dying controller leaves a usable text console behind. */
+        assert(pty_vt_set_graphics(1, 1) == 0);
+        assert(pty_vt_switch(2) == 0);
+        assert(pty_vt_active() == 1);
+        pty_process_session_exit(owner.pid);
+        assert(pty_vt_graphical(1) == 0 && !pty_vt_graphical_active());
+        assert(pty_vt_get_mode(1, &probe) == 0 && probe.mode == VT_AUTO);
+        assert(pty_vt_release_display(1, 1) == -22); /* hand-off cancelled */
+        /* K_OFF keeps the console tty silent. */
+        pty_flush_input(1);
+        assert(pty_vt_set_keyboard_mode(1, K_OFF) == 0);
+        pty_console_key_event(30, 1);
+        pty_console_key_event(30, 0);
+        assert(pty_read_input(1, &ch, 1) == -11);
+        assert(pty_vt_set_keyboard_mode(1, K_XLATE) == 0);
+    }
     puts("PASS native PTY modes, controlling-session isolation and queued-rights lifetime");
     return 0;
 }

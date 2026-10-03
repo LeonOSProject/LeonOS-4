@@ -50,6 +50,14 @@ class ConsoleBootPolicyTests(unittest.TestCase):
         self.assertNotIn(". /etc/reliefos/desktop-backend", script)
         self.assertNotIn("-novtswitch", (ROOT / "system/xorg/xdm-Xservers").read_text())
 
+    def test_xorg_server_is_attached_to_tty1_before_vt_initialization(self):
+        servers = (ROOT / "system/xorg/xdm-Xservers").read_text()
+        wrapper = (ROOT / "system/xorg/xorg-tty-wrapper").read_text()
+        self.assertIn("/usr/lib/reliefos/xorg-tty-wrapper", servers)
+        self.assertIn("exec <\"$tty\" >\"$tty\" 2>&1", wrapper)
+        self.assertIn("exec /usr/bin/Xorg \"$@\"", wrapper)
+        self.assertNotIn("setsid", wrapper)
+
     def test_invalid_backend_marker_never_falls_back_to_native_desktop(self):
         script = (ROOTFS / "usr/lib/reliefos/console-session").read_text()
         self.assertIn("exactly one line", script)
@@ -64,9 +72,14 @@ class ConsoleBootPolicyTests(unittest.TestCase):
             self.assertIn(event, launcher)
         for event in ("PAM authentication accepted", "twm started for uid=", "xterm started", "xdm session ended"):
             self.assertIn(event, session)
-        self.assertIn("/run/reliefos/xorg-events.log", launcher)
-        self.assertIn("/run/reliefos/xorg-events.log", session)
-        self.assertNotIn(">&3", session)
+        self.assertIn("/var/log/xdm.log", launcher)
+        self.assertIn("state_dir=/run/reliefos/xdm", launcher)
+        self.assertIn("sink=$state_dir/events", launcher)
+        self.assertIn("RELIEFOS_XORG_EVENT_FD=3", launcher)
+        self.assertIn('>&"$event_fd"', session)
+        self.assertNotIn("/run/reliefos/xorg-events.log", launcher + session)
+        self.assertNotIn("chmod 0622", launcher)
+        self.assertIn("xdm exit status=", launcher)
         self.assertIn("tty1 restored to text login", console)
         self.assertNotIn("password", launcher.lower() + session.lower())
 

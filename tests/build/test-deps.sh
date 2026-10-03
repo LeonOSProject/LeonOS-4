@@ -7,6 +7,11 @@
 # unit-tested in tests/host/test_json.c.
 set -u
 
+# The tool reports lock order as byte order; sort(1) collation must not depend
+# on the caller's locale for the comparison to mean anything.
+LC_ALL=C
+export LC_ALL
+
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$repo_root" || exit 1
 

@@ -17,8 +17,8 @@ void task_socket_release(struct task_file *file) { (void)file; }
 void task_inet_release(struct task_file *file) { (void)file; }
 void task_shm_release(struct task_file *file) { (void)file; }
 void task_socket_collect(void) {}
-void input_evdev_release(uint32_t kind, uint64_t token, uint32_t pid)
-{ (void)kind; (void)token; (void)pid; }
+void input_evdev_release(uint32_t kind, uint64_t token)
+{ (void)kind; (void)token; }
 uint32_t smp_current_cpu(void) { return 0; }
 void pty_reap_hungup(uint32_t id) { (void)id; }
 int pty_is_active(uint32_t id) { return id == 7; }

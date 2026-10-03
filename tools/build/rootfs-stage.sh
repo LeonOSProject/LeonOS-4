@@ -50,6 +50,7 @@ if [ "$desktop_backend" = xorg ]; then
     done
     file "$src/system/xorg/xorg.conf" etc/X11/xorg.conf 0644 product-policy override
     file "$src/system/xorg/reliefos-xdm" usr/lib/reliefos/reliefos-xdm 0755 reliefos-apps override
+    file "$src/system/xorg/xorg-tty-wrapper" usr/lib/reliefos/xorg-tty-wrapper 0755 reliefos-apps override
     file "$src/system/xorg/xdm.conf" etc/reliefos/xdm.conf 0644 product-policy override
     file "$src/system/xorg/xdm-Xservers" etc/reliefos/xdm-Xservers 0644 product-policy override
     file "$src/system/xorg/xdm-session" etc/reliefos/xdm-session 0755 reliefos-apps override
